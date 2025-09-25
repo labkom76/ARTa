@@ -3,6 +3,7 @@ import { useSession } from '@/contexts/SessionContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
+import { ReceiptTextIcon, HourglassIcon, FileCheckIcon, SendIcon, RotateCcwIcon } from 'lucide-react'; // Import icons
 
 interface TagihanCounts {
   total: number;
@@ -111,6 +112,7 @@ const DashboardSKPD = () => {
         <Card className="shadow-sm rounded-lg">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Tagihan</CardTitle>
+            <ReceiptTextIcon className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{counts?.total}</div>
@@ -120,6 +122,7 @@ const DashboardSKPD = () => {
         <Card className="shadow-sm rounded-lg">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Menunggu Registrasi</CardTitle>
+            <HourglassIcon className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{counts?.menungguRegistrasi}</div>
@@ -129,6 +132,7 @@ const DashboardSKPD = () => {
         <Card className="shadow-sm rounded-lg">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Menunggu Verifikasi</CardTitle>
+            <FileCheckIcon className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{counts?.menungguVerifikasi}</div>
@@ -138,6 +142,7 @@ const DashboardSKPD = () => {
         <Card className="shadow-sm rounded-lg">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Diteruskan</CardTitle>
+            <SendIcon className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{counts?.diteruskan}</div>
@@ -147,6 +152,7 @@ const DashboardSKPD = () => {
         <Card className="shadow-sm rounded-lg">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Dikembalikan</CardTitle>
+            <RotateCcwIcon className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{counts?.dikembalikan}</div>
