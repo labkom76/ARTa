@@ -40,7 +40,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { PlusCircleIcon, SearchIcon } from 'lucide-react';
-import { Textarea } from '@/components/ui/textarea'; // Import Textarea component
+import { Textarea } from '@/components/ui/textarea';
 
 // Zod schema for form validation
 const formSchema = z.object({
@@ -76,7 +76,7 @@ const PortalSKPD = () => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const [itemsPerPage, setItemsPerPage] = useState(10); // New state for items per page
   const [totalItems, setTotalItems] = useState(0);
 
   const form = useForm<TagihanFormValues>({
@@ -104,9 +104,13 @@ const PortalSKPD = () => {
         query = query.ilike('nomor_spm', `%${searchQuery}%`);
       }
 
-      const { data, error, count } = await query
-        .order('waktu_input', { ascending: false })
-        .range((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage - 1);
+      query = query.order('waktu_input', { ascending: false });
+
+      if (itemsPerPage !== -1) { // Apply range only if "All" is not selected
+        query = query.range((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage - 1);
+      }
+
+      const { data, error, count } = await query;
 
       if (error) throw error;
 
@@ -122,7 +126,7 @@ const PortalSKPD = () => {
 
   useEffect(() => {
     fetchTagihan();
-  }, [user, sessionLoading, searchQuery, currentPage]);
+  }, [user, sessionLoading, searchQuery, currentPage, itemsPerPage]); // Add itemsPerPage to dependencies
 
   const onSubmit = async (values: TagihanFormValues) => {
     if (!user || !profile) {
@@ -154,7 +158,7 @@ const PortalSKPD = () => {
     }
   };
 
-  const totalPages = Math.ceil(totalItems / itemsPerPage);
+  const totalPages = itemsPerPage === -1 ? 1 : Math.ceil(totalItems / itemsPerPage);
 
   return (
     <div className="p-6 bg-white rounded-lg shadow-sm border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
@@ -178,6 +182,27 @@ const PortalSKPD = () => {
             }}
             className="pl-9"
           />
+        </div>
+        <div className="flex items-center space-x-2">
+          <Label htmlFor="items-per-page" className="whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">Per halaman:</Label>
+          <Select
+            value={itemsPerPage.toString()}
+            onValueChange={(value) => {
+              setItemsPerPage(Number(value));
+              setCurrentPage(1); // Reset to first page when items per page changes
+            }}
+          >
+            <SelectTrigger className="w-[100px]">
+              <SelectValue placeholder="10" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="10">10</SelectItem>
+              <SelectItem value="25">25</SelectItem>
+              <SelectItem value="50">50</SelectItem>
+              <SelectItem value="100">100</SelectItem>
+              <SelectItem value="-1">Semua</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
@@ -223,7 +248,7 @@ const PortalSKPD = () => {
               <PaginationItem>
                 <PaginationPrevious
                   onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-                  disabled={currentPage === 1}
+                  disabled={currentPage === 1 || itemsPerPage === -1}
                 />
               </PaginationItem>
               {[...Array(totalPages)].map((_, index) => (
@@ -231,6 +256,7 @@ const PortalSKPD = () => {
                   <PaginationLink
                     isActive={currentPage === index + 1}
                     onClick={() => setCurrentPage(index + 1)}
+                    disabled={itemsPerPage === -1}
                   >
                     {index + 1}
                   </PaginationLink>
@@ -239,7 +265,7 @@ const PortalSKPD = () => {
               <PaginationItem>
                 <PaginationNext
                   onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-                  disabled={currentPage === totalPages}
+                  disabled={currentPage === totalPages || itemsPerPage === -1}
                 />
               </PaginationItem>
             </PaginationContent>
@@ -321,7 +347,7 @@ const PortalSKPD = () => {
                 id="uraian"
                 {...form.register('uraian')}
                 className="col-span-3"
-                rows={3} // Menentukan tinggi textarea
+                rows={3}
               />
               {form.formState.errors.uraian && (
                 <p className="col-span-4 text-right text-red-500 text-sm">
