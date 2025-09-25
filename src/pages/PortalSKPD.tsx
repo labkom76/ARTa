@@ -191,10 +191,10 @@ const PortalSKPD = () => {
               <TableHeader>
                 <TableRow>
                   <TableHead>Nomor SPM</TableHead>
-                  <TableHead>Uraian</TableHead>
-                  <TableHead>Jumlah Kotor</TableHead>
                   <TableHead>Jenis SPM</TableHead>
                   <TableHead>Jenis Tagihan</TableHead>
+                  <TableHead>Uraian</TableHead>
+                  <TableHead>Jumlah Kotor</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-center">Aksi</TableHead>
                 </TableRow>
@@ -203,10 +203,10 @@ const PortalSKPD = () => {
                 {tagihanList.map((tagihan) => (
                   <TableRow key={tagihan.id_tagihan}>
                     <TableCell className="font-medium">{tagihan.nomor_spm}</TableCell>
-                    <TableCell>{tagihan.uraian}</TableCell>
-                    <TableCell>Rp{tagihan.jumlah_kotor.toLocaleString('id-ID')}</TableCell>
                     <TableCell>{tagihan.jenis_spm}</TableCell>
                     <TableCell>{tagihan.jenis_tagihan}</TableCell>
+                    <TableCell>{tagihan.uraian}</TableCell>
+                    <TableCell>Rp{tagihan.jumlah_kotor.toLocaleString('id-ID')}</TableCell>
                     <TableCell>{tagihan.status_tagihan}</TableCell>
                     <TableCell className="text-center">
                       {/* Placeholder for action buttons */}
