@@ -271,37 +271,6 @@ const PortalSKPD = () => {
               )}
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="uraian" className="text-right">
-                Uraian
-              </Label>
-              <Input
-                id="uraian"
-                {...form.register('uraian')}
-                className="col-span-3"
-              />
-              {form.formState.errors.uraian && (
-                <p className="col-span-4 text-right text-red-500 text-sm">
-                  {form.formState.errors.uraian.message}
-                </p>
-              )}
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="jumlah_kotor" className="text-right">
-                Jumlah Kotor
-              </Label>
-              <Input
-                id="jumlah_kotor"
-                type="number"
-                {...form.register('jumlah_kotor')}
-                className="col-span-3"
-              />
-              {form.formState.errors.jumlah_kotor && (
-                <p className="col-span-4 text-right text-red-500 text-sm">
-                  {form.formState.errors.jumlah_kotor.message}
-                </p>
-              )}
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="jenis_spm" className="text-right">
                 Jenis SPM
               </Label>
@@ -340,6 +309,37 @@ const PortalSKPD = () => {
               {form.formState.errors.jenis_tagihan && (
                 <p className="col-span-4 text-right text-red-500 text-sm">
                   {form.formState.errors.jenis_tagihan.message}
+                </p>
+              )}
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="uraian" className="text-right">
+                Uraian
+              </Label>
+              <Input
+                id="uraian"
+                {...form.register('uraian')}
+                className="col-span-3"
+              />
+              {form.formState.errors.uraian && (
+                <p className="col-span-4 text-right text-red-500 text-sm">
+                  {form.formState.errors.uraian.message}
+                </p>
+              )}
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="jumlah_kotor" className="text-right">
+                Jumlah Kotor
+              </Label>
+              <Input
+                id="jumlah_kotor"
+                type="number"
+                {...form.register('jumlah_kotor')}
+                className="col-span-3"
+              />
+              {form.formState.errors.jumlah_kotor && (
+                <p className="col-span-4 text-right text-red-500 text-sm">
+                  {form.formState.errors.jumlah_kotor.message}
                 </p>
               )}
             </div>
