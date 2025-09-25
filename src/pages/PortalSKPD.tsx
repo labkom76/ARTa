@@ -41,7 +41,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { PlusCircleIcon, SearchIcon, EditIcon, Trash2Icon } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
-import DeleteConfirmationDialog from '@/components/DeleteConfirmationDialog'; // Import the new component
+import DeleteConfirmationDialog from '@/components/DeleteConfirmationDialog';
+import TagihanDetailDialog from '@/components/TagihanDetailDialog'; // Import the new detail dialog
 
 // Zod schema for form validation
 const formSchema = z.object({
@@ -57,6 +58,12 @@ const formSchema = z.object({
 
 type TagihanFormValues = z.infer<typeof formSchema>;
 
+interface VerificationItem {
+  item: string;
+  memenuhi_syarat: boolean;
+  keterangan: string;
+}
+
 interface Tagihan {
   id_tagihan: string;
   nama_skpd: string;
@@ -68,12 +75,20 @@ interface Tagihan {
   status_tagihan: string;
   waktu_input: string;
   id_pengguna_input: string;
+  catatan_verifikator?: string;
+  nomor_registrasi?: string;
+  waktu_registrasi?: string;
+  nama_verifikator?: string;
+  waktu_verifikasi?: string;
+  detail_verifikasi?: VerificationItem[];
+  nomor_verifikasi?: string;
+  nama_registrator?: string;
 }
 
 const PortalSKPD = () => {
   const { user, profile, loading: sessionLoading } = useSession();
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingTagihan, setEditingTagihan] = useState<Tagihan | null>(null); // State for editing
+  const [editingTagihan, setEditingTagihan] = useState<Tagihan | null>(null);
   const [tagihanList, setTagihanList] = useState<Tagihan[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -81,9 +96,11 @@ const PortalSKPD = () => {
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [totalItems, setTotalItems] = useState(0);
 
-  // State for delete confirmation dialog
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [tagihanToDelete, setTagihanToDelete] = useState<{ id: string; nomorSpm: string } | null>(null);
+
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false); // New state for detail modal
+  const [selectedTagihanForDetail, setSelectedTagihanForDetail] = useState<Tagihan | null>(null); // New state for detail tagihan
 
   const form = useForm<TagihanFormValues>({
     resolver: zodResolver(formSchema),
@@ -103,7 +120,7 @@ const PortalSKPD = () => {
     try {
       let query = supabase
         .from('database_tagihan')
-        .select('*', { count: 'exact' })
+        .select('*', { count: 'exact' }) // Select all columns for detail view
         .eq('id_pengguna_input', user.id);
 
       if (searchQuery) {
@@ -134,7 +151,6 @@ const PortalSKPD = () => {
     fetchTagihan();
   }, [user, sessionLoading, searchQuery, currentPage, itemsPerPage]);
 
-  // Effect to handle form pre-filling when editingTagihan changes
   useEffect(() => {
     if (editingTagihan) {
       form.reset({
@@ -145,7 +161,7 @@ const PortalSKPD = () => {
         jenis_tagihan: editingTagihan.jenis_tagihan,
       });
     } else {
-      form.reset(); // Clear form when not editing
+      form.reset();
     }
   }, [editingTagihan, form]);
 
@@ -157,7 +173,6 @@ const PortalSKPD = () => {
 
     try {
       if (editingTagihan) {
-        // Update existing tagihan
         const { error } = await supabase
           .from('database_tagihan')
           .update({
@@ -168,12 +183,11 @@ const PortalSKPD = () => {
             jenis_tagihan: values.jenis_tagihan,
           })
           .eq('id_tagihan', editingTagihan.id_tagihan)
-          .eq('id_pengguna_input', user.id); // Ensure user can only update their own tagihan
+          .eq('id_pengguna_input', user.id);
 
         if (error) throw error;
         toast.success('Tagihan berhasil diperbarui!');
       } else {
-        // Insert new tagihan
         const { error } = await supabase.from('database_tagihan').insert({
           id_pengguna_input: user.id,
           nama_skpd: profile.asal_skpd,
@@ -191,8 +205,8 @@ const PortalSKPD = () => {
 
       form.reset();
       setIsModalOpen(false);
-      setEditingTagihan(null); // Clear editing state
-      fetchTagihan(); // Refresh the list
+      setEditingTagihan(null);
+      fetchTagihan();
     } catch (error: any) {
       console.error('Error saving tagihan:', error.message);
       toast.error('Gagal menyimpan tagihan: ' + error.message);
@@ -225,7 +239,7 @@ const PortalSKPD = () => {
       if (error) throw error;
 
       toast.success('Tagihan berhasil dihapus!');
-      fetchTagihan(); // Refresh the list
+      fetchTagihan();
     } catch (error: any) {
       console.error('Error deleting tagihan:', error.message);
       toast.error('Gagal menghapus tagihan: ' + error.message);
@@ -233,6 +247,11 @@ const PortalSKPD = () => {
       setIsDeleteDialogOpen(false);
       setTagihanToDelete(null);
     }
+  };
+
+  const handleDetailClick = (tagihan: Tagihan) => {
+    setSelectedTagihanForDetail(tagihan);
+    setIsDetailModalOpen(true);
   };
 
   const totalPages = itemsPerPage === -1 ? 1 : Math.ceil(totalItems / itemsPerPage);
@@ -332,7 +351,7 @@ const PortalSKPD = () => {
                           </Button>
                         </div>
                       ) : (
-                        <Button variant="outline" size="sm" disabled>
+                        <Button variant="outline" size="sm" onClick={() => handleDetailClick(tagihan)}>
                           Detail
                         </Button>
                       )}
@@ -479,13 +498,18 @@ const PortalSKPD = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
       <DeleteConfirmationDialog
         isOpen={isDeleteDialogOpen}
         onClose={() => setIsDeleteDialogOpen(false)}
         onConfirm={confirmDelete}
         title="Konfirmasi Penghapusan"
         message={`Apakah Anda yakin ingin menghapus tagihan dengan Nomor SPM: ${tagihanToDelete?.nomorSpm}? Tindakan ini tidak dapat diurungkan.`}
+      />
+
+      <TagihanDetailDialog
+        isOpen={isDetailModalOpen}
+        onClose={() => setIsDetailModalOpen(false)}
+        tagihan={selectedTagihanForDetail}
       />
     </div>
   );
