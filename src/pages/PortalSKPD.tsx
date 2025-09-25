@@ -39,7 +39,7 @@ import { toast } from 'sonner';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { PlusCircleIcon, SearchIcon, EditIcon, Trash2Icon } from 'lucide-react'; // Import EditIcon and Trash2Icon
+import { PlusCircleIcon, SearchIcon, EditIcon, Trash2Icon } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 
 // Zod schema for form validation
@@ -72,11 +72,12 @@ interface Tagihan {
 const PortalSKPD = () => {
   const { user, profile, loading: sessionLoading } = useSession();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingTagihan, setEditingTagihan] = useState<Tagihan | null>(null); // State for editing
   const [tagihanList, setTagihanList] = useState<Tagihan[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10); // New state for items per page
+  const [itemsPerPage, setItemsPerPage] = useState(10);
   const [totalItems, setTotalItems] = useState(0);
 
   const form = useForm<TagihanFormValues>({
@@ -106,7 +107,7 @@ const PortalSKPD = () => {
 
       query = query.order('waktu_input', { ascending: false });
 
-      if (itemsPerPage !== -1) { // Apply range only if "All" is not selected
+      if (itemsPerPage !== -1) {
         query = query.range((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage - 1);
       }
 
@@ -126,31 +127,66 @@ const PortalSKPD = () => {
 
   useEffect(() => {
     fetchTagihan();
-  }, [user, sessionLoading, searchQuery, currentPage, itemsPerPage]); // Add itemsPerPage to dependencies
+  }, [user, sessionLoading, searchQuery, currentPage, itemsPerPage]);
+
+  // Effect to handle form pre-filling when editingTagihan changes
+  useEffect(() => {
+    if (editingTagihan) {
+      form.reset({
+        nomor_spm: editingTagihan.nomor_spm,
+        uraian: editingTagihan.uraian,
+        jumlah_kotor: editingTagihan.jumlah_kotor,
+        jenis_spm: editingTagihan.jenis_spm,
+        jenis_tagihan: editingTagihan.jenis_tagihan,
+      });
+    } else {
+      form.reset(); // Clear form when not editing
+    }
+  }, [editingTagihan, form]);
 
   const onSubmit = async (values: TagihanFormValues) => {
     if (!user || !profile) {
-      toast.error('Anda harus login untuk membuat tagihan.');
+      toast.error('Anda harus login untuk membuat/mengedit tagihan.');
       return;
     }
 
     try {
-      const { error } = await supabase.from('database_tagihan').insert({
-        id_pengguna_input: user.id,
-        nama_skpd: profile.asal_skpd, // Automatically set from user profile
-        nomor_spm: values.nomor_spm,
-        uraian: values.uraian,
-        jumlah_kotor: values.jumlah_kotor,
-        jenis_spm: values.jenis_spm,
-        jenis_tagihan: values.jenis_tagihan,
-        status_tagihan: 'Menunggu Registrasi', // Default status
-      });
+      if (editingTagihan) {
+        // Update existing tagihan
+        const { error } = await supabase
+          .from('database_tagihan')
+          .update({
+            nomor_spm: values.nomor_spm,
+            uraian: values.uraian,
+            jumlah_kotor: values.jumlah_kotor,
+            jenis_spm: values.jenis_spm,
+            jenis_tagihan: values.jenis_tagihan,
+          })
+          .eq('id_tagihan', editingTagihan.id_tagihan)
+          .eq('id_pengguna_input', user.id); // Ensure user can only update their own tagihan
 
-      if (error) throw error;
+        if (error) throw error;
+        toast.success('Tagihan berhasil diperbarui!');
+      } else {
+        // Insert new tagihan
+        const { error } = await supabase.from('database_tagihan').insert({
+          id_pengguna_input: user.id,
+          nama_skpd: profile.asal_skpd,
+          nomor_spm: values.nomor_spm,
+          uraian: values.uraian,
+          jumlah_kotor: values.jumlah_kotor,
+          jenis_spm: values.jenis_spm,
+          jenis_tagihan: values.jenis_tagihan,
+          status_tagihan: 'Menunggu Registrasi',
+        });
 
-      toast.success('Tagihan baru berhasil disimpan!');
+        if (error) throw error;
+        toast.success('Tagihan baru berhasil disimpan!');
+      }
+
       form.reset();
       setIsModalOpen(false);
+      setEditingTagihan(null); // Clear editing state
       fetchTagihan(); // Refresh the list
     } catch (error: any) {
       console.error('Error saving tagihan:', error.message);
@@ -158,9 +194,9 @@ const PortalSKPD = () => {
     }
   };
 
-  const handleEdit = (tagihanId: string) => {
-    toast.info(`Fungsi Edit untuk tagihan ID: ${tagihanId} akan segera diimplementasikan.`);
-    // Implementasi logika edit di sini
+  const handleEdit = (tagihan: Tagihan) => {
+    setEditingTagihan(tagihan);
+    setIsModalOpen(true);
   };
 
   const handleDelete = async (tagihanId: string) => {
@@ -170,7 +206,7 @@ const PortalSKPD = () => {
           .from('database_tagihan')
           .delete()
           .eq('id_tagihan', tagihanId)
-          .eq('id_pengguna_input', user?.id); // Pastikan hanya pengguna yang membuat yang bisa menghapus
+          .eq('id_pengguna_input', user?.id);
 
         if (error) throw error;
 
@@ -189,7 +225,7 @@ const PortalSKPD = () => {
     <div className="p-6 bg-white rounded-lg shadow-sm border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold text-gray-800 dark:text-white">Portal SKPD</h1>
-        <Button onClick={() => setIsModalOpen(true)} className="flex items-center gap-2">
+        <Button onClick={() => { setEditingTagihan(null); setIsModalOpen(true); }} className="flex items-center gap-2">
           <PlusCircleIcon className="h-4 w-4" /> Input Tagihan Baru
         </Button>
       </div>
@@ -203,7 +239,7 @@ const PortalSKPD = () => {
             value={searchQuery}
             onChange={(e) => {
               setSearchQuery(e.target.value);
-              setCurrentPage(1); // Reset to first page on new search
+              setCurrentPage(1);
             }}
             className="pl-9"
           />
@@ -214,7 +250,7 @@ const PortalSKPD = () => {
             value={itemsPerPage.toString()}
             onValueChange={(value) => {
               setItemsPerPage(Number(value));
-              setCurrentPage(1); // Reset to first page when items per page changes
+              setCurrentPage(1);
             }}
           >
             <SelectTrigger className="w-[100px]">
@@ -260,26 +296,30 @@ const PortalSKPD = () => {
                     <TableCell>Rp{tagihan.jumlah_kotor.toLocaleString('id-ID')}</TableCell>
                     <TableCell>{tagihan.status_tagihan}</TableCell>
                     <TableCell className="text-center">
-                      <div className="flex justify-center space-x-2">
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          onClick={() => handleEdit(tagihan.id_tagihan)}
-                          disabled={tagihan.status_tagihan !== 'Menunggu Registrasi'}
-                          title="Edit Tagihan"
-                        >
-                          <EditIcon className="h-4 w-4" />
+                      {tagihan.status_tagihan === 'Menunggu Registrasi' ? (
+                        <div className="flex justify-center space-x-2">
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => handleEdit(tagihan)}
+                            title="Edit Tagihan"
+                          >
+                            <EditIcon className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            size="icon"
+                            onClick={() => handleDelete(tagihan.id_tagihan)}
+                            title="Hapus Tagihan"
+                          >
+                            <Trash2Icon className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <Button variant="outline" size="sm" disabled>
+                          Detail
                         </Button>
-                        <Button
-                          variant="destructive"
-                          size="icon"
-                          onClick={() => handleDelete(tagihan.id_tagihan)}
-                          disabled={tagihan.status_tagihan !== 'Menunggu Registrasi'}
-                          title="Hapus Tagihan"
-                        >
-                          <Trash2Icon className="h-4 w-4" />
-                        </Button>
-                      </div>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -316,12 +356,12 @@ const PortalSKPD = () => {
         </>
       )}
 
-      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+      <Dialog open={isModalOpen} onOpenChange={(open) => { setIsModalOpen(open); if (!open) setEditingTagihan(null); }}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Input Tagihan Baru</DialogTitle>
+            <DialogTitle>{editingTagihan ? 'Edit Tagihan' : 'Input Tagihan Baru'}</DialogTitle>
             <DialogDescription>
-              Masukkan detail tagihan baru Anda di sini. Klik simpan setelah selesai.
+              {editingTagihan ? 'Perbarui detail tagihan Anda.' : 'Masukkan detail tagihan baru Anda di sini.'} Klik simpan setelah selesai.
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4">
@@ -416,7 +456,7 @@ const PortalSKPD = () => {
             </div>
             <DialogFooter>
               <Button type="submit" disabled={form.formState.isSubmitting}>
-                {form.formState.isSubmitting ? 'Menyimpan...' : 'Simpan'}
+                {form.formState.isSubmitting ? (editingTagihan ? 'Memperbarui...' : 'Menyimpan...') : 'Simpan'}
               </Button>
             </DialogFooter>
           </form>
