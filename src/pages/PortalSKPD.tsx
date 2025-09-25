@@ -39,7 +39,7 @@ import { toast } from 'sonner';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { PlusCircleIcon, SearchIcon } from 'lucide-react';
+import { PlusCircleIcon, SearchIcon, EditIcon, Trash2Icon } from 'lucide-react'; // Import EditIcon and Trash2Icon
 import { Textarea } from '@/components/ui/textarea';
 
 // Zod schema for form validation
@@ -158,6 +158,31 @@ const PortalSKPD = () => {
     }
   };
 
+  const handleEdit = (tagihanId: string) => {
+    toast.info(`Fungsi Edit untuk tagihan ID: ${tagihanId} akan segera diimplementasikan.`);
+    // Implementasi logika edit di sini
+  };
+
+  const handleDelete = async (tagihanId: string) => {
+    if (window.confirm('Apakah Anda yakin ingin menghapus tagihan ini?')) {
+      try {
+        const { error } = await supabase
+          .from('database_tagihan')
+          .delete()
+          .eq('id_tagihan', tagihanId)
+          .eq('id_pengguna_input', user?.id); // Pastikan hanya pengguna yang membuat yang bisa menghapus
+
+        if (error) throw error;
+
+        toast.success('Tagihan berhasil dihapus!');
+        fetchTagihan(); // Refresh the list
+      } catch (error: any) {
+        console.error('Error deleting tagihan:', error.message);
+        toast.error('Gagal menghapus tagihan: ' + error.message);
+      }
+    }
+  };
+
   const totalPages = itemsPerPage === -1 ? 1 : Math.ceil(totalItems / itemsPerPage);
 
   return (
@@ -235,8 +260,26 @@ const PortalSKPD = () => {
                     <TableCell>Rp{tagihan.jumlah_kotor.toLocaleString('id-ID')}</TableCell>
                     <TableCell>{tagihan.status_tagihan}</TableCell>
                     <TableCell className="text-center">
-                      {/* Placeholder for action buttons */}
-                      <Button variant="outline" size="sm" disabled>Detail</Button>
+                      <div className="flex justify-center space-x-2">
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => handleEdit(tagihan.id_tagihan)}
+                          disabled={tagihan.status_tagihan !== 'Menunggu Registrasi'}
+                          title="Edit Tagihan"
+                        >
+                          <EditIcon className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="icon"
+                          onClick={() => handleDelete(tagihan.id_tagihan)}
+                          disabled={tagihan.status_tagihan !== 'Menunggu Registrasi'}
+                          title="Hapus Tagihan"
+                        >
+                          <Trash2Icon className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
