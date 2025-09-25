@@ -40,6 +40,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { PlusCircleIcon, SearchIcon } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea'; // Import Textarea component
 
 // Zod schema for form validation
 const formSchema = z.object({
@@ -316,10 +317,11 @@ const PortalSKPD = () => {
               <Label htmlFor="uraian" className="text-right">
                 Uraian
               </Label>
-              <Input
+              <Textarea
                 id="uraian"
                 {...form.register('uraian')}
                 className="col-span-3"
+                rows={3} // Menentukan tinggi textarea
               />
               {form.formState.errors.uraian && (
                 <p className="col-span-4 text-right text-red-500 text-sm">
