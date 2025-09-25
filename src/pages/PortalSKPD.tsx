@@ -41,6 +41,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { PlusCircleIcon, SearchIcon, EditIcon, Trash2Icon } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
+import DeleteConfirmationDialog from '@/components/DeleteConfirmationDialog'; // Import the new component
 
 // Zod schema for form validation
 const formSchema = z.object({
@@ -79,6 +80,10 @@ const PortalSKPD = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [totalItems, setTotalItems] = useState(0);
+
+  // State for delete confirmation dialog
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [tagihanToDelete, setTagihanToDelete] = useState<{ id: string; nomorSpm: string } | null>(null);
 
   const form = useForm<TagihanFormValues>({
     resolver: zodResolver(formSchema),
@@ -199,23 +204,34 @@ const PortalSKPD = () => {
     setIsModalOpen(true);
   };
 
-  const handleDelete = async (tagihanId: string) => {
-    if (window.confirm('Apakah Anda yakin ingin menghapus tagihan ini?')) {
-      try {
-        const { error } = await supabase
-          .from('database_tagihan')
-          .delete()
-          .eq('id_tagihan', tagihanId)
-          .eq('id_pengguna_input', user?.id);
+  const handleDeleteClick = (tagihanId: string, nomorSpm: string) => {
+    setTagihanToDelete({ id: tagihanId, nomorSpm: nomorSpm });
+    setIsDeleteDialogOpen(true);
+  };
 
-        if (error) throw error;
+  const confirmDelete = async () => {
+    if (!tagihanToDelete || !user) {
+      toast.error('Terjadi kesalahan saat menghapus tagihan.');
+      return;
+    }
 
-        toast.success('Tagihan berhasil dihapus!');
-        fetchTagihan(); // Refresh the list
-      } catch (error: any) {
-        console.error('Error deleting tagihan:', error.message);
-        toast.error('Gagal menghapus tagihan: ' + error.message);
-      }
+    try {
+      const { error } = await supabase
+        .from('database_tagihan')
+        .delete()
+        .eq('id_tagihan', tagihanToDelete.id)
+        .eq('id_pengguna_input', user.id);
+
+      if (error) throw error;
+
+      toast.success('Tagihan berhasil dihapus!');
+      fetchTagihan(); // Refresh the list
+    } catch (error: any) {
+      console.error('Error deleting tagihan:', error.message);
+      toast.error('Gagal menghapus tagihan: ' + error.message);
+    } finally {
+      setIsDeleteDialogOpen(false);
+      setTagihanToDelete(null);
     }
   };
 
@@ -309,7 +325,7 @@ const PortalSKPD = () => {
                           <Button
                             variant="destructive"
                             size="icon"
-                            onClick={() => handleDelete(tagihan.id_tagihan)}
+                            onClick={() => handleDeleteClick(tagihan.id_tagihan, tagihan.nomor_spm)}
                             title="Hapus Tagihan"
                           >
                             <Trash2Icon className="h-4 w-4" />
@@ -462,6 +478,15 @@ const PortalSKPD = () => {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <DeleteConfirmationDialog
+        isOpen={isDeleteDialogOpen}
+        onClose={() => setIsDeleteDialogOpen(false)}
+        onConfirm={confirmDelete}
+        title="Konfirmasi Penghapusan"
+        message={`Apakah Anda yakin ingin menghapus tagihan dengan Nomor SPM: ${tagihanToDelete?.nomorSpm}? Tindakan ini tidak dapat diurungkan.`}
+      />
     </div>
   );
 };
