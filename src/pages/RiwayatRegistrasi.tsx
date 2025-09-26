@@ -10,20 +10,22 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input'; // Import Input component
-import { SearchIcon, EyeIcon } from 'lucide-react'; // Import SearchIcon and EyeIcon
-import { format, parseISO } from 'date-fns';
+import { Input } from '@/components/ui/input';
+import { SearchIcon, EyeIcon } from 'lucide-react';
+import { format, parseISO, startOfDay, endOfDay } from 'date-fns'; // Import startOfDay and endOfDay
 import { id as localeId } from 'date-fns/locale';
 import { toast } from 'sonner';
-import useDebounce from '@/hooks/use-debounce'; // Import useDebounce hook
-import TagihanDetailDialog from '@/components/TagihanDetailDialog'; // Import the detail dialog
+import useDebounce from '@/hooks/use-debounce';
+import TagihanDetailDialog from '@/components/TagihanDetailDialog';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select'; // Import Select components
+} from '@/components/ui/select';
+import { DateRange } from 'react-day-picker'; // Import DateRange type
+import { DateRangePickerWithPresets } from '@/components/DateRangePickerWithPresets'; // Import the new component
 
 interface VerificationItem {
   item: string;
@@ -56,9 +58,10 @@ const RiwayatRegistrasi = () => {
   const { profile, loading: sessionLoading } = useSession();
   const [tagihanList, setTagihanList] = useState<Tagihan[]>([]);
   const [loadingData, setLoadingData] = useState(true);
-  const [searchQuery, setSearchQuery] = useState(''); // State for search query
-  const debouncedSearchQuery = useDebounce(searchQuery, 500); // Debounce search query
-  const [selectedStatus, setSelectedStatus] = useState<string>('Semua Status'); // New state for status filter
+  const [searchQuery, setSearchQuery] = useState('');
+  const debouncedSearchQuery = useDebounce(searchQuery, 500);
+  const [selectedStatus, setSelectedStatus] = useState<string>('Semua Status');
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined); // New state for date range
 
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [selectedTagihanForDetail, setSelectedTagihanForDetail] = useState<Tagihan | null>(null);
@@ -75,19 +78,25 @@ const RiwayatRegistrasi = () => {
         let query = supabase
           .from('database_tagihan')
           .select('*')
-          .not('status_tagihan', 'eq', 'Menunggu Registrasi') // Filter utama: status_tagihan BUKAN 'Menunggu Registrasi'
+          .not('status_tagihan', 'eq', 'Menunggu Registrasi')
           .order('waktu_registrasi', { ascending: false });
 
-        // Tambahkan filter pencarian jika ada searchQuery
         if (debouncedSearchQuery) {
           query = query.or(
             `nomor_spm.ilike.%${debouncedSearchQuery}%,nama_skpd.ilike.%${debouncedSearchQuery}%`
           );
         }
 
-        // Tambahkan filter status jika selectedStatus bukan 'Semua Status'
         if (selectedStatus !== 'Semua Status') {
           query = query.eq('status_tagihan', selectedStatus);
+        }
+
+        // Tambahkan filter rentang tanggal
+        if (dateRange?.from) {
+          query = query.gte('waktu_registrasi', startOfDay(dateRange.from).toISOString());
+        }
+        if (dateRange?.to) {
+          query = query.lte('waktu_registrasi', endOfDay(dateRange.to).toISOString());
         }
 
         const { data, error } = await query;
@@ -103,7 +112,7 @@ const RiwayatRegistrasi = () => {
     };
 
     fetchRiwayatRegistrasi();
-  }, [sessionLoading, profile, debouncedSearchQuery, selectedStatus]); // Tambahkan selectedStatus sebagai dependency
+  }, [sessionLoading, profile, debouncedSearchQuery, selectedStatus, dateRange]); // Tambahkan dateRange sebagai dependency
 
   const handleDetailClick = (tagihan: Tagihan) => {
     setSelectedTagihanForDetail(tagihan);
@@ -155,6 +164,7 @@ const RiwayatRegistrasi = () => {
             <SelectItem value="Dikembalikan">Dikembalikan</SelectItem>
           </SelectContent>
         </Select>
+        <DateRangePickerWithPresets date={dateRange} onDateChange={setDateRange} className="w-full sm:w-auto" />
       </div>
 
       <div className="overflow-x-auto">
