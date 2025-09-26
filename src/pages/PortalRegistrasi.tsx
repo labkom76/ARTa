@@ -330,30 +330,53 @@ const PortalRegistrasi = () => {
       <div className="p-6 bg-white rounded-lg shadow-sm border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
         <h2 className="text-2xl font-semibold text-gray-800 dark:text-white mb-4">Antrian Registrasi</h2>
 
-        <div className="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-2 mb-4">
-          <div className="relative flex-1 w-full sm:w-auto">
-            <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400" />
-            <Input
-              ref={searchInputRef}
-              type="text"
-              placeholder="Cari Nomor SPM..."
-              className="pl-9 w-full"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
+        <div className="flex flex-col sm:flex-row items-center justify-between space-y-2 sm:space-y-0 sm:space-x-2 mb-4">
+          <div className="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-2 w-full sm:w-auto">
+            <div className="relative flex-1 w-full sm:w-auto">
+              <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400" />
+              <Input
+                ref={searchInputRef}
+                type="text"
+                placeholder="Cari Nomor SPM..."
+                className="pl-9 w-full"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+            <Select onValueChange={setSelectedSkpd} value={selectedSkpd}>
+              <SelectTrigger className="w-full sm:w-[180px]">
+                <SelectValue placeholder="Filter SKPD" />
+              </SelectTrigger>
+              <SelectContent>
+                {skpdOptions.map((skpd) => (
+                  <SelectItem key={skpd} value={skpd}>
+                    {skpd}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-          <Select onValueChange={setSelectedSkpd} value={selectedSkpd}>
-            <SelectTrigger className="w-full sm:w-[180px]">
-              <SelectValue placeholder="Filter SKPD" />
-            </SelectTrigger>
-            <SelectContent>
-              {skpdOptions.map((skpd) => (
-                <SelectItem key={skpd} value={skpd}>
-                  {skpd}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="flex items-center space-x-2"> {/* Moved to top right */}
+            <label htmlFor="queue-items-per-page" className="whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">Baris per halaman:</label>
+            <Select
+              value={queueItemsPerPage.toString()}
+              onValueChange={(value) => {
+                setQueueItemsPerPage(Number(value));
+                setQueueCurrentPage(1);
+              }}
+            >
+              <SelectTrigger className="w-[100px]">
+                <SelectValue placeholder="10" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="10">10</SelectItem>
+                <SelectItem value="25">25</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+                <SelectItem value="100">100</SelectItem>
+                <SelectItem value="-1">Semua</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         {loadingQueue ? (
@@ -400,59 +423,33 @@ const PortalRegistrasi = () => {
                 </TableBody>
               </Table>
             </div>
-            <div className="mt-4 flex flex-col sm:flex-row items-center justify-between space-y-2 sm:space-y-0">
-              <div className="flex items-center space-x-2">
-                <label htmlFor="queue-items-per-page" className="whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">Baris per halaman:</label>
-                <Select
-                  value={queueItemsPerPage.toString()}
-                  onValueChange={(value) => {
-                    setQueueItemsPerPage(Number(value));
-                    setQueueCurrentPage(1);
-                  }}
-                >
-                  <SelectTrigger className="w-[100px]">
-                    <SelectValue placeholder="10" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="10">10</SelectItem>
-                    <SelectItem value="25">25</SelectItem>
-                    <SelectItem value="50">50</SelectItem>
-                    <SelectItem value="100">100</SelectItem>
-                    <SelectItem value="-1">Semua</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <Pagination>
-                <PaginationContent>
-                  <PaginationItem>
-                    <PaginationPrevious
-                      onClick={() => setQueueCurrentPage((prev) => Math.max(1, prev - 1))}
-                      disabled={queueCurrentPage === 1 || queueItemsPerPage === -1}
-                    />
+            <Pagination className="mt-4">
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious
+                    onClick={() => setQueueCurrentPage((prev) => Math.max(1, prev - 1))}
+                    disabled={queueCurrentPage === 1 || queueItemsPerPage === -1}
+                  />
+                </PaginationItem>
+                {[...Array(queueTotalPages)].map((_, index) => (
+                  <PaginationItem key={index}>
+                    <PaginationLink
+                      isActive={queueCurrentPage === index + 1}
+                      onClick={() => setQueueCurrentPage(index + 1)}
+                      disabled={queueItemsPerPage === -1}
+                    >
+                      {index + 1}
+                    </PaginationLink>
                   </PaginationItem>
-                  {[...Array(queueTotalPages)].map((_, index) => (
-                    <PaginationItem key={index}>
-                      <PaginationLink
-                        isActive={queueCurrentPage === index + 1}
-                        onClick={() => setQueueCurrentPage(index + 1)}
-                        disabled={queueItemsPerPage === -1}
-                      >
-                        {index + 1}
-                      </PaginationLink>
-                    </PaginationItem>
-                  ))}
-                  <PaginationItem>
-                    <PaginationNext
-                      onClick={() => setQueueCurrentPage((prev) => Math.min(queueTotalPages, prev + 1))}
-                      disabled={queueCurrentPage === queueTotalPages || queueItemsPerPage === -1}
-                    />
-                  </PaginationItem>
-                </PaginationContent>
-              </Pagination>
-              <div className="text-sm text-gray-700 dark:text-gray-300">
-                Halaman {queueCurrentPage} dari {queueTotalPages}
-              </div>
-            </div>
+                ))}
+                <PaginationItem>
+                  <PaginationNext
+                    onClick={() => setQueueCurrentPage((prev) => Math.min(queueTotalPages, prev + 1))}
+                    disabled={queueCurrentPage === queueTotalPages || queueItemsPerPage === -1}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
           </>
         )}
       </div>
