@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { format, parseISO } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
+import { FileCheckIcon } from 'lucide-react'; // Import FileCheckIcon
 
 interface Tagihan {
   id_tagihan: string;
@@ -115,8 +116,8 @@ const PortalVerifikasi = () => {
                   <TableCell>{tagihan.nama_skpd}</TableCell>
                   <TableCell>Rp{tagihan.jumlah_kotor.toLocaleString('id-ID')}</TableCell>
                   <TableCell className="text-center">
-                    <Button variant="outline" size="sm">
-                      Proses
+                    <Button variant="ghost" size="icon" title="Proses Verifikasi">
+                      <FileCheckIcon className="h-5 w-5 text-blue-500" />
                     </Button>
                   </TableCell>
                 </TableRow>
