@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { HomeIcon, LayoutDashboardIcon, FileTextIcon, UserIcon } from 'lucide-react';
+import { HomeIcon, LayoutDashboardIcon, FileTextIcon, UserIcon, HistoryIcon } from 'lucide-react'; // Import HistoryIcon
 import { cn } from '@/lib/utils';
 import { useSession } from '@/contexts/SessionContext';
 import { Button } from '@/components/ui/button';
@@ -43,6 +43,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onLinkClick }) => {
     navItems.push(
       { to: '/dashboard-registrasi', icon: LayoutDashboardIcon, label: 'Dashboard' },
       { to: '/portal-registrasi', icon: FileTextIcon, label: 'Portal' },
+      { to: '/riwayat-registrasi', icon: HistoryIcon, label: 'Riwayat Registrasi' }, // New navigation item
     );
   } else if (role === 'Staf Verifikator') {
     navItems.push(
