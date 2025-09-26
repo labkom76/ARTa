@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react'; // Import useRef
 import { useSession } from '@/contexts/SessionContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -35,7 +35,19 @@ const PortalRegistrasi = () => {
   const [queueTagihanList, setQueueTagihanList] = useState<Tagihan[]>([]);
   const [loadingQueue, setLoadingQueue] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const debouncedSearchQuery = useDebounce(searchQuery, 700); // Gunakan hook useDebounce dengan delay 700ms
+  const debouncedSearchQuery = useDebounce(searchQuery, 700);
+  const searchInputRef = useRef<HTMLInputElement>(null); // Membuat ref untuk input pencarian
+
+  // Effect untuk debouncing searchQuery
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 500); // Debounce selama 500ms
+
+    return () => {
+      clearTimeout(handler); // Bersihkan timer jika searchQuery berubah sebelum waktu habis
+    };
+  }, [searchQuery]); // Effect ini berjalan setiap kali searchQuery berubah
 
   // Fetch Tagihan with 'Menunggu Registrasi' status and apply search filter
   useEffect(() => {
@@ -65,6 +77,10 @@ const PortalRegistrasi = () => {
         toast.error('Gagal memuat antrian tagihan: ' + error.message);
       } finally {
         setLoadingQueue(false);
+        // Fokuskan kembali input setelah loading selesai
+        if (searchInputRef.current) {
+          searchInputRef.current.focus();
+        }
       }
     };
     fetchQueueTagihan();
@@ -99,6 +115,7 @@ const PortalRegistrasi = () => {
           <div className="relative flex-1">
             <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400" />
             <Input
+              ref={searchInputRef} // Menghubungkan ref ke komponen Input
               type="text"
               placeholder="Cari Nomor SPM..."
               className="pl-9"
