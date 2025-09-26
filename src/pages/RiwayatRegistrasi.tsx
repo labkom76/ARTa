@@ -33,8 +33,8 @@ import {
   PaginationLink,
   PaginationNext,
   PaginationPrevious,
-} from '@/components/ui/pagination'; // Import Pagination components
-import { Label } from '@/components/ui/label'; // Import Label for "Baris per halaman"
+} from '@/components/ui/pagination';
+import { Label } from '@/components/ui/label';
 
 interface VerificationItem {
   item: string;
@@ -91,7 +91,7 @@ const RiwayatRegistrasi = () => {
       try {
         let query = supabase
           .from('database_tagihan')
-          .select('*', { count: 'exact' }) // Include count for pagination
+          .select('*', { count: 'exact' })
           .not('status_tagihan', 'eq', 'Menunggu Registrasi')
           .order('waktu_registrasi', { ascending: false });
 
@@ -112,8 +112,7 @@ const RiwayatRegistrasi = () => {
           query = query.lte('waktu_registrasi', endOfDay(dateRange.to).toISOString());
         }
 
-        // Apply pagination range
-        if (itemsPerPage !== -1) { // If not "Semua"
+        if (itemsPerPage !== -1) {
           const from = (currentPage - 1) * itemsPerPage;
           const to = from + itemsPerPage - 1;
           query = query.range(from, to);
@@ -123,7 +122,7 @@ const RiwayatRegistrasi = () => {
 
         if (error) throw error;
         setTagihanList(data as Tagihan[]);
-        setTotalItems(count || 0); // Set total items for pagination
+        setTotalItems(count || 0);
       } catch (error: any) {
         console.error('Error fetching riwayat registrasi:', error.message);
         toast.error('Gagal memuat riwayat registrasi: ' + error.message);
@@ -133,7 +132,7 @@ const RiwayatRegistrasi = () => {
     };
 
     fetchRiwayatRegistrasi();
-  }, [sessionLoading, profile, debouncedSearchQuery, selectedStatus, dateRange, currentPage, itemsPerPage]); // Add pagination states to dependencies
+  }, [sessionLoading, profile, debouncedSearchQuery, selectedStatus, dateRange, currentPage, itemsPerPage]);
 
   const handleDetailClick = (tagihan: Tagihan) => {
     setSelectedTagihanForDetail(tagihan);
@@ -188,6 +187,28 @@ const RiwayatRegistrasi = () => {
           </SelectContent>
         </Select>
         <DateRangePickerWithPresets date={dateRange} onDateChange={setDateRange} className="w-full sm:w-auto" />
+        {/* Moved "Baris per halaman" here */}
+        <div className="flex items-center space-x-2">
+          <Label htmlFor="items-per-page" className="whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">Baris per halaman:</Label>
+          <Select
+            value={itemsPerPage.toString()}
+            onValueChange={(value) => {
+              setItemsPerPage(Number(value));
+              setCurrentPage(1); // Reset to first page when items per page changes
+            }}
+          >
+            <SelectTrigger className="w-[100px]">
+              <SelectValue placeholder="10" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="10">10</SelectItem>
+              <SelectItem value="25">25</SelectItem>
+              <SelectItem value="50">50</SelectItem>
+              <SelectItem value="100">100</SelectItem>
+              <SelectItem value="-1">Semua</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       <div className="overflow-x-auto">
@@ -235,27 +256,6 @@ const RiwayatRegistrasi = () => {
 
       {/* Pagination Controls */}
       <div className="mt-6 flex flex-col sm:flex-row items-center justify-between space-y-2 sm:space-y-0">
-        <div className="flex items-center space-x-2">
-          <Label htmlFor="items-per-page" className="whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">Baris per halaman:</Label>
-          <Select
-            value={itemsPerPage.toString()}
-            onValueChange={(value) => {
-              setItemsPerPage(Number(value));
-              setCurrentPage(1); // Reset to first page when items per page changes
-            }}
-          >
-            <SelectTrigger className="w-[100px]">
-              <SelectValue placeholder="10" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="10">10</SelectItem>
-              <SelectItem value="25">25</SelectItem>
-              <SelectItem value="50">50</SelectItem>
-              <SelectItem value="100">100</SelectItem>
-              <SelectItem value="-1">Semua</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
         <div className="text-sm text-muted-foreground">
           Halaman {totalItems === 0 ? 0 : currentPage} dari {totalPages} ({totalItems} total item)
         </div>
