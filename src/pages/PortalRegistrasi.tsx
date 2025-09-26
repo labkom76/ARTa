@@ -17,7 +17,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select'; // Import Select components
+} from '@/components/ui/select';
 import { SearchIcon, CheckCircleIcon } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { id } from 'date-fns/locale';
@@ -45,8 +45,8 @@ const PortalRegistrasi = () => {
   const debouncedSearchQuery = useDebounce(searchQuery, 700);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  const [skpdOptions, setSkpdOptions] = useState<string[]>([]); // State untuk daftar SKPD
-  const [selectedSkpd, setSelectedSkpd] = useState<string>('Semua SKPD'); // State untuk SKPD yang dipilih
+  const [skpdOptions, setSkpdOptions] = useState<string[]>([]);
+  const [selectedSkpd, setSelectedSkpd] = useState<string>('Semua SKPD');
 
   // Effect untuk memfokuskan kembali input pencarian setelah data dimuat
   useEffect(() => {
@@ -55,18 +55,19 @@ const PortalRegistrasi = () => {
     }
   }, [loadingQueue, debouncedSearchQuery]);
 
-  // Fetch unique SKPD names for the dropdown
+  // Fetch unique SKPD names for the dropdown, filtered by 'Menunggu Registrasi' status
   useEffect(() => {
     const fetchSkpdOptions = async () => {
       try {
         const { data, error } = await supabase
           .from('database_tagihan')
-          .select('nama_skpd');
+          .select('nama_skpd')
+          .eq('status_tagihan', 'Menunggu Registrasi'); // Filter hanya untuk status 'Menunggu Registrasi'
 
         if (error) throw error;
 
         const uniqueSkpd = Array.from(new Set(data.map(item => item.nama_skpd)))
-          .filter((skpd): skpd is string => skpd !== null && skpd.trim() !== ''); // Filter out null/empty
+          .filter((skpd): skpd is string => skpd !== null && skpd.trim() !== '');
 
         setSkpdOptions(['Semua SKPD', ...uniqueSkpd.sort()]);
       } catch (error: any) {
@@ -112,7 +113,7 @@ const PortalRegistrasi = () => {
       }
     };
     fetchQueueTagihan();
-  }, [user, sessionLoading, profile, debouncedSearchQuery, selectedSkpd]); // Tambahkan selectedSkpd sebagai dependensi
+  }, [user, sessionLoading, profile, debouncedSearchQuery, selectedSkpd]);
 
   if (sessionLoading || loadingQueue) {
     return (
