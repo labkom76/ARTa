@@ -19,10 +19,11 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { SearchIcon, CheckCircleIcon } from 'lucide-react';
-import { format, parseISO } from 'date-fns';
-import { id } from 'date-fns/locale';
+import { format, parseISO, startOfMonth, endOfMonth } from 'date-fns';
+import { id as localeId } from 'date-fns/locale'; // Rename to avoid conflict with 'id' prop
 import { toast } from 'sonner';
 import useDebounce from '@/hooks/use-debounce';
+import RegistrasiConfirmationDialog from '@/components/RegistrasiConfirmationDialog'; // Import the new dialog
 
 interface Tagihan {
   id_tagihan: string;
@@ -35,6 +36,9 @@ interface Tagihan {
   status_tagihan: string;
   waktu_input: string;
   id_pengguna_input: string;
+  nomor_registrasi?: string; // Add this field for the generated number
+  waktu_registrasi?: string; // Add this field for registration timestamp
+  nama_registrator?: string; // Add this field for registrator name
 }
 
 const PortalRegistrasi = () => {
@@ -47,6 +51,11 @@ const PortalRegistrasi = () => {
 
   const [skpdOptions, setSkpdOptions] = useState<string[]>([]);
   const [selectedSkpd, setSelectedSkpd] = useState<string>('Semua SKPD');
+
+  const [isRegistrasiModalOpen, setIsRegistrasiModalOpen] = useState(false);
+  const [selectedTagihanForRegistrasi, setSelectedTagihanForRegistrasi] = useState<Tagihan | null>(null);
+  const [generatedNomorRegistrasi, setGeneratedNomorRegistrasi] = useState<string | null>(null);
+  const [isConfirming, setIsConfirming] = useState(false); // State for loading on confirm button
 
   // Effect untuk memfokuskan kembali input pencarian setelah data dimuat
   useEffect(() => {
@@ -62,7 +71,7 @@ const PortalRegistrasi = () => {
         const { data, error } = await supabase
           .from('database_tagihan')
           .select('nama_skpd')
-          .eq('status_tagihan', 'Menunggu Registrasi'); // Filter hanya untuk status 'Menunggu Registrasi'
+          .eq('status_tagihan', 'Menunggu Registrasi');
 
         if (error) throw error;
 
@@ -76,44 +85,125 @@ const PortalRegistrasi = () => {
       }
     };
     fetchSkpdOptions();
-  }, []); // Hanya berjalan sekali saat komponen dimuat
+  }, []);
 
   // Fetch Tagihan with 'Menunggu Registrasi' status and apply search/SKPD filters
+  const fetchQueueTagihan = async () => {
+    if (!user || sessionLoading || profile?.peran !== 'Staf Registrasi') {
+      setLoadingQueue(false);
+      return;
+    }
+
+    setLoadingQueue(true);
+    try {
+      let query = supabase
+        .from('database_tagihan')
+        .select('*')
+        .eq('status_tagihan', 'Menunggu Registrasi');
+
+      if (debouncedSearchQuery) {
+        query = query.ilike('nomor_spm', `%${debouncedSearchQuery}%`);
+      }
+
+      if (selectedSkpd !== 'Semua SKPD') {
+        query = query.eq('nama_skpd', selectedSkpd);
+      }
+
+      const { data, error } = await query.order('waktu_input', { ascending: true });
+
+      if (error) throw error;
+      setQueueTagihanList(data as Tagihan[]);
+    } catch (error: any) {
+      console.error('Error fetching queue tagihan:', error.message);
+      toast.error('Gagal memuat antrian tagihan: ' + error.message);
+    } finally {
+      setLoadingQueue(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchQueueTagihan = async () => {
-      if (!user || sessionLoading || profile?.peran !== 'Staf Registrasi') {
-        setLoadingQueue(false);
-        return;
-      }
-
-      setLoadingQueue(true);
-      try {
-        let query = supabase
-          .from('database_tagihan')
-          .select('*')
-          .eq('status_tagihan', 'Menunggu Registrasi');
-
-        if (debouncedSearchQuery) {
-          query = query.ilike('nomor_spm', `%${debouncedSearchQuery}%`);
-        }
-
-        if (selectedSkpd !== 'Semua SKPD') {
-          query = query.eq('nama_skpd', selectedSkpd);
-        }
-
-        const { data, error } = await query.order('waktu_input', { ascending: true });
-
-        if (error) throw error;
-        setQueueTagihanList(data as Tagihan[]);
-      } catch (error: any) {
-        console.error('Error fetching queue tagihan:', error.message);
-        toast.error('Gagal memuat antrian tagihan: ' + error.message);
-      } finally {
-        setLoadingQueue(false);
-      }
-    };
     fetchQueueTagihan();
   }, [user, sessionLoading, profile, debouncedSearchQuery, selectedSkpd]);
+
+  const generateNomorRegistrasi = async (): Promise<string> => {
+    const now = new Date();
+    const yearMonthDay = format(now, 'yyyyMMdd');
+    const startOfCurrentMonth = startOfMonth(now).toISOString();
+    const endOfCurrentMonth = endOfMonth(now).toISOString();
+
+    const { data, error } = await supabase
+      .from('database_tagihan')
+      .select('nomor_registrasi')
+      .not('nomor_registrasi', 'is', null)
+      .gte('waktu_registrasi', startOfCurrentMonth)
+      .lte('waktu_registrasi', endOfCurrentMonth)
+      .order('nomor_registrasi', { ascending: false })
+      .limit(1);
+
+    if (error) {
+      console.error('Error fetching last registration number:', error.message);
+      throw new Error('Gagal membuat nomor registrasi.');
+    }
+
+    let nextSequence = 1;
+    if (data && data.length > 0 && data[0].nomor_registrasi) {
+      const lastNomor = data[0].nomor_registrasi;
+      const parts = lastNomor.split('-');
+      if (parts.length === 3) {
+        const lastSequenceStr = parts[2];
+        const lastSequenceNum = parseInt(lastSequenceStr, 10);
+        if (!isNaN(lastSequenceNum)) {
+          nextSequence = lastSequenceNum + 1;
+        }
+      }
+    }
+
+    const formattedSequence = String(nextSequence).padStart(4, '0');
+    return `REG-${yearMonthDay}-${formattedSequence}`;
+  };
+
+  const handleRegistrasiClick = async (tagihan: Tagihan) => {
+    if (!profile?.nama_lengkap) {
+      toast.error('Nama registrator tidak ditemukan. Harap lengkapi profil Anda.');
+      return;
+    }
+    setSelectedTagihanForRegistrasi(tagihan);
+    setIsRegistrasiModalOpen(true);
+    setGeneratedNomorRegistrasi(null); // Reset before generating
+    try {
+      const newNomor = await generateNomorRegistrasi();
+      setGeneratedNomorRegistrasi(newNomor);
+    } catch (error: any) {
+      toast.error(error.message);
+      setIsRegistrasiModalOpen(false);
+    }
+  };
+
+  const confirmRegistrasi = async (tagihanId: string, nomorRegistrasi: string) => {
+    setIsConfirming(true);
+    try {
+      const { error } = await supabase
+        .from('database_tagihan')
+        .update({
+          status_tagihan: 'Menunggu Verifikasi',
+          nomor_registrasi: nomorRegistrasi,
+          waktu_registrasi: new Date().toISOString(),
+          nama_registrator: profile?.nama_lengkap, // Use the registrator's name from profile
+        })
+        .eq('id_tagihan', tagihanId);
+
+      if (error) throw error;
+
+      toast.success('Tagihan berhasil diregistrasi!');
+      setIsRegistrasiModalOpen(false);
+      fetchQueueTagihan(); // Refresh the list
+    } catch (error: any) {
+      console.error('Error confirming registration:', error.message);
+      toast.error('Gagal mengkonfirmasi registrasi: ' + error.message);
+    } finally {
+      setIsConfirming(false);
+    }
+  };
 
   if (sessionLoading || loadingQueue) {
     return (
@@ -187,7 +277,7 @@ const PortalRegistrasi = () => {
               <TableBody>
                 {queueTagihanList.map((tagihan) => (
                   <TableRow key={tagihan.id_tagihan}>
-                    <TableCell>{format(parseISO(tagihan.waktu_input), 'dd MMMM yyyy HH:mm', { locale: id })}</TableCell>
+                    <TableCell>{format(parseISO(tagihan.waktu_input), 'dd MMMM yyyy HH:mm', { locale: localeId })}</TableCell>
                     <TableCell className="font-medium">{tagihan.nama_skpd}</TableCell>
                     <TableCell>{tagihan.nomor_spm}</TableCell>
                     <TableCell>{tagihan.jenis_spm}</TableCell>
@@ -198,6 +288,8 @@ const PortalRegistrasi = () => {
                         variant="ghost"
                         size="icon"
                         title="Registrasi Tagihan"
+                        onClick={() => handleRegistrasiClick(tagihan)}
+                        disabled={isConfirming}
                       >
                         <CheckCircleIcon className="h-5 w-5 text-green-500" />
                       </Button>
@@ -209,6 +301,15 @@ const PortalRegistrasi = () => {
           </div>
         )}
       </div>
+
+      <RegistrasiConfirmationDialog
+        isOpen={isRegistrasiModalOpen}
+        onClose={() => setIsRegistrasiModalOpen(false)}
+        onConfirm={confirmRegistrasi}
+        tagihan={selectedTagihanForRegistrasi}
+        generatedNomorRegistrasi={generatedNomorRegistrasi}
+        isConfirming={isConfirming}
+      />
     </div>
   );
 };
