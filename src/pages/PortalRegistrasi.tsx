@@ -15,6 +15,7 @@ import { SearchIcon, CheckCircleIcon } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { toast } from 'sonner';
+import useDebounce from '@/hooks/use-debounce'; // Import the new custom hook
 
 interface Tagihan {
   id_tagihan: string;
@@ -34,18 +35,7 @@ const PortalRegistrasi = () => {
   const [queueTagihanList, setQueueTagihanList] = useState<Tagihan[]>([]);
   const [loadingQueue, setLoadingQueue] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState(searchQuery); // State baru untuk debouncing
-
-  // Effect untuk debouncing searchQuery
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedSearchQuery(searchQuery);
-    }, 500); // Debounce selama 500ms
-
-    return () => {
-      clearTimeout(handler); // Bersihkan timer jika searchQuery berubah sebelum waktu habis
-    };
-  }, [searchQuery]); // Effect ini berjalan setiap kali searchQuery berubah
+  const debouncedSearchQuery = useDebounce(searchQuery, 700); // Gunakan hook useDebounce dengan delay 700ms
 
   // Fetch Tagihan with 'Menunggu Registrasi' status and apply search filter
   useEffect(() => {
