@@ -171,10 +171,14 @@ const PortalRegistrasi = () => {
 
       query = query.order('waktu_registrasi', { ascending: false });
 
-      const { data, error, count } = await query.range(
-        (historyCurrentPage - 1) * historyItemsPerPage,
-        historyCurrentPage * historyItemsPerPage - 1
-      );
+      if (historyItemsPerPage !== -1) { // Apply range only if not 'All'
+        query = query.range(
+          (historyCurrentPage - 1) * historyItemsPerPage,
+          historyCurrentPage * historyItemsPerPage - 1
+        );
+      }
+
+      const { data, error, count } = await query;
 
       if (error) throw error;
 
@@ -383,27 +387,26 @@ const PortalRegistrasi = () => {
       <div className="p-6 bg-white rounded-lg shadow-sm border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
         <h2 className="text-2xl font-semibold text-gray-800 dark:text-white mb-4">Riwayat Registrasi (24 Jam Terakhir)</h2>
 
-        <div className="mb-4 flex items-center space-x-2">
-          <div className="flex items-center space-x-2">
-            <label htmlFor="history-items-per-page" className="whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">Per halaman:</label>
-            <Select
-              value={historyItemsPerPage.toString()}
-              onValueChange={(value) => {
-                setHistoryItemsPerPage(Number(value));
-                setHistoryCurrentPage(1);
-              }}
-            >
-              <SelectTrigger className="w-[100px]">
-                <SelectValue placeholder="10" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="10">10</SelectItem>
-                <SelectItem value="25">25</SelectItem>
-                <SelectItem value="50">50</SelectItem>
-                <SelectItem value="100">100</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+        <div className="mb-4 flex justify-end items-center space-x-2"> {/* Moved to top right */}
+          <label htmlFor="history-items-per-page" className="whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">Per halaman:</label>
+          <Select
+            value={historyItemsPerPage.toString()}
+            onValueChange={(value) => {
+              setHistoryItemsPerPage(Number(value));
+              setHistoryCurrentPage(1);
+            }}
+          >
+            <SelectTrigger className="w-[100px]">
+              <SelectValue placeholder="10" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="10">10</SelectItem>
+              <SelectItem value="25">25</SelectItem>
+              <SelectItem value="50">50</SelectItem>
+              <SelectItem value="100">100</SelectItem>
+              <SelectItem value="-1">Semua</SelectItem> {/* Added 'Semua' option */}
+            </SelectContent>
+          </Select>
         </div>
 
         {loadingHistory ? (
@@ -452,7 +455,7 @@ const PortalRegistrasi = () => {
                 <PaginationItem>
                   <PaginationPrevious
                     onClick={() => setHistoryCurrentPage((prev) => Math.max(1, prev - 1))}
-                    disabled={historyCurrentPage === 1}
+                    disabled={historyCurrentPage === 1 || historyItemsPerPage === -1}
                   />
                 </PaginationItem>
                 {[...Array(historyTotalPages)].map((_, index) => (
@@ -460,6 +463,7 @@ const PortalRegistrasi = () => {
                     <PaginationLink
                       isActive={historyCurrentPage === index + 1}
                       onClick={() => setHistoryCurrentPage(index + 1)}
+                      disabled={historyItemsPerPage === -1}
                     >
                       {index + 1}
                     </PaginationLink>
@@ -468,7 +472,7 @@ const PortalRegistrasi = () => {
                 <PaginationItem>
                   <PaginationNext
                     onClick={() => setHistoryCurrentPage((prev) => Math.min(historyTotalPages, prev + 1))}
-                    disabled={historyCurrentPage === historyTotalPages}
+                    disabled={historyCurrentPage === historyTotalPages || historyItemsPerPage === -1}
                   />
                 </PaginationItem>
               </PaginationContent>
