@@ -11,6 +11,7 @@ import DashboardSKPD from "./pages/DashboardSKPD";
 import PortalSKPD from "./pages/PortalSKPD";
 import DashboardRegistrasi from "./pages/DashboardRegistrasi";
 import PortalRegistrasi from "./pages/PortalRegistrasi";
+import RiwayatRegistrasi from "./pages/RiwayatRegistrasi"; // Import the new page
 import DashboardVerifikasi from "./pages/DashboardVerifikasi";
 import PortalVerifikasi from "./pages/PortalVerifikasi";
 import { SessionContextProvider } from "./contexts/SessionContext";
@@ -32,6 +33,7 @@ const App = () => (
               <Route path="/portal-skpd" element={<PortalSKPD />} />
               <Route path="/dashboard-registrasi" element={<DashboardRegistrasi />} />
               <Route path="/portal-registrasi" element={<PortalRegistrasi />} />
+              <Route path="/riwayat-registrasi" element={<RiwayatRegistrasi />} /> {/* New route */}
               <Route path="/dashboard-verifikasi" element={<DashboardVerifikasi />} />
               <Route path="/portal-verifikasi" element={<PortalVerifikasi />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
