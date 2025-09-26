@@ -17,6 +17,13 @@ import { id as localeId } from 'date-fns/locale';
 import { toast } from 'sonner';
 import useDebounce from '@/hooks/use-debounce'; // Import useDebounce hook
 import TagihanDetailDialog from '@/components/TagihanDetailDialog'; // Import the detail dialog
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'; // Import Select components
 
 interface VerificationItem {
   item: string;
@@ -51,6 +58,7 @@ const RiwayatRegistrasi = () => {
   const [loadingData, setLoadingData] = useState(true);
   const [searchQuery, setSearchQuery] = useState(''); // State for search query
   const debouncedSearchQuery = useDebounce(searchQuery, 500); // Debounce search query
+  const [selectedStatus, setSelectedStatus] = useState<string>('Semua Status'); // New state for status filter
 
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [selectedTagihanForDetail, setSelectedTagihanForDetail] = useState<Tagihan | null>(null);
@@ -77,6 +85,11 @@ const RiwayatRegistrasi = () => {
           );
         }
 
+        // Tambahkan filter status jika selectedStatus bukan 'Semua Status'
+        if (selectedStatus !== 'Semua Status') {
+          query = query.eq('status_tagihan', selectedStatus);
+        }
+
         const { data, error } = await query;
 
         if (error) throw error;
@@ -90,7 +103,7 @@ const RiwayatRegistrasi = () => {
     };
 
     fetchRiwayatRegistrasi();
-  }, [sessionLoading, profile, debouncedSearchQuery]); // Tambahkan debouncedSearchQuery sebagai dependency
+  }, [sessionLoading, profile, debouncedSearchQuery, selectedStatus]); // Tambahkan selectedStatus sebagai dependency
 
   const handleDetailClick = (tagihan: Tagihan) => {
     setSelectedTagihanForDetail(tagihan);
@@ -120,17 +133,28 @@ const RiwayatRegistrasi = () => {
       <h1 className="text-3xl font-bold text-gray-800 dark:text-white mb-6">Riwayat Registrasi Tagihan</h1>
 
       {/* Area Kontrol Filter */}
-      <div className="mb-6 flex items-center space-x-2">
-        <div className="relative flex-1">
+      <div className="mb-6 flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-2">
+        <div className="relative flex-1 w-full sm:w-auto">
           <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400" />
           <Input
             type="text"
             placeholder="Cari berdasarkan Nomor SPM atau Nama SKPD..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9"
+            className="pl-9 w-full"
           />
         </div>
+        <Select onValueChange={setSelectedStatus} value={selectedStatus}>
+          <SelectTrigger className="w-full sm:w-[200px]">
+            <SelectValue placeholder="Filter Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="Semua Status">Semua Status</SelectItem>
+            <SelectItem value="Menunggu Verifikasi">Menunggu Verifikasi</SelectItem>
+            <SelectItem value="Diteruskan">Diteruskan</SelectItem>
+            <SelectItem value="Dikembalikan">Dikembalikan</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="overflow-x-auto">
