@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'; // Import useRef
+import React, { useState, useEffect, useRef } from 'react';
 import { useSession } from '@/contexts/SessionContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -15,7 +15,7 @@ import { SearchIcon, CheckCircleIcon } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { toast } from 'sonner';
-import useDebounce from '@/hooks/use-debounce'; // Import the new custom hook
+import useDebounce from '@/hooks/use-debounce';
 
 interface Tagihan {
   id_tagihan: string;
@@ -35,19 +35,8 @@ const PortalRegistrasi = () => {
   const [queueTagihanList, setQueueTagihanList] = useState<Tagihan[]>([]);
   const [loadingQueue, setLoadingQueue] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const debouncedSearchQuery = useDebounce(searchQuery, 700);
+  const debouncedSearchQuery = useDebounce(searchQuery, 700); // Gunakan hook useDebounce dengan delay 700ms
   const searchInputRef = useRef<HTMLInputElement>(null); // Membuat ref untuk input pencarian
-
-  // Effect untuk debouncing searchQuery
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedSearchQuery(searchQuery);
-    }, 500); // Debounce selama 500ms
-
-    return () => {
-      clearTimeout(handler); // Bersihkan timer jika searchQuery berubah sebelum waktu habis
-    };
-  }, [searchQuery]); // Effect ini berjalan setiap kali searchQuery berubah
 
   // Fetch Tagihan with 'Menunggu Registrasi' status and apply search filter
   useEffect(() => {
@@ -77,14 +66,17 @@ const PortalRegistrasi = () => {
         toast.error('Gagal memuat antrian tagihan: ' + error.message);
       } finally {
         setLoadingQueue(false);
-        // Fokuskan kembali input setelah loading selesai
-        if (searchInputRef.current) {
-          searchInputRef.current.focus();
-        }
       }
     };
     fetchQueueTagihan();
   }, [user, sessionLoading, profile, debouncedSearchQuery]); // Dependensi diubah ke debouncedSearchQuery
+
+  // Effect untuk memfokuskan kembali input pencarian setelah data dimuat
+  useEffect(() => {
+    if (!loadingQueue && debouncedSearchQuery && searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  }, [loadingQueue, debouncedSearchQuery]); // Bergantung pada loadingQueue dan debouncedSearchQuery
 
   if (sessionLoading || loadingQueue) {
     return (
