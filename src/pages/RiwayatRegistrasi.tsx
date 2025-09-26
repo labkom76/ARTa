@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useSession } from '@/contexts/SessionContext';
+import { supabase } from '@/integrations/supabase/client';
 import {
   Table,
   TableBody,
@@ -8,15 +9,76 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { Button } from '@/components/ui/button';
+import { format, parseISO } from 'date-fns';
+import { id as localeId } from 'date-fns/locale';
+import { toast } from 'sonner';
+
+interface VerificationItem {
+  item: string;
+  memenuhi_syarat: boolean;
+  keterangan: string;
+}
+
+interface Tagihan {
+  id_tagihan: string;
+  nama_skpd: string;
+  nomor_spm: string;
+  jenis_spm: string;
+  jenis_tagihan: string;
+  uraian: string;
+  jumlah_kotor: number;
+  status_tagihan: string;
+  waktu_input: string;
+  id_pengguna_input: string;
+  nomor_registrasi?: string;
+  waktu_registrasi?: string;
+  nama_registrator?: string;
+  catatan_verifikator?: string;
+  waktu_verifikasi?: string;
+  detail_verifikasi?: VerificationItem[];
+  nomor_verifikasi?: string;
+  nama_verifikator?: string;
+}
 
 const RiwayatRegistrasi = () => {
   const { profile, loading: sessionLoading } = useSession();
+  const [tagihanList, setTagihanList] = useState<Tagihan[]>([]);
+  const [loadingData, setLoadingData] = useState(true);
 
-  if (sessionLoading) {
+  useEffect(() => {
+    const fetchRiwayatRegistrasi = async () => {
+      if (sessionLoading || profile?.peran !== 'Staf Registrasi') {
+        setLoadingData(false);
+        return;
+      }
+
+      setLoadingData(true);
+      try {
+        const { data, error } = await supabase
+          .from('database_tagihan')
+          .select('*')
+          .not('status_tagihan', 'eq', 'Menunggu Registrasi') // Filter: status_tagihan BUKAN 'Menunggu Registrasi'
+          .order('waktu_registrasi', { ascending: false }); // Urutkan berdasarkan waktu registrasi terbaru
+
+        if (error) throw error;
+        setTagihanList(data as Tagihan[]);
+      } catch (error: any) {
+        console.error('Error fetching riwayat registrasi:', error.message);
+        toast.error('Gagal memuat riwayat registrasi: ' + error.message);
+      } finally {
+        setLoadingData(false);
+      }
+    };
+
+    fetchRiwayatRegistrasi();
+  }, [sessionLoading, profile]);
+
+  if (sessionLoading || loadingData) {
     return (
       <div className="p-6 bg-white rounded-lg shadow-sm border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
         <h1 className="text-3xl font-bold text-gray-800 dark:text-white mb-4">Memuat Halaman...</h1>
-        <p className="text-gray-600 dark:text-gray-400">Sedang memeriksa hak akses Anda.</p>
+        <p className="text-gray-600 dark:text-gray-400">Sedang memeriksa hak akses Anda dan mengambil data.</p>
       </div>
     );
   }
@@ -39,7 +101,6 @@ const RiwayatRegistrasi = () => {
         Area Kontrol Filter (akan diisi nanti)
       </div>
 
-      {/* Kerangka Tabel Kosong */}
       <div className="overflow-x-auto">
         <Table>
           <TableHeader>
@@ -54,12 +115,31 @@ const RiwayatRegistrasi = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {/* Baris data akan ditambahkan di sini nanti */}
-            <TableRow>
-              <TableCell colSpan={7} className="text-center text-muted-foreground">
-                Tidak ada data riwayat registrasi.
-              </TableCell>
-            </TableRow>
+            {tagihanList.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={7} className="text-center text-muted-foreground">
+                  Tidak ada data riwayat registrasi.
+                </TableCell>
+              </TableRow>
+            ) : (
+              tagihanList.map((tagihan) => (
+                <TableRow key={tagihan.id_tagihan}>
+                  <TableCell>
+                    {tagihan.waktu_registrasi ? format(parseISO(tagihan.waktu_registrasi), 'dd MMMM yyyy HH:mm', { locale: localeId }) : '-'}
+                  </TableCell>
+                  <TableCell className="font-medium">{tagihan.nomor_registrasi || '-'}</TableCell>
+                  <TableCell>{tagihan.nomor_spm}</TableCell>
+                  <TableCell>{tagihan.nama_skpd}</TableCell>
+                  <TableCell>Rp{tagihan.jumlah_kotor.toLocaleString('id-ID')}</TableCell>
+                  <TableCell>{tagihan.status_tagihan}</TableCell>
+                  <TableCell className="text-center">
+                    <Button variant="outline" size="sm">
+                      Detail
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
           </TableBody>
         </Table>
       </div>
