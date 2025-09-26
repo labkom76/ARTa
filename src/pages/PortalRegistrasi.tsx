@@ -34,9 +34,9 @@ const PortalRegistrasi = () => {
   const [queueTagihanList, setQueueTagihanList] = useState<Tagihan[]>([]);
   const [loadingQueue, setLoadingQueue] = useState(true);
 
-  // Fetch ALL Tagihan for testing connection
+  // Fetch Tagihan with 'Menunggu Registrasi' status
   useEffect(() => {
-    const fetchAllTagihan = async () => {
+    const fetchQueueTagihan = async () => {
       if (!user || sessionLoading || profile?.peran !== 'Staf Registrasi') {
         setLoadingQueue(false);
         return;
@@ -44,22 +44,22 @@ const PortalRegistrasi = () => {
 
       setLoadingQueue(true);
       try {
-        // Fetch ALL data without any filters
         const { data, error } = await supabase
           .from('database_tagihan')
           .select('*')
+          .eq('status_tagihan', 'Menunggu Registrasi') // Filter ditambahkan di sini
           .order('waktu_input', { ascending: true });
 
         if (error) throw error;
         setQueueTagihanList(data as Tagihan[]);
       } catch (error: any) {
-        console.error('Error fetching all tagihan:', error.message);
-        toast.error('Gagal memuat semua tagihan: ' + error.message);
+        console.error('Error fetching queue tagihan:', error.message);
+        toast.error('Gagal memuat antrian tagihan: ' + error.message);
       } finally {
         setLoadingQueue(false);
       }
     };
-    fetchAllTagihan();
+    fetchQueueTagihan();
   }, [user, sessionLoading, profile]); // Dependencies for re-fetching
 
   if (sessionLoading || loadingQueue) {
@@ -102,7 +102,7 @@ const PortalRegistrasi = () => {
         {loadingQueue ? (
           <p className="text-center text-gray-600 dark:text-gray-400">Memuat antrian...</p>
         ) : queueTagihanList.length === 0 ? (
-          <p className="text-center text-gray-600 dark:text-gray-400">Tidak ada tagihan ditemukan.</p>
+          <p className="text-center text-gray-600 dark:text-gray-400">Tidak ada tagihan ditemukan dengan status 'Menunggu Registrasi'.</p>
         ) : (
           <div className="overflow-x-auto">
             <Table>
