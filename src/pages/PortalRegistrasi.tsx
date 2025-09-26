@@ -18,12 +18,27 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { SearchIcon, CheckCircleIcon } from 'lucide-react';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '@/components/ui/pagination';
+import { SearchIcon, CheckCircleIcon, EyeIcon } from 'lucide-react';
 import { format, parseISO, startOfMonth, endOfMonth } from 'date-fns';
-import { id as localeId } from 'date-fns/locale'; // Rename to avoid conflict with 'id' prop
+import { id as localeId } from 'date-fns/locale';
 import { toast } from 'sonner';
 import useDebounce from '@/hooks/use-debounce';
-import RegistrasiConfirmationDialog from '@/components/RegistrasiConfirmationDialog'; // Import the new dialog
+import RegistrasiConfirmationDialog from '@/components/RegistrasiConfirmationDialog';
+import TagihanDetailDialog from '@/components/TagihanDetailDialog'; // Import the detail dialog
+
+interface VerificationItem {
+  item: string;
+  memenuhi_syarat: boolean;
+  keterangan: string;
+}
 
 interface Tagihan {
   id_tagihan: string;
@@ -36,9 +51,14 @@ interface Tagihan {
   status_tagihan: string;
   waktu_input: string;
   id_pengguna_input: string;
-  nomor_registrasi?: string; // Add this field for the generated number
-  waktu_registrasi?: string; // Add this field for registration timestamp
-  nama_registrator?: string; // Add this field for registrator name
+  nomor_registrasi?: string;
+  waktu_registrasi?: string;
+  nama_registrator?: string;
+  catatan_verifikator?: string;
+  waktu_verifikasi?: string;
+  detail_verifikasi?: VerificationItem[];
+  nomor_verifikasi?: string;
+  nama_verifikator?: string;
 }
 
 const PortalRegistrasi = () => {
@@ -55,7 +75,18 @@ const PortalRegistrasi = () => {
   const [isRegistrasiModalOpen, setIsRegistrasiModalOpen] = useState(false);
   const [selectedTagihanForRegistrasi, setSelectedTagihanForRegistrasi] = useState<Tagihan | null>(null);
   const [generatedNomorRegistrasi, setGeneratedNomorRegistrasi] = useState<string | null>(null);
-  const [isConfirming, setIsConfirming] = useState(false); // State for loading on confirm button
+  const [isConfirming, setIsConfirming] = useState(false);
+
+  // State for History Table
+  const [historyTagihanList, setHistoryTagihanList] = useState<Tagihan[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(true);
+  const [historyCurrentPage, setHistoryCurrentPage] = useState(1);
+  const [historyItemsPerPage, setHistoryItemsPerPage] = useState(10);
+  const [historyTotalItems, setHistoryTotalItems] = useState(0);
+
+  // State for Detail Dialog
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [selectedTagihanForDetail, setSelectedTagihanForDetail] = useState<Tagihan | null>(null);
 
   // Effect untuk memfokuskan kembali input pencarian setelah data dimuat
   useEffect(() => {
@@ -121,9 +152,46 @@ const PortalRegistrasi = () => {
     }
   };
 
+  // Fetch History Tagihan (last 24 hours, status 'Menunggu Verifikasi')
+  const fetchHistoryTagihan = async () => {
+    if (!user || sessionLoading || profile?.peran !== 'Staf Registrasi') {
+      setLoadingHistory(false);
+      return;
+    }
+
+    setLoadingHistory(true);
+    try {
+      const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+
+      let query = supabase
+        .from('database_tagihan')
+        .select('*', { count: 'exact' })
+        .eq('status_tagihan', 'Menunggu Verifikasi')
+        .gte('waktu_registrasi', twentyFourHoursAgo);
+
+      query = query.order('waktu_registrasi', { ascending: false });
+
+      const { data, error, count } = await query.range(
+        (historyCurrentPage - 1) * historyItemsPerPage,
+        historyCurrentPage * historyItemsPerPage - 1
+      );
+
+      if (error) throw error;
+
+      setHistoryTagihanList(data as Tagihan[]);
+      setHistoryTotalItems(count || 0);
+    } catch (error: any) {
+      console.error('Error fetching history tagihan:', error.message);
+      toast.error('Gagal memuat riwayat tagihan: ' + error.message);
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+
   useEffect(() => {
     fetchQueueTagihan();
-  }, [user, sessionLoading, profile, debouncedSearchQuery, selectedSkpd]);
+    fetchHistoryTagihan(); // Fetch history data
+  }, [user, sessionLoading, profile, debouncedSearchQuery, selectedSkpd, historyCurrentPage, historyItemsPerPage]);
 
   const generateNomorRegistrasi = async (): Promise<string> => {
     const now = new Date();
@@ -188,7 +256,7 @@ const PortalRegistrasi = () => {
           status_tagihan: 'Menunggu Verifikasi',
           nomor_registrasi: nomorRegistrasi,
           waktu_registrasi: new Date().toISOString(),
-          nama_registrator: profile?.nama_lengkap, // Use the registrator's name from profile
+          nama_registrator: profile?.nama_lengkap,
         })
         .eq('id_tagihan', tagihanId);
 
@@ -196,7 +264,8 @@ const PortalRegistrasi = () => {
 
       toast.success('Tagihan berhasil diregistrasi!');
       setIsRegistrasiModalOpen(false);
-      fetchQueueTagihan(); // Refresh the list
+      fetchQueueTagihan(); // Refresh the queue list
+      fetchHistoryTagihan(); // Refresh the history list
     } catch (error: any) {
       console.error('Error confirming registration:', error.message);
       toast.error('Gagal mengkonfirmasi registrasi: ' + error.message);
@@ -205,7 +274,14 @@ const PortalRegistrasi = () => {
     }
   };
 
-  if (sessionLoading || loadingQueue) {
+  const handleDetailClick = (tagihan: Tagihan) => {
+    setSelectedTagihanForDetail(tagihan);
+    setIsDetailModalOpen(true);
+  };
+
+  const historyTotalPages = historyItemsPerPage === -1 ? 1 : Math.ceil(historyTotalItems / historyItemsPerPage);
+
+  if (sessionLoading || loadingQueue || loadingHistory) {
     return (
       <div className="p-6 bg-white rounded-lg shadow-sm border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
         <h1 className="text-3xl font-bold text-gray-800 dark:text-white mb-4">Memuat Portal Registrasi...</h1>
@@ -227,6 +303,7 @@ const PortalRegistrasi = () => {
     <div className="space-y-6">
       <h1 className="text-3xl font-bold text-gray-800 dark:text-white mb-6">Portal Registrasi</h1>
 
+      {/* Antrian Registrasi Panel */}
       <div className="p-6 bg-white rounded-lg shadow-sm border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
         <h2 className="text-2xl font-semibold text-gray-800 dark:text-white mb-4">Antrian Registrasi</h2>
 
@@ -302,6 +379,104 @@ const PortalRegistrasi = () => {
         )}
       </div>
 
+      {/* Riwayat Registrasi Panel */}
+      <div className="p-6 bg-white rounded-lg shadow-sm border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
+        <h2 className="text-2xl font-semibold text-gray-800 dark:text-white mb-4">Riwayat Registrasi (24 Jam Terakhir)</h2>
+
+        <div className="mb-4 flex items-center space-x-2">
+          <div className="flex items-center space-x-2">
+            <label htmlFor="history-items-per-page" className="whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">Per halaman:</label>
+            <Select
+              value={historyItemsPerPage.toString()}
+              onValueChange={(value) => {
+                setHistoryItemsPerPage(Number(value));
+                setHistoryCurrentPage(1);
+              }}
+            >
+              <SelectTrigger className="w-[100px]">
+                <SelectValue placeholder="10" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="10">10</SelectItem>
+                <SelectItem value="25">25</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+                <SelectItem value="100">100</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        {loadingHistory ? (
+          <p className="text-center text-gray-600 dark:text-gray-400">Memuat riwayat registrasi...</p>
+        ) : historyTagihanList.length === 0 ? (
+          <p className="text-center text-gray-600 dark:text-gray-400">Tidak ada riwayat registrasi dalam 24 jam terakhir.</p>
+        ) : (
+          <>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Waktu Registrasi</TableHead>
+                    <TableHead>Nomor Registrasi</TableHead>
+                    <TableHead>Nomor SPM</TableHead>
+                    <TableHead>Nama SKPD</TableHead>
+                    <TableHead>Jumlah Kotor</TableHead>
+                    <TableHead className="text-center">Aksi</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {historyTagihanList.map((tagihan) => (
+                    <TableRow key={tagihan.id_tagihan}>
+                      <TableCell>{format(parseISO(tagihan.waktu_registrasi!), 'dd MMMM yyyy HH:mm', { locale: localeId })}</TableCell>
+                      <TableCell className="font-medium">{tagihan.nomor_registrasi}</TableCell>
+                      <TableCell>{tagihan.nomor_spm}</TableCell>
+                      <TableCell>{tagihan.nama_skpd}</TableCell>
+                      <TableCell>Rp{tagihan.jumlah_kotor.toLocaleString('id-ID')}</TableCell>
+                      <TableCell className="text-center">
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          title="Lihat Detail"
+                          onClick={() => handleDetailClick(tagihan)}
+                        >
+                          <EyeIcon className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+            <Pagination className="mt-4">
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious
+                    onClick={() => setHistoryCurrentPage((prev) => Math.max(1, prev - 1))}
+                    disabled={historyCurrentPage === 1}
+                  />
+                </PaginationItem>
+                {[...Array(historyTotalPages)].map((_, index) => (
+                  <PaginationItem key={index}>
+                    <PaginationLink
+                      isActive={historyCurrentPage === index + 1}
+                      onClick={() => setHistoryCurrentPage(index + 1)}
+                    >
+                      {index + 1}
+                    </PaginationLink>
+                  </PaginationItem>
+                ))}
+                <PaginationItem>
+                  <PaginationNext
+                    onClick={() => setHistoryCurrentPage((prev) => Math.min(historyTotalPages, prev + 1))}
+                    disabled={historyCurrentPage === historyTotalPages}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          </>
+        )}
+      </div>
+
       <RegistrasiConfirmationDialog
         isOpen={isRegistrasiModalOpen}
         onClose={() => setIsRegistrasiModalOpen(false)}
@@ -309,6 +484,12 @@ const PortalRegistrasi = () => {
         tagihan={selectedTagihanForRegistrasi}
         generatedNomorRegistrasi={generatedNomorRegistrasi}
         isConfirming={isConfirming}
+      />
+
+      <TagihanDetailDialog
+        isOpen={isDetailModalOpen}
+        onClose={() => setIsDetailModalOpen(false)}
+        tagihan={selectedTagihanForDetail}
       />
     </div>
   );
