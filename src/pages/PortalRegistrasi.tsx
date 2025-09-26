@@ -33,8 +33,9 @@ const PortalRegistrasi = () => {
   const { user, profile, loading: sessionLoading } = useSession();
   const [queueTagihanList, setQueueTagihanList] = useState<Tagihan[]>([]);
   const [loadingQueue, setLoadingQueue] = useState(true);
+  const [searchQuery, setSearchQuery] = useState(''); // State baru untuk query pencarian
 
-  // Fetch Tagihan with 'Menunggu Registrasi' status
+  // Fetch Tagihan with 'Menunggu Registrasi' status and apply search filter
   useEffect(() => {
     const fetchQueueTagihan = async () => {
       if (!user || sessionLoading || profile?.peran !== 'Staf Registrasi') {
@@ -44,11 +45,16 @@ const PortalRegistrasi = () => {
 
       setLoadingQueue(true);
       try {
-        const { data, error } = await supabase
+        let query = supabase
           .from('database_tagihan')
           .select('*')
-          .eq('status_tagihan', 'Menunggu Registrasi') // Filter ditambahkan di sini
-          .order('waktu_input', { ascending: true });
+          .eq('status_tagihan', 'Menunggu Registrasi'); // Filter status tetap ada
+
+        if (searchQuery) {
+          query = query.ilike('nomor_spm', `%${searchQuery}%`); // Tambahkan filter pencarian
+        }
+
+        const { data, error } = await query.order('waktu_input', { ascending: true });
 
         if (error) throw error;
         setQueueTagihanList(data as Tagihan[]);
@@ -60,7 +66,7 @@ const PortalRegistrasi = () => {
       }
     };
     fetchQueueTagihan();
-  }, [user, sessionLoading, profile]); // Dependencies for re-fetching
+  }, [user, sessionLoading, profile, searchQuery]); // Tambahkan searchQuery ke dependensi
 
   if (sessionLoading || loadingQueue) {
     return (
@@ -94,7 +100,8 @@ const PortalRegistrasi = () => {
               type="text"
               placeholder="Cari Nomor SPM..."
               className="pl-9"
-              disabled // Disabled as per instruction to focus on raw data display
+              value={searchQuery} // Hubungkan input ke state
+              onChange={(e) => setSearchQuery(e.target.value)} // Perbarui state saat input berubah
             />
           </div>
         </div>
@@ -102,7 +109,7 @@ const PortalRegistrasi = () => {
         {loadingQueue ? (
           <p className="text-center text-gray-600 dark:text-gray-400">Memuat antrian...</p>
         ) : queueTagihanList.length === 0 ? (
-          <p className="text-center text-gray-600 dark:text-gray-400">Tidak ada tagihan ditemukan dengan status 'Menunggu Registrasi'.</p>
+          <p className="text-center text-gray-600 dark:text-gray-400">Tidak ada tagihan ditemukan dengan status 'Menunggu Registrasi' atau sesuai pencarian Anda.</p>
         ) : (
           <div className="overflow-x-auto">
             <Table>
