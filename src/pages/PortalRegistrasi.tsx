@@ -33,7 +33,19 @@ const PortalRegistrasi = () => {
   const { user, profile, loading: sessionLoading } = useSession();
   const [queueTagihanList, setQueueTagihanList] = useState<Tagihan[]>([]);
   const [loadingQueue, setLoadingQueue] = useState(true);
-  const [searchQuery, setSearchQuery] = useState(''); // State baru untuk query pencarian
+  const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState(searchQuery); // State baru untuk debouncing
+
+  // Effect untuk debouncing searchQuery
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 500); // Debounce selama 500ms
+
+    return () => {
+      clearTimeout(handler); // Bersihkan timer jika searchQuery berubah sebelum waktu habis
+    };
+  }, [searchQuery]); // Effect ini berjalan setiap kali searchQuery berubah
 
   // Fetch Tagihan with 'Menunggu Registrasi' status and apply search filter
   useEffect(() => {
@@ -48,10 +60,10 @@ const PortalRegistrasi = () => {
         let query = supabase
           .from('database_tagihan')
           .select('*')
-          .eq('status_tagihan', 'Menunggu Registrasi'); // Filter status tetap ada
+          .eq('status_tagihan', 'Menunggu Registrasi');
 
-        if (searchQuery) {
-          query = query.ilike('nomor_spm', `%${searchQuery}%`); // Tambahkan filter pencarian
+        if (debouncedSearchQuery) { // Gunakan debouncedSearchQuery untuk filter
+          query = query.ilike('nomor_spm', `%${debouncedSearchQuery}%`);
         }
 
         const { data, error } = await query.order('waktu_input', { ascending: true });
@@ -66,7 +78,7 @@ const PortalRegistrasi = () => {
       }
     };
     fetchQueueTagihan();
-  }, [user, sessionLoading, profile, searchQuery]); // Tambahkan searchQuery ke dependensi
+  }, [user, sessionLoading, profile, debouncedSearchQuery]); // Dependensi diubah ke debouncedSearchQuery
 
   if (sessionLoading || loadingQueue) {
     return (
@@ -100,8 +112,8 @@ const PortalRegistrasi = () => {
               type="text"
               placeholder="Cari Nomor SPM..."
               className="pl-9"
-              value={searchQuery} // Hubungkan input ke state
-              onChange={(e) => setSearchQuery(e.target.value)} // Perbarui state saat input berubah
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
         </div>
