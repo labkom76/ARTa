@@ -11,6 +11,13 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'; // Import Select components
 import { SearchIcon, CheckCircleIcon } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { id } from 'date-fns/locale';
@@ -35,10 +42,42 @@ const PortalRegistrasi = () => {
   const [queueTagihanList, setQueueTagihanList] = useState<Tagihan[]>([]);
   const [loadingQueue, setLoadingQueue] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const debouncedSearchQuery = useDebounce(searchQuery, 700); // Gunakan hook useDebounce dengan delay 700ms
-  const searchInputRef = useRef<HTMLInputElement>(null); // Membuat ref untuk input pencarian
+  const debouncedSearchQuery = useDebounce(searchQuery, 700);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // Fetch Tagihan with 'Menunggu Registrasi' status and apply search filter
+  const [skpdOptions, setSkpdOptions] = useState<string[]>([]); // State untuk daftar SKPD
+  const [selectedSkpd, setSelectedSkpd] = useState<string>('Semua SKPD'); // State untuk SKPD yang dipilih
+
+  // Effect untuk memfokuskan kembali input pencarian setelah data dimuat
+  useEffect(() => {
+    if (!loadingQueue && debouncedSearchQuery && searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  }, [loadingQueue, debouncedSearchQuery]);
+
+  // Fetch unique SKPD names for the dropdown
+  useEffect(() => {
+    const fetchSkpdOptions = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('database_tagihan')
+          .select('nama_skpd');
+
+        if (error) throw error;
+
+        const uniqueSkpd = Array.from(new Set(data.map(item => item.nama_skpd)))
+          .filter((skpd): skpd is string => skpd !== null && skpd.trim() !== ''); // Filter out null/empty
+
+        setSkpdOptions(['Semua SKPD', ...uniqueSkpd.sort()]);
+      } catch (error: any) {
+        console.error('Error fetching SKPD options:', error.message);
+        toast.error('Gagal memuat daftar SKPD: ' + error.message);
+      }
+    };
+    fetchSkpdOptions();
+  }, []); // Hanya berjalan sekali saat komponen dimuat
+
+  // Fetch Tagihan with 'Menunggu Registrasi' status and apply search/SKPD filters
   useEffect(() => {
     const fetchQueueTagihan = async () => {
       if (!user || sessionLoading || profile?.peran !== 'Staf Registrasi') {
@@ -53,8 +92,12 @@ const PortalRegistrasi = () => {
           .select('*')
           .eq('status_tagihan', 'Menunggu Registrasi');
 
-        if (debouncedSearchQuery) { // Gunakan debouncedSearchQuery untuk filter
+        if (debouncedSearchQuery) {
           query = query.ilike('nomor_spm', `%${debouncedSearchQuery}%`);
+        }
+
+        if (selectedSkpd !== 'Semua SKPD') {
+          query = query.eq('nama_skpd', selectedSkpd);
         }
 
         const { data, error } = await query.order('waktu_input', { ascending: true });
@@ -69,14 +112,7 @@ const PortalRegistrasi = () => {
       }
     };
     fetchQueueTagihan();
-  }, [user, sessionLoading, profile, debouncedSearchQuery]); // Dependensi diubah ke debouncedSearchQuery
-
-  // Effect untuk memfokuskan kembali input pencarian setelah data dimuat
-  useEffect(() => {
-    if (!loadingQueue && debouncedSearchQuery && searchInputRef.current) {
-      searchInputRef.current.focus();
-    }
-  }, [loadingQueue, debouncedSearchQuery]); // Bergantung pada loadingQueue dan debouncedSearchQuery
+  }, [user, sessionLoading, profile, debouncedSearchQuery, selectedSkpd]); // Tambahkan selectedSkpd sebagai dependensi
 
   if (sessionLoading || loadingQueue) {
     return (
@@ -103,24 +139,36 @@ const PortalRegistrasi = () => {
       <div className="p-6 bg-white rounded-lg shadow-sm border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
         <h2 className="text-2xl font-semibold text-gray-800 dark:text-white mb-4">Antrian Registrasi</h2>
 
-        <div className="flex items-center space-x-2 mb-4">
-          <div className="relative flex-1">
+        <div className="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-2 mb-4">
+          <div className="relative flex-1 w-full sm:w-auto">
             <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400" />
             <Input
-              ref={searchInputRef} // Menghubungkan ref ke komponen Input
+              ref={searchInputRef}
               type="text"
               placeholder="Cari Nomor SPM..."
-              className="pl-9"
+              className="pl-9 w-full"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
+          <Select onValueChange={setSelectedSkpd} value={selectedSkpd}>
+            <SelectTrigger className="w-full sm:w-[180px]">
+              <SelectValue placeholder="Filter SKPD" />
+            </SelectTrigger>
+            <SelectContent>
+              {skpdOptions.map((skpd) => (
+                <SelectItem key={skpd} value={skpd}>
+                  {skpd}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         {loadingQueue ? (
           <p className="text-center text-gray-600 dark:text-gray-400">Memuat antrian...</p>
         ) : queueTagihanList.length === 0 ? (
-          <p className="text-center text-gray-600 dark:text-gray-400">Tidak ada tagihan ditemukan dengan status 'Menunggu Registrasi' atau sesuai pencarian Anda.</p>
+          <p className="text-center text-gray-600 dark:text-gray-400">Tidak ada tagihan ditemukan dengan status 'Menunggu Registrasi' atau sesuai pencarian/filter Anda.</p>
         ) : (
           <div className="overflow-x-auto">
             <Table>
