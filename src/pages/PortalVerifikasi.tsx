@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { format, parseISO, startOfDay, endOfDay, isSameDay } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
-import { FileCheckIcon, LockIcon, EyeIcon, PrinterIcon } from 'lucide-react'; // Added EyeIcon and PrinterIcon
+import { FileCheckIcon, LockIcon, EyeIcon, PrinterIcon } from 'lucide-react';
 import VerifikasiTagihanDialog from '@/components/VerifikasiTagihanDialog';
 import {
   Pagination,
@@ -30,8 +30,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import TagihanDetailDialog from '@/components/TagihanDetailDialog'; // Import TagihanDetailDialog
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'; // Import Card components
+import TagihanDetailDialog from '@/components/TagihanDetailDialog';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface VerificationItem {
   item: string;
@@ -67,19 +67,19 @@ const LOCK_TIMEOUT_MINUTES = 30; // Define lock timeout: 30 minutes
 const PortalVerifikasi = () => {
   const { user, profile, loading: sessionLoading } = useSession();
   const [queueTagihanList, setQueueTagihanList] = useState<Tagihan[]>([]);
-  const [loadingQueue, setLoadingQueue] = useState(true); // Renamed for clarity
+  const [loadingQueue, setLoadingQueue] = useState(true);
 
-  const [historyTagihanList, setHistoryTagihanList] = useState<Tagihan[]>([]); // New state for history
-  const [loadingHistory, setLoadingHistory] = useState(true); // New loading state for history
-  const [historyCurrentPage, setHistoryCurrentPage] = useState(1); // New pagination state
-  const [historyItemsPerPage, setHistoryItemsPerPage] = useState(10); // New pagination state
-  const [historyTotalItems, setHistoryTotalItems] = useState(0); // New pagination state
+  const [historyTagihanList, setHistoryTagihanList] = useState<Tagihan[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(true);
+  const [historyCurrentPage, setHistoryCurrentPage] = useState(1);
+  const [historyItemsPerPage, setHistoryItemsPerPage] = useState(10);
+  const [historyTotalItems, setHistoryTotalItems] = useState(0);
 
   const [isVerifikasiModalOpen, setIsVerifikasiModalOpen] = useState(false);
   const [selectedTagihanForVerifikasi, setSelectedTagihanForVerifikasi] = useState<Tagihan | null>(null);
 
-  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false); // State for detail dialog
-  const [selectedTagihanForDetail, setSelectedTagihanForDetail] = useState<Tagihan | null>(null); // State for detail tagihan
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [selectedTagihanForDetail, setSelectedTagihanForDetail] = useState<Tagihan | null>(null);
 
   const fetchQueueTagihan = async () => {
     if (sessionLoading || profile?.peran !== 'Staf Verifikator') {
@@ -98,7 +98,6 @@ const PortalVerifikasi = () => {
         .eq('status_tagihan', 'Menunggu Verifikasi')
         .order('waktu_registrasi', { ascending: true });
 
-      // Filter out items locked by others, unless their lock is stale or locked by current user
       query = query.or(
         `locked_by.is.null,locked_by.eq.${user?.id},locked_at.lt.${lockTimeoutThreshold}`
       );
@@ -129,7 +128,7 @@ const PortalVerifikasi = () => {
       let query = supabase
         .from('database_tagihan')
         .select('*', { count: 'exact' })
-        .in('status_tagihan', ['Diteruskan', 'Dikembalikan']) // Only verified or returned
+        .in('status_tagihan', ['Diteruskan', 'Dikembalikan'])
         .gte('waktu_verifikasi', todayStart)
         .lte('waktu_verifikasi', todayEnd)
         .order('waktu_verifikasi', { ascending: false });
@@ -156,7 +155,7 @@ const PortalVerifikasi = () => {
 
   useEffect(() => {
     fetchQueueTagihan();
-    fetchHistoryTagihan(); // Fetch history data on mount and dependencies change
+    fetchHistoryTagihan();
 
     const channel = supabase
       .channel('portal-verifikasi-changes')
@@ -174,7 +173,6 @@ const PortalVerifikasi = () => {
           const now = new Date();
           const lockTimeoutThreshold = new Date(now.getTime() - LOCK_TIMEOUT_MINUTES * 60 * 1000);
 
-          // Update Queue List
           setQueueTagihanList(prevList => {
             const existingIndex = prevList.findIndex(t => t.id_tagihan === newTagihan.id_tagihan);
             let updatedList = [...prevList];
@@ -207,7 +205,6 @@ const PortalVerifikasi = () => {
             return updatedList.sort((a, b) => (a.waktu_registrasi || '').localeCompare(b.waktu_registrasi || ''));
           });
 
-          // Update History List
           setHistoryTagihanList(prevList => {
             const isVerifiedToday = newTagihan.waktu_verifikasi &&
                                     isSameDay(parseISO(newTagihan.waktu_verifikasi), new Date()) &&
@@ -219,14 +216,13 @@ const PortalVerifikasi = () => {
               if (existingHistoryIndex > -1) {
                 updatedHistoryList[existingHistoryIndex] = newTagihan;
               } else {
-                updatedHistoryList.unshift(newTagihan); // Add to the beginning for most recent
+                updatedHistoryList.unshift(newTagihan);
               }
             } else {
               if (existingHistoryIndex > -1) {
                 updatedHistoryList.splice(existingHistoryIndex, 1);
               }
             }
-            // Re-sort to ensure newest is at top, then apply pagination logic if needed
             return updatedHistoryList.sort((a, b) => (b.waktu_verifikasi || '').localeCompare(a.waktu_verifikasi || ''));
           });
         }
@@ -236,7 +232,7 @@ const PortalVerifikasi = () => {
     return () => {
       channel.unsubscribe();
     };
-  }, [sessionLoading, profile, user, historyCurrentPage, historyItemsPerPage]); // Add history dependencies
+  }, [sessionLoading, profile, user, historyCurrentPage, historyItemsPerPage]);
 
   const handleProcessVerification = async (tagihan: Tagihan) => {
     if (!user) {
@@ -322,73 +318,77 @@ const PortalVerifikasi = () => {
   }
 
   return (
-    <div className="p-6 bg-white rounded-lg shadow-sm border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
+    <div className="space-y-6"> {/* Main container for spacing between sections */}
       <h1 className="text-3xl font-bold text-gray-800 dark:text-white mb-6">Portal Verifikasi Tagihan</h1>
 
       {/* Antrian Verifikasi Panel */}
-      <div className="mb-6">
-        <h2 className="text-2xl font-semibold text-gray-800 dark:text-white mb-4">Antrian Verifikasi</h2>
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nomor Registrasi</TableHead>
-                <TableHead>Waktu Registrasi</TableHead>
-                <TableHead>Nomor SPM</TableHead>
-                <TableHead>Nama SKPD</TableHead>
-                <TableHead>Jumlah Kotor</TableHead>
-                <TableHead className="text-center">Aksi</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {queueTagihanList.length === 0 ? (
+      <Card className="shadow-sm rounded-lg">
+        <CardHeader>
+          <CardTitle className="text-2xl font-semibold text-gray-800 dark:text-white">Antrian Verifikasi</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center text-muted-foreground">
-                    Tidak ada tagihan di antrian verifikasi.
-                  </TableCell>
+                  <TableHead>Nomor Registrasi</TableHead>
+                  <TableHead>Waktu Registrasi</TableHead>
+                  <TableHead>Nomor SPM</TableHead>
+                  <TableHead>Nama SKPD</TableHead>
+                  <TableHead>Jumlah Kotor</TableHead>
+                  <TableHead className="text-center">Aksi</TableHead>
                 </TableRow>
-              ) : (
-                queueTagihanList.map((tagihan) => {
-                  const isLockedByOther = tagihan.locked_by && tagihan.locked_by !== user?.id;
-                  const isStaleLock = tagihan.locked_at && (new Date().getTime() - parseISO(tagihan.locked_at).getTime()) > LOCK_TIMEOUT_MINUTES * 60 * 1000;
+              </TableHeader>
+              <TableBody>
+                {queueTagihanList.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center text-muted-foreground">
+                      Tidak ada tagihan di antrian verifikasi.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  queueTagihanList.map((tagihan) => {
+                    const isLockedByOther = tagihan.locked_by && tagihan.locked_by !== user?.id;
+                    const isStaleLock = tagihan.locked_at && (new Date().getTime() - parseISO(tagihan.locked_at).getTime()) > LOCK_TIMEOUT_MINUTES * 60 * 1000;
 
-                  const isDisabled = isLockedByOther && !isStaleLock;
+                    const isDisabled = isLockedByOther && !isStaleLock;
 
-                  return (
-                    <TableRow key={tagihan.id_tagihan}>
-                      <TableCell className="font-medium">{tagihan.nomor_registrasi || '-'}</TableCell>
-                      <TableCell>
-                        {tagihan.waktu_registrasi ? format(parseISO(tagihan.waktu_registrasi), 'dd MMMM yyyy HH:mm', { locale: localeId }) : '-'}
-                      </TableCell>
-                      <TableCell>{tagihan.nomor_spm}</TableCell>
-                      <TableCell>{tagihan.nama_skpd}</TableCell>
-                      <TableCell>Rp{tagihan.jumlah_kotor.toLocaleString('id-ID')}</TableCell>
-                      <TableCell className="text-center">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          title={isDisabled ? "Tagihan ini sedang diproses oleh verifikator lain" : "Proses Verifikasi"}
-                          onClick={() => handleProcessVerification(tagihan)}
-                          disabled={isDisabled}
-                        >
-                          {isDisabled ? (
-                            <LockIcon className="h-5 w-5 text-gray-400" />
-                          ) : (
-                            <FileCheckIcon className="h-5 w-5 text-blue-500" />
-                          )}
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
-              )}
-            </TableBody>
-          </Table>
-        </div>
-      </div>
+                    return (
+                      <TableRow key={tagihan.id_tagihan}>
+                        <TableCell className="font-medium">{tagihan.nomor_registrasi || '-'}</TableCell>
+                        <TableCell>
+                          {tagihan.waktu_registrasi ? format(parseISO(tagihan.waktu_registrasi), 'dd MMMM yyyy HH:mm', { locale: localeId }) : '-'}
+                        </TableCell>
+                        <TableCell>{tagihan.nomor_spm}</TableCell>
+                        <TableCell>{tagihan.nama_skpd}</TableCell>
+                        <TableCell>Rp{tagihan.jumlah_kotor.toLocaleString('id-ID')}</TableCell>
+                        <TableCell className="text-center">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            title={isDisabled ? "Tagihan ini sedang diproses oleh verifikator lain" : "Proses Verifikasi"}
+                            onClick={() => handleProcessVerification(tagihan)}
+                            disabled={isDisabled}
+                          >
+                            {isDisabled ? (
+                              <LockIcon className="h-5 w-5 text-gray-400" />
+                            ) : (
+                              <FileCheckIcon className="h-5 w-5 text-blue-500" />
+                            )}
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Riwayat Verifikasi Hari Ini Panel */}
-      <Card className="shadow-sm rounded-lg mt-6"> {/* Wrapped in Card */}
+      <Card className="shadow-sm rounded-lg">
         <CardHeader>
           <CardTitle className="text-2xl font-semibold text-gray-800 dark:text-white">Riwayat Verifikasi Hari Ini</CardTitle>
         </CardHeader>
