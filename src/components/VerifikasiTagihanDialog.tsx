@@ -33,7 +33,7 @@ import { toast } from 'sonner';
 import { useSession } from '@/contexts/SessionContext';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
+import *s z from 'zod';
 
 interface VerificationItem {
   item: string;
@@ -185,10 +185,8 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
 
     setIsSubmitting(true);
     try {
-      let nomorVerifikasi: string | null = null;
-      if (values.status_keputusan === 'Diteruskan') {
-        nomorVerifikasi = await generateNomorVerifikasi();
-      }
+      // Generate nomorVerifikasi unconditionally for any verification action
+      const nomorVerifikasi = await generateNomorVerifikasi();
 
       const { error } = await supabase
         .from('database_tagihan')
@@ -198,19 +196,19 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
           waktu_verifikasi: new Date().toISOString(),
           nama_verifikator: profile.nama_lengkap,
           detail_verifikasi: values.detail_verifikasi,
-          nomor_verifikasi: nomorVerifikasi,
+          nomor_verifikasi: nomorVerifikasi, // This will now always have a value
           locked_by: null, // Unlock after processing
           locked_at: null, // Clear lock timestamp
         })
-        .eq('id_tagihan', tagihan.id_tagihan); // Removed .eq('locked_by', user.id)
+        .eq('id_tagihan', tagihan.id_tagihan);
 
       if (error) {
-        console.error('Supabase update error:', error); // Log the error object
+        console.error('Supabase update error:', error);
         throw error;
       }
 
       toast.success(`Tagihan ${tagihan.nomor_spm} berhasil ${values.status_keputusan.toLowerCase()}!`);
-      onClose(); // Close the dialog and trigger unlock in parent
+      onClose();
     } catch (error: any) {
       console.error('Error processing verification:', error.message);
       toast.error('Gagal memproses verifikasi: ' + error.message);
@@ -235,7 +233,7 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
           </SheetDescription>
         </SheetHeader>
 
-        <div className="flex-1 overflow-y-auto pr-4 -mr-4"> {/* Added pr-4 -mr-4 for scrollbar */}
+        <div className="flex-1 overflow-y-auto pr-4 -mr-4">
           <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-6 py-4">
             {/* Detail Tagihan */}
             <div className="grid gap-2">
