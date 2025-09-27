@@ -33,7 +33,7 @@ import { toast } from 'sonner';
 import { useSession } from '@/contexts/SessionContext';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import *s z from 'zod';
+import * as z from 'zod'; // Perbaikan di sini: dari '*s z' menjadi '* as z'
 
 interface VerificationItem {
   item: string;
