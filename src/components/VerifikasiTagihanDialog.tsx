@@ -202,10 +202,12 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
           locked_by: null, // Unlock after processing
           locked_at: null, // Clear lock timestamp
         })
-        .eq('id_tagihan', tagihan.id_tagihan)
-        .eq('locked_by', user.id); // Ensure only the current locker can update
+        .eq('id_tagihan', tagihan.id_tagihan); // Removed .eq('locked_by', user.id)
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase update error:', error); // Log the error object
+        throw error;
+      }
 
       toast.success(`Tagihan ${tagihan.nomor_spm} berhasil ${values.status_keputusan.toLowerCase()}!`);
       onClose(); // Close the dialog and trigger unlock in parent
