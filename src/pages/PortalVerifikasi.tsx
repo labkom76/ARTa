@@ -11,10 +11,26 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, startOfDay, endOfDay } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
-import { FileCheckIcon, LockIcon } from 'lucide-react';
+import { FileCheckIcon, LockIcon, EyeIcon, PrinterIcon } from 'lucide-react'; // Added EyeIcon and PrinterIcon
 import VerifikasiTagihanDialog from '@/components/VerifikasiTagihanDialog';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '@/components/ui/pagination';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import TagihanDetailDialog from '@/components/TagihanDetailDialog'; // Import TagihanDetailDialog
 
 interface VerificationItem {
   item: string;
@@ -50,18 +66,27 @@ const LOCK_TIMEOUT_MINUTES = 30; // Define lock timeout: 30 minutes
 const PortalVerifikasi = () => {
   const { user, profile, loading: sessionLoading } = useSession();
   const [queueTagihanList, setQueueTagihanList] = useState<Tagihan[]>([]);
-  const [loadingData, setLoadingData] = useState(true);
+  const [loadingQueue, setLoadingQueue] = useState(true); // Renamed for clarity
+
+  const [historyTagihanList, setHistoryTagihanList] = useState<Tagihan[]>([]); // New state for history
+  const [loadingHistory, setLoadingHistory] = useState(true); // New loading state for history
+  const [historyCurrentPage, setHistoryCurrentPage] = useState(1); // New pagination state
+  const [historyItemsPerPage, setHistoryItemsPerPage] = useState(10); // New pagination state
+  const [historyTotalItems, setHistoryTotalItems] = useState(0); // New pagination state
 
   const [isVerifikasiModalOpen, setIsVerifikasiModalOpen] = useState(false);
   const [selectedTagihanForVerifikasi, setSelectedTagihanForVerifikasi] = useState<Tagihan | null>(null);
 
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false); // State for detail dialog
+  const [selectedTagihanForDetail, setSelectedTagihanForDetail] = useState<Tagihan | null>(null); // State for detail tagihan
+
   const fetchQueueTagihan = async () => {
     if (sessionLoading || profile?.peran !== 'Staf Verifikator') {
-      setLoadingData(false);
+      setLoadingQueue(false);
       return;
     }
 
-    setLoadingData(true);
+    setLoadingQueue(true);
     try {
       const now = new Date();
       const lockTimeoutThreshold = new Date(now.getTime() - LOCK_TIMEOUT_MINUTES * 60 * 1000).toISOString();
@@ -85,12 +110,52 @@ const PortalVerifikasi = () => {
       console.error('Error fetching queue tagihan:', error.message);
       toast.error('Gagal memuat antrian verifikasi: ' + error.message);
     } finally {
-      setLoadingData(false);
+      setLoadingQueue(false);
+    }
+  };
+
+  const fetchHistoryTagihan = async () => {
+    if (sessionLoading || profile?.peran !== 'Staf Verifikator') {
+      setLoadingHistory(false);
+      return;
+    }
+
+    setLoadingHistory(true);
+    try {
+      const todayStart = startOfDay(new Date()).toISOString();
+      const todayEnd = endOfDay(new Date()).toISOString();
+
+      let query = supabase
+        .from('database_tagihan')
+        .select('*', { count: 'exact' })
+        .in('status_tagihan', ['Diteruskan', 'Dikembalikan']) // Only verified or returned
+        .gte('waktu_verifikasi', todayStart)
+        .lte('waktu_verifikasi', todayEnd)
+        .order('waktu_verifikasi', { ascending: false });
+
+      if (historyItemsPerPage !== -1) {
+        query = query.range(
+          (historyCurrentPage - 1) * historyItemsPerPage,
+          historyCurrentPage * historyItemsPerPage - 1
+        );
+      }
+
+      const { data, error, count } = await query;
+
+      if (error) throw error;
+      setHistoryTagihanList(data as Tagihan[]);
+      setHistoryTotalItems(count || 0);
+    } catch (error: any) {
+      console.error('Error fetching history tagihan:', error.message);
+      toast.error('Gagal memuat riwayat verifikasi: ' + error.message);
+    } finally {
+      setLoadingHistory(false);
     }
   };
 
   useEffect(() => {
     fetchQueueTagihan();
+    fetchHistoryTagihan(); // Fetch history data on mount and dependencies change
 
     const channel = supabase
       .channel('portal-verifikasi-changes')
@@ -108,55 +173,60 @@ const PortalVerifikasi = () => {
           const now = new Date();
           const lockTimeoutThreshold = new Date(now.getTime() - LOCK_TIMEOUT_MINUTES * 60 * 1000);
 
+          // Update Queue List
           setQueueTagihanList(prevList => {
-            console.log('Realtime Update Received:', { oldTagihan, newTagihan, currentUser: user?.id });
             const existingIndex = prevList.findIndex(t => t.id_tagihan === newTagihan.id_tagihan);
-            let updatedList = [...prevList]; // Create a mutable copy
+            let updatedList = [...prevList];
 
-            // Determine if the tagihan should currently be in the queue for THIS user
             const isCurrentlyInQueue =
               newTagihan.status_tagihan === 'Menunggu Verifikasi' &&
-              (newTagihan.locked_by === null || // Not locked
-               newTagihan.locked_by === user?.id || // Locked by current user
-               (newTagihan.locked_at && parseISO(newTagihan.locked_at).getTime() < lockTimeoutThreshold.getTime())); // Stale locked
-
-            console.log(`Tagihan ${newTagihan.nomor_spm} (ID: ${newTagihan.id_tagihan}) - isCurrentlyInQueue: ${isCurrentlyInQueue}, existingIndex: ${existingIndex}`);
+              (newTagihan.locked_by === null ||
+               newTagihan.locked_by === user?.id ||
+               (newTagihan.locked_at && parseISO(newTagihan.locked_at).getTime() < lockTimeoutThreshold.getTime()));
 
             if (isCurrentlyInQueue) {
-              // If it should be in the queue
               if (existingIndex > -1) {
-                // Update existing item
-                console.log(`Updating existing tagihan ${newTagihan.nomor_spm}`);
                 updatedList[existingIndex] = newTagihan;
               } else {
-                // Add new item
-                console.log(`Adding new tagihan ${newTagihan.nomor_spm}`);
                 updatedList.push(newTagihan);
-                // Add toast for new item appearing (e.g., unlocked by someone else)
                 if (oldTagihan.locked_by !== null && newTagihan.locked_by === null) {
                     toast.info(`Tagihan ${newTagihan.nomor_spm} tersedia kembali.`);
                 }
               }
             } else {
-              // If it should NOT be in the queue
               if (existingIndex > -1) {
-                // Remove existing item
-                console.log(`Removing tagihan ${newTagihan.nomor_spm}`);
                 updatedList.splice(existingIndex, 1);
-                // Add toast for item disappearing
                 if (newTagihan.status_tagihan !== 'Menunggu Verifikasi') {
                     toast.info(`Tagihan ${newTagihan.nomor_spm} telah diverifikasi.`);
                 } else if (newTagihan.locked_by !== null && newTagihan.locked_by !== user?.id) {
                     toast.info(`Tagihan ${newTagihan.nomor_spm} sedang diproses oleh verifikator lain.`);
                 }
-              } else {
-                console.log(`Tagihan ${newTagihan.nomor_spm} should not be in queue and is not found in prevList.`);
               }
             }
+            return updatedList.sort((a, b) => (a.waktu_registrasi || '').localeCompare(b.waktu_registrasi || ''));
+          });
 
-            return updatedList.sort((a, b) =>
-              (a.waktu_registrasi || '').localeCompare(b.waktu_registrasi || '')
-            );
+          // Update History List
+          setHistoryTagihanList(prevList => {
+            const isVerifiedToday = newTagihan.waktu_verifikasi &&
+                                    isSameDay(parseISO(newTagihan.waktu_verifikasi), new Date()) &&
+                                    (newTagihan.status_tagihan === 'Diteruskan' || newTagihan.status_tagihan === 'Dikembalikan');
+            const existingHistoryIndex = prevList.findIndex(t => t.id_tagihan === newTagihan.id_tagihan);
+            let updatedHistoryList = [...prevList];
+
+            if (isVerifiedToday) {
+              if (existingHistoryIndex > -1) {
+                updatedHistoryList[existingHistoryIndex] = newTagihan;
+              } else {
+                updatedHistoryList.unshift(newTagihan); // Add to the beginning for most recent
+              }
+            } else {
+              if (existingHistoryIndex > -1) {
+                updatedHistoryList.splice(existingHistoryIndex, 1);
+              }
+            }
+            // Re-sort to ensure newest is at top, then apply pagination logic if needed
+            return updatedHistoryList.sort((a, b) => (b.waktu_verifikasi || '').localeCompare(a.waktu_verifikasi || ''));
           });
         }
       )
@@ -165,7 +235,7 @@ const PortalVerifikasi = () => {
     return () => {
       channel.unsubscribe();
     };
-  }, [sessionLoading, profile, user]); // Re-run effect if user or profile changes
+  }, [sessionLoading, profile, user, historyCurrentPage, historyItemsPerPage]); // Add history dependencies
 
   const handleProcessVerification = async (tagihan: Tagihan) => {
     if (!user) {
@@ -177,11 +247,6 @@ const PortalVerifikasi = () => {
       const now = new Date();
       const lockTimeoutThreshold = new Date(now.getTime() - LOCK_TIMEOUT_MINUTES * 60 * 1000).toISOString();
 
-      // Attempt to lock the tagihan.
-      // It will succeed if:
-      // 1. It's not locked (locked_by is null)
-      // 2. It's locked by the current user (re-locking after a refresh, for example)
-      // 3. It's locked by another user, but the lock has expired (locked_at is older than threshold)
       const { data, error } = await supabase
         .from('database_tagihan')
         .update({
@@ -197,14 +262,11 @@ const PortalVerifikasi = () => {
       if (error) throw error;
 
       if (data && data.length > 0) {
-        // Lock acquired successfully
         setSelectedTagihanForVerifikasi(data[0] as Tagihan);
         setIsVerifikasiModalOpen(true);
         toast.success(`Tagihan ${data[0].nomor_spm} berhasil dikunci.`);
       } else {
-        // Lock failed (already locked by someone else and not stale)
         toast.error('Gagal: Tagihan ini sedang diproses oleh verifikator lain.');
-        // No need to fetchQueueTagihan here, real-time subscription will handle it
       }
     } catch (error: any) {
       console.error('Error acquiring lock:', error.message);
@@ -216,22 +278,15 @@ const PortalVerifikasi = () => {
     setIsVerifikasiModalOpen(false);
     if (selectedTagihanForVerifikasi && user) {
       try {
-        // Only unlock if the tagihan is still in 'Menunggu Verifikasi' status
-        // and was locked by the current user.
-        // This prevents unlocking if it was already processed or locked by someone else.
         const { error } = await supabase
           .from('database_tagihan')
           .update({ locked_by: null, locked_at: null })
           .eq('id_tagihan', selectedTagihanForVerifikasi.id_tagihan)
           .eq('locked_by', user.id)
-          .eq('status_tagihan', 'Menunggu Verifikasi'); // Crucial: only unlock if still in queue
+          .eq('status_tagihan', 'Menunggu Verifikasi');
 
         if (error) {
           console.error('Error unlocking tagihan:', error.message);
-        } else {
-          // If the update was successful (meaning it was unlocked by this user and was still in queue)
-          // the real-time subscription will handle re-adding it to other users' lists.
-          // No explicit toast here, as the real-time will trigger one for others.
         }
       } catch (error) {
         console.error('Error during unlock attempt:', error);
@@ -240,7 +295,14 @@ const PortalVerifikasi = () => {
     setSelectedTagihanForVerifikasi(null);
   };
 
-  if (sessionLoading || loadingData) {
+  const handleDetailClick = (tagihan: Tagihan) => {
+    setSelectedTagihanForDetail(tagihan);
+    setIsDetailModalOpen(true);
+  };
+
+  const historyTotalPages = historyItemsPerPage === -1 ? 1 : Math.ceil(historyTotalItems / historyItemsPerPage);
+
+  if (sessionLoading || loadingQueue || loadingHistory) {
     return (
       <div className="p-6 bg-white rounded-lg shadow-sm border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
         <h1 className="text-3xl font-bold text-gray-800 dark:text-white mb-4">Memuat Halaman...</h1>
@@ -262,68 +324,176 @@ const PortalVerifikasi = () => {
     <div className="p-6 bg-white rounded-lg shadow-sm border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
       <h1 className="text-3xl font-bold text-gray-800 dark:text-white mb-6">Portal Verifikasi Tagihan</h1>
 
-      <div className="overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Nomor Registrasi</TableHead>
-              <TableHead>Waktu Registrasi</TableHead>
-              <TableHead>Nomor SPM</TableHead>
-              <TableHead>Nama SKPD</TableHead>
-              <TableHead>Jumlah Kotor</TableHead>
-              <TableHead className="text-center">Aksi</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {queueTagihanList.length === 0 ? (
+      {/* Antrian Verifikasi Panel */}
+      <div className="mb-6">
+        <h2 className="text-2xl font-semibold text-gray-800 dark:text-white mb-4">Antrian Verifikasi</h2>
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-muted-foreground">
-                  Tidak ada tagihan di antrian verifikasi.
-                </TableCell>
+                <TableHead>Nomor Registrasi</TableHead>
+                <TableHead>Waktu Registrasi</TableHead>
+                <TableHead>Nomor SPM</TableHead>
+                <TableHead>Nama SKPD</TableHead>
+                <TableHead>Jumlah Kotor</TableHead>
+                <TableHead className="text-center">Aksi</TableHead>
               </TableRow>
-            ) : (
-              queueTagihanList.map((tagihan) => {
-                const isLockedByOther = tagihan.locked_by && tagihan.locked_by !== user?.id;
-                const isStaleLock = tagihan.locked_at && (new Date().getTime() - parseISO(tagihan.locked_at).getTime()) > LOCK_TIMEOUT_MINUTES * 60 * 1000;
+            </TableHeader>
+            <TableBody>
+              {queueTagihanList.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center text-muted-foreground">
+                    Tidak ada tagihan di antrian verifikasi.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                queueTagihanList.map((tagihan) => {
+                  const isLockedByOther = tagihan.locked_by && tagihan.locked_by !== user?.id;
+                  const isStaleLock = tagihan.locked_at && (new Date().getTime() - parseISO(tagihan.locked_at).getTime()) > LOCK_TIMEOUT_MINUTES * 60 * 1000;
 
-                const isDisabled = isLockedByOther && !isStaleLock;
+                  const isDisabled = isLockedByOther && !isStaleLock;
 
-                return (
-                  <TableRow key={tagihan.id_tagihan}>
-                    <TableCell className="font-medium">{tagihan.nomor_registrasi || '-'}</TableCell>
-                    <TableCell>
-                      {tagihan.waktu_registrasi ? format(parseISO(tagihan.waktu_registrasi), 'dd MMMM yyyy HH:mm', { locale: localeId }) : '-'}
-                    </TableCell>
-                    <TableCell>{tagihan.nomor_spm}</TableCell>
-                    <TableCell>{tagihan.nama_skpd}</TableCell>
-                    <TableCell>Rp{tagihan.jumlah_kotor.toLocaleString('id-ID')}</TableCell>
-                    <TableCell className="text-center">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        title={isDisabled ? "Tagihan ini sedang diproses oleh verifikator lain" : "Proses Verifikasi"}
-                        onClick={() => handleProcessVerification(tagihan)}
-                        disabled={isDisabled}
-                      >
-                        {isDisabled ? (
-                          <LockIcon className="h-5 w-5 text-gray-400" />
-                        ) : (
-                          <FileCheckIcon className="h-5 w-5 text-blue-500" />
-                        )}
-                      </Button>
-                    </TableCell>
+                  return (
+                    <TableRow key={tagihan.id_tagihan}>
+                      <TableCell className="font-medium">{tagihan.nomor_registrasi || '-'}</TableCell>
+                      <TableCell>
+                        {tagihan.waktu_registrasi ? format(parseISO(tagihan.waktu_registrasi), 'dd MMMM yyyy HH:mm', { locale: localeId }) : '-'}
+                      </TableCell>
+                      <TableCell>{tagihan.nomor_spm}</TableCell>
+                      <TableCell>{tagihan.nama_skpd}</TableCell>
+                      <TableCell>Rp{tagihan.jumlah_kotor.toLocaleString('id-ID')}</TableCell>
+                      <TableCell className="text-center">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          title={isDisabled ? "Tagihan ini sedang diproses oleh verifikator lain" : "Proses Verifikasi"}
+                          onClick={() => handleProcessVerification(tagihan)}
+                          disabled={isDisabled}
+                        >
+                          {isDisabled ? (
+                            <LockIcon className="h-5 w-5 text-gray-400" />
+                          ) : (
+                            <FileCheckIcon className="h-5 w-5 text-blue-500" />
+                          )}
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      </div>
+
+      {/* Riwayat Verifikasi Hari Ini Panel */}
+      <div className="p-6 bg-white rounded-lg shadow-sm border border-gray-200 dark:bg-gray-800 dark:border-gray-700 mt-6">
+        <h2 className="text-2xl font-semibold text-gray-800 dark:text-white mb-4">Riwayat Verifikasi Hari Ini</h2>
+
+        <div className="mb-4 flex justify-end items-center space-x-2">
+          <label htmlFor="history-items-per-page" className="whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">Baris per halaman:</label>
+          <Select
+            value={historyItemsPerPage.toString()}
+            onValueChange={(value) => {
+              setHistoryItemsPerPage(Number(value));
+              setHistoryCurrentPage(1);
+            }}
+          >
+            <SelectTrigger className="w-[100px]">
+              <SelectValue placeholder="10" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="10">10</SelectItem>
+              <SelectItem value="25">25</SelectItem>
+              <SelectItem value="50">50</SelectItem>
+              <SelectItem value="100">100</SelectItem>
+              <SelectItem value="-1">Semua</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {loadingHistory ? (
+          <p className="text-center text-gray-600 dark:text-gray-400">Memuat riwayat verifikasi...</p>
+        ) : historyTagihanList.length === 0 ? (
+          <p className="text-center text-gray-600 dark:text-gray-400">Tidak ada riwayat verifikasi hari ini.</p>
+        ) : (
+          <>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Waktu Verifikasi</TableHead>
+                    <TableHead>Nomor Verifikasi</TableHead>
+                    <TableHead>Nomor SPM</TableHead>
+                    <TableHead>Status Tagihan</TableHead>
+                    <TableHead className="text-center">Aksi</TableHead>
                   </TableRow>
-                );
-              })
-            )}
-          </TableBody>
-        </Table>
+                </TableHeader>
+                <TableBody>
+                  {historyTagihanList.map((tagihan) => (
+                    <TableRow key={tagihan.id_tagihan}>
+                      <TableCell>
+                        {tagihan.waktu_verifikasi ? format(parseISO(tagihan.waktu_verifikasi), 'dd MMMM yyyy HH:mm', { locale: localeId }) : '-'}
+                      </TableCell>
+                      <TableCell className="font-medium">{tagihan.nomor_verifikasi || '-'}</TableCell>
+                      <TableCell>{tagihan.nomor_spm}</TableCell>
+                      <TableCell>{tagihan.status_tagihan}</TableCell>
+                      <TableCell className="text-center">
+                        <div className="flex justify-center space-x-2">
+                          <Button variant="outline" size="icon" title="Lihat Detail" onClick={() => handleDetailClick(tagihan)}>
+                            <EyeIcon className="h-4 w-4" />
+                          </Button>
+                          <Button variant="outline" size="icon" title="Cetak">
+                            <PrinterIcon className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+            <Pagination className="mt-4">
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious
+                    onClick={() => setHistoryCurrentPage((prev) => Math.max(1, prev - 1))}
+                    disabled={historyCurrentPage === 1 || historyItemsPerPage === -1}
+                  />
+                </PaginationItem>
+                {[...Array(historyTotalPages)].map((_, index) => (
+                  <PaginationItem key={index}>
+                    <PaginationLink
+                      isActive={historyCurrentPage === index + 1}
+                      onClick={() => setHistoryCurrentPage(index + 1)}
+                      disabled={historyItemsPerPage === -1}
+                    >
+                      {index + 1}
+                    </PaginationLink>
+                  </PaginationItem>
+                ))}
+                <PaginationItem>
+                  <PaginationNext
+                    onClick={() => setHistoryCurrentPage((prev) => Math.min(historyTotalPages, prev + 1))}
+                    disabled={historyCurrentPage === historyTotalPages || historyItemsPerPage === -1}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          </>
+        )}
       </div>
 
       <VerifikasiTagihanDialog
         isOpen={isVerifikasiModalOpen}
         onClose={handleCloseVerifikasiModal}
         tagihan={selectedTagihanForVerifikasi}
+      />
+
+      <TagihanDetailDialog
+        isOpen={isDetailModalOpen}
+        onClose={() => setIsDetailModalOpen(false)}
+        tagihan={selectedTagihanForDetail}
       />
     </div>
   );
