@@ -14,7 +14,7 @@ import { toast } from 'sonner';
 import { format, parseISO } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
 import { FileCheckIcon, LockIcon } from 'lucide-react';
-import VerifikasiTagihanDialog from '@/components/VerifikasiTagihanDialog'; // Import the new dialog component
+import VerifikasiTagihanDialog from '@/components/VerifikasiTagihanDialog';
 
 interface VerificationItem {
   item: string;
@@ -41,9 +41,11 @@ interface Tagihan {
   detail_verifikasi?: VerificationItem[];
   nomor_verifikasi?: string;
   nama_verifikator?: string;
-  locked_by?: string; // Add locked_by to Tagihan interface
-  locked_at?: string; // Add locked_at to Tagihan interface
+  locked_by?: string;
+  locked_at?: string;
 }
+
+const LOCK_TIMEOUT_MINUTES = 30; // Define lock timeout: 30 minutes
 
 const PortalVerifikasi = () => {
   const { user, profile, loading: sessionLoading } = useSession();
@@ -93,50 +95,46 @@ const PortalVerifikasi = () => {
           const oldTagihan = payload.old as Tagihan;
           const newTagihan = payload.new as Tagihan;
 
-          // Update the list based on changes
-          setQueueTagihanList(prevList => {
-            const updatedList = prevList.filter(t => t.id_tagihan !== newTagihan.id_tagihan);
+          const now = new Date();
+          const lockTimeoutThreshold = new Date(now.getTime() - LOCK_TIMEOUT_MINUTES * 60 * 1000);
 
-            // If status changed from 'Menunggu Verifikasi' or locked by another user
-            if (
-              (oldTagihan.status_tagihan === 'Menunggu Verifikasi' && newTagihan.status_tagihan !== 'Menunggu Verifikasi') ||
-              (newTagihan.locked_by !== null && newTagihan.locked_by !== user?.id)
-            ) {
+          // Determine if the new tagihan should be visible in the queue
+          const shouldBeVisible =
+            newTagihan.status_tagihan === 'Menunggu Verifikasi' &&
+            (newTagihan.locked_by === null || // Not locked
+             newTagihan.locked_by === user?.id || // Locked by current user
+             (newTagihan.locked_at && parseISO(newTagihan.locked_at).getTime() < lockTimeoutThreshold.getTime())); // Stale locked
+
+          setQueueTagihanList(prevList => {
+            let updatedList = prevList.filter(t => t.id_tagihan !== newTagihan.id_tagihan); // Remove old version
+
+            if (shouldBeVisible) {
+              updatedList.push(newTagihan); // Add the new version
+              // Add toasts for state changes
+              if (oldTagihan.status_tagihan !== 'Menunggu Verifikasi' && newTagihan.status_tagihan === 'Menunggu Verifikasi') {
+                toast.info(`Tagihan ${newTagihan.nomor_spm} kembali ke antrian.`);
+              } else if (oldTagihan.locked_by !== null && newTagihan.locked_by === null) {
+                toast.info(`Tagihan ${newTagihan.nomor_spm} tersedia kembali (kunci dilepas).`);
+              } else if (oldTagihan.locked_by !== null && newTagihan.locked_by !== null && newTagihan.locked_by !== user?.id &&
+                         (!oldTagihan.locked_at || parseISO(oldTagihan.locked_at).getTime() >= lockTimeoutThreshold.getTime()) && // Was not stale
+                         (newTagihan.locked_at && parseISO(newTagihan.locked_at).getTime() < lockTimeoutThreshold.getTime())) { // Now stale
+                toast.info(`Tagihan ${newTagihan.nomor_spm} tersedia kembali (kunci kadaluarsa).`);
+              }
+            } else {
+              // If it should NOT be visible, and it was previously visible, show a toast
               if (prevList.some(t => t.id_tagihan === newTagihan.id_tagihan)) {
-                toast.info(`Tagihan ${newTagihan.nomor_spm} telah diambil atau diproses.`);
-              }
-              return updatedList;
-            }
-            // If unlocked and still 'Menunggu Verifikasi', add it back if not already present
-            else if (
-              newTagihan.locked_by === null &&
-              newTagihan.status_tagihan === 'Menunggu Verifikasi' &&
-              !prevList.some(t => t.id_tagihan === newTagihan.id_tagihan)
-            ) {
-              toast.info(`Tagihan ${newTagihan.nomor_spm} tersedia kembali.`);
-              return [...updatedList, newTagihan].sort((a, b) =>
-                (a.waktu_registrasi || '').localeCompare(b.waktu_registrasi || '')
-              );
-            }
-            // If it's an update to a locked_by by the current user, keep it in the list (it's being processed)
-            // Or if it's an update to other fields but still 'Menunggu Verifikasi' and not locked by others
-            else if (
-              newTagihan.status_tagihan === 'Menunggu Verifikasi' &&
-              (newTagihan.locked_by === user?.id || newTagihan.locked_by === null)
-            ) {
-              // If it's already in the list, update it. Otherwise, add it.
-              const existingIndex = prevList.findIndex(t => t.id_tagihan === newTagihan.id_tagihan);
-              if (existingIndex > -1) {
-                const newList = [...prevList];
-                newList[existingIndex] = newTagihan;
-                return newList;
-              } else {
-                return [...prevList, newTagihan].sort((a, b) =>
-                  (a.waktu_registrasi || '').localeCompare(b.waktu_registrasi || '')
-                );
+                if (newTagihan.status_tagihan !== 'Menunggu Verifikasi') {
+                  toast.info(`Tagihan ${newTagihan.nomor_spm} telah diverifikasi.`);
+                } else if (newTagihan.locked_by !== null && newTagihan.locked_by !== user?.id &&
+                           (newTagihan.locked_at && parseISO(newTagihan.locked_at).getTime() >= lockTimeoutThreshold.getTime())) {
+                  toast.info(`Tagihan ${newTagihan.nomor_spm} sedang diproses oleh verifikator lain.`);
+                }
               }
             }
-            return prevList;
+
+            return updatedList.sort((a, b) =>
+              (a.waktu_registrasi || '').localeCompare(b.waktu_registrasi || '')
+            );
           });
         }
       )
@@ -153,26 +151,36 @@ const PortalVerifikasi = () => {
       return;
     }
 
-    // Coba mengunci tagihan
     try {
+      const now = new Date();
+      const lockTimeoutThreshold = new Date(now.getTime() - LOCK_TIMEOUT_MINUTES * 60 * 1000).toISOString();
+
+      // Attempt to lock the tagihan.
+      // It will succeed if:
+      // 1. It's not locked (locked_by is null)
+      // 2. It's locked by the current user (re-locking after a refresh, for example)
+      // 3. It's locked by another user, but the lock has expired (locked_at is older than threshold)
       const { data, error } = await supabase
         .from('database_tagihan')
         .update({
           locked_by: user.id,
-          locked_at: new Date().toISOString(),
+          locked_at: now.toISOString(),
         })
         .eq('id_tagihan', tagihan.id_tagihan)
-        .is('locked_by', null) // Hanya kunci jika belum dikunci
-        .select(); // Penting untuk mendapatkan data yang diperbarui
+        .or(
+          `locked_by.is.null,locked_by.eq.${user.id},and(locked_by.neq.${user.id},locked_at.lt.${lockTimeoutThreshold})`
+        )
+        .select();
 
       if (error) throw error;
 
       if (data && data.length > 0) {
-        // Penguncian berhasil
-        setSelectedTagihanForVerifikasi(data[0] as Tagihan); // Gunakan data yang diperbarui
+        // Lock acquired successfully
+        setSelectedTagihanForVerifikasi(data[0] as Tagihan);
         setIsVerifikasiModalOpen(true);
+        toast.success(`Tagihan ${data[0].nomor_spm} berhasil dikunci.`);
       } else {
-        // Penguncian gagal (sudah dikunci oleh orang lain)
+        // Lock failed (already locked by someone else and not stale)
         toast.error('Gagal: Tagihan ini sedang diproses oleh verifikator lain.');
         // No need to fetchQueueTagihan here, real-time subscription will handle it
       }
@@ -186,26 +194,27 @@ const PortalVerifikasi = () => {
     setIsVerifikasiModalOpen(false);
     if (selectedTagihanForVerifikasi && user) {
       try {
-        // Coba membuka kunci tagihan jika dikunci oleh pengguna saat ini
-        // dan statusnya masih 'Menunggu Verifikasi' (belum diproses)
-        const { data, error } = await supabase
+        // Only unlock if the tagihan is still in 'Menunggu Verifikasi' status
+        // and was locked by the current user.
+        // This prevents unlocking if it was already processed or locked by someone else.
+        const { error } = await supabase
           .from('database_tagihan')
           .update({ locked_by: null, locked_at: null })
           .eq('id_tagihan', selectedTagihanForVerifikasi.id_tagihan)
           .eq('locked_by', user.id)
-          .eq('status_tagihan', 'Menunggu Verifikasi') // Only unlock if still in queue
-          .select();
+          .eq('status_tagihan', 'Menunggu Verifikasi'); // Crucial: only unlock if still in queue
 
         if (error) {
           console.error('Error unlocking tagihan:', error.message);
-        } else if (data && data.length > 0) {
-          toast.info(`Tagihan ${selectedTagihanForVerifikasi.nomor_spm} telah dibuka kuncinya.`);
+        } else {
+          // If the update was successful (meaning it was unlocked by this user and was still in queue)
+          // the real-time subscription will handle re-adding it to other users' lists.
+          // No explicit toast here, as the real-time will trigger one for others.
         }
       } catch (error) {
         console.error('Error during unlock attempt:', error);
       }
     }
-    // No need to fetchQueueTagihan here, real-time subscription will handle it
     setSelectedTagihanForVerifikasi(null);
   };
 
@@ -251,32 +260,39 @@ const PortalVerifikasi = () => {
                 </TableCell>
               </TableRow>
             ) : (
-              queueTagihanList.map((tagihan) => (
-                <TableRow key={tagihan.id_tagihan}>
-                  <TableCell className="font-medium">{tagihan.nomor_registrasi || '-'}</TableCell>
-                  <TableCell>
-                    {tagihan.waktu_registrasi ? format(parseISO(tagihan.waktu_registrasi), 'dd MMMM yyyy HH:mm', { locale: localeId }) : '-'}
-                  </TableCell>
-                  <TableCell>{tagihan.nomor_spm}</TableCell>
-                  <TableCell>{tagihan.nama_skpd}</TableCell>
-                  <TableCell>Rp{tagihan.jumlah_kotor.toLocaleString('id-ID')}</TableCell>
-                  <TableCell className="text-center">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      title={tagihan.locked_by ? "Tagihan ini sedang diproses" : "Proses Verifikasi"}
-                      onClick={() => handleProcessVerification(tagihan)}
-                      disabled={!!tagihan.locked_by}
-                    >
-                      {tagihan.locked_by ? (
-                        <LockIcon className="h-5 w-5 text-gray-400" />
-                      ) : (
-                        <FileCheckIcon className="h-5 w-5 text-blue-500" />
-                      )}
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))
+              queueTagihanList.map((tagihan) => {
+                const isLockedByOther = tagihan.locked_by && tagihan.locked_by !== user?.id;
+                const isStaleLock = tagihan.locked_at && (new Date().getTime() - parseISO(tagihan.locked_at).getTime()) > LOCK_TIMEOUT_MINUTES * 60 * 1000;
+
+                const isDisabled = isLockedByOther && !isStaleLock;
+
+                return (
+                  <TableRow key={tagihan.id_tagihan}>
+                    <TableCell className="font-medium">{tagihan.nomor_registrasi || '-'}</TableCell>
+                    <TableCell>
+                      {tagihan.waktu_registrasi ? format(parseISO(tagihan.waktu_registrasi), 'dd MMMM yyyy HH:mm', { locale: localeId }) : '-'}
+                    </TableCell>
+                    <TableCell>{tagihan.nomor_spm}</TableCell>
+                    <TableCell>{tagihan.nama_skpd}</TableCell>
+                    <TableCell>Rp{tagihan.jumlah_kotor.toLocaleString('id-ID')}</TableCell>
+                    <TableCell className="text-center">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        title={isDisabled ? "Tagihan ini sedang diproses oleh verifikator lain" : "Proses Verifikasi"}
+                        onClick={() => handleProcessVerification(tagihan)}
+                        disabled={isDisabled}
+                      >
+                        {isDisabled ? (
+                          <LockIcon className="h-5 w-5 text-gray-400" />
+                        ) : (
+                          <FileCheckIcon className="h-5 w-5 text-blue-500" />
+                        )}
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                );
+              })
             )}
           </TableBody>
         </Table>
