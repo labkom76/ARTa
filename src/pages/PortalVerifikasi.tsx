@@ -427,6 +427,7 @@ const PortalVerifikasi = () => {
                     <TableRow>
                       <TableHead>Waktu Verifikasi</TableHead>
                       <TableHead>Nomor Verifikasi</TableHead>
+                      <TableHead>Nama SKPD</TableHead> {/* New TableHead */}
                       <TableHead>Nomor SPM</TableHead>
                       <TableHead>Status Tagihan</TableHead>
                       <TableHead className="text-center">Aksi</TableHead>
@@ -439,6 +440,7 @@ const PortalVerifikasi = () => {
                           {tagihan.waktu_verifikasi ? format(parseISO(tagihan.waktu_verifikasi), 'dd MMMM yyyy HH:mm', { locale: localeId }) : '-'}
                         </TableCell>
                         <TableCell className="font-medium">{tagihan.nomor_verifikasi || '-'}</TableCell>
+                        <TableCell>{tagihan.nama_skpd}</TableCell> {/* New TableCell */}
                         <TableCell>{tagihan.nomor_spm}</TableCell>
                         <TableCell>{tagihan.status_tagihan}</TableCell>
                         <TableCell className="text-center">
