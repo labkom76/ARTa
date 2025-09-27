@@ -52,7 +52,7 @@ const PortalVerifikasi = () => {
   const [queueTagihanList, setQueueTagihanList] = useState<Tagihan[]>([]);
   const [loadingData, setLoadingData] = useState(true);
 
-  const [isVerifikasiModalOpen, setIsVerifikasiModalOpen] = useState(false);
+  const [isVerifikasiModalOpen, setIsVerifikasiModal] = useState(false);
   const [selectedTagihanForVerifikasi, setSelectedTagihanForVerifikasi] = useState<Tagihan | null>(null);
 
   const fetchQueueTagihan = async () => {
@@ -98,36 +98,40 @@ const PortalVerifikasi = () => {
           const now = new Date();
           const lockTimeoutThreshold = new Date(now.getTime() - LOCK_TIMEOUT_MINUTES * 60 * 1000);
 
-          // Determine if the new tagihan should be visible in the queue
-          const shouldBeVisible =
-            newTagihan.status_tagihan === 'Menunggu Verifikasi' &&
-            (newTagihan.locked_by === null || // Not locked
-             newTagihan.locked_by === user?.id || // Locked by current user
-             (newTagihan.locked_at && parseISO(newTagihan.locked_at).getTime() < lockTimeoutThreshold.getTime())); // Stale locked
-
           setQueueTagihanList(prevList => {
-            let updatedList = prevList.filter(t => t.id_tagihan !== newTagihan.id_tagihan); // Remove old version
+            const existingIndex = prevList.findIndex(t => t.id_tagihan === newTagihan.id_tagihan);
+            let updatedList = [...prevList]; // Create a mutable copy
 
-            if (shouldBeVisible) {
-              updatedList.push(newTagihan); // Add the new version
-              // Add toasts for state changes
-              if (oldTagihan.status_tagihan !== 'Menunggu Verifikasi' && newTagihan.status_tagihan === 'Menunggu Verifikasi') {
-                toast.info(`Tagihan ${newTagihan.nomor_spm} kembali ke antrian.`);
-              } else if (oldTagihan.locked_by !== null && newTagihan.locked_by === null) {
-                toast.info(`Tagihan ${newTagihan.nomor_spm} tersedia kembali (kunci dilepas).`);
-              } else if (oldTagihan.locked_by !== null && newTagihan.locked_by !== null && newTagihan.locked_by !== user?.id &&
-                         (!oldTagihan.locked_at || parseISO(oldTagihan.locked_at).getTime() >= lockTimeoutThreshold.getTime()) && // Was not stale
-                         (newTagihan.locked_at && parseISO(newTagihan.locked_at).getTime() < lockTimeoutThreshold.getTime())) { // Now stale
-                toast.info(`Tagihan ${newTagihan.nomor_spm} tersedia kembali (kunci kadaluarsa).`);
+            // Determine if the tagihan should currently be in the queue
+            const isCurrentlyInQueue =
+              newTagihan.status_tagihan === 'Menunggu Verifikasi' &&
+              (newTagihan.locked_by === null || // Not locked
+               newTagihan.locked_by === user?.id || // Locked by current user
+               (newTagihan.locked_at && parseISO(newTagihan.locked_at).getTime() < lockTimeoutThreshold.getTime())); // Stale locked
+
+            if (isCurrentlyInQueue) {
+              // If it should be in the queue
+              if (existingIndex > -1) {
+                // Update existing item
+                updatedList[existingIndex] = newTagihan;
+              } else {
+                // Add new item
+                updatedList.push(newTagihan);
+                // Add toast for new item appearing (e.g., unlocked by someone else)
+                if (oldTagihan.locked_by !== null && newTagihan.locked_by === null) {
+                    toast.info(`Tagihan ${newTagihan.nomor_spm} tersedia kembali.`);
+                }
               }
             } else {
-              // If it should NOT be visible, and it was previously visible, show a toast
-              if (prevList.some(t => t.id_tagihan === newTagihan.id_tagihan)) {
+              // If it should NOT be in the queue
+              if (existingIndex > -1) {
+                // Remove existing item
+                updatedList.splice(existingIndex, 1);
+                // Add toast for item disappearing
                 if (newTagihan.status_tagihan !== 'Menunggu Verifikasi') {
-                  toast.info(`Tagihan ${newTagihan.nomor_spm} telah diverifikasi.`);
-                } else if (newTagihan.locked_by !== null && newTagihan.locked_by !== user?.id &&
-                           (newTagihan.locked_at && parseISO(newTagihan.locked_at).getTime() >= lockTimeoutThreshold.getTime())) {
-                  toast.info(`Tagihan ${newTagihan.nomor_spm} sedang diproses oleh verifikator lain.`);
+                    toast.info(`Tagihan ${newTagihan.nomor_spm} telah diverifikasi.`);
+                } else if (newTagihan.locked_by !== null && newTagihan.locked_by !== user?.id) {
+                    toast.info(`Tagihan ${newTagihan.nomor_spm} sedang diproses oleh verifikator lain.`);
                 }
               }
             }
@@ -177,7 +181,7 @@ const PortalVerifikasi = () => {
       if (data && data.length > 0) {
         // Lock acquired successfully
         setSelectedTagihanForVerifikasi(data[0] as Tagihan);
-        setIsVerifikasiModalOpen(true);
+        setIsVerifikasiModal(true);
         toast.success(`Tagihan ${data[0].nomor_spm} berhasil dikunci.`);
       } else {
         // Lock failed (already locked by someone else and not stale)
@@ -191,7 +195,7 @@ const PortalVerifikasi = () => {
   };
 
   const handleCloseVerifikasiModal = async () => {
-    setIsVerifikasiModalOpen(false);
+    setIsVerifikasiModal(false);
     if (selectedTagihanForVerifikasi && user) {
       try {
         // Only unlock if the tagihan is still in 'Menunggu Verifikasi' status
