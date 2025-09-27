@@ -33,7 +33,7 @@ import { toast } from 'sonner';
 import { useSession } from '@/contexts/SessionContext';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod'; // Perbaikan di sini: dari '*s z' menjadi '* as z'
+import * as z from 'zod';
 
 interface VerificationItem {
   item: string;
@@ -67,6 +67,7 @@ interface Tagihan {
 interface VerifikasiTagihanDialogProps {
   isOpen: boolean;
   onClose: () => void;
+  onVerificationSuccess: () => void; // Properti baru ditambahkan di sini
   tagihan: Tagihan | null;
 }
 
@@ -97,7 +98,7 @@ const verificationFormSchema = z.object({
 
 type VerificationFormValues = z.infer<typeof verificationFormSchema>;
 
-const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpen, onClose, tagihan }) => {
+const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpen, onClose, onVerificationSuccess, tagihan }) => {
   const { user, profile } = useSession();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
