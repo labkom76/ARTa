@@ -52,7 +52,7 @@ const PortalVerifikasi = () => {
   const [queueTagihanList, setQueueTagihanList] = useState<Tagihan[]>([]);
   const [loadingData, setLoadingData] = useState(true);
 
-  const [isVerifikasiModalOpen, setIsVerifikasiModal] = useState(false);
+  const [isVerifikasiModalOpen, setIsVerifikasiModalOpen] = useState(false);
   const [selectedTagihanForVerifikasi, setSelectedTagihanForVerifikasi] = useState<Tagihan | null>(null);
 
   const fetchQueueTagihan = async () => {
@@ -63,11 +63,21 @@ const PortalVerifikasi = () => {
 
     setLoadingData(true);
     try {
-      const { data, error } = await supabase
+      const now = new Date();
+      const lockTimeoutThreshold = new Date(now.getTime() - LOCK_TIMEOUT_MINUTES * 60 * 1000).toISOString();
+
+      let query = supabase
         .from('database_tagihan')
         .select('*')
         .eq('status_tagihan', 'Menunggu Verifikasi')
         .order('waktu_registrasi', { ascending: true });
+
+      // Filter out items locked by others, unless their lock is stale or locked by current user
+      query = query.or(
+        `locked_by.is.null,locked_by.eq.${user?.id},locked_at.lt.${lockTimeoutThreshold}`
+      );
+
+      const { data, error } = await query;
 
       if (error) throw error;
       setQueueTagihanList(data as Tagihan[]);
@@ -99,23 +109,28 @@ const PortalVerifikasi = () => {
           const lockTimeoutThreshold = new Date(now.getTime() - LOCK_TIMEOUT_MINUTES * 60 * 1000);
 
           setQueueTagihanList(prevList => {
+            console.log('Realtime Update Received:', { oldTagihan, newTagihan, currentUser: user?.id });
             const existingIndex = prevList.findIndex(t => t.id_tagihan === newTagihan.id_tagihan);
             let updatedList = [...prevList]; // Create a mutable copy
 
-            // Determine if the tagihan should currently be in the queue
+            // Determine if the tagihan should currently be in the queue for THIS user
             const isCurrentlyInQueue =
               newTagihan.status_tagihan === 'Menunggu Verifikasi' &&
               (newTagihan.locked_by === null || // Not locked
                newTagihan.locked_by === user?.id || // Locked by current user
                (newTagihan.locked_at && parseISO(newTagihan.locked_at).getTime() < lockTimeoutThreshold.getTime())); // Stale locked
 
+            console.log(`Tagihan ${newTagihan.nomor_spm} (ID: ${newTagihan.id_tagihan}) - isCurrentlyInQueue: ${isCurrentlyInQueue}, existingIndex: ${existingIndex}`);
+
             if (isCurrentlyInQueue) {
               // If it should be in the queue
               if (existingIndex > -1) {
                 // Update existing item
+                console.log(`Updating existing tagihan ${newTagihan.nomor_spm}`);
                 updatedList[existingIndex] = newTagihan;
               } else {
                 // Add new item
+                console.log(`Adding new tagihan ${newTagihan.nomor_spm}`);
                 updatedList.push(newTagihan);
                 // Add toast for new item appearing (e.g., unlocked by someone else)
                 if (oldTagihan.locked_by !== null && newTagihan.locked_by === null) {
@@ -126,6 +141,7 @@ const PortalVerifikasi = () => {
               // If it should NOT be in the queue
               if (existingIndex > -1) {
                 // Remove existing item
+                console.log(`Removing tagihan ${newTagihan.nomor_spm}`);
                 updatedList.splice(existingIndex, 1);
                 // Add toast for item disappearing
                 if (newTagihan.status_tagihan !== 'Menunggu Verifikasi') {
@@ -133,6 +149,8 @@ const PortalVerifikasi = () => {
                 } else if (newTagihan.locked_by !== null && newTagihan.locked_by !== user?.id) {
                     toast.info(`Tagihan ${newTagihan.nomor_spm} sedang diproses oleh verifikator lain.`);
                 }
+              } else {
+                console.log(`Tagihan ${newTagihan.nomor_spm} should not be in queue and is not found in prevList.`);
               }
             }
 
@@ -147,7 +165,7 @@ const PortalVerifikasi = () => {
     return () => {
       channel.unsubscribe();
     };
-  }, [sessionLoading, profile, user]);
+  }, [sessionLoading, profile, user]); // Re-run effect if user or profile changes
 
   const handleProcessVerification = async (tagihan: Tagihan) => {
     if (!user) {
@@ -181,7 +199,7 @@ const PortalVerifikasi = () => {
       if (data && data.length > 0) {
         // Lock acquired successfully
         setSelectedTagihanForVerifikasi(data[0] as Tagihan);
-        setIsVerifikasiModal(true);
+        setIsVerifikasiModalOpen(true);
         toast.success(`Tagihan ${data[0].nomor_spm} berhasil dikunci.`);
       } else {
         // Lock failed (already locked by someone else and not stale)
@@ -195,7 +213,7 @@ const PortalVerifikasi = () => {
   };
 
   const handleCloseVerifikasiModal = async () => {
-    setIsVerifikasiModal(false);
+    setIsVerifikasiModalOpen(false);
     if (selectedTagihanForVerifikasi && user) {
       try {
         // Only unlock if the tagihan is still in 'Menunggu Verifikasi' status
