@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { format, parseISO, startOfDay, endOfDay } from 'date-fns';
+import { format, parseISO, startOfDay, endOfDay, isSameDay } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
 import { FileCheckIcon, LockIcon, EyeIcon, PrinterIcon } from 'lucide-react'; // Added EyeIcon and PrinterIcon
 import VerifikasiTagihanDialog from '@/components/VerifikasiTagihanDialog';
@@ -31,6 +31,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import TagihanDetailDialog from '@/components/TagihanDetailDialog'; // Import TagihanDetailDialog
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'; // Import Card components
 
 interface VerificationItem {
   item: string;
@@ -387,102 +388,105 @@ const PortalVerifikasi = () => {
       </div>
 
       {/* Riwayat Verifikasi Hari Ini Panel */}
-      <div className="p-6 bg-white rounded-lg shadow-sm border border-gray-200 dark:bg-gray-800 dark:border-gray-700 mt-6">
-        <h2 className="text-2xl font-semibold text-gray-800 dark:text-white mb-4">Riwayat Verifikasi Hari Ini</h2>
+      <Card className="shadow-sm rounded-lg mt-6"> {/* Wrapped in Card */}
+        <CardHeader>
+          <CardTitle className="text-2xl font-semibold text-gray-800 dark:text-white">Riwayat Verifikasi Hari Ini</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="mb-4 flex justify-end items-center space-x-2">
+            <label htmlFor="history-items-per-page" className="whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">Baris per halaman:</label>
+            <Select
+              value={historyItemsPerPage.toString()}
+              onValueChange={(value) => {
+                setHistoryItemsPerPage(Number(value));
+                setHistoryCurrentPage(1);
+              }}
+            >
+              <SelectTrigger className="w-[100px]">
+                <SelectValue placeholder="10" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="10">10</SelectItem>
+                <SelectItem value="25">25</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+                <SelectItem value="100">100</SelectItem>
+                <SelectItem value="-1">Semua</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
-        <div className="mb-4 flex justify-end items-center space-x-2">
-          <label htmlFor="history-items-per-page" className="whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">Baris per halaman:</label>
-          <Select
-            value={historyItemsPerPage.toString()}
-            onValueChange={(value) => {
-              setHistoryItemsPerPage(Number(value));
-              setHistoryCurrentPage(1);
-            }}
-          >
-            <SelectTrigger className="w-[100px]">
-              <SelectValue placeholder="10" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="10">10</SelectItem>
-              <SelectItem value="25">25</SelectItem>
-              <SelectItem value="50">50</SelectItem>
-              <SelectItem value="100">100</SelectItem>
-              <SelectItem value="-1">Semua</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        {loadingHistory ? (
-          <p className="text-center text-gray-600 dark:text-gray-400">Memuat riwayat verifikasi...</p>
-        ) : historyTagihanList.length === 0 ? (
-          <p className="text-center text-gray-600 dark:text-gray-400">Tidak ada riwayat verifikasi hari ini.</p>
-        ) : (
-          <>
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Waktu Verifikasi</TableHead>
-                    <TableHead>Nomor Verifikasi</TableHead>
-                    <TableHead>Nomor SPM</TableHead>
-                    <TableHead>Status Tagihan</TableHead>
-                    <TableHead className="text-center">Aksi</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {historyTagihanList.map((tagihan) => (
-                    <TableRow key={tagihan.id_tagihan}>
-                      <TableCell>
-                        {tagihan.waktu_verifikasi ? format(parseISO(tagihan.waktu_verifikasi), 'dd MMMM yyyy HH:mm', { locale: localeId }) : '-'}
-                      </TableCell>
-                      <TableCell className="font-medium">{tagihan.nomor_verifikasi || '-'}</TableCell>
-                      <TableCell>{tagihan.nomor_spm}</TableCell>
-                      <TableCell>{tagihan.status_tagihan}</TableCell>
-                      <TableCell className="text-center">
-                        <div className="flex justify-center space-x-2">
-                          <Button variant="outline" size="icon" title="Lihat Detail" onClick={() => handleDetailClick(tagihan)}>
-                            <EyeIcon className="h-4 w-4" />
-                          </Button>
-                          <Button variant="outline" size="icon" title="Cetak">
-                            <PrinterIcon className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
+          {loadingHistory ? (
+            <p className="text-center text-gray-600 dark:text-gray-400">Memuat riwayat verifikasi...</p>
+          ) : historyTagihanList.length === 0 ? (
+            <p className="text-center text-gray-600 dark:text-gray-400">Tidak ada riwayat verifikasi hari ini.</p>
+          ) : (
+            <>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Waktu Verifikasi</TableHead>
+                      <TableHead>Nomor Verifikasi</TableHead>
+                      <TableHead>Nomor SPM</TableHead>
+                      <TableHead>Status Tagihan</TableHead>
+                      <TableHead className="text-center">Aksi</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-            <Pagination className="mt-4">
-              <PaginationContent>
-                <PaginationItem>
-                  <PaginationPrevious
-                    onClick={() => setHistoryCurrentPage((prev) => Math.max(1, prev - 1))}
-                    disabled={historyCurrentPage === 1 || historyItemsPerPage === -1}
-                  />
-                </PaginationItem>
-                {[...Array(historyTotalPages)].map((_, index) => (
-                  <PaginationItem key={index}>
-                    <PaginationLink
-                      isActive={historyCurrentPage === index + 1}
-                      onClick={() => setHistoryCurrentPage(index + 1)}
-                      disabled={historyItemsPerPage === -1}
-                    >
-                      {index + 1}
-                    </PaginationLink>
+                  </TableHeader>
+                  <TableBody>
+                    {historyTagihanList.map((tagihan) => (
+                      <TableRow key={tagihan.id_tagihan}>
+                        <TableCell>
+                          {tagihan.waktu_verifikasi ? format(parseISO(tagihan.waktu_verifikasi), 'dd MMMM yyyy HH:mm', { locale: localeId }) : '-'}
+                        </TableCell>
+                        <TableCell className="font-medium">{tagihan.nomor_verifikasi || '-'}</TableCell>
+                        <TableCell>{tagihan.nomor_spm}</TableCell>
+                        <TableCell>{tagihan.status_tagihan}</TableCell>
+                        <TableCell className="text-center">
+                          <div className="flex justify-center space-x-2">
+                            <Button variant="outline" size="icon" title="Lihat Detail" onClick={() => handleDetailClick(tagihan)}>
+                              <EyeIcon className="h-4 w-4" />
+                            </Button>
+                            <Button variant="outline" size="icon" title="Cetak">
+                              <PrinterIcon className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+              <Pagination className="mt-4">
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      onClick={() => setHistoryCurrentPage((prev) => Math.max(1, prev - 1))}
+                      disabled={historyCurrentPage === 1 || historyItemsPerPage === -1}
+                    />
                   </PaginationItem>
-                ))}
-                <PaginationItem>
-                  <PaginationNext
-                    onClick={() => setHistoryCurrentPage((prev) => Math.min(historyTotalPages, prev + 1))}
-                    disabled={historyCurrentPage === historyTotalPages || historyItemsPerPage === -1}
-                  />
-                </PaginationItem>
-              </PaginationContent>
-            </Pagination>
-          </>
-        )}
-      </div>
+                  {[...Array(historyTotalPages)].map((_, index) => (
+                    <PaginationItem key={index}>
+                      <PaginationLink
+                        isActive={historyCurrentPage === index + 1}
+                        onClick={() => setHistoryCurrentPage(index + 1)}
+                        disabled={historyItemsPerPage === -1}
+                      >
+                        {index + 1}
+                      </PaginationLink>
+                    </PaginationItem>
+                  ))}
+                  <PaginationItem>
+                    <PaginationNext
+                      onClick={() => setHistoryCurrentPage((prev) => Math.min(historyTotalPages, prev + 1))}
+                      disabled={historyCurrentPage === historyTotalPages || historyItemsPerPage === -1}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            </>
+          )}
+        </CardContent>
+      </Card>
 
       <VerifikasiTagihanDialog
         isOpen={isVerifikasiModalOpen}
