@@ -67,7 +67,7 @@ interface Tagihan {
 interface VerifikasiTagihanDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onVerificationSuccess: () => void; // Properti baru ditambahkan di sini
+  onVerificationSuccess: () => void;
   tagihan: Tagihan | null;
 }
 
@@ -209,6 +209,7 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
       }
 
       toast.success(`Tagihan ${tagihan.nomor_spm} berhasil ${values.status_keputusan.toLowerCase()}!`);
+      onVerificationSuccess(); // Panggil callback setelah sukses
       onClose();
     } catch (error: any) {
       console.error('Error processing verification:', error.message);
