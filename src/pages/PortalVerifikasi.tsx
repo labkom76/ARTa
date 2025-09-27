@@ -153,6 +153,12 @@ const PortalVerifikasi = () => {
     }
   };
 
+  // Fungsi baru untuk menangani keberhasilan verifikasi
+  const handleVerificationSuccess = () => {
+    fetchQueueTagihan(); // Perbarui daftar antrian
+    fetchHistoryTagihan(); // Perbarui daftar riwayat
+  };
+
   useEffect(() => {
     fetchQueueTagihan();
     fetchHistoryTagihan();
@@ -493,6 +499,7 @@ const PortalVerifikasi = () => {
       <VerifikasiTagihanDialog
         isOpen={isVerifikasiModalOpen}
         onClose={handleCloseVerifikasiModal}
+        onVerificationSuccess={handleVerificationSuccess} {/* Properti baru ditambahkan di sini */}
         tagihan={selectedTagihanForVerifikasi}
       />
 
