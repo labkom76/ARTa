@@ -109,8 +109,13 @@ const RiwayatVerifikasi = () => {
           query = query.eq('status_tagihan', selectedStatus);
         }
 
-        // No date filters yet as per instructions.
-        // These will be added in a later step.
+        // Apply date range filter
+        if (dateRange?.from) {
+          query = query.gte('waktu_verifikasi', startOfDay(dateRange.from).toISOString());
+        }
+        if (dateRange?.to) {
+          query = query.lte('waktu_verifikasi', endOfDay(dateRange.to).toISOString());
+        }
 
         if (itemsPerPage !== -1) {
           const from = (currentPage - 1) * itemsPerPage;
@@ -132,7 +137,7 @@ const RiwayatVerifikasi = () => {
     };
 
     fetchRiwayatVerifikasi();
-  }, [sessionLoading, profile, debouncedSearchQuery, selectedStatus, currentPage, itemsPerPage]); // Added selectedStatus to dependencies
+  }, [sessionLoading, profile, debouncedSearchQuery, selectedStatus, dateRange, currentPage, itemsPerPage]); // Added dateRange to dependencies
 
   const handleDetailClick = (tagihan: Tagihan) => {
     setSelectedTagihanForDetail(tagihan);
@@ -202,6 +207,14 @@ const RiwayatVerifikasi = () => {
                 <SelectItem value="Dikembalikan">Dikembalikan</SelectItem>
               </SelectContent>
             </Select>
+            <DateRangePickerWithPresets
+              date={dateRange}
+              onDateChange={(newDateRange) => {
+                setDateRange(newDateRange);
+                setCurrentPage(1); // Reset to first page on date range change
+              }}
+              className="w-full sm:w-auto"
+            />
           </div>
         </CardContent>
       </Card>
