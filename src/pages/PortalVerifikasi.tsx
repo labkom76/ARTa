@@ -88,6 +88,11 @@ const PortalVerifikasi = () => {
   const [historySkpdOptions, setHistorySkpdOptions] = useState<string[]>([]); // New state for history SKPD options
   const [selectedHistorySkpd, setSelectedHistorySkpd] = useState<string>('Semua SKPD'); // New state for selected history SKPD
 
+  // State for History Table Pagination (added to resolve ReferenceError)
+  const [historyCurrentPage, setHistoryCurrentPage] = useState(1);
+  const [historyItemsPerPage, setHistoryItemsPerPage] = useState(10);
+  const [historyTotalItems, setHistoryTotalItems] = useState(0);
+
   const [isVerifikasiModalOpen, setIsVerifikasiModalOpen] = useState(false);
   const [selectedTagihanForVerifikasi, setSelectedTagihanForVerifikasi] = useState<Tagihan | null>(null);
 
@@ -228,6 +233,7 @@ const PortalVerifikasi = () => {
 
       query = query.order('waktu_verifikasi', { ascending: false });
 
+      // Pagination for history table
       if (historyItemsPerPage !== -1) {
         query = query.range(
           (historyCurrentPage - 1) * historyItemsPerPage,
@@ -260,7 +266,7 @@ const PortalVerifikasi = () => {
 
   useEffect(() => {
     fetchHistoryTagihan();
-  }, [user, sessionLoading, profile, debouncedHistorySearchQuery, selectedHistorySkpd, historyCurrentPage, historyItemsPerPage]); // Added new dependencies
+  }, [user, sessionLoading, profile, debouncedHistorySearchQuery, selectedHistorySkpd, historyCurrentPage, historyItemsPerPage]);
 
   useEffect(() => {
     const channel = supabase
