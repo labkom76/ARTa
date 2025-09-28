@@ -96,7 +96,13 @@ const RiwayatVerifikasi = () => {
           .in('status_tagihan', ['Diteruskan', 'Dikembalikan']) // Filter for 'Diteruskan' or 'Dikembalikan'
           .order('waktu_verifikasi', { ascending: false }); // Order by most recent verification
 
-        // No search, status, or date filters yet as per instructions.
+        if (debouncedSearchQuery) {
+          query = query.or(
+            `nomor_spm.ilike.%${debouncedSearchQuery}%,nama_skpd.ilike.%${debouncedSearchQuery}%`
+          );
+        }
+
+        // No status or date filters yet as per instructions.
         // These will be added in a later step.
 
         if (itemsPerPage !== -1) {
@@ -119,7 +125,7 @@ const RiwayatVerifikasi = () => {
     };
 
     fetchRiwayatVerifikasi();
-  }, [sessionLoading, profile, currentPage, itemsPerPage]); // Dependencies for fetching
+  }, [sessionLoading, profile, debouncedSearchQuery, currentPage, itemsPerPage]); // Dependencies for fetching
 
   const handleDetailClick = (tagihan: Tagihan) => {
     setSelectedTagihanForDetail(tagihan);
@@ -159,14 +165,24 @@ const RiwayatVerifikasi = () => {
     <div className="space-y-6">
       <h1 className="text-3xl font-bold text-gray-800 dark:text-white mb-6">Riwayat Verifikasi Tagihan</h1>
 
-      {/* Area kosong untuk kontrol filter */}
+      {/* Area Kontrol Filter */}
       <Card className="shadow-sm rounded-lg">
         <CardHeader>
           <CardTitle className="text-xl font-semibold">Filter Data</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="h-24 flex items-center justify-center text-gray-500 dark:text-gray-400 border border-dashed rounded-md">
-            Area kontrol filter akan ditempatkan di sini.
+          <div className="relative flex-1 w-full">
+            <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400" />
+            <Input
+              type="text"
+              placeholder="Cari berdasarkan Nomor SPM atau Nama SKPD..."
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setCurrentPage(1); // Reset to first page on search
+              }}
+              className="pl-9 w-full"
+            />
           </div>
         </CardContent>
       </Card>
