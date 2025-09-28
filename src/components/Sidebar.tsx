@@ -49,6 +49,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onLinkClick }) => {
     navItems.push(
       { to: '/dashboard-verifikasi', icon: LayoutDashboardIcon, label: 'Dashboard' },
       { to: '/portal-verifikasi', icon: FileTextIcon, label: 'Portal' },
+      { to: '/riwayat-verifikasi', icon: HistoryIcon, label: 'Riwayat Verifikasi' }, // New navigation item for Verifikator
     );
   } else {
     // Default or fallback for other roles/unassigned
