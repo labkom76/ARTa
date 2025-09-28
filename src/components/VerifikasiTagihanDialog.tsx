@@ -109,11 +109,18 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
       catatan_verifikator: '',
       detail_verifikasi: checklistItems.map(item => ({
         item,
-        memenuhi_syarat: true,
+        memenuhi_syarat: true, // Default to true
         keterangan: '',
       })),
     },
   });
+
+  // Watch for changes in detail_verifikasi and status_keputusan
+  const detailVerifikasiWatch = form.watch('detail_verifikasi');
+  const statusKeputusanWatch = form.watch('status_keputusan');
+
+  // Determine if all checklist items meet requirements
+  const allChecklistItemsMet = detailVerifikasiWatch.every(item => item.memenuhi_syarat === true);
 
   useEffect(() => {
     if (isOpen && tagihan) {
@@ -184,9 +191,14 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
       return;
     }
 
+    // Additional check for 'Diteruskan' decision
+    if (values.status_keputusan === 'Diteruskan' && !allChecklistItemsMet) {
+      toast.error('Tidak dapat meneruskan tagihan. Semua item checklist harus memenuhi syarat.');
+      return;
+    }
+
     setIsSubmitting(true);
     try {
-      // Generate nomorVerifikasi unconditionally for any verification action
       const nomorVerifikasi = await generateNomorVerifikasi();
 
       const { error } = await supabase
@@ -197,9 +209,9 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
           waktu_verifikasi: new Date().toISOString(),
           nama_verifikator: profile.nama_lengkap,
           detail_verifikasi: values.detail_verifikasi,
-          nomor_verifikasi: nomorVerifikasi, // This will now always have a value
-          locked_by: null, // Unlock after processing
-          locked_at: null, // Clear lock timestamp
+          nomor_verifikasi: nomorVerifikasi,
+          locked_by: null,
+          locked_at: null,
         })
         .eq('id_tagihan', tagihan.id_tagihan);
 
@@ -209,7 +221,7 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
       }
 
       toast.success(`Tagihan ${tagihan.nomor_spm} berhasil ${values.status_keputusan.toLowerCase()}!`);
-      onVerificationSuccess(); // Panggil callback setelah sukses
+      onVerificationSuccess();
       onClose();
     } catch (error: any) {
       console.error('Error processing verification:', error.message);
@@ -339,7 +351,7 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
                       <SelectValue placeholder="Pilih Keputusan" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Diteruskan">Diteruskan</SelectItem>
+                      <SelectItem value="Diteruskan" disabled={!allChecklistItemsMet}>Diteruskan</SelectItem>
                       <SelectItem value="Dikembalikan">Dikembalikan</SelectItem>
                     </SelectContent>
                   </Select>
@@ -366,10 +378,10 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
             <Button
               type="submit"
               className="w-full mt-6"
-              variant={getButtonVariant(form.watch('status_keputusan'))}
-              disabled={isSubmitting || !form.formState.isValid}
+              variant={getButtonVariant(statusKeputusanWatch)}
+              disabled={isSubmitting || !form.formState.isValid || (statusKeputusanWatch === 'Diteruskan' && !allChecklistItemsMet)}
             >
-              {isSubmitting ? 'Memproses...' : `Proses Tagihan (${form.watch('status_keputusan') || 'Pilih Keputusan'})`}
+              {isSubmitting ? 'Memproses...' : `Proses Tagihan (${statusKeputusanWatch || 'Pilih Keputusan'})`}
             </Button>
           </form>
         </div>
