@@ -225,6 +225,29 @@ const RiwayatVerifikasi = () => {
           <CardTitle className="text-xl font-semibold">Daftar Riwayat Verifikasi</CardTitle>
         </CardHeader>
         <CardContent>
+          {/* Moved "Baris per halaman" here */}
+          <div className="mb-4 flex justify-end items-center space-x-2">
+            <Label htmlFor="items-per-page" className="whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">Baris per halaman:</Label>
+            <Select
+              value={itemsPerPage.toString()}
+              onValueChange={(value) => {
+                setItemsPerPage(Number(value));
+                setCurrentPage(1); // Reset to first page when items per page changes
+              }}
+            >
+              <SelectTrigger className="w-[100px]">
+                <SelectValue placeholder="10" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="10">10</SelectItem>
+                <SelectItem value="25">25</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+                <SelectItem value="100">100</SelectItem>
+                <SelectItem value="-1">Semua</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
@@ -276,27 +299,6 @@ const RiwayatVerifikasi = () => {
           </div>
           {/* Pagination Controls */}
           <div className="mt-6 flex flex-col sm:flex-row items-center justify-between space-y-2 sm:space-y-0">
-            <div className="flex items-center space-x-2">
-              <Label htmlFor="items-per-page" className="whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">Baris per halaman:</Label>
-              <Select
-                value={itemsPerPage.toString()}
-                onValueChange={(value) => {
-                  setItemsPerPage(Number(value));
-                  setCurrentPage(1); // Reset to first page when items per page changes
-                }}
-              >
-                <SelectTrigger className="w-[100px]">
-                  <SelectValue placeholder="10" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="10">10</SelectItem>
-                  <SelectItem value="25">25</SelectItem>
-                  <SelectItem value="50">50</SelectItem>
-                  <SelectItem value="100">100</SelectItem>
-                  <SelectItem value="-1">Semua</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
             <div className="text-sm text-muted-foreground">
               Halaman {totalItems === 0 ? 0 : currentPage} dari {totalPages} ({totalItems} total item)
             </div>
