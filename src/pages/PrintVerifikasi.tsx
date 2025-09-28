@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { format, parseISO } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
 import { toast } from 'sonner';
+import { CheckIcon, XIcon } from 'lucide-react'; // Import CheckIcon and XIcon
 
 interface VerificationItem {
   item: string;
@@ -241,8 +242,12 @@ const PrintVerifikasi = () => {
               <tr key={index}>
                 <td className="print-text-center">{index + 1}</td>
                 <td>{item}</td>
-                <td className="print-text-center">{isMet ? 'V' : ''}</td>
-                <td className="print-text-center">{isMet === false ? 'V' : ''}</td>
+                <td className="print-text-center">
+                  {isMet ? <div className="flex justify-center items-center"><CheckIcon className="h-4 w-4 text-green-600" /></div> : ''}
+                </td>
+                <td className="print-text-center">
+                  {isMet === false ? <div className="flex justify-center items-center"><XIcon className="h-4 w-4 text-red-600" /></div> : ''}
+                </td>
                 <td>{keterangan}</td>
               </tr>
             );
