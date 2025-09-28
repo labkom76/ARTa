@@ -83,9 +83,10 @@ const PortalVerifikasi = () => {
 
   const [historyTagihanList, setHistoryTagihanList] = useState<Tagihan[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(true);
-  const [historyCurrentPage, setHistoryCurrentPage] = useState(1);
-  const [historyItemsPerPage, setHistoryItemsPerPage] = useState(10);
-  const [historyTotalItems, setHistoryTotalItems] = useState(0);
+  const [historySearchQuery, setHistorySearchQuery] = useState(''); // New state for history search
+  const debouncedHistorySearchQuery = useDebounce(historySearchQuery, 500); // Debounced history search
+  const [historySkpdOptions, setHistorySkpdOptions] = useState<string[]>([]); // New state for history SKPD options
+  const [selectedHistorySkpd, setSelectedHistorySkpd] = useState<string>('Semua SKPD'); // New state for selected history SKPD
 
   const [isVerifikasiModalOpen, setIsVerifikasiModalOpen] = useState(false);
   const [selectedTagihanForVerifikasi, setSelectedTagihanForVerifikasi] = useState<Tagihan | null>(null);
@@ -114,6 +115,34 @@ const PortalVerifikasi = () => {
       }
     };
     fetchQueueSkpdOptions();
+  }, []);
+
+  // Fetch unique SKPD names for the history filter dropdown
+  useEffect(() => {
+    const fetchHistorySkpdOptions = async () => {
+      try {
+        const todayStart = startOfDay(new Date()).toISOString();
+        const todayEnd = endOfDay(new Date()).toISOString();
+
+        const { data, error } = await supabase
+          .from('database_tagihan')
+          .select('nama_skpd')
+          .in('status_tagihan', ['Diteruskan', 'Dikembalikan'])
+          .gte('waktu_verifikasi', todayStart)
+          .lte('waktu_verifikasi', todayEnd);
+
+        if (error) throw error;
+
+        const uniqueSkpd = Array.from(new Set(data.map(item => item.nama_skpd)))
+          .filter((skpd): skpd is string => skpd !== null && skpd.trim() !== '');
+
+        setHistorySkpdOptions(['Semua SKPD', ...uniqueSkpd.sort()]);
+      } catch (error: any) {
+        console.error('Error fetching history SKPD options:', error.message);
+        toast.error('Gagal memuat daftar SKPD untuk riwayat: ' + error.message);
+      }
+    };
+    fetchHistorySkpdOptions();
   }, []);
 
   const fetchQueueTagihan = async () => {
@@ -183,8 +212,21 @@ const PortalVerifikasi = () => {
         .select('*', { count: 'exact' })
         .in('status_tagihan', ['Diteruskan', 'Dikembalikan'])
         .gte('waktu_verifikasi', todayStart)
-        .lte('waktu_verifikasi', todayEnd)
-        .order('waktu_verifikasi', { ascending: false });
+        .lte('waktu_verifikasi', todayEnd);
+
+      // Apply history search query
+      if (debouncedHistorySearchQuery) {
+        query = query.or(
+          `nomor_spm.ilike.%${debouncedHistorySearchQuery}%,nama_skpd.ilike.%${debouncedHistorySearchQuery}%`
+        );
+      }
+
+      // Apply history SKPD filter
+      if (selectedHistorySkpd !== 'Semua SKPD') {
+        query = query.eq('nama_skpd', selectedHistorySkpd);
+      }
+
+      query = query.order('waktu_verifikasi', { ascending: false });
 
       if (historyItemsPerPage !== -1) {
         query = query.range(
@@ -218,7 +260,7 @@ const PortalVerifikasi = () => {
 
   useEffect(() => {
     fetchHistoryTagihan();
-  }, [user, sessionLoading, profile, historyCurrentPage, historyItemsPerPage]);
+  }, [user, sessionLoading, profile, debouncedHistorySearchQuery, selectedHistorySkpd, historyCurrentPage, historyItemsPerPage]); // Added new dependencies
 
   useEffect(() => {
     const channel = supabase
@@ -541,26 +583,55 @@ const PortalVerifikasi = () => {
           <CardTitle className="text-2xl font-semibold text-gray-800 dark:text-white">Riwayat Verifikasi Hari Ini</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="mb-4 flex justify-end items-center space-x-2">
-            <label htmlFor="history-items-per-page" className="whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">Baris per halaman:</label>
-            <Select
-              value={historyItemsPerPage.toString()}
-              onValueChange={(value) => {
-                setHistoryItemsPerPage(Number(value));
-                setHistoryCurrentPage(1);
-              }}
-            >
-              <SelectTrigger className="w-[100px]">
-                <SelectValue placeholder="10" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="10">10</SelectItem>
-                <SelectItem value="25">25</SelectItem>
-                <SelectItem value="50">50</SelectItem>
-                <SelectItem value="100">100</SelectItem>
-                <SelectItem value="-1">Semua</SelectItem>
-              </SelectContent>
-            </Select>
+          <div className="flex flex-col sm:flex-row items-center justify-between space-y-2 sm:space-y-0 sm:space-x-2 mb-4">
+            <div className="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-2 w-full sm:w-auto">
+              <div className="relative flex-1 w-full sm:w-auto">
+                <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400" />
+                <Input
+                  type="text"
+                  placeholder="Cari Nomor SPM atau Nama SKPD..."
+                  className="pl-9 w-full"
+                  value={historySearchQuery}
+                  onChange={(e) => {
+                    setHistorySearchQuery(e.target.value);
+                    setHistoryCurrentPage(1); // Reset page on search
+                  }}
+                />
+              </div>
+              <Select onValueChange={(value) => { setSelectedHistorySkpd(value); setHistoryCurrentPage(1); }} value={selectedHistorySkpd}>
+                <SelectTrigger className="w-full sm:w-[180px]">
+                  <SelectValue placeholder="Filter SKPD" />
+                </SelectTrigger>
+                <SelectContent>
+                  {historySkpdOptions.map((skpd) => (
+                    <SelectItem key={skpd} value={skpd}>
+                      {skpd}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Label htmlFor="history-items-per-page" className="whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">Baris per halaman:</Label>
+              <Select
+                value={historyItemsPerPage.toString()}
+                onValueChange={(value) => {
+                  setHistoryItemsPerPage(Number(value));
+                  setHistoryCurrentPage(1);
+                }}
+              >
+                <SelectTrigger className="w-[100px]">
+                  <SelectValue placeholder="10" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="10">10</SelectItem>
+                  <SelectItem value="25">25</SelectItem>
+                  <SelectItem value="50">50</SelectItem>
+                  <SelectItem value="100">100</SelectItem>
+                  <SelectItem value="-1">Semua</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           {loadingHistory ? (
