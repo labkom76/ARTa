@@ -197,6 +197,12 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
       return;
     }
 
+    // Additional check for 'Dikembalikan' decision
+    if (values.status_keputusan === 'Dikembalikan' && allChecklistItemsMet) {
+      toast.error('Tidak dapat mengembalikan tagihan. Semua item checklist sudah memenuhi syarat.');
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       const nomorVerifikasi = await generateNomorVerifikasi();
@@ -236,6 +242,11 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
     if (status === 'Dikembalikan') return 'destructive';
     return 'secondary';
   };
+
+  // Determine if the submit button should be disabled
+  const isSubmitButtonDisabled = isSubmitting || !form.formState.isValid ||
+    (statusKeputusanWatch === 'Diteruskan' && !allChecklistItemsMet) ||
+    (statusKeputusanWatch === 'Dikembalikan' && allChecklistItemsMet);
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
@@ -352,7 +363,7 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="Diteruskan" disabled={!allChecklistItemsMet}>Diteruskan</SelectItem>
-                      <SelectItem value="Dikembalikan">Dikembalikan</SelectItem>
+                      <SelectItem value="Dikembalikan" disabled={allChecklistItemsMet}>Dikembalikan</SelectItem>
                     </SelectContent>
                   </Select>
                 )}
@@ -379,7 +390,7 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
               type="submit"
               className="w-full mt-6"
               variant={getButtonVariant(statusKeputusanWatch)}
-              disabled={isSubmitting || !form.formState.isValid || (statusKeputusanWatch === 'Diteruskan' && !allChecklistItemsMet)}
+              disabled={isSubmitButtonDisabled}
             >
               {isSubmitting ? 'Memproses...' : `Proses Tagihan (${statusKeputusanWatch || 'Pilih Keputusan'})`}
             </Button>
