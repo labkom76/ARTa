@@ -11,9 +11,10 @@ import DashboardSKPD from "./pages/DashboardSKPD";
 import PortalSKPD from "./pages/PortalSKPD";
 import DashboardRegistrasi from "./pages/DashboardRegistrasi";
 import PortalRegistrasi from "./pages/PortalRegistrasi";
-import RiwayatRegistrasi from "./pages/RiwayatRegistrasi"; // Import the new page
+import RiwayatRegistrasi from "./pages/RiwayatRegistrasi";
 import DashboardVerifikasi from "./pages/DashboardVerifikasi";
 import PortalVerifikasi from "./pages/PortalVerifikasi";
+import PrintVerifikasi from "./pages/PrintVerifikasi"; // Import the new print page
 import { SessionContextProvider } from "./contexts/SessionContext";
 
 const queryClient = new QueryClient();
@@ -27,13 +28,14 @@ const App = () => (
         <SessionContextProvider>
           <Routes>
             <Route path="/login" element={<Login />} />
+            <Route path="/print-verifikasi" element={<PrintVerifikasi />} /> {/* New route for print page */}
             <Route element={<MainLayout />}>
               <Route path="/" element={<Index />} />
               <Route path="/dashboard-skpd" element={<DashboardSKPD />} />
               <Route path="/portal-skpd" element={<PortalSKPD />} />
               <Route path="/dashboard-registrasi" element={<DashboardRegistrasi />} />
               <Route path="/portal-registrasi" element={<PortalRegistrasi />} />
-              <Route path="/riwayat-registrasi" element={<RiwayatRegistrasi />} /> {/* New route */}
+              <Route path="/riwayat-registrasi" element={<RiwayatRegistrasi />} />
               <Route path="/dashboard-verifikasi" element={<DashboardVerifikasi />} />
               <Route path="/portal-verifikasi" element={<PortalVerifikasi />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

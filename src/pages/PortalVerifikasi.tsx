@@ -233,7 +233,6 @@ const PortalVerifikasi = () => {
 
       query = query.order('waktu_verifikasi', { ascending: false });
 
-      // Pagination for history table
       if (historyItemsPerPage !== -1) {
         query = query.range(
           (historyCurrentPage - 1) * historyItemsPerPage,
@@ -407,6 +406,15 @@ const PortalVerifikasi = () => {
   const handleDetailClick = (tagihan: Tagihan) => {
     setSelectedTagihanForDetail(tagihan);
     setIsDetailModalOpen(true);
+  };
+
+  const handlePrintClick = (tagihanId: string) => {
+    const printWindow = window.open(`/print-verifikasi?id=${tagihanId}`, '_blank', 'width=800,height=900,scrollbars=yes');
+    if (printWindow) {
+      printWindow.focus();
+    } else {
+      toast.error('Gagal membuka jendela cetak. Pastikan pop-up tidak diblokir.');
+    }
   };
 
   const queueTotalPages = queueItemsPerPage === -1 ? 1 : Math.ceil(queueTotalItems / queueItemsPerPage);
@@ -673,7 +681,7 @@ const PortalVerifikasi = () => {
                             <Button variant="outline" size="icon" title="Lihat Detail" onClick={() => handleDetailClick(tagihan)}>
                               <EyeIcon className="h-4 w-4" />
                             </Button>
-                            <Button variant="outline" size="icon" title="Cetak">
+                            <Button variant="outline" size="icon" title="Cetak" onClick={() => handlePrintClick(tagihan.id_tagihan)}>
                               <PrinterIcon className="h-4 w-4" />
                             </Button>
                           </div>
