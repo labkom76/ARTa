@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useSession } from '@/contexts/SessionContext';
 import { supabase } from '@/integrations/supabase/client';
 import {
@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { format, parseISO, startOfDay, endOfDay, isSameDay } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
-import { FileCheckIcon, LockIcon, EyeIcon, PrinterIcon } from 'lucide-react';
+import { FileCheckIcon, LockIcon, EyeIcon, PrinterIcon, SearchIcon } from 'lucide-react';
 import VerifikasiTagihanDialog from '@/components/VerifikasiTagihanDialog';
 import {
   Pagination,
@@ -32,6 +32,9 @@ import {
 } from '@/components/ui/select';
 import TagihanDetailDialog from '@/components/TagihanDetailDialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import useDebounce from '@/hooks/use-debounce';
 
 interface VerificationItem {
   item: string;
@@ -68,6 +71,15 @@ const PortalVerifikasi = () => {
   const { user, profile, loading: sessionLoading } = useSession();
   const [queueTagihanList, setQueueTagihanList] = useState<Tagihan[]>([]);
   const [loadingQueue, setLoadingQueue] = useState(true);
+  const [queueSearchQuery, setQueueSearchQuery] = useState('');
+  const debouncedQueueSearchQuery = useDebounce(queueSearchQuery, 500);
+  const [queueSkpdOptions, setQueueSkpdOptions] = useState<string[]>([]);
+  const [selectedQueueSkpd, setSelectedQueueSkpd] = useState<string>('Semua SKPD');
+
+  // State for Queue Table Pagination
+  const [queueCurrentPage, setQueueCurrentPage] = useState(1);
+  const [queueItemsPerPage, setQueueItemsPerPage] = useState(10);
+  const [queueTotalItems, setQueueTotalItems] = useState(0);
 
   const [historyTagihanList, setHistoryTagihanList] = useState<Tagihan[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(true);
@@ -80,6 +92,29 @@ const PortalVerifikasi = () => {
 
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [selectedTagihanForDetail, setSelectedTagihanForDetail] = useState<Tagihan | null>(null);
+
+  // Fetch unique SKPD names for the queue filter dropdown
+  useEffect(() => {
+    const fetchQueueSkpdOptions = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('database_tagihan')
+          .select('nama_skpd')
+          .eq('status_tagihan', 'Menunggu Verifikasi');
+
+        if (error) throw error;
+
+        const uniqueSkpd = Array.from(new Set(data.map(item => item.nama_skpd)))
+          .filter((skpd): skpd is string => skpd !== null && skpd.trim() !== '');
+
+        setQueueSkpdOptions(['Semua SKPD', ...uniqueSkpd.sort()]);
+      } catch (error: any) {
+        console.error('Error fetching queue SKPD options:', error.message);
+        toast.error('Gagal memuat daftar SKPD untuk antrian: ' + error.message);
+      }
+    };
+    fetchQueueSkpdOptions();
+  }, []);
 
   const fetchQueueTagihan = async () => {
     if (sessionLoading || profile?.peran !== 'Staf Verifikator') {
@@ -94,7 +129,7 @@ const PortalVerifikasi = () => {
 
       let query = supabase
         .from('database_tagihan')
-        .select('*')
+        .select('*', { count: 'exact' })
         .eq('status_tagihan', 'Menunggu Verifikasi')
         .order('waktu_registrasi', { ascending: true });
 
@@ -102,10 +137,28 @@ const PortalVerifikasi = () => {
         `locked_by.is.null,locked_by.eq.${user?.id},locked_at.lt.${lockTimeoutThreshold}`
       );
 
-      const { data, error } = await query;
+      if (debouncedQueueSearchQuery) {
+        query = query.or(
+          `nomor_spm.ilike.%${debouncedQueueSearchQuery}%,nama_skpd.ilike.%${debouncedQueueSearchQuery}%`
+        );
+      }
+
+      if (selectedQueueSkpd !== 'Semua SKPD') {
+        query = query.eq('nama_skpd', selectedQueueSkpd);
+      }
+
+      if (queueItemsPerPage !== -1) {
+        query = query.range(
+          (queueCurrentPage - 1) * queueItemsPerPage,
+          queueCurrentPage * queueItemsPerPage - 1
+        );
+      }
+
+      const { data, error, count } = await query;
 
       if (error) throw error;
       setQueueTagihanList(data as Tagihan[]);
+      setQueueTotalItems(count || 0);
     } catch (error: any) {
       console.error('Error fetching queue tagihan:', error.message);
       toast.error('Gagal memuat antrian verifikasi: ' + error.message);
@@ -161,8 +214,13 @@ const PortalVerifikasi = () => {
 
   useEffect(() => {
     fetchQueueTagihan();
-    fetchHistoryTagihan();
+  }, [user, sessionLoading, profile, debouncedQueueSearchQuery, selectedQueueSkpd, queueCurrentPage, queueItemsPerPage]);
 
+  useEffect(() => {
+    fetchHistoryTagihan();
+  }, [user, sessionLoading, profile, historyCurrentPage, historyItemsPerPage]);
+
+  useEffect(() => {
     const channel = supabase
       .channel('portal-verifikasi-changes')
       .on(
@@ -303,6 +361,7 @@ const PortalVerifikasi = () => {
     setIsDetailModalOpen(true);
   };
 
+  const queueTotalPages = queueItemsPerPage === -1 ? 1 : Math.ceil(queueTotalItems / queueItemsPerPage);
   const historyTotalPages = historyItemsPerPage === -1 ? 1 : Math.ceil(historyTotalItems / historyItemsPerPage);
 
   if (sessionLoading || loadingQueue || loadingHistory) {
@@ -333,63 +392,146 @@ const PortalVerifikasi = () => {
           <CardTitle className="text-2xl font-semibold text-gray-800 dark:text-white">Antrian Verifikasi</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nomor Registrasi</TableHead>
-                  <TableHead>Waktu Registrasi</TableHead>
-                  <TableHead>Nomor SPM</TableHead>
-                  <TableHead>Nama SKPD</TableHead>
-                  <TableHead>Jumlah Kotor</TableHead>
-                  <TableHead className="text-center">Aksi</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {queueTagihanList.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center text-muted-foreground">
-                      Tidak ada tagihan di antrian verifikasi.
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  queueTagihanList.map((tagihan) => {
-                    const isLockedByOther = tagihan.locked_by && tagihan.locked_by !== user?.id;
-                    const isStaleLock = tagihan.locked_at && (new Date().getTime() - parseISO(tagihan.locked_at).getTime()) > LOCK_TIMEOUT_MINUTES * 60 * 1000;
-
-                    const isDisabled = isLockedByOther && !isStaleLock;
-
-                    return (
-                      <TableRow key={tagihan.id_tagihan}>
-                        <TableCell className="font-medium">{tagihan.nomor_registrasi || '-'}</TableCell>
-                        <TableCell>
-                          {tagihan.waktu_registrasi ? format(parseISO(tagihan.waktu_registrasi), 'dd MMMM yyyy HH:mm', { locale: localeId }) : '-'}
-                        </TableCell>
-                        <TableCell>{tagihan.nomor_spm}</TableCell>
-                        <TableCell>{tagihan.nama_skpd}</TableCell>
-                        <TableCell>Rp{tagihan.jumlah_kotor.toLocaleString('id-ID')}</TableCell>
-                        <TableCell className="text-center">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            title={isDisabled ? "Tagihan ini sedang diproses oleh verifikator lain" : "Proses Verifikasi"}
-                            onClick={() => handleProcessVerification(tagihan)}
-                            disabled={isDisabled}
-                          >
-                            {isDisabled ? (
-                              <LockIcon className="h-5 w-5 text-gray-400" />
-                            ) : (
-                              <FileCheckIcon className="h-5 w-5 text-blue-500" />
-                            )}
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })
-                )}
-              </TableBody>
-            </Table>
+          <div className="flex flex-col sm:flex-row items-center justify-between space-y-2 sm:space-y-0 sm:space-x-2 mb-4">
+            <div className="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-2 w-full sm:w-auto">
+              <div className="relative flex-1 w-full sm:w-auto">
+                <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400" />
+                <Input
+                  type="text"
+                  placeholder="Cari Nomor SPM atau Nama SKPD..."
+                  className="pl-9 w-full"
+                  value={queueSearchQuery}
+                  onChange={(e) => {
+                    setQueueSearchQuery(e.target.value);
+                    setQueueCurrentPage(1); // Reset page on search
+                  }}
+                />
+              </div>
+              <Select onValueChange={(value) => { setSelectedQueueSkpd(value); setQueueCurrentPage(1); }} value={selectedQueueSkpd}>
+                <SelectTrigger className="w-full sm:w-[180px]">
+                  <SelectValue placeholder="Filter SKPD" />
+                </SelectTrigger>
+                <SelectContent>
+                  {queueSkpdOptions.map((skpd) => (
+                    <SelectItem key={skpd} value={skpd}>
+                      {skpd}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Label htmlFor="queue-items-per-page" className="whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">Baris per halaman:</Label>
+              <Select
+                value={queueItemsPerPage.toString()}
+                onValueChange={(value) => {
+                  setQueueItemsPerPage(Number(value));
+                  setQueueCurrentPage(1);
+                }}
+              >
+                <SelectTrigger className="w-[100px]">
+                  <SelectValue placeholder="10" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="10">10</SelectItem>
+                  <SelectItem value="25">25</SelectItem>
+                  <SelectItem value="50">50</SelectItem>
+                  <SelectItem value="100">100</SelectItem>
+                  <SelectItem value="-1">Semua</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
+
+          {loadingQueue ? (
+            <p className="text-center text-gray-600 dark:text-gray-400">Memuat antrian...</p>
+          ) : queueTagihanList.length === 0 ? (
+            <p className="text-center text-gray-600 dark:text-gray-400">Tidak ada tagihan di antrian verifikasi.</p>
+          ) : (
+            <>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Nomor Registrasi</TableHead>
+                      <TableHead>Waktu Registrasi</TableHead>
+                      <TableHead>Nomor SPM</TableHead>
+                      <TableHead>Nama SKPD</TableHead>
+                      <TableHead>Jumlah Kotor</TableHead>
+                      <TableHead className="text-center">Aksi</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {queueTagihanList.map((tagihan) => {
+                      const isLockedByOther = tagihan.locked_by && tagihan.locked_by !== user?.id;
+                      const isStaleLock = tagihan.locked_at && (new Date().getTime() - parseISO(tagihan.locked_at).getTime()) > LOCK_TIMEOUT_MINUTES * 60 * 1000;
+
+                      const isDisabled = isLockedByOther && !isStaleLock;
+
+                      return (
+                        <TableRow key={tagihan.id_tagihan}>
+                          <TableCell className="font-medium">{tagihan.nomor_registrasi || '-'}</TableCell>
+                          <TableCell>
+                            {tagihan.waktu_registrasi ? format(parseISO(tagihan.waktu_registrasi), 'dd MMMM yyyy HH:mm', { locale: localeId }) : '-'}
+                          </TableCell>
+                          <TableCell>{tagihan.nomor_spm}</TableCell>
+                          <TableCell>{tagihan.nama_skpd}</TableCell>
+                          <TableCell>Rp{tagihan.jumlah_kotor.toLocaleString('id-ID')}</TableCell>
+                          <TableCell className="text-center">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              title={isDisabled ? "Tagihan ini sedang diproses oleh verifikator lain" : "Proses Verifikasi"}
+                              onClick={() => handleProcessVerification(tagihan)}
+                              disabled={isDisabled}
+                            >
+                              {isDisabled ? (
+                                <LockIcon className="h-5 w-5 text-gray-400" />
+                              ) : (
+                                <FileCheckIcon className="h-5 w-5 text-blue-500" />
+                              )}
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+              <div className="mt-6 flex flex-col sm:flex-row items-center justify-between space-y-2 sm:space-y-0">
+                <div className="text-sm text-muted-foreground">
+                  Halaman {queueTotalItems === 0 ? 0 : queueCurrentPage} dari {queueTotalPages} ({queueTotalItems} total item)
+                </div>
+                <Pagination>
+                  <PaginationContent>
+                    <PaginationItem>
+                      <PaginationPrevious
+                        onClick={() => setQueueCurrentPage((prev) => Math.max(1, prev - 1))}
+                        disabled={queueCurrentPage === 1 || queueItemsPerPage === -1}
+                      />
+                    </PaginationItem>
+                    {[...Array(queueTotalPages)].map((_, index) => (
+                      <PaginationItem key={index}>
+                        <PaginationLink
+                          isActive={queueCurrentPage === index + 1}
+                          onClick={() => setQueueCurrentPage(index + 1)}
+                          disabled={queueItemsPerPage === -1}
+                        >
+                          {index + 1}
+                        </PaginationLink>
+                      </PaginationItem>
+                    ))}
+                    <PaginationItem>
+                      <PaginationNext
+                        onClick={() => setQueueCurrentPage((prev) => Math.min(queueTotalPages, prev + 1))}
+                        disabled={queueCurrentPage === queueTotalPages || queueItemsPerPage === -1}
+                      />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
+              </div>
+            </>
+          )}
         </CardContent>
       </Card>
 
@@ -464,33 +606,38 @@ const PortalVerifikasi = () => {
                   </TableBody>
                 </Table>
               </div>
-              <Pagination className="mt-4">
-                <PaginationContent>
-                  <PaginationItem>
-                    <PaginationPrevious
-                      onClick={() => setHistoryCurrentPage((prev) => Math.max(1, prev - 1))}
-                      disabled={historyCurrentPage === 1 || historyItemsPerPage === -1}
-                    />
-                  </PaginationItem>
-                  {[...Array(historyTotalPages)].map((_, index) => (
-                    <PaginationItem key={index}>
-                      <PaginationLink
-                        isActive={historyCurrentPage === index + 1}
-                        onClick={() => setHistoryCurrentPage(index + 1)}
-                        disabled={historyItemsPerPage === -1}
-                      >
-                        {index + 1}
-                      </PaginationLink>
+              <div className="mt-6 flex flex-col sm:flex-row items-center justify-between space-y-2 sm:space-y-0">
+                <div className="text-sm text-muted-foreground">
+                  Halaman {historyTotalItems === 0 ? 0 : historyCurrentPage} dari {historyTotalPages} ({historyTotalItems} total item)
+                </div>
+                <Pagination>
+                  <PaginationContent>
+                    <PaginationItem>
+                      <PaginationPrevious
+                        onClick={() => setHistoryCurrentPage((prev) => Math.max(1, prev - 1))}
+                        disabled={historyCurrentPage === 1 || historyItemsPerPage === -1}
+                      />
                     </PaginationItem>
-                  ))}
-                  <PaginationItem>
-                    <PaginationNext
-                      onClick={() => setHistoryCurrentPage((prev) => Math.min(historyTotalPages, prev + 1))}
-                      disabled={historyCurrentPage === historyTotalPages || historyItemsPerPage === -1}
-                    />
-                  </PaginationItem>
-                </PaginationContent>
-              </Pagination>
+                    {[...Array(historyTotalPages)].map((_, index) => (
+                      <PaginationItem key={index}>
+                        <PaginationLink
+                          isActive={historyCurrentPage === index + 1}
+                          onClick={() => setHistoryCurrentPage(index + 1)}
+                          disabled={historyItemsPerPage === -1}
+                        >
+                          {index + 1}
+                        </PaginationLink>
+                      </PaginationItem>
+                    ))}
+                    <PaginationItem>
+                      <PaginationNext
+                        onClick={() => setHistoryCurrentPage((prev) => Math.min(historyTotalPages, prev + 1))}
+                        disabled={historyCurrentPage === historyTotalPages || historyItemsPerPage === -1}
+                      />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
+              </div>
             </>
           )}
         </CardContent>
