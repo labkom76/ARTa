@@ -93,8 +93,10 @@ const RiwayatVerifikasi = () => {
         let query = supabase
           .from('database_tagihan')
           .select('*', { count: 'exact' })
-          .in('status_tagihan', ['Diteruskan', 'Dikembalikan']) // Filter for 'Diteruskan' or 'Dikembalikan'
           .order('waktu_verifikasi', { ascending: false }); // Order by most recent verification
+
+        // Apply primary filter: status_tagihan must be 'Diteruskan' or 'Dikembalikan'
+        query = query.in('status_tagihan', ['Diteruskan', 'Dikembalikan']);
 
         if (debouncedSearchQuery) {
           query = query.or(
@@ -102,7 +104,12 @@ const RiwayatVerifikasi = () => {
           );
         }
 
-        // No status or date filters yet as per instructions.
+        // Apply new status filter if not 'Semua Status'
+        if (selectedStatus !== 'Semua Status') {
+          query = query.eq('status_tagihan', selectedStatus);
+        }
+
+        // No date filters yet as per instructions.
         // These will be added in a later step.
 
         if (itemsPerPage !== -1) {
@@ -125,7 +132,7 @@ const RiwayatVerifikasi = () => {
     };
 
     fetchRiwayatVerifikasi();
-  }, [sessionLoading, profile, debouncedSearchQuery, currentPage, itemsPerPage]); // Dependencies for fetching
+  }, [sessionLoading, profile, debouncedSearchQuery, selectedStatus, currentPage, itemsPerPage]); // Added selectedStatus to dependencies
 
   const handleDetailClick = (tagihan: Tagihan) => {
     setSelectedTagihanForDetail(tagihan);
@@ -171,18 +178,30 @@ const RiwayatVerifikasi = () => {
           <CardTitle className="text-xl font-semibold">Filter Data</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="relative flex-1 w-full">
-            <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400" />
-            <Input
-              type="text"
-              placeholder="Cari berdasarkan Nomor SPM atau Nama SKPD..."
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                setCurrentPage(1); // Reset to first page on search
-              }}
-              className="pl-9 w-full"
-            />
+          <div className="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-2">
+            <div className="relative flex-1 w-full sm:w-auto">
+              <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400" />
+              <Input
+                type="text"
+                placeholder="Cari berdasarkan Nomor SPM atau Nama SKPD..."
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setCurrentPage(1); // Reset to first page on search
+                }}
+                className="pl-9 w-full"
+              />
+            </div>
+            <Select onValueChange={(value) => { setSelectedStatus(value); setCurrentPage(1); }} value={selectedStatus}>
+              <SelectTrigger className="w-full sm:w-[200px]">
+                <SelectValue placeholder="Filter Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Semua Status">Semua Status</SelectItem>
+                <SelectItem value="Diteruskan">Diteruskan</SelectItem>
+                <SelectItem value="Dikembalikan">Dikembalikan</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </CardContent>
       </Card>
