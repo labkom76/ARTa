@@ -64,6 +64,10 @@ interface Tagihan {
   nama_verifikator?: string;
   locked_by?: string;
   locked_at?: string;
+  nomor_koreksi?: string;
+  id_korektor?: string;
+  waktu_koreksi?: string;
+  catatan_koreksi?: string;
 }
 
 const LOCK_TIMEOUT_MINUTES = 30; // Define lock timeout: 30 minutes
@@ -258,8 +262,8 @@ const PortalVerifikasi = () => {
     }
   };
 
-  // Fungsi baru untuk menangani keberhasilan verifikasi
-  const handleVerificationSuccess = () => {
+  // Fungsi baru untuk menangani keberhasilan verifikasi atau koreksi
+  const handleActionSuccess = () => {
     fetchQueueTagihan(); // Perbarui daftar antrian
     fetchHistoryTagihan(); // Perbarui daftar riwayat
   };
@@ -290,8 +294,8 @@ const PortalVerifikasi = () => {
           const lockTimeoutThreshold = new Date(now.getTime() - LOCK_TIMEOUT_MINUTES * 60 * 1000);
 
           setQueueTagihanList(prevList => {
-            const existingIndex = prevList.findIndex(t => t.id_tagihan === newTagihan.id_tagihan);
-            let updatedList = [...prevList];
+            // Filter out the old version of the tagihan if it exists
+            let updatedList = prevList.filter(t => t.id_tagihan !== newTagihan.id_tagihan);
 
             const isCurrentlyInQueue =
               newTagihan.status_tagihan === 'Menunggu Verifikasi' &&
@@ -300,21 +304,19 @@ const PortalVerifikasi = () => {
                (newTagihan.locked_at && parseISO(newTagihan.locked_at).getTime() < lockTimeoutThreshold.getTime()));
 
             if (isCurrentlyInQueue) {
-              if (existingIndex > -1) {
-                updatedList[existingIndex] = newTagihan;
-              } else {
-                updatedList.push(newTagihan);
-                if (oldTagihan.locked_by !== null && newTagihan.locked_by === null) {
-                    toast.info(`Tagihan ${newTagihan.nomor_spm} tersedia kembali.`);
-                }
+              updatedList.push(newTagihan); // Add the new version if it should be in the queue
+              if (oldTagihan.status_tagihan !== 'Menunggu Verifikasi' && newTagihan.status_tagihan === 'Menunggu Verifikasi') {
+                toast.info(`Tagihan ${newTagihan.nomor_spm} baru masuk antrian verifikasi.`);
+              } else if (oldTagihan.locked_by !== null && newTagihan.locked_by === null) {
+                toast.info(`Tagihan ${newTagihan.nomor_spm} tersedia kembali.`);
               }
             } else {
-              if (existingIndex > -1) {
-                updatedList.splice(existingIndex, 1);
+              // If it's no longer in the queue, and it was previously, show a toast
+              if (prevList.some(t => t.id_tagihan === newTagihan.id_tagihan)) {
                 if (newTagihan.status_tagihan !== 'Menunggu Verifikasi') {
-                    toast.info(`Tagihan ${newTagihan.nomor_spm} telah diverifikasi.`);
+                  toast.info(`Tagihan ${newTagihan.nomor_spm} telah diverifikasi.`);
                 } else if (newTagihan.locked_by !== null && newTagihan.locked_by !== user?.id) {
-                    toast.info(`Tagihan ${newTagihan.nomor_spm} sedang diproses oleh verifikator lain.`);
+                  toast.info(`Tagihan ${newTagihan.nomor_spm} sedang diproses oleh verifikator lain.`);
                 }
               }
             }
@@ -761,7 +763,7 @@ const PortalVerifikasi = () => {
       <VerifikasiTagihanDialog
         isOpen={isVerifikasiModalOpen}
         onClose={handleCloseVerifikasiModal}
-        onVerificationSuccess={handleVerificationSuccess}
+        onVerificationSuccess={handleActionSuccess}
         tagihan={selectedTagihanForVerifikasi}
       />
 
@@ -774,7 +776,8 @@ const PortalVerifikasi = () => {
       <KoreksiTagihanSidePanel
         isOpen={isKoreksiSidePanelOpen}
         onClose={handleCloseKoreksiSidePanel}
-        tagihan={selectedTagihanForKoreksi} // Pass the full tagihan object
+        onCorrectionSuccess={handleActionSuccess} // Pass the new prop
+        tagihan={selectedTagihanForKoreksi}
       />
     </div>
   );
