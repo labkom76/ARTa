@@ -282,20 +282,21 @@ const PortalVerifikasi = () => {
       .on(
         'postgres_changes',
         {
-          event: 'UPDATE',
+          event: 'UPDATE', // Listen for updates
           schema: 'public',
           table: 'database_tagihan',
         },
         (payload) => {
           const oldTagihan = payload.old as Tagihan;
           const newTagihan = payload.new as Tagihan;
+          console.log('Realtime UPDATE received:', newTagihan); // Debug log
 
           const now = new Date();
           const lockTimeoutThreshold = new Date(now.getTime() - LOCK_TIMEOUT_MINUTES * 60 * 1000);
 
           setQueueTagihanList(prevList => {
-            // Filter out the old version of the tagihan if it exists
-            let updatedList = prevList.filter(t => t.id_tagihan !== newTagihan.id_tagihan);
+            const existingIndex = prevList.findIndex(t => t.id_tagihan === newTagihan.id_tagihan);
+            let updatedList = [...prevList];
 
             const isCurrentlyInQueue =
               newTagihan.status_tagihan === 'Menunggu Verifikasi' &&
@@ -304,15 +305,15 @@ const PortalVerifikasi = () => {
                (newTagihan.locked_at && parseISO(newTagihan.locked_at).getTime() < lockTimeoutThreshold.getTime()));
 
             if (isCurrentlyInQueue) {
-              updatedList.push(newTagihan); // Add the new version if it should be in the queue
-              if (oldTagihan.status_tagihan !== 'Menunggu Verifikasi' && newTagihan.status_tagihan === 'Menunggu Verifikasi') {
+              if (existingIndex > -1) {
+                updatedList[existingIndex] = newTagihan; // Update existing item
+              } else {
+                updatedList.push(newTagihan); // Add new item to queue
                 toast.info(`Tagihan ${newTagihan.nomor_spm} baru masuk antrian verifikasi.`);
-              } else if (oldTagihan.locked_by !== null && newTagihan.locked_by === null) {
-                toast.info(`Tagihan ${newTagihan.nomor_spm} tersedia kembali.`);
               }
             } else {
-              // If it's no longer in the queue, and it was previously, show a toast
-              if (prevList.some(t => t.id_tagihan === newTagihan.id_tagihan)) {
+              if (existingIndex > -1) {
+                updatedList.splice(existingIndex, 1); // Remove from queue
                 if (newTagihan.status_tagihan !== 'Menunggu Verifikasi') {
                   toast.info(`Tagihan ${newTagihan.nomor_spm} telah diverifikasi.`);
                 } else if (newTagihan.locked_by !== null && newTagihan.locked_by !== user?.id) {

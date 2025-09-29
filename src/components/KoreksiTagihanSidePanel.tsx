@@ -156,6 +156,7 @@ const KoreksiTagihanSidePanel: React.FC<KoreksiTagihanSidePanelProps> = ({ isOpe
     setIsSubmitting(true);
     try {
       const nomorKoreksi = await generateNomorKoreksi();
+      const now = new Date().toISOString();
 
       const { error } = await supabase
         .from('database_tagihan')
@@ -163,8 +164,12 @@ const KoreksiTagihanSidePanel: React.FC<KoreksiTagihanSidePanelProps> = ({ isOpe
           status_tagihan: 'Dikembalikan', // Staf Koreksi mengembalikan ke SKPD
           catatan_koreksi: values.keterangan_koreksi,
           id_korektor: user.id,
-          waktu_koreksi: new Date().toISOString(),
+          waktu_koreksi: now,
           nomor_koreksi: nomorKoreksi,
+          // Also update verification related fields to reflect this action in history
+          waktu_verifikasi: now, // Treat correction as a form of verification action for history purposes
+          nama_verifikator: profile.nama_lengkap, // Corrector's name as verifier for history
+          nomor_verifikasi: nomorKoreksi, // Use correction number as verification number for history
           locked_by: null, // Clear lock
           locked_at: null, // Clear lock
         })
