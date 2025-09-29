@@ -11,45 +11,46 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { CheckIcon, XIcon } from 'lucide-react';
+import { format, parseISO } from 'date-fns';
+import { id as localeId } from 'date-fns/locale';
+
+interface VerificationItem {
+  item: string;
+  memenuhi_syarat: boolean;
+  keterangan: string;
+}
+
+interface Tagihan {
+  id_tagihan: string;
+  nama_skpd: string;
+  nomor_spm: string;
+  jenis_spm: string;
+  jenis_tagihan: string;
+  uraian: string;
+  jumlah_kotor: number;
+  status_tagihan: string;
+  waktu_input: string;
+  id_pengguna_input: string;
+  nomor_registrasi?: string;
+  waktu_registrasi?: string;
+  nama_registrator?: string;
+  catatan_verifikator?: string;
+  waktu_verifikasi?: string;
+  detail_verifikasi?: VerificationItem[];
+  nomor_verifikasi?: string;
+  nama_verifikator?: string;
+}
 
 interface KoreksiTagihanSidePanelProps {
   isOpen: boolean;
   onClose: () => void;
-  tagihanId: string | null;
+  tagihan: Tagihan | null; // Changed from tagihanId to full tagihan object
 }
 
-const KoreksiTagihanSidePanel: React.FC<KoreksiTagihanSidePanelProps> = ({ isOpen, onClose, tagihanId }) => {
-  if (!isOpen || !tagihanId) {
+const KoreksiTagihanSidePanel: React.FC<KoreksiTagihanSidePanelProps> = ({ isOpen, onClose, tagihan }) => {
+  if (!isOpen || !tagihan) {
     return null;
   }
-
-  // Placeholder data for static display
-  const placeholderTagihan = {
-    nomor_spm: 'SPM-20240101-001',
-    nama_skpd: 'Dinas Pendidikan',
-    jenis_spm: 'Belanja Pegawai',
-    jenis_tagihan: 'Uang Persediaan (UP)',
-    uraian: 'Pembayaran gaji dan tunjangan bulan Januari 2024',
-    jumlah_kotor: 150000000,
-    status_tagihan: 'Dikembalikan',
-    nomor_registrasi: 'REG-20240102-0001',
-    waktu_registrasi: '2024-01-02T10:00:00Z',
-    nama_registrator: 'Budi Santoso',
-    nomor_verifikasi: 'VER-20240103-0001',
-    waktu_verifikasi: '2024-01-03T14:30:00Z',
-    nama_verifikator: 'Siti Aminah',
-    catatan_verifikator: 'Dokumen pendukung kurang lengkap, harap perbaiki.',
-    detail_verifikasi: [
-      { item: 'SPTJ', memenuhi_syarat: true, keterangan: '' },
-      { item: 'Kebenaran Perhitungan Tagihan', memenuhi_syarat: true, keterangan: '' },
-      { item: 'Kesesuaian Kode Rekening', memenuhi_syarat: false, keterangan: 'Kode rekening tidak sesuai dengan anggaran.' },
-      { item: 'E-Billing', memenuhi_syarat: true, keterangan: '' },
-      { item: 'Fotocopy Rekening Pihak Ketiga / Bendahara Pengeluaran / Bendahara Pengeluaran Pembantu', memenuhi_syarat: false, keterangan: 'Fotocopy rekening tidak jelas.' },
-      { item: 'Fotocopy NPWP', memenuhi_syarat: true, keterangan: '' },
-      { item: 'Tanda Penerimaan / Kwitansi / Bukti Pembayaran', memenuhi_syarat: true, keterangan: '' },
-      { item: 'Lainnya', memenuhi_syarat: true, keterangan: '' },
-    ],
-  };
 
   const checklistItems = [
     'SPTJ',
@@ -65,14 +66,9 @@ const KoreksiTagihanSidePanel: React.FC<KoreksiTagihanSidePanelProps> = ({ isOpe
   const formatDate = (dateString: string | undefined) => {
     if (!dateString) return '-';
     try {
-      return new Date(dateString).toLocaleString('id-ID', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      });
+      return format(parseISO(dateString), 'dd MMMM yyyy HH:mm', { locale: localeId });
     } catch (e) {
+      console.error("Error formatting date:", dateString, e);
       return dateString;
     }
   };
@@ -93,39 +89,39 @@ const KoreksiTagihanSidePanel: React.FC<KoreksiTagihanSidePanelProps> = ({ isOpe
             <div className="grid grid-cols-1 gap-y-2 text-sm">
               <div>
                 <Label className="text-muted-foreground">Nomor SPM</Label>
-                <p className="font-medium">{placeholderTagihan.nomor_spm}</p>
+                <p className="font-medium">{tagihan.nomor_spm || '-'}</p>
               </div>
               <div>
                 <Label className="text-muted-foreground">Nama SKPD</Label>
-                <p className="font-medium">{placeholderTagihan.nama_skpd}</p>
+                <p className="font-medium">{tagihan.nama_skpd || '-'}</p>
               </div>
               <div>
                 <Label className="text-muted-foreground">Jenis SPM</Label>
-                <p className="font-medium">{placeholderTagihan.jenis_spm}</p>
+                <p className="font-medium">{tagihan.jenis_spm || '-'}</p>
               </div>
               <div>
                 <Label className="text-muted-foreground">Jenis Tagihan</Label>
-                <p className="font-medium">{placeholderTagihan.jenis_tagihan}</p>
+                <p className="font-medium">{tagihan.jenis_tagihan || '-'}</p>
               </div>
               <div>
                 <Label className="text-muted-foreground">Uraian</Label>
-                <p className="font-medium">{placeholderTagihan.uraian}</p>
+                <p className="font-medium">{tagihan.uraian || '-'}</p>
               </div>
               <div>
                 <Label className="text-muted-foreground">Jumlah Kotor</Label>
-                <p className="font-medium">Rp{placeholderTagihan.jumlah_kotor.toLocaleString('id-ID')}</p>
+                <p className="font-medium">Rp{tagihan.jumlah_kotor?.toLocaleString('id-ID') || '0'}</p>
               </div>
               <div>
                 <Label className="text-muted-foreground">Status Tagihan</Label>
-                <p className="font-medium">{placeholderTagihan.status_tagihan}</p>
+                <p className="font-medium">{tagihan.status_tagihan || '-'}</p>
               </div>
               <div>
                 <Label className="text-muted-foreground">Waktu Registrasi</Label>
-                <p className="font-medium">{formatDate(placeholderTagihan.waktu_registrasi)}</p>
+                <p className="font-medium">{formatDate(tagihan.waktu_registrasi)}</p>
               </div>
               <div>
                 <Label className="text-muted-foreground">Nomor Registrasi</Label>
-                <p className="font-medium">{placeholderTagihan.nomor_registrasi}</p>
+                <p className="font-medium">{tagihan.nomor_registrasi || '-'}</p>
               </div>
             </div>
           </div>
@@ -135,7 +131,7 @@ const KoreksiTagihanSidePanel: React.FC<KoreksiTagihanSidePanelProps> = ({ isOpe
             <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-3">Hasil Verifikasi Sebelumnya</h3>
             <div className="text-sm mb-2">
               <Label className="text-muted-foreground">Catatan Verifikator:</Label>
-              <p className="font-medium">{placeholderTagihan.catatan_verifikator}</p>
+              <p className="font-medium">{tagihan.catatan_verifikator || '-'}</p>
             </div>
             <Table>
               <TableHeader>
@@ -147,7 +143,7 @@ const KoreksiTagihanSidePanel: React.FC<KoreksiTagihanSidePanelProps> = ({ isOpe
               </TableHeader>
               <TableBody>
                 {checklistItems.map((item, index) => {
-                  const verificationDetail = placeholderTagihan.detail_verifikasi?.find(
+                  const verificationDetail = tagihan.detail_verifikasi?.find(
                     (detail) => detail.item === item
                   );
                   const isMet = verificationDetail?.memenuhi_syarat;

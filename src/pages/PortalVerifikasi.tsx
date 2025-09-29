@@ -35,6 +35,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import useDebounce from '@/hooks/use-debounce';
+import KoreksiTagihanSidePanel from '@/components/KoreksiTagihanSidePanel'; // Import the new component
 
 interface VerificationItem {
   item: string;
@@ -99,6 +100,10 @@ const PortalVerifikasi = () => {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [selectedTagihanForDetail, setSelectedTagihanForDetail] = useState<Tagihan | null>(null);
 
+  // New states for Koreksi Side Panel
+  const [isKoreksiSidePanelOpen, setIsKoreksiSidePanelOpen] = useState(false);
+  const [selectedTagihanForKoreksi, setSelectedTagihanForKoreksi] = useState<Tagihan | null>(null);
+
   // Fetch unique SKPD names for the queue filter dropdown
   useEffect(() => {
     const fetchQueueSkpdOptions = async () => {
@@ -151,7 +156,7 @@ const PortalVerifikasi = () => {
   }, []);
 
   const fetchQueueTagihan = async () => {
-    if (sessionLoading || profile?.peran !== 'Staf Verifikator') {
+    if (sessionLoading || (profile?.peran !== 'Staf Verifikator' && profile?.peran !== 'Staf Koreksi')) {
       setLoadingQueue(false);
       return;
     }
@@ -202,7 +207,7 @@ const PortalVerifikasi = () => {
   };
 
   const fetchHistoryTagihan = async () => {
-    if (sessionLoading || profile?.peran !== 'Staf Verifikator') {
+    if (sessionLoading || (profile?.peran !== 'Staf Verifikator' && profile?.peran !== 'Staf Koreksi')) {
       setLoadingHistory(false);
       return;
     }
@@ -382,6 +387,23 @@ const PortalVerifikasi = () => {
     }
   };
 
+  // New handler for the action button click
+  const handleActionButtonClick = async (tagihan: Tagihan) => {
+    if (!user || !profile?.peran) {
+      toast.error('Anda harus login untuk memproses tagihan.');
+      return;
+    }
+
+    if (profile.peran === 'Staf Verifikator') {
+      await handleProcessVerification(tagihan);
+    } else if (profile.peran === 'Staf Koreksi') {
+      setSelectedTagihanForKoreksi(tagihan);
+      setIsKoreksiSidePanelOpen(true);
+    } else {
+      toast.error('Peran Anda tidak memiliki izin untuk aksi ini.');
+    }
+  };
+
   const handleCloseVerifikasiModal = async () => {
     setIsVerifikasiModalOpen(false);
     if (selectedTagihanForVerifikasi && user) {
@@ -401,6 +423,13 @@ const PortalVerifikasi = () => {
       }
     }
     setSelectedTagihanForVerifikasi(null);
+  };
+
+  const handleCloseKoreksiSidePanel = () => {
+    setIsKoreksiSidePanelOpen(false);
+    setSelectedTagihanForKoreksi(null);
+    // No unlock logic needed here for now, as KoreksiTagihanSidePanel is static.
+    // If Koreksi becomes interactive and involves locking, add unlock logic here.
   };
 
   const handleDetailClick = (tagihan: Tagihan) => {
@@ -429,7 +458,8 @@ const PortalVerifikasi = () => {
     );
   }
 
-  if (profile?.peran !== 'Staf Verifikator') {
+  // Updated access check to include 'Staf Koreksi'
+  if (profile?.peran !== 'Staf Verifikator' && profile?.peran !== 'Staf Koreksi') {
     return (
       <div className="p-6 bg-white rounded-lg shadow-sm border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
         <h1 className="text-3xl font-bold text-red-600 dark:text-red-400 mb-4">Akses Ditolak</h1>
@@ -538,7 +568,7 @@ const PortalVerifikasi = () => {
                               variant="ghost"
                               size="icon"
                               title={isDisabled ? "Tagihan ini sedang diproses oleh verifikator lain" : "Proses Verifikasi"}
-                              onClick={() => handleProcessVerification(tagihan)}
+                              onClick={() => handleActionButtonClick(tagihan)} // Use the new handler
                               disabled={isDisabled}
                             >
                               {isDisabled ? (
@@ -739,6 +769,12 @@ const PortalVerifikasi = () => {
         isOpen={isDetailModalOpen}
         onClose={() => setIsDetailModalOpen(false)}
         tagihan={selectedTagihanForDetail}
+      />
+
+      <KoreksiTagihanSidePanel
+        isOpen={isKoreksiSidePanelOpen}
+        onClose={handleCloseKoreksiSidePanel}
+        tagihan={selectedTagihanForKoreksi} // Pass the full tagihan object
       />
     </div>
   );

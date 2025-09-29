@@ -43,13 +43,13 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onLinkClick }) => {
     navItems.push(
       { to: '/dashboard-registrasi', icon: LayoutDashboardIcon, label: 'Dashboard' },
       { to: '/portal-registrasi', icon: FileTextIcon, label: 'Portal' },
-      { to: '/riwayat-registrasi', icon: HistoryIcon, label: 'Riwayat Registrasi' }, // New navigation item
+      { to: '/riwayat-registrasi', icon: HistoryIcon, label: 'Riwayat Registrasi' },
     );
-  } else if (role === 'Staf Verifikator') {
+  } else if (role === 'Staf Verifikator' || role === 'Staf Koreksi') { // Added 'Staf Koreksi'
     navItems.push(
       { to: '/dashboard-verifikasi', icon: LayoutDashboardIcon, label: 'Dashboard' },
       { to: '/portal-verifikasi', icon: FileTextIcon, label: 'Portal Verifikasi' },
-      { to: '/riwayat-verifikasi', icon: HistoryIcon, label: 'Riwayat Verifikasi' }, // New navigation item for Verifikator
+      { to: '/riwayat-verifikasi', icon: HistoryIcon, label: 'Riwayat Verifikasi' },
     );
   } else {
     // Default or fallback for other roles/unassigned
