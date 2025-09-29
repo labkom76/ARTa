@@ -38,11 +38,15 @@ interface Tagihan {
   catatan_verifikator?: string;
   nomor_registrasi?: string;
   waktu_registrasi?: string;
-  nama_verifikator?: string;
+  nama_registrator?: string;
   waktu_verifikasi?: string;
   detail_verifikasi?: VerificationItem[];
   nomor_verifikasi?: string;
-  nama_registrator?: string;
+  nama_verifikator?: string;
+  nomor_koreksi?: string; 
+  id_korektor?: string; 
+  waktu_koreksi?: string; 
+  catatan_koreksi?: string; 
 }
 
 interface TagihanDetailDialogProps {
@@ -171,31 +175,52 @@ const TagihanDetailDialog: React.FC<TagihanDetailDialogProps> = ({ isOpen, onClo
               </div>
 
               <h4 className="text-md font-medium mb-2">Checklist Verifikasi</h4>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Uraian</TableHead>
-                    <TableHead className="w-[150px] text-center">Memenuhi Syarat</TableHead>
-                    <TableHead>Keterangan</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {checklistItems.map((item, index) => {
-                    const verificationDetail = tagihan.detail_verifikasi?.find(
-                      (detail) => detail.item === item
-                    );
-                    return (
-                      <TableRow key={index}>
-                        <TableCell>{item}</TableCell>
-                        <TableCell className="text-center">
-                          {verificationDetail ? (verificationDetail.memenuhi_syarat ? 'Ya' : 'Tidak') : '-'}
-                        </TableCell>
-                        <TableCell>{verificationDetail?.keterangan || '-'}</TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
+              {tagihan.id_korektor ? (
+                // Simplified table for Staf Koreksi
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Uraian</TableHead>
+                      <TableHead className="w-[150px] text-center">Memenuhi Syarat</TableHead>
+                      <TableHead>Keterangan</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    <TableRow>
+                      <TableCell>Tidak dapat diterbitkan SP2D</TableCell>
+                      <TableCell className="text-center">Tidak</TableCell>
+                      <TableCell>{tagihan.catatan_koreksi || '-'}</TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              ) : (
+                // Existing detailed table for Staf Verifikasi
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Uraian</TableHead>
+                      <TableHead className="w-[150px] text-center">Memenuhi Syarat</TableHead>
+                      <TableHead>Keterangan</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {checklistItems.map((item, index) => {
+                      const verificationDetail = tagihan.detail_verifikasi?.find(
+                        (detail) => detail.item === item
+                      );
+                      return (
+                        <TableRow key={index}>
+                          <TableCell>{item}</TableCell>
+                          <TableCell className="text-center">
+                            {verificationDetail ? (verificationDetail.memenuhi_syarat ? 'Ya' : 'Tidak') : '-'}
+                          </TableCell>
+                          <TableCell>{verificationDetail?.keterangan || '-'}</TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              )}
             </div>
           )}
         </div>
