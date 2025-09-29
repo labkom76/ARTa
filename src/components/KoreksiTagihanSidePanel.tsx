@@ -19,6 +19,13 @@ import { useSession } from '@/contexts/SessionContext';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from '@/components/ui/sheet'; // Import Sheet components
 
 interface VerificationItem {
   item: string;
@@ -96,7 +103,7 @@ const KoreksiTagihanSidePanel: React.FC<KoreksiTagihanSidePanelProps> = ({ isOpe
     }
   }, [isOpen, tagihan, form]);
 
-  if (!isOpen || !tagihan) {
+  if (!tagihan) {
     return null;
   }
 
@@ -192,15 +199,16 @@ const KoreksiTagihanSidePanel: React.FC<KoreksiTagihanSidePanelProps> = ({ isOpe
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/50 flex justify-end">
-      <div className="bg-white dark:bg-gray-800 w-full md:w-1/3 lg:w-1/4 h-full shadow-lg overflow-y-auto flex flex-col">
-        <div className="flex items-center justify-between p-4 border-b dark:border-gray-700">
-          <h2 className="text-xl font-semibold text-gray-800 dark:text-white">Koreksi Tagihan</h2>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
-            &times;
-          </button>
-        </div>
-        <div className="p-4 flex-1 overflow-y-auto">
+    <Sheet open={isOpen} onOpenChange={onClose}>
+      <SheetContent className="w-full sm:max-w-[600px] flex flex-col">
+        <SheetHeader>
+          <SheetTitle>Koreksi Tagihan: {tagihan.nomor_spm}</SheetTitle>
+          <SheetDescription>
+            Periksa detail tagihan dan masukkan keterangan koreksi.
+          </SheetDescription>
+        </SheetHeader>
+
+        <div className="flex-1 overflow-y-auto pr-4 -mr-4">
           <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col h-full">
             {/* Area 1: Detail Tagihan */}
             <div className="mb-6">
@@ -313,8 +321,8 @@ const KoreksiTagihanSidePanel: React.FC<KoreksiTagihanSidePanelProps> = ({ isOpe
             </Button>
           </form>
         </div>
-      </div>
-    </div>
+      </SheetContent>
+    </Sheet>
   );
 };
 
