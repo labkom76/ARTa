@@ -33,7 +33,7 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
 
   // Refs untuk menyimpan nilai state terbaru
   const latestUser = useRef<User | null>(null);
-  const latestSession = useRef<Session | null>(null);
+  const latestSession = useRef<Session | null>(latestSession); // Initialize with latestSession
 
   // Update refs setiap kali state user atau session berubah
   useEffect(() => {
@@ -149,8 +149,8 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
           case 'Staf Verifikator':
             navigate('/dashboard-verifikasi');
             break;
-          case 'Staf Koreksi': // New case for Staf Koreksi
-            navigate('/portal-verifikasi'); // Redirect to portal-verifikasi
+          case 'Staf Koreksi':
+            navigate('/dashboard-koreksi'); // Redirect Staf Koreksi ke dashboard baru
             break;
           default:
             navigate('/');

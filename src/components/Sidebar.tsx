@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { HomeIcon, LayoutDashboardIcon, FileTextIcon, UserIcon, HistoryIcon } from 'lucide-react'; // Import HistoryIcon
+import { HomeIcon, LayoutDashboardIcon, FileTextIcon, UserIcon, HistoryIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSession } from '@/contexts/SessionContext';
 import { Button } from '@/components/ui/button';
@@ -45,11 +45,17 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onLinkClick }) => {
       { to: '/portal-registrasi', icon: FileTextIcon, label: 'Portal' },
       { to: '/riwayat-registrasi', icon: HistoryIcon, label: 'Riwayat Registrasi' },
     );
-  } else if (role === 'Staf Verifikator' || role === 'Staf Koreksi') { // Added 'Staf Koreksi'
+  } else if (role === 'Staf Verifikator') {
     navItems.push(
       { to: '/dashboard-verifikasi', icon: LayoutDashboardIcon, label: 'Dashboard' },
       { to: '/portal-verifikasi', icon: FileTextIcon, label: 'Portal Verifikasi' },
       { to: '/riwayat-verifikasi', icon: HistoryIcon, label: 'Riwayat Verifikasi' },
+    );
+  } else if (role === 'Staf Koreksi') { // New case for Staf Koreksi
+    navItems.push(
+      { to: '/dashboard-koreksi', icon: LayoutDashboardIcon, label: 'Dashboard' }, // New dashboard for Koreksi
+      { to: '/portal-verifikasi', icon: FileTextIcon, label: 'Portal Verifikasi' }, // Staf Koreksi also uses Portal Verifikasi
+      { to: '/riwayat-verifikasi', icon: HistoryIcon, label: 'Riwayat Verifikasi' }, // Staf Koreksi also uses Riwayat Verifikasi
     );
   } else {
     // Default or fallback for other roles/unassigned
