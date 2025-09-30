@@ -33,7 +33,7 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
 
   // Refs untuk menyimpan nilai state terbaru
   const latestUser = useRef<User | null>(null);
-  const latestSession = useRef<Session | null>(latestSession); // Initialize with latestSession
+  const latestSession = useRef<Session | null>(null); // Diperbaiki: Inisialisasi dengan null
 
   // Update refs setiap kali state user atau session berubah
   useEffect(() => {
