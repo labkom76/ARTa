@@ -16,7 +16,7 @@ import { id as localeId } from 'date-fns/locale';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useSession } from '@/contexts/SessionContext';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form'; // Import Controller
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import {
@@ -26,6 +26,13 @@ import {
   SheetTitle,
   SheetDescription,
 } from '@/components/ui/sheet';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'; // Import Select components
 
 interface VerificationItem {
   item: string;
@@ -68,7 +75,12 @@ interface KoreksiTagihanSidePanelProps {
 }
 
 const koreksiFormSchema = z.object({
-  keterangan_koreksi: z.string().min(1, { message: 'Keterangan koreksi wajib diisi.' }),
+  keterangan_koreksi: z.enum([
+    'Kas sumber dana tidak cukup tersedia',
+    'Kas sumber dana tidak cukup tersedia, prioritas belanja wajib rutin bulanan',
+  ], {
+    required_error: 'Keterangan koreksi wajib dipilih.',
+  }),
 });
 
 type KoreksiFormValues = z.infer<typeof koreksiFormSchema>;
@@ -81,7 +93,7 @@ const KoreksiTagihanSidePanel: React.FC<KoreksiTagihanSidePanelProps> = ({ isOpe
   const form = useForm<KoreksiFormValues>({
     resolver: zodResolver(koreksiFormSchema),
     defaultValues: {
-      keterangan_koreksi: '',
+      keterangan_koreksi: undefined, // Set to undefined for initial empty state
     },
   });
 
@@ -138,7 +150,7 @@ const KoreksiTagihanSidePanel: React.FC<KoreksiTagihanSidePanelProps> = ({ isOpe
   useEffect(() => {
     if (isOpen && tagihan?.nomor_registrasi) {
       form.reset({
-        keterangan_koreksi: tagihan.catatan_koreksi || '',
+        keterangan_koreksi: tagihan.catatan_koreksi as KoreksiFormValues['keterangan_koreksi'] || undefined,
       });
       const generateAndSetNomor = async () => {
         try {
@@ -152,6 +164,7 @@ const KoreksiTagihanSidePanel: React.FC<KoreksiTagihanSidePanelProps> = ({ isOpe
       generateAndSetNomor();
     } else if (!isOpen) {
       setGeneratedNomorKoreksi(null);
+      form.reset({ keterangan_koreksi: undefined }); // Reset dropdown on close
     }
   }, [isOpen, tagihan, form, generateFullNomorKoreksi]);
 
@@ -282,12 +295,20 @@ const KoreksiTagihanSidePanel: React.FC<KoreksiTagihanSidePanelProps> = ({ isOpe
               </div>
               <div className="grid gap-2 mb-4 flex-1">
                 <Label htmlFor="keterangan-koreksi">Keterangan</Label>
-                <Textarea
-                  id="keterangan-koreksi"
-                  {...form.register('keterangan_koreksi')}
-                  placeholder="Masukkan keterangan koreksi..."
-                  rows={4}
-                  className="flex-1"
+                <Controller
+                  name="keterangan_koreksi"
+                  control={form.control}
+                  render={({ field }) => (
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Pilih Keterangan Koreksi" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Kas sumber dana tidak cukup tersedia">Kas sumber dana tidak cukup tersedia</SelectItem>
+                        <SelectItem value="Kas sumber dana tidak cukup tersedia, prioritas belanja wajib rutin bulanan">Kas sumber dana tidak cukup tersedia, prioritas belanja wajib rutin bulanan</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
                 />
                 {form.formState.errors.keterangan_koreksi && (
                   <p className="text-red-500 text-sm">
@@ -298,7 +319,7 @@ const KoreksiTagihanSidePanel: React.FC<KoreksiTagihanSidePanelProps> = ({ isOpe
             </div>
 
             {/* Area 4: Tombol Aksi */}
-            <Button type="submit" className="w-full mt-auto" variant="destructive" disabled={isSubmitting || !generatedNomorKoreksi}>
+            <Button type="submit" className="w-full mt-auto" variant="destructive" disabled={isSubmitting || !generatedNomorKoreksi || !form.formState.isValid}>
               {isSubmitting ? 'Memproses...' : 'Proses Pengembalian'}
             </Button>
           </form>
