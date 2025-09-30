@@ -124,151 +124,246 @@ const PrintVerifikasi = () => {
   }
 
   return (
-    <div className="font-sans text-black bg-white p-8 mx-auto max-w-3xl print:p-0 print:mx-0 print:w-auto">
+    <>
       <style>
         {`
-        @page {
-          size: A4;
-          margin: 2cm;
-        }
-        body {
-          -webkit-print-color-adjust: exact !important;
-          print-color-adjust: exact !important;
-        }
-        .print-table th, .print-table td {
-          border: 1px solid black;
-          padding: 4px 8px;
-          font-size: 10pt;
-          vertical-align: top;
-        }
-        .print-table th {
-          background-color: #f0f0f0;
-          text-align: center;
-        }
-        .print-text-sm {
-          font-size: 10pt;
-        }
-        .print-text-md {
-          font-size: 11pt;
-        }
-        .print-text-lg {
-          font-size: 12pt;
-        }
-        .print-font-bold {
-          font-weight: bold;
-        }
-        .print-mt-4 { margin-top: 16px; }
-        .print-mb-2 { margin-bottom: 8px; }
-        .print-mb-4 { margin-bottom: 16px; }
-        .print-mb-8 { margin-bottom: 32px; }
-        .print-leading-relaxed { line-height: 1.625; }
-        .print-w-1\/2 { width: 50%; }
-        .print-w-1\/3 { width: 33.333333%; }
-        .print-w-1\/4 { width: 25%; }
-        .print-text-center { text-align: center; }
-        .print-text-right { text-align: right; }
-        .print-flex { display: flex; }
-        .print-justify-between { justify-content: space-between; }
-        .print-items-end { align-items: flex-end; }
-        .print-border-b { border-bottom: 1px solid black; }
-        .print-border-t { border-top: 1px solid black; }
-        .print-border-l { border-left: 1px solid black; }
-        .print-border-r { border-right: 1px solid black; }
-        .print-border { border: 1px solid black; }
-        .print-p-1 { padding: 4px; }
-        .print-p-2 { padding: 8px; }
-        .print-px-2 { padding-left: 8px; padding-right: 8px; }
-        .print-py-1 { padding-top: 4px; padding-bottom: 4px; }
-        .print-h-24 { height: 96px; } /* For signature area */
-        .print-h-32 { height: 128px; } /* For QR code area */
-        .print-block { display: block; }
-        .print-inline-block { display: inline-block; }
-        .print-align-top { vertical-align: top; }
-        .print-align-middle { vertical-align: middle; }
-        .print-align-bottom { vertical-align: bottom; }
-        .print-whitespace-nowrap { white-space: nowrap; }
+          * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+          }
+
+          @media print {
+            body {
+              background-color: white !important;
+              padding: 0 !important;
+            }
+            .container {
+              padding: 40px !important;
+              background-color: white !important;
+            }
+          }
+
+          body {
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+            padding: 20px;
+          }
+
+          .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px;
+            background-color: white;
+          }
+
+          h1 {
+            text-align: center;
+            font-size: 20px;
+            margin-bottom: 30px;
+            font-weight: bold;
+          }
+
+          .info-section {
+            margin-bottom: 25px;
+          }
+
+          .info-row {
+            display: flex;
+            margin-bottom: 8px;
+            font-size: 13px;
+          }
+
+          .info-label {
+            width: 150px;
+            flex-shrink: 0;
+          }
+
+          .info-separator {
+            margin: 0 10px;
+          }
+
+          .info-value {
+            flex: 1;
+          }
+
+          .highlight {
+            font-weight: bold;
+            font-size: 14px;
+          }
+
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 30px 0;
+            font-size: 12px;
+          }
+
+          table, th, td {
+            border: 1px solid #000;
+          }
+
+          th, td {
+            padding: 10px;
+            text-align: center;
+          }
+
+          th {
+            background-color: #f0f0f0;
+            font-weight: bold;
+          }
+
+          .col-no {
+            width: 50px;
+          }
+
+          .col-uraian {
+            width: 300px;
+          }
+
+          .col-syarat {
+            width: 70px;
+          }
+
+          .col-keterangan {
+            flex: 1;
+          }
+
+          .text-left {
+            text-align: left;
+            padding-left: 10px;
+          }
+
+          .signature-section {
+            margin-top: 50px;
+            text-align: right;
+          }
+
+          .signature-title {
+            font-size: 13px;
+            margin-bottom: 80px;
+            margin-right: 100px;
+          }
+
+          .signature-name {
+            font-size: 13px;
+            font-weight: bold;
+            margin-right: 60px;
+          }
+
+          .qr-code {
+            width: 120px;
+            height: 120px;
+            background-color: #e0e0e0;
+            margin: 20px 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            color: #666;
+            margin-left: 50px;
+          }
+
+          .checkmark {
+            font-size: 16px;
+          }
         `}
       </style>
-      <div className="print-text-center print-font-bold print-text-lg print-mb-8">
-        LEMBAR VERIFIKASI SKPKD
-      </div>
 
-      <div className="grid grid-cols-[120px_1fr] gap-y-1 print-text-sm print-mb-8 print-leading-relaxed">
-        <div className="print-font-bold">Nama SKPD</div>
-        <div>: {tagihan.nama_skpd || '-'}</div>
+      <div className="container">
+        <h1>LEMBAR VERIFIKASI SKPKD</h1>
 
-        <div className="print-font-bold">Jenis Tagihan</div>
-        <div>: {tagihan.jenis_tagihan || '-'}</div>
-
-        <div className="print-font-bold">Jenis SPM</div>
-        <div>: {tagihan.jenis_spm || '-'}</div>
-
-        <div className="print-font-bold">Nomor SPM</div>
-        <div>: {tagihan.nomor_spm || '-'}</div>
-
-        <div className="print-font-bold print-align-top">Uraian</div>
-        <div className="print-align-top">: {tagihan.uraian || '-'}</div>
-
-        <div className="print-font-bold">Nilai Tagihan</div>
-        <div>: {formatCurrency(tagihan.jumlah_kotor)}</div>
-
-        <div className="print-font-bold">Waktu Verifikasi</div>
-        <div>: {formatDate(tagihan.waktu_verifikasi)}</div>
-      </div>
-
-      <table className="print-table w-full border-collapse print-mb-8">
-        <thead>
-          <tr>
-            <th className="w-[30px]">No</th>
-            <th className="w-[250px]">Uraian</th>
-            <th colSpan={2} className="w-[100px]">Memenuhi Syarat</th>
-            <th>Keterangan</th>
-          </tr>
-          <tr>
-            <th></th>
-            <th></th>
-            <th className="w-[50px]">Ya</th>
-            <th className="w-[50px]">Tidak</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          {checklistItems.map((item, index) => {
-            const detail = tagihan.detail_verifikasi?.find(d => d.item === item);
-            const isMet = detail?.memenuhi_syarat;
-            const keterangan = detail?.keterangan || '';
-
-            return (
-              <tr key={index}>
-                <td className="print-text-center">{index + 1}</td>
-                <td>{item}</td>
-                <td className="print-text-center">
-                  {isMet ? <div className="flex justify-center items-center"><CheckIcon className="h-4 w-4 text-green-600" /></div> : ''}
-                </td>
-                <td className="print-text-center">
-                  {isMet === false ? <div className="flex justify-center items-center"><XIcon className="h-4 w-4 text-red-600" /></div> : ''}
-                </td>
-                <td>{keterangan}</td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-
-      <div className="print-flex print-justify-between print-items-end print-mt-4">
-        <div className="print-w-1/2 print-text-center print-text-sm">
-          <p className="print-mb-8">PARAF TELAH MELALUI VERIFIKASI</p>
-          <div className="print-h-24"></div> {/* Placeholder for paraf */}
-        </div>
-        <div className="print-w-1/2 print-text-center print-text-sm">
-          <p className="print-mb-2">VERIFIKATOR</p>
-          <p className="print-font-bold print-mb-8">{tagihan.nama_verifikator || '____________________'}</p>
-          <div className="print-h-32 print-w-32 mx-auto print-border print-flex print-items-center print-justify-center print-text-xs text-gray-400">
-            QR Code Placeholder
+        <div className="info-section">
+          <div className="info-row">
+            <span className="info-label">Nama SKPD</span>
+            <span className="info-separator">:</span>
+            <span className="info-value">{tagihan.nama_skpd || '-'}</span>
+          </div>
+          <div className="info-row">
+            <span className="info-label">Jenis Tagihan</span>
+            <span className="info-separator">:</span>
+            <span className="info-value">{tagihan.jenis_tagihan || '-'}</span>
+          </div>
+          <div className="info-row">
+            <span className="info-label">Jenis SPM</span>
+            <span className="info-separator">:</span>
+            <span className="info-value">{tagihan.jenis_spm || '-'}</span>
+          </div>
+          <div className="info-row">
+            <span className="info-label">Nomor SPM</span>
+            <span className="info-separator">:</span>
+            <span className="info-value">{tagihan.nomor_spm || '-'}</span>
+          </div>
+          <div className="info-row">
+            <span className="info-label">Uraian</span>
+            <span className="info-separator">:</span>
+            <span className="info-value">{tagihan.uraian || '-'}</span>
+          </div>
+          <div className="info-row">
+            <span className="info-label">Nilai Tagihan</span>
+            <span className="info-separator">:</span>
+            <span className="info-value highlight">{formatCurrency(tagihan.jumlah_kotor)}</span>
+          </div>
+          <div className="info-row">
+            <span className="info-label">Waktu Verifikasi</span>
+            <span className="info-separator">:</span>
+            <span className="info-value">{formatDate(tagihan.waktu_verifikasi)}</span>
           </div>
         </div>
+
+        <table className="print-table">
+          <thead>
+            <tr>
+              <th className="col-no" rowSpan={2}>No</th>
+              <th className="col-uraian" rowSpan={2}>Uraian</th>
+              <th colSpan={2}>Memenuhi Syarat</th>
+              <th className="col-keterangan" rowSpan={2}>
+                Keterangan
+                {tagihan.nomor_verifikasi && (
+                  <>
+                    <br />
+                    (No. Verifikasi : {tagihan.nomor_verifikasi})
+                  </>
+                )}
+              </th>
+            </tr>
+            <tr>
+              <th className="col-syarat">Ya</th>
+              <th className="col-syarat">Tidak</th>
+            </tr>
+          </thead>
+          <tbody>
+            {checklistItems.map((item, index) => {
+              const detail = tagihan.detail_verifikasi?.find(d => d.item === item);
+              const isMet = detail?.memenuhi_syarat;
+              const keterangan = detail?.keterangan || '';
+
+              return (
+                <tr key={index}>
+                  <td>{index + 1}</td>
+                  <td className="text-left">{item}</td>
+                  <td>
+                    {isMet ? <CheckIcon className="h-4 w-4 mx-auto text-green-600" /> : ''}
+                  </td>
+                  <td>
+                    {isMet === false ? <XIcon className="h-4 w-4 mx-auto text-red-600" /> : ''}
+                  </td>
+                  <td className="text-left">{keterangan}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+
+        <div className="signature-section">
+          <div className="signature-title">VERIFIKATOR</div>
+          <div className="signature-name">
+            {tagihan.nama_verifikator || '____________________'}
+          </div>
+          <div className="qr-code">[QR Code]</div>
+        </div>
       </div>
-    </div>
+    </>
   );
 };
 
