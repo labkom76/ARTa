@@ -34,7 +34,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Label } from '@/components/ui/label'; // Import Label for "Baris per halaman"
+import { Label } from '@/components/ui/label';
+import TagihanDetailDialog from '@/components/TagihanDetailDialog'; // Import TagihanDetailDialog
 
 interface Tagihan {
   id_tagihan: string;
@@ -43,6 +44,23 @@ interface Tagihan {
   nomor_koreksi?: string;
   waktu_koreksi?: string;
   catatan_koreksi?: string;
+  // Add other fields that might be needed for TagihanDetailDialog or PrintVerifikasi
+  jenis_spm?: string;
+  jenis_tagihan?: string;
+  uraian?: string;
+  jumlah_kotor?: number;
+  status_tagihan?: string;
+  waktu_input?: string;
+  id_pengguna_input?: string;
+  catatan_verifikator?: string;
+  nomor_registrasi?: string;
+  waktu_registrasi?: string;
+  nama_registrator?: string;
+  waktu_verifikasi?: string;
+  detail_verifikasi?: { item: string; memenuhi_syarat: boolean; keterangan: string }[];
+  nomor_verifikasi?: string;
+  nama_verifikator?: string;
+  id_korektor?: string;
 }
 
 const RekapDikembalikan = () => {
@@ -58,6 +76,10 @@ const RekapDikembalikan = () => {
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [totalItems, setTotalItems] = useState(0);
 
+  // Detail Dialog states
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [selectedTagihanForDetail, setSelectedTagihanForDetail] = useState<Tagihan | null>(null);
+
   useEffect(() => {
     const fetchRekapDikembalikan = async () => {
       if (!user || sessionLoading || profile?.peran !== 'Staf Koreksi') {
@@ -69,7 +91,7 @@ const RekapDikembalikan = () => {
       try {
         let query = supabase
           .from('database_tagihan')
-          .select('id_tagihan, nama_skpd, nomor_spm, nomor_koreksi, waktu_koreksi, catatan_koreksi', { count: 'exact' }) // Add count for pagination
+          .select('*', { count: 'exact' }) // Select all columns for detail view
           .eq('id_korektor', user.id)
           .order('waktu_koreksi', { ascending: false });
 
@@ -87,17 +109,17 @@ const RekapDikembalikan = () => {
         }
 
         // Apply pagination range
-        if (itemsPerPage !== -1) { // Apply range only if not 'All'
+        if (itemsPerPage !== -1) {
           const from = (currentPage - 1) * itemsPerPage;
           const to = from + itemsPerPage - 1;
           query = query.range(from, to);
         }
 
-        const { data, error, count } = await query; // Get count from the query
+        const { data, error, count } = await query;
 
         if (error) throw error;
         setTagihanList(data as Tagihan[]);
-        setTotalItems(count || 0); // Set total items for pagination
+        setTotalItems(count || 0);
       } catch (error: any) {
         console.error('Error fetching rekap dikembalikan:', error.message);
         toast.error('Gagal memuat rekap tagihan dikembalikan: ' + error.message);
@@ -107,7 +129,21 @@ const RekapDikembalikan = () => {
     };
 
     fetchRekapDikembalikan();
-  }, [user, profile, sessionLoading, debouncedSearchQuery, dateRange, currentPage, itemsPerPage]); // Add pagination states to dependencies
+  }, [user, profile, sessionLoading, debouncedSearchQuery, dateRange, currentPage, itemsPerPage]);
+
+  const handleDetailClick = (tagihan: Tagihan) => {
+    setSelectedTagihanForDetail(tagihan);
+    setIsDetailModalOpen(true);
+  };
+
+  const handlePrintClick = (tagihanId: string) => {
+    const printWindow = window.open(`/print-verifikasi?id=${tagihanId}`, '_blank', 'width=800,height=900,scrollbars=yes');
+    if (printWindow) {
+      printWindow.focus();
+    } else {
+      toast.error('Gagal membuka jendela cetak. Pastikan pop-up tidak diblokir.');
+    }
+  };
 
   const totalPages = itemsPerPage === -1 ? 1 : Math.ceil(totalItems / itemsPerPage);
 
@@ -225,10 +261,10 @@ const RekapDikembalikan = () => {
                       <TableCell>{tagihan.catatan_koreksi || '-'}</TableCell>
                       <TableCell className="text-center">
                         <div className="flex justify-center space-x-2">
-                          <Button variant="outline" size="icon" title="Lihat Detail">
+                          <Button variant="outline" size="icon" title="Lihat Detail" onClick={() => handleDetailClick(tagihan)}>
                             <EyeIcon className="h-4 w-4" />
                           </Button>
-                          <Button variant="outline" size="icon" title="Cetak">
+                          <Button variant="outline" size="icon" title="Cetak" onClick={() => handlePrintClick(tagihan.id_tagihan)}>
                             <PrinterIcon className="h-4 w-4" />
                           </Button>
                         </div>
@@ -275,6 +311,12 @@ const RekapDikembalikan = () => {
           </div>
         </CardContent>
       </Card>
+
+      <TagihanDetailDialog
+        isOpen={isDetailModalOpen}
+        onClose={() => setIsDetailModalOpen(false)}
+        tagihan={selectedTagihanForDetail}
+      />
     </div>
   );
 };
