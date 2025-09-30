@@ -338,3 +338,7 @@ const PrintKoreksi = () => {
         </div>
       </div>
     </>
+  );
+};
+
+export default PrintKoreksi;
