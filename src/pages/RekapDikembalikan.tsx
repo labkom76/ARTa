@@ -13,8 +13,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { format, parseISO } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
-import { EyeIcon, PrinterIcon } from 'lucide-react'; // Import EyeIcon and PrinterIcon
+import { EyeIcon, PrinterIcon, SearchIcon } from 'lucide-react'; // Import EyeIcon, PrinterIcon, and SearchIcon
 import { Button } from '@/components/ui/button'; // Import Button for consistent styling
+import { Input } from '@/components/ui/input'; // Import Input component
+import useDebounce from '@/hooks/use-debounce'; // Import useDebounce hook
 
 interface Tagihan {
   id_tagihan: string;
@@ -29,6 +31,8 @@ const RekapDikembalikan = () => {
   const { user, profile, loading: sessionLoading } = useSession();
   const [tagihanList, setTagihanList] = useState<Tagihan[]>([]);
   const [loadingData, setLoadingData] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const debouncedSearchQuery = useDebounce(searchQuery, 500); // Debounce search input
 
   useEffect(() => {
     const fetchRekapDikembalikan = async () => {
@@ -39,11 +43,19 @@ const RekapDikembalikan = () => {
 
       setLoadingData(true);
       try {
-        const { data, error } = await supabase
+        let query = supabase
           .from('database_tagihan')
           .select('id_tagihan, nama_skpd, nomor_spm, nomor_koreksi, waktu_koreksi, catatan_koreksi')
           .eq('id_korektor', user.id) // Filter by current user's ID
           .order('waktu_koreksi', { ascending: false }); // Order by most recent correction
+
+        if (debouncedSearchQuery) {
+          query = query.or(
+            `nomor_spm.ilike.%${debouncedSearchQuery}%,nama_skpd.ilike.%${debouncedSearchQuery}%`
+          );
+        }
+
+        const { data, error } = await query;
 
         if (error) throw error;
         setTagihanList(data as Tagihan[]);
@@ -56,7 +68,7 @@ const RekapDikembalikan = () => {
     };
 
     fetchRekapDikembalikan();
-  }, [user, profile, sessionLoading]);
+  }, [user, profile, sessionLoading, debouncedSearchQuery]); // Add debouncedSearchQuery to dependencies
 
   if (sessionLoading || loadingData) {
     return (
@@ -80,14 +92,21 @@ const RekapDikembalikan = () => {
     <div className="space-y-6">
       <h1 className="text-3xl font-bold text-gray-800 dark:text-white mb-6">Rekap Tagihan Dikembalikan</h1>
 
-      {/* Area Kontrol Filter (Kosong) */}
+      {/* Area Kontrol Filter */}
       <Card className="shadow-sm rounded-lg">
         <CardHeader>
           <CardTitle className="text-xl font-semibold">Filter Data</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="h-24 flex items-center justify-center text-muted-foreground">
-            Area untuk kontrol filter (akan diimplementasikan nanti)
+          <div className="relative flex-1 w-full">
+            <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400" />
+            <Input
+              type="text"
+              placeholder="Cari berdasarkan Nomor SPM atau Nama SKPD..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 w-full"
+            />
           </div>
         </CardContent>
       </Card>
@@ -107,13 +126,13 @@ const RekapDikembalikan = () => {
                   <TableHead>Nomor SPM</TableHead>
                   <TableHead>Nama SKPD</TableHead>
                   <TableHead>Keterangan</TableHead>
-                  <TableHead className="text-center">Aksi</TableHead> {/* New header for actions */}
+                  <TableHead className="text-center">Aksi</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {tagihanList.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center text-muted-foreground py-8"> {/* Updated colSpan */}
+                    <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
                       Tidak ada data tagihan dikembalikan.
                     </TableCell>
                   </TableRow>
