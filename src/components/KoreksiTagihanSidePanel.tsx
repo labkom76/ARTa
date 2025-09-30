@@ -109,10 +109,10 @@ const KoreksiTagihanSidePanel: React.FC<KoreksiTagihanSidePanelProps> = ({ isOpe
       let maxSequence = 0;
       data.forEach(item => {
         if (item.nomor_koreksi) {
-          // Expected format: [REG-YYYYMMDD-NNNN]-K-[MMM]
+          // Expected format: [NNNN]-K-[MMM]
           const parts = item.nomor_koreksi.split('-K-');
           if (parts.length === 2) {
-            const sequencePart = parseInt(parts[1], 10);
+            const sequencePart = parseInt(parts[1], 10); // This is the monthly correction sequence
             if (!isNaN(sequencePart) && sequencePart > maxSequence) {
               maxSequence = sequencePart;
             }
@@ -122,13 +122,17 @@ const KoreksiTagihanSidePanel: React.FC<KoreksiTagihanSidePanelProps> = ({ isOpe
       nextSequence = maxSequence + 1;
     }
 
-    return String(nextSequence).padStart(4, '0');
+    return String(nextSequence).padStart(4, '0'); // Pad with 4 zeros for monthly sequence
   }, []);
 
   // Main function to generate the full nomor_koreksi
   const generateFullNomorKoreksi = useCallback(async (originalNomorRegistrasi: string): Promise<string> => {
+    // Extract only the sequence number from originalNomorRegistrasi (e.g., '0010' from 'REG-20250930-0010')
+    const regParts = originalNomorRegistrasi.split('-');
+    const registrationSequence = regParts.length === 3 ? regParts[2] : originalNomorRegistrasi; // Fallback if format is unexpected
+
     const monthlyCorrectionSequence = await generateMonthlyCorrectionSequence();
-    return `${originalNomorRegistrasi}-K-${monthlyCorrectionSequence}`;
+    return `${parseInt(registrationSequence, 10)}-K-${monthlyCorrectionSequence}`; // Convert to int to remove leading zeros if any, then back to string
   }, [generateMonthlyCorrectionSequence]);
 
   useEffect(() => {
