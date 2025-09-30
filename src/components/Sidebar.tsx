@@ -55,8 +55,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onLinkClick }) => {
     navItems.push(
       { to: '/dashboard-koreksi', icon: LayoutDashboardIcon, label: 'Dashboard' },
       { to: '/portal-verifikasi', icon: FileTextIcon, label: 'Portal Verifikasi' },
-      { to: '/riwayat-verifikasi', icon: HistoryIcon, label: 'Riwayat Verifikasi' },
-      { to: '/rekap-dikembalikan', icon: ListFilterIcon, label: 'Rekap Dikembalikan' }, // New navigation item
+      // { to: '/riwayat-verifikasi', icon: HistoryIcon, label: 'Riwayat Verifikasi' }, // Dihapus untuk Staf Koreksi
+      { to: '/rekap-dikembalikan', icon: ListFilterIcon, label: 'Rekap Dikembalikan' },
     );
   } else {
     // Default or fallback for other roles/unassigned
