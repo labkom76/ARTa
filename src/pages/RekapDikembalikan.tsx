@@ -11,12 +11,14 @@ import {
 } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, startOfDay, endOfDay } from 'date-fns'; // Import startOfDay and endOfDay
 import { id as localeId } from 'date-fns/locale';
-import { EyeIcon, PrinterIcon, SearchIcon } from 'lucide-react'; // Import EyeIcon, PrinterIcon, and SearchIcon
-import { Button } from '@/components/ui/button'; // Import Button for consistent styling
-import { Input } from '@/components/ui/input'; // Import Input component
-import useDebounce from '@/hooks/use-debounce'; // Import useDebounce hook
+import { EyeIcon, PrinterIcon, SearchIcon } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import useDebounce from '@/hooks/use-debounce';
+import { DateRange } from 'react-day-picker'; // Import DateRange type
+import { DateRangePickerWithPresets } from '@/components/DateRangePickerWithPresets'; // Import the DateRangePicker component
 
 interface Tagihan {
   id_tagihan: string;
@@ -32,7 +34,8 @@ const RekapDikembalikan = () => {
   const [tagihanList, setTagihanList] = useState<Tagihan[]>([]);
   const [loadingData, setLoadingData] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const debouncedSearchQuery = useDebounce(searchQuery, 500); // Debounce search input
+  const debouncedSearchQuery = useDebounce(searchQuery, 500);
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined); // New state for date range
 
   useEffect(() => {
     const fetchRekapDikembalikan = async () => {
@@ -46,13 +49,21 @@ const RekapDikembalikan = () => {
         let query = supabase
           .from('database_tagihan')
           .select('id_tagihan, nama_skpd, nomor_spm, nomor_koreksi, waktu_koreksi, catatan_koreksi')
-          .eq('id_korektor', user.id) // Filter by current user's ID
-          .order('waktu_koreksi', { ascending: false }); // Order by most recent correction
+          .eq('id_korektor', user.id)
+          .order('waktu_koreksi', { ascending: false });
 
         if (debouncedSearchQuery) {
           query = query.or(
             `nomor_spm.ilike.%${debouncedSearchQuery}%,nama_skpd.ilike.%${debouncedSearchQuery}%`
           );
+        }
+
+        // Apply date range filter
+        if (dateRange?.from) {
+          query = query.gte('waktu_koreksi', startOfDay(dateRange.from).toISOString());
+        }
+        if (dateRange?.to) {
+          query = query.lte('waktu_koreksi', endOfDay(dateRange.to).toISOString());
         }
 
         const { data, error } = await query;
@@ -68,7 +79,7 @@ const RekapDikembalikan = () => {
     };
 
     fetchRekapDikembalikan();
-  }, [user, profile, sessionLoading, debouncedSearchQuery]); // Add debouncedSearchQuery to dependencies
+  }, [user, profile, sessionLoading, debouncedSearchQuery, dateRange]); // Add dateRange to dependencies
 
   if (sessionLoading || loadingData) {
     return (
@@ -98,15 +109,18 @@ const RekapDikembalikan = () => {
           <CardTitle className="text-xl font-semibold">Filter Data</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="relative flex-1 w-full">
-            <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400" />
-            <Input
-              type="text"
-              placeholder="Cari berdasarkan Nomor SPM atau Nama SKPD..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 w-full"
-            />
+          <div className="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-2">
+            <div className="relative flex-1 w-full sm:w-auto">
+              <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400" />
+              <Input
+                type="text"
+                placeholder="Cari berdasarkan Nomor SPM atau Nama SKPD..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 w-full"
+              />
+            </div>
+            <DateRangePickerWithPresets date={dateRange} onDateChange={setDateRange} className="w-full sm:w-auto" />
           </div>
         </CardContent>
       </Card>
