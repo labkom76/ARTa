@@ -159,6 +159,16 @@ const KoreksiTagihanSidePanel: React.FC<KoreksiTagihanSidePanelProps> = ({ isOpe
     return null;
   }
 
+  const formatDate = (dateString: string | undefined) => {
+    if (!dateString) return '-';
+    try {
+      return format(parseISO(dateString), 'dd MMMM yyyy HH:mm', { locale: localeId });
+    } catch (e) {
+      console.error("Error formatting date:", dateString, e);
+      return dateString;
+    }
+  };
+
   const onSubmit = async (values: KoreksiFormValues) => {
     if (!user || !profile?.nama_lengkap) {
       toast.error('Informasi pengguna tidak lengkap. Harap login ulang.');
@@ -224,21 +234,41 @@ const KoreksiTagihanSidePanel: React.FC<KoreksiTagihanSidePanelProps> = ({ isOpe
               <p className="text-xl font-bold text-red-600 dark:text-red-400">{generatedNomorKoreksi || 'Membuat...'}</p>
             </div>
 
-            {/* Area 2: Detail Ringkas Tagihan */}
-            <div className="mb-6">
-              <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-3">Detail Tagihan</h3>
-              <div className="grid grid-cols-1 gap-y-2 text-sm">
+            {/* Area 2: Detail Tagihan (Updated to match VerifikasiTagihanDialog) */}
+            <div className="grid gap-2 mb-6">
+              <h3 className="text-lg font-semibold">Detail Tagihan</h3>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
                 <div>
-                  <Label className="text-muted-foreground">Nomor SPM</Label>
-                  <p className="font-medium">{tagihan.nomor_spm || '-'}</p>
+                  <Label className="text-muted-foreground">Nomor Registrasi</Label>
+                  <p className="font-medium">{tagihan.nomor_registrasi || '-'}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Waktu Registrasi</Label>
+                  <p className="font-medium">{formatDate(tagihan.waktu_registrasi)}</p>
                 </div>
                 <div>
                   <Label className="text-muted-foreground">Nama SKPD</Label>
-                  <p className="font-medium">{tagihan.nama_skpd || '-'}</p>
+                  <p className="font-medium">{tagihan.nama_skpd}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Nomor SPM</Label>
+                  <p className="font-medium">{tagihan.nomor_spm}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Jenis SPM</Label>
+                  <p className="font-medium">{tagihan.jenis_spm}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Jenis Tagihan</Label>
+                  <p className="font-medium">{tagihan.jenis_tagihan}</p>
+                </div>
+                <div className="col-span-2">
+                  <Label className="text-muted-foreground">Uraian</Label>
+                  <p className="font-medium">{tagihan.uraian}</p>
                 </div>
                 <div>
                   <Label className="text-muted-foreground">Jumlah Kotor</Label>
-                  <p className="font-medium">Rp{tagihan.jumlah_kotor?.toLocaleString('id-ID') || '0'}</p>
+                  <p className="font-medium">Rp{tagihan.jumlah_kotor.toLocaleString('id-ID')}</p>
                 </div>
               </div>
             </div>
