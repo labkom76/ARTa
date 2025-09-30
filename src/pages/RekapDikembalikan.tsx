@@ -9,21 +9,14 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { SearchIcon, EyeIcon, PrinterIcon } from 'lucide-react'; // Import PrinterIcon
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { toast } from 'sonner';
 import { format, parseISO, startOfDay, endOfDay } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
-import { toast } from 'sonner';
+import { EyeIcon, PrinterIcon, SearchIcon } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import useDebounce from '@/hooks/use-debounce';
-import TagihanDetailDialog from '@/components/TagihanDetailDialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { DateRange } from 'react-day-picker';
 import { DateRangePickerWithPresets } from '@/components/DateRangePickerWithPresets';
 import {
@@ -34,43 +27,48 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from '@/components/ui/pagination';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'; // Import Card components
-
-interface VerificationItem {
-  item: string;
-  memenuhi_syarat: boolean;
-  keterangan: string;
-}
+import TagihanDetailDialog from '@/components/TagihanDetailDialog'; // Import TagihanDetailDialog
 
 interface Tagihan {
   id_tagihan: string;
   nama_skpd: string;
   nomor_spm: string;
-  jenis_spm: string;
-  jenis_tagihan: string;
-  uraian: string;
-  jumlah_kotor: number;
-  status_tagihan: string;
-  waktu_input: string;
-  id_pengguna_input: string;
+  nomor_koreksi?: string;
+  waktu_koreksi?: string;
+  catatan_koreksi?: string;
+  // Add other fields that might be needed for TagihanDetailDialog or PrintKoreksi
+  jenis_spm?: string;
+  jenis_tagihan?: string;
+  uraian?: string;
+  jumlah_kotor?: number;
+  status_tagihan?: string;
+  waktu_input?: string;
+  id_pengguna_input?: string;
+  catatan_verifikator?: string;
   nomor_registrasi?: string;
   waktu_registrasi?: string;
   nama_registrator?: string;
-  catatan_verifikator?: string;
   waktu_verifikasi?: string;
-  detail_verifikasi?: VerificationItem[];
+  detail_verifikasi?: { item: string; memenuhi_syarat: boolean; keterangan: string }[];
   nomor_verifikasi?: string;
   nama_verifikator?: string;
+  id_korektor?: string;
 }
 
-const RiwayatVerifikasi = () => {
-  const { profile, loading: sessionLoading } = useSession();
+const RekapDikembalikan = () => {
+  const { user, profile, loading: sessionLoading } = useSession();
   const [tagihanList, setTagihanList] = useState<Tagihan[]>([]);
   const [loadingData, setLoadingData] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const debouncedSearchQuery = useDebounce(searchQuery, 500);
-  const [selectedStatus, setSelectedStatus] = useState<string>('Semua Status');
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
 
   // Pagination states
@@ -78,12 +76,13 @@ const RiwayatVerifikasi = () => {
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [totalItems, setTotalItems] = useState(0);
 
+  // Detail Dialog states
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [selectedTagihanForDetail, setSelectedTagihanForDetail] = useState<Tagihan | null>(null);
 
   useEffect(() => {
-    const fetchRiwayatVerifikasi = async () => {
-      if (sessionLoading || (profile?.peran !== 'Staf Verifikator' && profile?.peran !== 'Administrator')) {
+    const fetchRekapDikembalikan = async () => {
+      if (!user || sessionLoading || profile?.peran !== 'Staf Koreksi') {
         setLoadingData(false);
         return;
       }
@@ -92,16 +91,9 @@ const RiwayatVerifikasi = () => {
       try {
         let query = supabase
           .from('database_tagihan')
-          .select('*', { count: 'exact' })
-          .order('waktu_verifikasi', { ascending: false }); // Order by most recent verification
-
-        // Apply primary filter: status_tagihan must be 'Diteruskan' or 'Dikembalikan'
-        query = query.in('status_tagihan', ['Diteruskan', 'Dikembalikan']);
-
-        // Conditional filter for 'Staf Verifikator'
-        if (profile?.peran === 'Staf Verifikator') {
-          query = query.is('id_korektor', null);
-        }
+          .select('*', { count: 'exact' }) // Select all columns for detail view
+          .eq('id_korektor', user.id)
+          .order('waktu_koreksi', { ascending: false });
 
         if (debouncedSearchQuery) {
           query = query.or(
@@ -109,19 +101,14 @@ const RiwayatVerifikasi = () => {
           );
         }
 
-        // Apply new status filter if not 'Semua Status'
-        if (selectedStatus !== 'Semua Status') {
-          query = query.eq('status_tagihan', selectedStatus);
-        }
-
-        // Apply date range filter
         if (dateRange?.from) {
-          query = query.gte('waktu_verifikasi', startOfDay(dateRange.from).toISOString());
+          query = query.gte('waktu_koreksi', startOfDay(dateRange.from).toISOString());
         }
         if (dateRange?.to) {
-          query = query.lte('waktu_verifikasi', endOfDay(dateRange.to).toISOString());
+          query = query.lte('waktu_koreksi', endOfDay(dateRange.to).toISOString());
         }
 
+        // Apply pagination range
         if (itemsPerPage !== -1) {
           const from = (currentPage - 1) * itemsPerPage;
           const to = from + itemsPerPage - 1;
@@ -134,15 +121,15 @@ const RiwayatVerifikasi = () => {
         setTagihanList(data as Tagihan[]);
         setTotalItems(count || 0);
       } catch (error: any) {
-        console.error('Error fetching riwayat verifikasi:', error.message);
-        toast.error('Gagal memuat riwayat verifikasi: ' + error.message);
+        console.error('Error fetching rekap dikembalikan:', error.message);
+        toast.error('Gagal memuat rekap tagihan dikembalikan: ' + error.message);
       } finally {
         setLoadingData(false);
       }
     };
 
-    fetchRiwayatVerifikasi();
-  }, [sessionLoading, profile, debouncedSearchQuery, selectedStatus, dateRange, currentPage, itemsPerPage]);
+    fetchRekapDikembalikan();
+  }, [user, profile, sessionLoading, debouncedSearchQuery, dateRange, currentPage, itemsPerPage]);
 
   const handleDetailClick = (tagihan: Tagihan) => {
     setSelectedTagihanForDetail(tagihan);
@@ -150,22 +137,12 @@ const RiwayatVerifikasi = () => {
   };
 
   const handlePrintClick = (tagihanId: string) => {
-    if (profile?.peran === 'Staf Koreksi') {
-      const printWindow = window.open(`/print-koreksi?id=${tagihanId}`, '_blank', 'width=800,height=900,scrollbars=yes');
-      if (printWindow) {
-        printWindow.focus();
-      } else {
-        toast.error('Gagal membuka jendela cetak. Pastikan pop-up tidak diblokir.');
-      }
-    } else if (profile?.peran === 'Staf Verifikator') {
-      const printWindow = window.open(`/print-verifikasi?id=${tagihanId}`, '_blank', 'width=800,height=900,scrollbars=yes');
-      if (printWindow) {
-        printWindow.focus();
-      } else {
-        toast.error('Gagal membuka jendela cetak. Pastikan pop-up tidak diblokir.');
-      }
+    // Mengubah ini untuk membuka halaman PrintKoreksi yang baru
+    const printWindow = window.open(`/print-koreksi?id=${tagihanId}`, '_blank', 'width=800,height=900,scrollbars=yes');
+    if (printWindow) {
+      printWindow.focus();
     } else {
-      toast.error('Peran Anda tidak memiliki izin untuk mencetak.');
+      toast.error('Gagal membuka jendela cetak. Pastikan pop-up tidak diblokir.');
     }
   };
 
@@ -180,7 +157,7 @@ const RiwayatVerifikasi = () => {
     );
   }
 
-  if (profile?.peran !== 'Staf Verifikator' && profile?.peran !== 'Administrator') {
+  if (profile?.peran !== 'Staf Koreksi') {
     return (
       <div className="p-6 bg-white rounded-lg shadow-sm border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
         <h1 className="text-3xl font-bold text-red-600 dark:text-red-400 mb-4">Akses Ditolak</h1>
@@ -191,7 +168,7 @@ const RiwayatVerifikasi = () => {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-gray-800 dark:text-white mb-6">Riwayat Verifikasi Tagihan</h1>
+      <h1 className="text-3xl font-bold text-gray-800 dark:text-white mb-6">Rekap Tagihan Dikembalikan</h1>
 
       {/* Area Kontrol Filter */}
       <Card className="shadow-sm rounded-lg">
@@ -213,16 +190,6 @@ const RiwayatVerifikasi = () => {
                 className="pl-9 w-full"
               />
             </div>
-            <Select onValueChange={(value) => { setSelectedStatus(value); setCurrentPage(1); }} value={selectedStatus}>
-              <SelectTrigger className="w-full sm:w-[200px]">
-                <SelectValue placeholder="Filter Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Semua Status">Semua Status</SelectItem>
-                <SelectItem value="Diteruskan">Diteruskan</SelectItem>
-                <SelectItem value="Dikembalikan">Dikembalikan</SelectItem>
-              </SelectContent>
-            </Select>
             <DateRangePickerWithPresets
               date={dateRange}
               onDateChange={(newDateRange) => {
@@ -235,13 +202,13 @@ const RiwayatVerifikasi = () => {
         </CardContent>
       </Card>
 
-      {/* Tabel untuk riwayat verifikasi */}
+      {/* Tabel Riwayat */}
       <Card className="shadow-sm rounded-lg">
         <CardHeader>
-          <CardTitle className="text-xl font-semibold">Daftar Riwayat Verifikasi</CardTitle>
+          <CardTitle className="text-xl font-semibold">Daftar Tagihan Dikembalikan</CardTitle>
         </CardHeader>
         <CardContent>
-          {/* Moved "Baris per halaman" here */}
+          {/* "Baris per halaman" dropdown */}
           <div className="mb-4 flex justify-end items-center space-x-2">
             <Label htmlFor="items-per-page" className="whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">Baris per halaman:</Label>
             <Select
@@ -268,35 +235,31 @@ const RiwayatVerifikasi = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Waktu Verifikasi</TableHead>
-                  <TableHead>Nomor Verifikasi</TableHead>
-                  <TableHead>Nama SKPD</TableHead>
+                  <TableHead>Waktu Koreksi</TableHead>
+                  <TableHead>Nomor Koreksi</TableHead>
                   <TableHead>Nomor SPM</TableHead>
-                  <TableHead>Jumlah Kotor</TableHead>
-                  <TableHead>Status Akhir</TableHead>
-                  <TableHead>Diperiksa oleh</TableHead>
+                  <TableHead>Nama SKPD</TableHead>
+                  <TableHead>Keterangan</TableHead>
                   <TableHead className="text-center">Aksi</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {tagihanList.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
-                      Tidak ada data riwayat verifikasi.
+                    <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                      Tidak ada data tagihan dikembalikan.
                     </TableCell>
                   </TableRow>
                 ) : (
                   tagihanList.map((tagihan) => (
                     <TableRow key={tagihan.id_tagihan}>
                       <TableCell>
-                        {tagihan.waktu_verifikasi ? format(parseISO(tagihan.waktu_verifikasi), 'dd MMMM yyyy HH:mm', { locale: localeId }) : '-'}
+                        {tagihan.waktu_koreksi ? format(parseISO(tagihan.waktu_koreksi), 'dd MMMM yyyy HH:mm', { locale: localeId }) : '-'}
                       </TableCell>
-                      <TableCell className="font-medium">{tagihan.nomor_verifikasi || '-'}</TableCell>
-                      <TableCell>{tagihan.nama_skpd}</TableCell>
+                      <TableCell className="font-medium">{tagihan.nomor_koreksi || '-'}</TableCell>
                       <TableCell>{tagihan.nomor_spm}</TableCell>
-                      <TableCell>Rp{tagihan.jumlah_kotor.toLocaleString('id-ID')}</TableCell>
-                      <TableCell>{tagihan.status_tagihan}</TableCell>
-                      <TableCell>{tagihan.nama_verifikator || '-'}</TableCell>
+                      <TableCell>{tagihan.nama_skpd}</TableCell>
+                      <TableCell>{tagihan.catatan_koreksi || '-'}</TableCell>
                       <TableCell className="text-center">
                         <div className="flex justify-center space-x-2">
                           <Button variant="outline" size="icon" title="Lihat Detail" onClick={() => handleDetailClick(tagihan)}>
@@ -313,6 +276,7 @@ const RiwayatVerifikasi = () => {
               </TableBody>
             </Table>
           </div>
+
           {/* Pagination Controls */}
           <div className="mt-6 flex flex-col sm:flex-row items-center justify-between space-y-2 sm:space-y-0">
             <div className="text-sm text-muted-foreground">
@@ -358,4 +322,4 @@ const RiwayatVerifikasi = () => {
   );
 };
 
-export default RiwayatVerifikasi;
+export default RekapDikembalikan;
