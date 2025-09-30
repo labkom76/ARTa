@@ -13,6 +13,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { format, parseISO } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
+import { EyeIcon, PrinterIcon } from 'lucide-react'; // Import EyeIcon and PrinterIcon
+import { Button } from '@/components/ui/button'; // Import Button for consistent styling
 
 interface Tagihan {
   id_tagihan: string;
@@ -105,12 +107,13 @@ const RekapDikembalikan = () => {
                   <TableHead>Nomor SPM</TableHead>
                   <TableHead>Nama SKPD</TableHead>
                   <TableHead>Keterangan</TableHead>
+                  <TableHead className="text-center">Aksi</TableHead> {/* New header for actions */}
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {tagihanList.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                    <TableCell colSpan={6} className="text-center text-muted-foreground py-8"> {/* Updated colSpan */}
                       Tidak ada data tagihan dikembalikan.
                     </TableCell>
                   </TableRow>
@@ -124,6 +127,16 @@ const RekapDikembalikan = () => {
                       <TableCell>{tagihan.nomor_spm}</TableCell>
                       <TableCell>{tagihan.nama_skpd}</TableCell>
                       <TableCell>{tagihan.catatan_koreksi || '-'}</TableCell>
+                      <TableCell className="text-center">
+                        <div className="flex justify-center space-x-2">
+                          <Button variant="outline" size="icon" title="Lihat Detail">
+                            <EyeIcon className="h-4 w-4" />
+                          </Button>
+                          <Button variant="outline" size="icon" title="Cetak">
+                            <PrinterIcon className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
                     </TableRow>
                   ))
                 )}
