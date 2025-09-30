@@ -98,6 +98,11 @@ const RiwayatVerifikasi = () => {
         // Apply primary filter: status_tagihan must be 'Diteruskan' or 'Dikembalikan'
         query = query.in('status_tagihan', ['Diteruskan', 'Dikembalikan']);
 
+        // Conditional filter for 'Staf Verifikator'
+        if (profile?.peran === 'Staf Verifikator') {
+          query = query.is('id_korektor', null);
+        }
+
         if (debouncedSearchQuery) {
           query = query.or(
             `nomor_spm.ilike.%${debouncedSearchQuery}%,nama_skpd.ilike.%${debouncedSearchQuery}%`
@@ -137,7 +142,7 @@ const RiwayatVerifikasi = () => {
     };
 
     fetchRiwayatVerifikasi();
-  }, [sessionLoading, profile, debouncedSearchQuery, selectedStatus, dateRange, currentPage, itemsPerPage]); // Added dateRange to dependencies
+  }, [sessionLoading, profile, debouncedSearchQuery, selectedStatus, dateRange, currentPage, itemsPerPage]);
 
   const handleDetailClick = (tagihan: Tagihan) => {
     setSelectedTagihanForDetail(tagihan);
@@ -145,11 +150,22 @@ const RiwayatVerifikasi = () => {
   };
 
   const handlePrintClick = (tagihanId: string) => {
-    const printWindow = window.open(`/print-verifikasi?id=${tagihanId}`, '_blank', 'width=800,height=900,scrollbars=yes');
-    if (printWindow) {
-      printWindow.focus();
+    if (profile?.peran === 'Staf Koreksi') {
+      const printWindow = window.open(`/print-koreksi?id=${tagihanId}`, '_blank', 'width=800,height=900,scrollbars=yes');
+      if (printWindow) {
+        printWindow.focus();
+      } else {
+        toast.error('Gagal membuka jendela cetak. Pastikan pop-up tidak diblokir.');
+      }
+    } else if (profile?.peran === 'Staf Verifikator') {
+      const printWindow = window.open(`/print-verifikasi?id=${tagihanId}`, '_blank', 'width=800,height=900,scrollbars=yes');
+      if (printWindow) {
+        printWindow.focus();
+      } else {
+        toast.error('Gagal membuka jendela cetak. Pastikan pop-up tidak diblokir.');
+      }
     } else {
-      toast.error('Gagal membuka jendela cetak. Pastikan pop-up tidak diblokir.');
+      toast.error('Peran Anda tidak memiliki izin untuk mencetak.');
     }
   };
 
@@ -254,8 +270,8 @@ const RiwayatVerifikasi = () => {
                 <TableRow>
                   <TableHead>Waktu Verifikasi</TableHead>
                   <TableHead>Nomor Verifikasi</TableHead>
-                  <TableHead>Nomor SPM</TableHead>
                   <TableHead>Nama SKPD</TableHead>
+                  <TableHead>Nomor SPM</TableHead>
                   <TableHead>Jumlah Kotor</TableHead>
                   <TableHead>Status Akhir</TableHead>
                   <TableHead>Diperiksa oleh</TableHead>
@@ -276,8 +292,8 @@ const RiwayatVerifikasi = () => {
                         {tagihan.waktu_verifikasi ? format(parseISO(tagihan.waktu_verifikasi), 'dd MMMM yyyy HH:mm', { locale: localeId }) : '-'}
                       </TableCell>
                       <TableCell className="font-medium">{tagihan.nomor_verifikasi || '-'}</TableCell>
-                      <TableCell>{tagihan.nomor_spm}</TableCell>
                       <TableCell>{tagihan.nama_skpd}</TableCell>
+                      <TableCell>{tagihan.nomor_spm}</TableCell>
                       <TableCell>Rp{tagihan.jumlah_kotor.toLocaleString('id-ID')}</TableCell>
                       <TableCell>{tagihan.status_tagihan}</TableCell>
                       <TableCell>{tagihan.nama_verifikator || '-'}</TableCell>

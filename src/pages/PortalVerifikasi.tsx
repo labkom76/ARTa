@@ -138,12 +138,19 @@ const PortalVerifikasi = () => {
         const todayStart = startOfDay(new Date()).toISOString();
         const todayEnd = endOfDay(new Date()).toISOString();
 
-        const { data, error } = await supabase
+        let query = supabase
           .from('database_tagihan')
           .select('nama_skpd')
           .in('status_tagihan', ['Diteruskan', 'Dikembalikan'])
           .gte('waktu_verifikasi', todayStart)
           .lte('waktu_verifikasi', todayEnd);
+        
+        // Conditional filter for 'Staf Verifikator'
+        if (profile?.peran === 'Staf Verifikator') {
+          query = query.is('id_korektor', null);
+        }
+
+        const { data, error } = await query;
 
         if (error) throw error;
 
@@ -157,7 +164,7 @@ const PortalVerifikasi = () => {
       }
     };
     fetchHistorySkpdOptions();
-  }, []);
+  }, [profile?.peran]); // Add profile.peran to dependencies
 
   const fetchQueueTagihan = async () => {
     if (sessionLoading || (profile?.peran !== 'Staf Verifikator' && profile?.peran !== 'Staf Koreksi')) {
@@ -227,6 +234,11 @@ const PortalVerifikasi = () => {
         .in('status_tagihan', ['Diteruskan', 'Dikembalikan'])
         .gte('waktu_verifikasi', todayStart)
         .lte('waktu_verifikasi', todayEnd);
+
+      // Conditional filter for 'Staf Verifikator'
+      if (profile?.peran === 'Staf Verifikator') {
+        query = query.is('id_korektor', null);
+      }
 
       // Apply history search query
       if (debouncedHistorySearchQuery) {
@@ -331,7 +343,10 @@ const PortalVerifikasi = () => {
             const existingHistoryIndex = prevList.findIndex(t => t.id_tagihan === newTagihan.id_tagihan);
             let updatedHistoryList = [...prevList];
 
-            if (isVerifiedToday) {
+            // Apply conditional filter for 'Staf Verifikator' in realtime updates
+            const shouldBeInHistoryForVerifier = isVerifiedToday && (profile?.peran !== 'Staf Verifikator' || newTagihan.id_korektor === null);
+
+            if (shouldBeInHistoryForVerifier) {
               if (existingHistoryIndex > -1) {
                 updatedHistoryList[existingHistoryIndex] = newTagihan;
               } else {
