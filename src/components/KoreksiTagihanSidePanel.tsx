@@ -85,41 +85,51 @@ const KoreksiTagihanSidePanel: React.FC<KoreksiTagihanSidePanelProps> = ({ isOpe
     },
   });
 
-  const generateNomorKoreksi = useCallback(async (originalNomorRegistrasi: string): Promise<string> => {
+  // Helper function to generate the monthly correction sequence (e.g., '0020')
+  const generateMonthlyCorrectionSequence = useCallback(async (): Promise<string> => {
     const now = new Date();
     const startOfCurrentMonth = startOfMonth(now).toISOString();
     const endOfCurrentMonth = endOfMonth(now).toISOString();
 
+    // Fetch all nomor_koreksi for the current month to find the highest sequence
     const { data, error } = await supabase
       .from('database_tagihan')
       .select('nomor_koreksi')
-      .ilike('nomor_koreksi', `${originalNomorRegistrasi}-K-%`)
+      .not('nomor_koreksi', 'is', null)
       .gte('waktu_koreksi', startOfCurrentMonth)
-      .lte('waktu_koreksi', endOfCurrentMonth)
-      .order('nomor_koreksi', { ascending: false })
-      .limit(1);
+      .lte('waktu_koreksi', endOfCurrentMonth);
 
     if (error) {
-      console.error('Error fetching last correction number:', error.message);
-      throw new Error('Gagal membuat nomor koreksi.');
+      console.error('Error fetching last correction number for sequence:', error.message);
+      throw new Error('Gagal membuat nomor urut koreksi bulanan.');
     }
 
     let nextSequence = 1;
-    if (data && data.length > 0 && data[0].nomor_koreksi) {
-      const lastNomor = data[0].nomor_koreksi;
-      const parts = lastNomor.split('-K-');
-      if (parts.length === 2) {
-        const sequencePart = parts[1];
-        const lastSequenceNum = parseInt(sequencePart, 10);
-        if (!isNaN(lastSequenceNum)) {
-          nextSequence = lastSequenceNum + 1;
+    if (data && data.length > 0) {
+      let maxSequence = 0;
+      data.forEach(item => {
+        if (item.nomor_koreksi) {
+          // Expected format: [REG-YYYYMMDD-NNNN]-K-[MMM]
+          const parts = item.nomor_koreksi.split('-K-');
+          if (parts.length === 2) {
+            const sequencePart = parseInt(parts[1], 10);
+            if (!isNaN(sequencePart) && sequencePart > maxSequence) {
+              maxSequence = sequencePart;
+            }
+          }
         }
-      }
+      });
+      nextSequence = maxSequence + 1;
     }
 
-    const formattedSequence = String(nextSequence).padStart(3, '0');
-    return `${originalNomorRegistrasi}-K-${formattedSequence}`;
+    return String(nextSequence).padStart(4, '0');
   }, []);
+
+  // Main function to generate the full nomor_koreksi
+  const generateFullNomorKoreksi = useCallback(async (originalNomorRegistrasi: string): Promise<string> => {
+    const monthlyCorrectionSequence = await generateMonthlyCorrectionSequence();
+    return `${originalNomorRegistrasi}-K-${monthlyCorrectionSequence}`;
+  }, [generateMonthlyCorrectionSequence]);
 
   useEffect(() => {
     if (isOpen && tagihan?.nomor_registrasi) {
@@ -128,7 +138,7 @@ const KoreksiTagihanSidePanel: React.FC<KoreksiTagihanSidePanelProps> = ({ isOpe
       });
       const generateAndSetNomor = async () => {
         try {
-          const newNomor = await generateNomorKoreksi(tagihan.nomor_registrasi!);
+          const newNomor = await generateFullNomorKoreksi(tagihan.nomor_registrasi!);
           setGeneratedNomorKoreksi(newNomor);
         } catch (error: any) {
           toast.error(error.message);
@@ -139,7 +149,7 @@ const KoreksiTagihanSidePanel: React.FC<KoreksiTagihanSidePanelProps> = ({ isOpe
     } else if (!isOpen) {
       setGeneratedNomorKoreksi(null);
     }
-  }, [isOpen, tagihan, form, generateNomorKoreksi]);
+  }, [isOpen, tagihan, form, generateFullNomorKoreksi]);
 
   if (!tagihan) {
     return null;
@@ -167,11 +177,12 @@ const KoreksiTagihanSidePanel: React.FC<KoreksiTagihanSidePanelProps> = ({ isOpe
           id_korektor: user.id,
           waktu_koreksi: now,
           nomor_koreksi: generatedNomorKoreksi,
-          waktu_verifikasi: now,
-          nama_verifikator: profile.nama_lengkap,
-          nomor_verifikasi: generatedNomorKoreksi,
-          locked_by: null,
-          locked_at: null,
+          // Also update verification related fields to reflect this action in history
+          waktu_verifikasi: now, // Treat correction as a form of verification action for history purposes
+          nama_verifikator: profile.nama_lengkap, // Corrector's name as verifier for history
+          nomor_verifikasi: generatedNomorKoreksi, // Use correction number as verification number for history
+          locked_by: null, // Clear lock
+          locked_at: null, // Clear lock
         })
         .eq('id_tagihan', tagihan.id_tagihan);
 
