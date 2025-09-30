@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { HomeIcon, LayoutDashboardIcon, FileTextIcon, UserIcon, HistoryIcon } from 'lucide-react';
+import { HomeIcon, LayoutDashboardIcon, FileTextIcon, UserIcon, HistoryIcon, ListFilterIcon } from 'lucide-react'; // Import ListFilterIcon
 import { cn } from '@/lib/utils';
 import { useSession } from '@/contexts/SessionContext';
 import { Button } from '@/components/ui/button';
@@ -51,11 +51,12 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onLinkClick }) => {
       { to: '/portal-verifikasi', icon: FileTextIcon, label: 'Portal Verifikasi' },
       { to: '/riwayat-verifikasi', icon: HistoryIcon, label: 'Riwayat Verifikasi' },
     );
-  } else if (role === 'Staf Koreksi') { // New case for Staf Koreksi
+  } else if (role === 'Staf Koreksi') {
     navItems.push(
-      { to: '/dashboard-koreksi', icon: LayoutDashboardIcon, label: 'Dashboard' }, // New dashboard for Koreksi
-      { to: '/portal-verifikasi', icon: FileTextIcon, label: 'Portal Verifikasi' }, // Staf Koreksi also uses Portal Verifikasi
-      { to: '/riwayat-verifikasi', icon: HistoryIcon, label: 'Riwayat Verifikasi' }, // Staf Koreksi also uses Riwayat Verifikasi
+      { to: '/dashboard-koreksi', icon: LayoutDashboardIcon, label: 'Dashboard' },
+      { to: '/portal-verifikasi', icon: FileTextIcon, label: 'Portal Verifikasi' },
+      { to: '/riwayat-verifikasi', icon: HistoryIcon, label: 'Riwayat Verifikasi' },
+      { to: '/rekap-dikembalikan', icon: ListFilterIcon, label: 'Rekap Dikembalikan' }, // New navigation item
     );
   } else {
     // Default or fallback for other roles/unassigned
