@@ -11,14 +11,30 @@ import {
 } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { format, parseISO, startOfDay, endOfDay } from 'date-fns'; // Import startOfDay and endOfDay
+import { format, parseISO, startOfDay, endOfDay } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
 import { EyeIcon, PrinterIcon, SearchIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import useDebounce from '@/hooks/use-debounce';
-import { DateRange } from 'react-day-picker'; // Import DateRange type
-import { DateRangePickerWithPresets } from '@/components/DateRangePickerWithPresets'; // Import the DateRangePicker component
+import { DateRange } from 'react-day-picker';
+import { DateRangePickerWithPresets } from '@/components/DateRangePickerWithPresets';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '@/components/ui/pagination';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Label } from '@/components/ui/label'; // Import Label for "Baris per halaman"
 
 interface Tagihan {
   id_tagihan: string;
@@ -35,7 +51,12 @@ const RekapDikembalikan = () => {
   const [loadingData, setLoadingData] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const debouncedSearchQuery = useDebounce(searchQuery, 500);
-  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined); // New state for date range
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [totalItems, setTotalItems] = useState(0);
 
   useEffect(() => {
     const fetchRekapDikembalikan = async () => {
@@ -48,7 +69,7 @@ const RekapDikembalikan = () => {
       try {
         let query = supabase
           .from('database_tagihan')
-          .select('id_tagihan, nama_skpd, nomor_spm, nomor_koreksi, waktu_koreksi, catatan_koreksi')
+          .select('id_tagihan, nama_skpd, nomor_spm, nomor_koreksi, waktu_koreksi, catatan_koreksi', { count: 'exact' }) // Add count for pagination
           .eq('id_korektor', user.id)
           .order('waktu_koreksi', { ascending: false });
 
@@ -58,7 +79,6 @@ const RekapDikembalikan = () => {
           );
         }
 
-        // Apply date range filter
         if (dateRange?.from) {
           query = query.gte('waktu_koreksi', startOfDay(dateRange.from).toISOString());
         }
@@ -66,10 +86,18 @@ const RekapDikembalikan = () => {
           query = query.lte('waktu_koreksi', endOfDay(dateRange.to).toISOString());
         }
 
-        const { data, error } = await query;
+        // Apply pagination range
+        if (itemsPerPage !== -1) { // Apply range only if not 'All'
+          const from = (currentPage - 1) * itemsPerPage;
+          const to = from + itemsPerPage - 1;
+          query = query.range(from, to);
+        }
+
+        const { data, error, count } = await query; // Get count from the query
 
         if (error) throw error;
         setTagihanList(data as Tagihan[]);
+        setTotalItems(count || 0); // Set total items for pagination
       } catch (error: any) {
         console.error('Error fetching rekap dikembalikan:', error.message);
         toast.error('Gagal memuat rekap tagihan dikembalikan: ' + error.message);
@@ -79,7 +107,9 @@ const RekapDikembalikan = () => {
     };
 
     fetchRekapDikembalikan();
-  }, [user, profile, sessionLoading, debouncedSearchQuery, dateRange]); // Add dateRange to dependencies
+  }, [user, profile, sessionLoading, debouncedSearchQuery, dateRange, currentPage, itemsPerPage]); // Add pagination states to dependencies
+
+  const totalPages = itemsPerPage === -1 ? 1 : Math.ceil(totalItems / itemsPerPage);
 
   if (sessionLoading || loadingData) {
     return (
@@ -116,11 +146,21 @@ const RekapDikembalikan = () => {
                 type="text"
                 placeholder="Cari berdasarkan Nomor SPM atau Nama SKPD..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setCurrentPage(1); // Reset to first page on search
+                }}
                 className="pl-9 w-full"
               />
             </div>
-            <DateRangePickerWithPresets date={dateRange} onDateChange={setDateRange} className="w-full sm:w-auto" />
+            <DateRangePickerWithPresets
+              date={dateRange}
+              onDateChange={(newDateRange) => {
+                setDateRange(newDateRange);
+                setCurrentPage(1); // Reset to first page on date range change
+              }}
+              className="w-full sm:w-auto"
+            />
           </div>
         </CardContent>
       </Card>
@@ -131,6 +171,29 @@ const RekapDikembalikan = () => {
           <CardTitle className="text-xl font-semibold">Daftar Tagihan Dikembalikan</CardTitle>
         </CardHeader>
         <CardContent>
+          {/* "Baris per halaman" dropdown */}
+          <div className="mb-4 flex justify-end items-center space-x-2">
+            <Label htmlFor="items-per-page" className="whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">Baris per halaman:</Label>
+            <Select
+              value={itemsPerPage.toString()}
+              onValueChange={(value) => {
+                setItemsPerPage(Number(value));
+                setCurrentPage(1); // Reset to first page when items per page changes
+              }}
+            >
+              <SelectTrigger className="w-[100px]">
+                <SelectValue placeholder="10" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="10">10</SelectItem>
+                <SelectItem value="25">25</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+                <SelectItem value="100">100</SelectItem>
+                <SelectItem value="-1">Semua</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
@@ -175,6 +238,40 @@ const RekapDikembalikan = () => {
                 )}
               </TableBody>
             </Table>
+          </div>
+
+          {/* Pagination Controls */}
+          <div className="mt-6 flex flex-col sm:flex-row items-center justify-between space-y-2 sm:space-y-0">
+            <div className="text-sm text-muted-foreground">
+              Halaman {totalItems === 0 ? 0 : currentPage} dari {totalPages} ({totalItems} total item)
+            </div>
+            <Pagination>
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious
+                    onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                    disabled={currentPage === 1 || itemsPerPage === -1}
+                  />
+                </PaginationItem>
+                {[...Array(totalPages)].map((_, index) => (
+                  <PaginationItem key={index}>
+                    <PaginationLink
+                      isActive={currentPage === index + 1}
+                      onClick={() => setCurrentPage(index + 1)}
+                      disabled={itemsPerPage === -1}
+                    >
+                      {index + 1}
+                    </PaginationLink>
+                  </PaginationItem>
+                ))}
+                <PaginationItem>
+                  <PaginationNext
+                    onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                    disabled={currentPage === totalPages || itemsPerPage === -1}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
           </div>
         </CardContent>
       </Card>
