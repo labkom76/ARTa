@@ -441,11 +441,22 @@ const PortalVerifikasi = () => {
   };
 
   const handlePrintClick = (tagihanId: string) => {
-    const printWindow = window.open(`/print-verifikasi?id=${tagihanId}`, '_blank', 'width=800,height=900,scrollbars=yes');
-    if (printWindow) {
-      printWindow.focus();
+    if (profile?.peran === 'Staf Koreksi') {
+      const printWindow = window.open(`/print-koreksi?id=${tagihanId}`, '_blank', 'width=800,height=900,scrollbars=yes');
+      if (printWindow) {
+        printWindow.focus();
+      } else {
+        toast.error('Gagal membuka jendela cetak. Pastikan pop-up tidak diblokir.');
+      }
+    } else if (profile?.peran === 'Staf Verifikator') {
+      const printWindow = window.open(`/print-verifikasi?id=${tagihanId}`, '_blank', 'width=800,height=900,scrollbars=yes');
+      if (printWindow) {
+        printWindow.focus();
+      } else {
+        toast.error('Gagal membuka jendela cetak. Pastikan pop-up tidak diblokir.');
+      }
     } else {
-      toast.error('Gagal membuka jendela cetak. Pastikan pop-up tidak diblokir.');
+      toast.error('Peran Anda tidak memiliki izin untuk mencetak.');
     }
   };
 
