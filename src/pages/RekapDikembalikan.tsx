@@ -44,7 +44,7 @@ interface Tagihan {
   nomor_koreksi?: string;
   waktu_koreksi?: string;
   catatan_koreksi?: string;
-  // Add other fields that might be needed for TagihanDetailDialog or PrintVerifikasi
+  // Add other fields that might be needed for TagihanDetailDialog or PrintKoreksi
   jenis_spm?: string;
   jenis_tagihan?: string;
   uraian?: string;
@@ -137,7 +137,8 @@ const RekapDikembalikan = () => {
   };
 
   const handlePrintClick = (tagihanId: string) => {
-    const printWindow = window.open(`/print-verifikasi?id=${tagihanId}`, '_blank', 'width=800,height=900,scrollbars=yes');
+    // Mengubah ini untuk membuka halaman PrintKoreksi yang baru
+    const printWindow = window.open(`/print-koreksi?id=${tagihanId}`, '_blank', 'width=800,height=900,scrollbars=yes');
     if (printWindow) {
       printWindow.focus();
     } else {
