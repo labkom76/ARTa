@@ -114,7 +114,9 @@ const AdminUsers = () => {
       // The 'user_profiles_with_email' view will also reflect this change.
 
       toast.success(`Pengguna ${userToDelete.namaLengkap} berhasil dihapus.`);
-      // Umpan balik visual (menutup modal, refresh tabel) akan ditangani di Tahap 3
+      setIsDeleteDialogOpen(false); // Tutup modal konfirmasi
+      setUserToDelete(null); // Bersihkan state pengguna yang akan dihapus
+      fetchUsers(); // Refresh tabel manajemen pengguna
     } catch (error: any) {
       console.error('Error deleting user:', error.message);
       toast.error('Gagal menghapus pengguna: ' + error.message);
