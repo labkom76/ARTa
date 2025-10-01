@@ -90,10 +90,23 @@ const AddUserDialog: React.FC<AddUserDialogProps> = ({ isOpen, onClose, onUserAd
     setIsSubmitting(true);
     try {
       if (editingUser) {
-        // Mode Edit: Hanya perbarui profil (untuk tahap selanjutnya)
-        // Untuk tahap ini, tombol Simpan akan disabled, jadi kode ini tidak akan terpanggil.
-        // Ini hanya placeholder untuk tahap berikutnya.
-        toast.info('Fungsionalitas simpan untuk edit belum diaktifkan di tahap ini.');
+        // Mode Edit: Perbarui profil
+        const { error: profileUpdateError } = await supabase
+          .from('profiles')
+          .update({
+            nama_lengkap: values.nama_lengkap,
+            asal_skpd: values.asal_skpd,
+            peran: values.peran,
+          })
+          .eq('id', editingUser.id);
+
+        if (profileUpdateError) {
+          console.error('Error updating profile:', profileUpdateError);
+          toast.error('Gagal memperbarui profil pengguna: ' + profileUpdateError.message);
+          setIsSubmitting(false);
+          return;
+        }
+        toast.success('Profil pengguna berhasil diperbarui!');
       } else {
         // Mode Tambah: Buat pengguna baru di Auth dan perbarui profil
         const { data, error: authError } = await supabase.auth.signUp({
@@ -103,6 +116,8 @@ const AddUserDialog: React.FC<AddUserDialogProps> = ({ isOpen, onClose, onUserAd
             data: {
               nama_lengkap: values.nama_lengkap,
               asal_skpd: values.asal_skpd,
+              // Peran awal akan diatur oleh trigger handle_new_user ke 'SKPD'
+              // Kita akan memperbarui peran jika berbeda dari default
             },
           },
         });
@@ -158,9 +173,9 @@ const AddUserDialog: React.FC<AddUserDialogProps> = ({ isOpen, onClose, onUserAd
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>{isEditMode ? 'Detail Pengguna' : 'Tambah Pengguna Baru'}</DialogTitle>
+          <DialogTitle>{isEditMode ? 'Edit Pengguna' : 'Tambah Pengguna Baru'}</DialogTitle>
           <DialogDescription>
-            {isEditMode ? 'Lihat detail pengguna di bawah ini.' : 'Masukkan detail pengguna baru di sini.'}
+            {isEditMode ? 'Perbarui detail pengguna di sini.' : 'Masukkan detail pengguna baru di sini.'} Klik simpan setelah selesai.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4">
@@ -172,7 +187,7 @@ const AddUserDialog: React.FC<AddUserDialogProps> = ({ isOpen, onClose, onUserAd
               id="nama_lengkap"
               {...form.register('nama_lengkap')}
               className="col-span-3"
-              disabled={isSubmitting || isEditMode} // Disabled in edit mode
+              disabled={isSubmitting} // Enabled in edit mode
             />
             {form.formState.errors.nama_lengkap && (
               <p className="col-span-4 text-right text-red-500 text-sm">
@@ -223,7 +238,7 @@ const AddUserDialog: React.FC<AddUserDialogProps> = ({ isOpen, onClose, onUserAd
               id="asal_skpd"
               {...form.register('asal_skpd')}
               className="col-span-3"
-              disabled={isSubmitting || isEditMode} // Disabled in edit mode
+              disabled={isSubmitting} // Enabled in edit mode
             />
             {form.formState.errors.asal_skpd && (
               <p className="col-span-4 text-right text-red-500 text-sm">
@@ -239,7 +254,7 @@ const AddUserDialog: React.FC<AddUserDialogProps> = ({ isOpen, onClose, onUserAd
               name="peran"
               control={form.control}
               render={({ field }) => (
-                <Select onValueChange={field.onChange} value={field.value} disabled={isSubmitting || isEditMode}> {/* Disabled in edit mode */}
+                <Select onValueChange={field.onChange} value={field.value} disabled={isSubmitting}> {/* Enabled in edit mode */}
                   <SelectTrigger className="col-span-3">
                     <SelectValue placeholder="Pilih Peran" />
                   </SelectTrigger>
@@ -260,8 +275,8 @@ const AddUserDialog: React.FC<AddUserDialogProps> = ({ isOpen, onClose, onUserAd
             )}
           </div>
           <DialogFooter>
-            <Button type="submit" disabled={isSubmitting || isEditMode}> {/* Disabled in edit mode */}
-              {isSubmitting ? (isEditMode ? 'Memperbarui...' : 'Menyimpan...') : 'Simpan'}
+            <Button type="submit" disabled={isSubmitting}> {/* Enabled in edit mode */}
+              {isSubmitting ? (editingUser ? 'Memperbarui...' : 'Menyimpan...') : 'Simpan'}
             </Button>
           </DialogFooter>
         </form>
