@@ -19,7 +19,7 @@ interface UserProfile {
   nama_lengkap: string;
   asal_skpd: string;
   peran: string;
-  email: string;
+  email: string; // Email akan diisi dengan 'N/A' karena tidak diambil langsung dari profiles
 }
 
 const AdminUsers = () => {
@@ -43,19 +43,19 @@ const AdminUsers = () => {
 
       setLoadingUsers(true);
       try {
-        // Fetch profiles and join with auth.users to get email
+        // Mengambil semua kolom dari tabel 'profiles' secara langsung
         const { data, error } = await supabase
           .from('profiles')
-          .select('*, auth.users(email)');
+          .select('*'); // Mengambil semua kolom dari tabel profiles
 
         if (error) throw error;
 
-        const usersWithEmail: UserProfile[] = data.map((profile: any) => ({
-          id: profile.id,
-          nama_lengkap: profile.nama_lengkap,
-          asal_skpd: profile.asal_skpd,
-          peran: profile.peran,
-          email: profile.auth.users?.email || 'N/A', // Handle case where email might be null
+        const usersWithEmail: UserProfile[] = data.map((userProfile: any) => ({
+          id: userProfile.id,
+          nama_lengkap: userProfile.nama_lengkap,
+          asal_skpd: userProfile.asal_skpd,
+          peran: userProfile.peran,
+          email: 'N/A', // Email tidak tersedia langsung dari tabel profiles, diisi 'N/A'
         }));
 
         setUsers(usersWithEmail);
