@@ -139,7 +139,7 @@ const PrintVerifikasi = () => {
               padding: 0 !important;
             }
             .container {
-              padding: 40px !important;
+              padding: 20px !important; /* Mengurangi padding untuk memberi lebih banyak ruang vertikal */
               background-color: white !important;
             }
           }
@@ -160,17 +160,17 @@ const PrintVerifikasi = () => {
           h1 {
             text-align: center;
             font-size: 20px;
-            margin-bottom: 30px;
+            margin-bottom: 20px; /* Mengurangi margin-bottom */
             font-weight: bold;
           }
 
           .info-section {
-            margin-bottom: 25px;
+            margin-bottom: 15px; /* Mengurangi margin-bottom */
           }
 
           .info-row {
             display: flex;
-            margin-bottom: 8px;
+            margin-bottom: 5px; /* Mengurangi margin-bottom */
             font-size: 13px;
           }
 
@@ -195,7 +195,7 @@ const PrintVerifikasi = () => {
           table {
             width: 100%;
             border-collapse: collapse;
-            margin: 30px 0;
+            margin: 20px 0; /* Mengurangi margin */
             font-size: 12px;
           }
 
@@ -204,7 +204,7 @@ const PrintVerifikasi = () => {
           }
 
           th, td {
-            padding: 10px;
+            padding: 8px; /* Mengurangi padding */
             text-align: center;
           }
 
@@ -235,13 +235,13 @@ const PrintVerifikasi = () => {
           }
 
           .signature-section {
-            margin-top: 50px;
+            margin-top: 30px; /* Mengurangi margin-top */
             text-align: right;
           }
 
           .signature-title {
             font-size: 13px;
-            margin-bottom: 80px;
+            margin-bottom: 40px; /* Mengurangi margin-bottom secara signifikan */
             margin-right: 100px;
           }
 
@@ -252,14 +252,14 @@ const PrintVerifikasi = () => {
           }
 
           .qr-code {
-            width: 120px;
-            height: 120px;
+            width: 100px; /* Sedikit mengurangi ukuran QR code */
+            height: 100px; /* Sedikit mengurangi ukuran QR code */
             background-color: #e0e0e0;
-            margin: 20px 0;
+            margin: 10px 0; /* Mengurangi margin */
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 11px;
+            font-size: 10px; /* Mengurangi ukuran font */
             color: #666;
             margin-left: 50px;
           }
