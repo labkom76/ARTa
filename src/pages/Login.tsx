@@ -2,15 +2,31 @@ import { Auth } from '@supabase/auth-ui-react';
 import { ThemeSupa } from '@supabase/auth-ui-shared';
 import { supabase } from '@/integrations/supabase/client';
 import { MadeWithDyad } from '@/components/made-with-dyad';
+import { Button } from '@/components/ui/button'; // Import Button component
+import { ChromeIcon } from 'lucide-react'; // Import Google icon (using ChromeIcon as a generic browser/Google icon)
 
 const Login = () => {
+  const handleGoogleLogin = async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: window.location.origin, // Redirect to the root of your app after login
+      },
+    });
+
+    if (error) {
+      console.error('Error logging in with Google:', error.message);
+      // Optionally show a toast notification for the error
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-900 p-4">
       <div className="w-full max-w-md bg-white dark:bg-gray-800 p-8 rounded-lg shadow-md border border-gray-200 dark:border-gray-700">
         <h2 className="text-2xl font-bold text-center text-gray-800 dark:text-white mb-6">Selamat Datang</h2>
         <Auth
           supabaseClient={supabase}
-          providers={[]}
+          providers={[]} // Keep providers empty as we're adding a custom Google button
           appearance={{
             theme: ThemeSupa,
             variables: {
@@ -30,6 +46,17 @@ const Login = () => {
           theme="light"
           redirectTo={window.location.origin} // Redirect to root after login, SessionContext will handle further role-based redirect
         />
+        <div className="relative flex justify-center text-xs uppercase my-6">
+          <span className="bg-white dark:bg-gray-800 px-2 text-muted-foreground">Atau lanjutkan dengan</span>
+        </div>
+        <Button
+          variant="outline"
+          className="w-full flex items-center justify-center gap-2"
+          onClick={handleGoogleLogin}
+        >
+          <ChromeIcon className="h-5 w-5" />
+          Login with Google
+        </Button>
       </div>
       <MadeWithDyad />
     </div>
