@@ -28,7 +28,8 @@ const AdminUsers = () => {
   const [loadingPage, setLoadingPage] = useState(true);
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(true);
-  const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false); // State for modal visibility
+  const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<UserProfile | null>(null); // State for the user being edited
 
   useEffect(() => {
     if (!sessionLoading) {
@@ -69,10 +70,20 @@ const AdminUsers = () => {
 
   useEffect(() => {
     fetchUsers();
-  }, [sessionLoading, profile]); // Re-fetch when session or profile changes
+  }, [sessionLoading, profile]);
 
-  const handleUserAdded = () => {
-    fetchUsers(); // Refresh the user list after a new user is added
+  const handleUserAddedOrUpdated = () => {
+    fetchUsers(); // Refresh the user list after a new user is added or updated
+  };
+
+  const handleEditClick = (user: UserProfile) => {
+    setEditingUser(user); // Set the user to be edited
+    setIsAddUserModalOpen(true); // Open the modal
+  };
+
+  const handleCloseAddUserModal = () => {
+    setIsAddUserModalOpen(false);
+    setEditingUser(null); // Reset editingUser when modal closes
   };
 
   if (loadingPage) {
@@ -97,7 +108,7 @@ const AdminUsers = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold text-gray-800 dark:text-white">Manajemen Pengguna</h1>
-        <Button onClick={() => setIsAddUserModalOpen(true)} className="flex items-center gap-2">
+        <Button onClick={() => { setEditingUser(null); setIsAddUserModalOpen(true); }} className="flex items-center gap-2">
           <PlusCircleIcon className="h-4 w-4" /> Tambah Pengguna Baru
         </Button>
       </div>
@@ -140,7 +151,7 @@ const AdminUsers = () => {
                       <TableCell>{userProfile.peran || '-'}</TableCell>
                       <TableCell className="text-center">
                         <div className="flex justify-center space-x-2">
-                          <Button variant="outline" size="icon" title="Edit Pengguna">
+                          <Button variant="outline" size="icon" title="Edit Pengguna" onClick={() => handleEditClick(userProfile)}>
                             <EditIcon className="h-4 w-4" />
                           </Button>
                           <Button variant="destructive" size="icon" title="Hapus Pengguna">
@@ -159,8 +170,9 @@ const AdminUsers = () => {
 
       <AddUserDialog
         isOpen={isAddUserModalOpen}
-        onClose={() => setIsAddUserModalOpen(false)}
-        onUserAdded={handleUserAdded}
+        onClose={handleCloseAddUserModal}
+        onUserAdded={handleUserAddedOrUpdated}
+        editingUser={editingUser}
       />
     </div>
   );

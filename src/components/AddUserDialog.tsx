@@ -23,16 +23,25 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { supabase } from '@/integrations/supabase/client';
 
+interface UserProfile {
+  id: string;
+  nama_lengkap: string;
+  asal_skpd: string;
+  peran: string;
+  email: string;
+}
+
 interface AddUserDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onUserAdded: () => void;
+  editingUser?: UserProfile | null; // New prop for editing
 }
 
 const formSchema = z.object({
   nama_lengkap: z.string().min(1, { message: 'Nama Lengkap wajib diisi.' }),
-  email: z.string().email({ message: 'Email tidak valid.' }).min(1, { message: 'Email wajib diisi.' }),
-  password: z.string().min(6, { message: 'Password minimal 6 karakter.' }),
+  email: z.string().email({ message: 'Email tidak valid.' }).min(1, { message: 'Email wajib diisi.' }).optional(), // Optional for edit mode
+  password: z.string().min(6, { message: 'Password minimal 6 karakter.' }).optional(), // Optional for edit mode
   asal_skpd: z.string().min(1, { message: 'Asal SKPD wajib diisi.' }),
   peran: z.enum(['SKPD', 'Staf Registrasi', 'Staf Verifikator', 'Staf Koreksi', 'Administrator'], {
     required_error: 'Peran wajib dipilih.',
@@ -41,7 +50,7 @@ const formSchema = z.object({
 
 type AddUserFormValues = z.infer<typeof formSchema>;
 
-const AddUserDialog: React.FC<AddUserDialogProps> = ({ isOpen, onClose, onUserAdded }) => {
+const AddUserDialog: React.FC<AddUserDialogProps> = ({ isOpen, onClose, onUserAdded, editingUser }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm<AddUserFormValues>({
@@ -56,82 +65,102 @@ const AddUserDialog: React.FC<AddUserDialogProps> = ({ isOpen, onClose, onUserAd
   });
 
   useEffect(() => {
-    if (!isOpen) {
-      form.reset(); // Reset form when dialog closes
+    if (isOpen && editingUser) {
+      // Set form values for editing
+      form.reset({
+        nama_lengkap: editingUser.nama_lengkap,
+        email: editingUser.email,
+        password: '', // Password is not editable, so reset it
+        asal_skpd: editingUser.asal_skpd,
+        peran: editingUser.peran as AddUserFormValues['peran'],
+      });
+    } else if (isOpen && !editingUser) {
+      // Reset form for adding new user
+      form.reset({
+        nama_lengkap: '',
+        email: '',
+        password: '',
+        asal_skpd: '',
+        peran: 'SKPD',
+      });
     }
-  }, [isOpen, form]);
+  }, [isOpen, editingUser, form]);
 
   const onSubmit = async (values: AddUserFormValues) => {
     setIsSubmitting(true);
     try {
-      // Langkah A: Buat pengguna baru di sistem Autentikasi Supabase
-      const { data, error: authError } = await supabase.auth.signUp({
-        email: values.email,
-        password: values.password,
-        options: {
-          data: {
-            nama_lengkap: values.nama_lengkap,
-            asal_skpd: values.asal_skpd,
-            // Peran awal akan diatur oleh trigger handle_new_user ke 'SKPD'
-            // Kita akan memperbarui peran jika berbeda dari default
+      if (editingUser) {
+        // Mode Edit: Hanya perbarui profil (untuk tahap selanjutnya)
+        // Untuk tahap ini, tombol Simpan akan disabled, jadi kode ini tidak akan terpanggil.
+        // Ini hanya placeholder untuk tahap berikutnya.
+        toast.info('Fungsionalitas simpan untuk edit belum diaktifkan di tahap ini.');
+      } else {
+        // Mode Tambah: Buat pengguna baru di Auth dan perbarui profil
+        const { data, error: authError } = await supabase.auth.signUp({
+          email: values.email!, // Email wajib diisi untuk signUp
+          password: values.password!, // Password wajib diisi untuk signUp
+          options: {
+            data: {
+              nama_lengkap: values.nama_lengkap,
+              asal_skpd: values.asal_skpd,
+            },
           },
-        },
-      });
+        });
 
-      if (authError) {
-        // Handle specific auth errors, e.g., user already exists
-        if (authError.message.includes('already registered')) {
-          toast.error('Gagal menambahkan pengguna: Email sudah terdaftar.');
-        } else {
-          toast.error('Gagal mendaftarkan pengguna: ' + authError.message);
-        }
-        setIsSubmitting(false);
-        return;
-      }
-
-      if (!data.user) {
-        toast.error('Gagal membuat pengguna: Tidak ada data pengguna yang dikembalikan.');
-        setIsSubmitting(false);
-        return;
-      }
-
-      const newUserId = data.user.id;
-
-      // Langkah B: Perbarui peran di tabel profiles jika peran yang dipilih bukan 'SKPD' (default)
-      if (values.peran !== 'SKPD') {
-        const { error: profileUpdateError } = await supabase
-          .from('profiles')
-          .update({ peran: values.peran })
-          .eq('id', newUserId);
-
-        if (profileUpdateError) {
-          console.error('Error updating profile role:', profileUpdateError);
-          // Jika gagal update profil, mungkin perlu menghapus user auth yang baru dibuat
-          // Untuk kesederhanaan, kita hanya akan log error dan menampilkan toast
-          toast.error('Pengguna berhasil dibuat, tetapi gagal memperbarui peran: ' + profileUpdateError.message);
+        if (authError) {
+          if (authError.message.includes('already registered')) {
+            toast.error('Gagal menambahkan pengguna: Email sudah terdaftar.');
+          } else {
+            toast.error('Gagal mendaftarkan pengguna: ' + authError.message);
+          }
           setIsSubmitting(false);
           return;
         }
+
+        if (!data.user) {
+          toast.error('Gagal membuat pengguna: Tidak ada data pengguna yang dikembalikan.');
+          setIsSubmitting(false);
+          return;
+        }
+
+        const newUserId = data.user.id;
+
+        // Perbarui peran di tabel profiles jika peran yang dipilih bukan 'SKPD' (default)
+        if (values.peran !== 'SKPD') {
+          const { error: profileUpdateError } = await supabase
+            .from('profiles')
+            .update({ peran: values.peran })
+            .eq('id', newUserId);
+
+          if (profileUpdateError) {
+            console.error('Error updating profile role:', profileUpdateError);
+            toast.error('Pengguna berhasil dibuat, tetapi gagal memperbarui peran: ' + profileUpdateError.message);
+            setIsSubmitting(false);
+            return;
+          }
+        }
+        toast.success('Pengguna baru berhasil ditambahkan!');
       }
 
-      toast.success('Pengguna baru berhasil ditambahkan!');
       onUserAdded(); // Trigger refresh in parent component
       onClose(); // Close the dialog
     } catch (error: any) {
-      console.error('Error adding new user:', error.message);
-      toast.error('Terjadi kesalahan saat menambahkan pengguna: ' + error.message);
+      console.error('Error saving user:', error.message);
+      toast.error('Terjadi kesalahan saat menyimpan pengguna: ' + error.message);
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  const isEditMode = !!editingUser;
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Tambah Pengguna Baru</DialogTitle>
+          <DialogTitle>{isEditMode ? 'Detail Pengguna' : 'Tambah Pengguna Baru'}</DialogTitle>
           <DialogDescription>
-            Masukkan detail pengguna baru di sini. Klik simpan setelah selesai.
+            {isEditMode ? 'Lihat detail pengguna di bawah ini.' : 'Masukkan detail pengguna baru di sini.'}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4">
@@ -143,7 +172,7 @@ const AddUserDialog: React.FC<AddUserDialogProps> = ({ isOpen, onClose, onUserAd
               id="nama_lengkap"
               {...form.register('nama_lengkap')}
               className="col-span-3"
-              disabled={isSubmitting}
+              disabled={isSubmitting || isEditMode} // Disabled in edit mode
             />
             {form.formState.errors.nama_lengkap && (
               <p className="col-span-4 text-right text-red-500 text-sm">
@@ -160,7 +189,7 @@ const AddUserDialog: React.FC<AddUserDialogProps> = ({ isOpen, onClose, onUserAd
               type="email"
               {...form.register('email')}
               className="col-span-3"
-              disabled={isSubmitting}
+              disabled={isSubmitting || isEditMode} // Disabled in edit mode
             />
             {form.formState.errors.email && (
               <p className="col-span-4 text-right text-red-500 text-sm">
@@ -177,7 +206,8 @@ const AddUserDialog: React.FC<AddUserDialogProps> = ({ isOpen, onClose, onUserAd
               type="password"
               {...form.register('password')}
               className="col-span-3"
-              disabled={isSubmitting}
+              disabled={isSubmitting || isEditMode} // Disabled in edit mode
+              placeholder={isEditMode ? "Tidak dapat diubah" : "Masukkan password"}
             />
             {form.formState.errors.password && (
               <p className="col-span-4 text-right text-red-500 text-sm">
@@ -193,7 +223,7 @@ const AddUserDialog: React.FC<AddUserDialogProps> = ({ isOpen, onClose, onUserAd
               id="asal_skpd"
               {...form.register('asal_skpd')}
               className="col-span-3"
-              disabled={isSubmitting}
+              disabled={isSubmitting || isEditMode} // Disabled in edit mode
             />
             {form.formState.errors.asal_skpd && (
               <p className="col-span-4 text-right text-red-500 text-sm">
@@ -209,7 +239,7 @@ const AddUserDialog: React.FC<AddUserDialogProps> = ({ isOpen, onClose, onUserAd
               name="peran"
               control={form.control}
               render={({ field }) => (
-                <Select onValueChange={field.onChange} value={field.value} disabled={isSubmitting}>
+                <Select onValueChange={field.onChange} value={field.value} disabled={isSubmitting || isEditMode}> {/* Disabled in edit mode */}
                   <SelectTrigger className="col-span-3">
                     <SelectValue placeholder="Pilih Peran" />
                   </SelectTrigger>
@@ -230,8 +260,8 @@ const AddUserDialog: React.FC<AddUserDialogProps> = ({ isOpen, onClose, onUserAd
             )}
           </div>
           <DialogFooter>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? 'Menyimpan...' : 'Simpan'}
+            <Button type="submit" disabled={isSubmitting || isEditMode}> {/* Disabled in edit mode */}
+              {isSubmitting ? (isEditMode ? 'Memperbarui...' : 'Menyimpan...') : 'Simpan'}
             </Button>
           </DialogFooter>
         </form>
