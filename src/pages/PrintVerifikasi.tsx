@@ -241,14 +241,15 @@ const PrintVerifikasi = () => {
 
           .signature-title {
             font-size: 13px;
-            margin-bottom: 40px; /* Mengurangi margin-bottom secara signifikan */
-            margin-right: 100px;
+            margin-bottom: 30px; /* Mengurangi margin-bottom secara signifikan */
+            margin-right: 60px;
           }
 
           .signature-name {
             font-size: 13px;
             font-weight: bold;
-            margin-right: 60px;
+            margin-right: 70px;
+            padding-top: 20px;
           }
 
           .qr-code {
