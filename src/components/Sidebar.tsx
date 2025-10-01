@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { HomeIcon, LayoutDashboardIcon, FileTextIcon, UserIcon, HistoryIcon, ListFilterIcon, UsersIcon } from 'lucide-react'; // Import UsersIcon
+import { HomeIcon, LayoutDashboardIcon, FileTextIcon, UserIcon, HistoryIcon, ListFilterIcon, UsersIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSession } from '@/contexts/SessionContext';
 import { Button } from '@/components/ui/button';
@@ -57,13 +57,12 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onLinkClick }) => {
       { to: '/portal-verifikasi', icon: FileTextIcon, label: 'Portal Verifikasi' },
       { to: '/rekap-dikembalikan', icon: ListFilterIcon, label: 'Rekap Dikembalikan' },
     );
-  } else if (role === 'Administrator') { // New condition for Administrator
+  } else if (role === 'Administrator') {
     navItems.push(
+      { to: '/admin/dashboard', icon: LayoutDashboardIcon, label: 'Dashboard Admin' }, // New link for Admin Dashboard
       { to: '/admin/users', icon: UsersIcon, label: 'Manajemen Pengguna' },
-      // Add other admin-specific links here if needed
     );
   } else {
-    // Default or fallback for other roles/unassigned
     navItems.push(
       { to: '/', icon: HomeIcon, label: 'Home' },
     );
