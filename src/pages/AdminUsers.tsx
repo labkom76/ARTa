@@ -102,16 +102,19 @@ const AdminUsers = () => {
     }
 
     try {
-      // Delete user from Supabase Auth
-      const { error: authError } = await supabase.auth.admin.deleteUser(userToDelete.id);
+      // Invoke the Edge Function to delete the user
+      const { data, error: invokeError } = await supabase.functions.invoke('delete-user', {
+        body: JSON.stringify({ user_id: userToDelete.id }),
+      });
 
-      if (authError) {
-        throw authError;
+      if (invokeError) {
+        throw invokeError;
       }
 
-      // Note: The profile in the 'profiles' table will be automatically deleted
-      // due to the 'ON DELETE CASCADE' constraint on the 'id' column.
-      // The 'user_profiles_with_email' view will also reflect this change.
+      // Check for error message from the Edge Function's response body
+      if (data && data.error) {
+        throw new Error(data.error);
+      }
 
       toast.success(`Pengguna ${userToDelete.namaLengkap} berhasil dihapus.`);
       setIsDeleteDialogOpen(false); // Tutup modal konfirmasi
