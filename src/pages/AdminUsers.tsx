@@ -13,13 +13,14 @@ import {
 import { PlusCircleIcon, EditIcon, Trash2Icon } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
+import AddUserDialog from '@/components/AddUserDialog'; // Import the new dialog component
 
 interface UserProfile {
   id: string;
   nama_lengkap: string;
   asal_skpd: string;
   peran: string;
-  email: string; // Email sekarang akan diambil dari view
+  email: string;
 }
 
 const AdminUsers = () => {
@@ -27,6 +28,7 @@ const AdminUsers = () => {
   const [loadingPage, setLoadingPage] = useState(true);
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(true);
+  const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false); // State for modal visibility
 
   useEffect(() => {
     if (!sessionLoading) {
@@ -34,41 +36,44 @@ const AdminUsers = () => {
     }
   }, [sessionLoading]);
 
+  const fetchUsers = async () => {
+    if (sessionLoading || profile?.peran !== 'Administrator') {
+      setLoadingUsers(false);
+      return;
+    }
+
+    setLoadingUsers(true);
+    try {
+      const { data, error } = await supabase
+        .from('user_profiles_with_email')
+        .select('id, nama_lengkap, asal_skpd, peran, email');
+
+      if (error) throw error;
+
+      const usersWithEmail: UserProfile[] = data.map((user: any) => ({
+        id: user.id,
+        nama_lengkap: user.nama_lengkap,
+        asal_skpd: user.asal_skpd,
+        peran: user.peran,
+        email: user.email || 'N/A',
+      }));
+
+      setUsers(usersWithEmail);
+    } catch (error: any) {
+      console.error('Error fetching users:', error.message);
+      toast.error('Gagal memuat daftar pengguna: ' + error.message);
+    } finally {
+      setLoadingUsers(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchUsers = async () => {
-      if (sessionLoading || profile?.peran !== 'Administrator') {
-        setLoadingUsers(false);
-        return;
-      }
-
-      setLoadingUsers(true);
-      try {
-        // Mengambil data dari view baru yang menggabungkan profiles dan auth.users
-        const { data, error } = await supabase
-          .from('user_profiles_with_email') // Menggunakan view baru
-          .select('id, nama_lengkap, asal_skpd, peran, email'); // Memilih kolom yang diinginkan
-
-        if (error) throw error;
-
-        const usersWithEmail: UserProfile[] = data.map((user: any) => ({
-          id: user.id,
-          nama_lengkap: user.nama_lengkap,
-          asal_skpd: user.asal_skpd,
-          peran: user.peran,
-          email: user.email || 'N/A', // Email sekarang diambil dari view
-        }));
-
-        setUsers(usersWithEmail);
-      } catch (error: any) {
-        console.error('Error fetching users:', error.message);
-        toast.error('Gagal memuat daftar pengguna: ' + error.message);
-      } finally {
-        setLoadingUsers(false);
-      }
-    };
-
     fetchUsers();
-  }, [sessionLoading, profile]);
+  }, [sessionLoading, profile]); // Re-fetch when session or profile changes
+
+  const handleUserAdded = () => {
+    fetchUsers(); // Refresh the user list after a new user is added
+  };
 
   if (loadingPage) {
     return (
@@ -92,7 +97,7 @@ const AdminUsers = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold text-gray-800 dark:text-white">Manajemen Pengguna</h1>
-        <Button className="flex items-center gap-2">
+        <Button onClick={() => setIsAddUserModalOpen(true)} className="flex items-center gap-2">
           <PlusCircleIcon className="h-4 w-4" /> Tambah Pengguna Baru
         </Button>
       </div>
@@ -151,6 +156,12 @@ const AdminUsers = () => {
           </div>
         </CardContent>
       </Card>
+
+      <AddUserDialog
+        isOpen={isAddUserModalOpen}
+        onClose={() => setIsAddUserModalOpen(false)}
+        onUserAdded={handleUserAdded}
+      />
     </div>
   );
 };
