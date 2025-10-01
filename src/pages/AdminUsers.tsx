@@ -10,11 +10,29 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { PlusCircleIcon, EditIcon, Trash2Icon } from 'lucide-react';
+import { PlusCircleIcon, EditIcon, Trash2Icon, SearchIcon } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
 import AddUserDialog from '@/components/AddUserDialog';
-import DeleteConfirmationDialog from '@/components/DeleteConfirmationDialog'; // Import the delete confirmation dialog
+import DeleteConfirmationDialog from '@/components/DeleteConfirmationDialog';
+import { Input } from '@/components/ui/input';
+import useDebounce from '@/hooks/use-debounce';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '@/components/ui/pagination';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
 
 interface UserProfile {
   id: string;
@@ -32,8 +50,15 @@ const AdminUsers = () => {
   const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
 
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false); // State for delete confirmation dialog
-  const [userToDelete, setUserToDelete] = useState<{ id: string; namaLengkap: string } | null>(null); // State for user to delete
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<{ id: string; namaLengkap: string } | null>(null);
+
+  // State for search and pagination
+  const [searchQuery, setSearchQuery] = useState('');
+  const debouncedSearchQuery = useDebounce(searchQuery, 500);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [totalItems, setTotalItems] = useState(0);
 
   useEffect(() => {
     if (!sessionLoading) {
@@ -49,9 +74,26 @@ const AdminUsers = () => {
 
     setLoadingUsers(true);
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('user_profiles_with_email')
-        .select('id, nama_lengkap, asal_skpd, peran, email');
+        .select('id, nama_lengkap, asal_skpd, peran, email', { count: 'exact' });
+
+      if (debouncedSearchQuery) {
+        query = query.or(
+          `nama_lengkap.ilike.%${debouncedSearchQuery}%,email.ilike.%${debouncedSearchQuery}%`
+        );
+      }
+
+      query = query.order('nama_lengkap', { ascending: true });
+
+      if (itemsPerPage !== -1) { // Apply range only if not 'All'
+        query = query.range(
+          (currentPage - 1) * itemsPerPage,
+          currentPage * itemsPerPage - 1
+        );
+      }
+
+      const { data, error, count } = await query;
 
       if (error) throw error;
 
@@ -64,6 +106,7 @@ const AdminUsers = () => {
       }));
 
       setUsers(usersWithEmail);
+      setTotalItems(count || 0);
     } catch (error: any) {
       console.error('Error fetching users:', error.message);
       toast.error('Gagal memuat daftar pengguna: ' + error.message);
@@ -74,20 +117,20 @@ const AdminUsers = () => {
 
   useEffect(() => {
     fetchUsers();
-  }, [sessionLoading, profile]);
+  }, [sessionLoading, profile, debouncedSearchQuery, currentPage, itemsPerPage]);
 
   const handleUserAddedOrUpdated = () => {
     fetchUsers(); // Refresh the user list after a new user is added or updated
   };
 
   const handleEditClick = (user: UserProfile) => {
-    setEditingUser(user); // Set the user to be edited
-    setIsAddUserModalOpen(true); // Open the modal
+    setEditingUser(user);
+    setIsAddUserModalOpen(true);
   };
 
   const handleCloseAddUserModal = () => {
     setIsAddUserModalOpen(false);
-    setEditingUser(null); // Reset editingUser when modal closes
+    setEditingUser(null);
   };
 
   const handleDeleteClick = (user: UserProfile) => {
@@ -102,7 +145,6 @@ const AdminUsers = () => {
     }
 
     try {
-      // Invoke the Edge Function to delete the user
       const { data, error: invokeError } = await supabase.functions.invoke('delete-user', {
         body: JSON.stringify({ user_id: userToDelete.id }),
       });
@@ -111,20 +153,21 @@ const AdminUsers = () => {
         throw invokeError;
       }
 
-      // Check for error message from the Edge Function's response body
       if (data && data.error) {
         throw new Error(data.error);
       }
 
       toast.success(`Pengguna ${userToDelete.namaLengkap} berhasil dihapus.`);
-      setIsDeleteDialogOpen(false); // Tutup modal konfirmasi
-      setUserToDelete(null); // Bersihkan state pengguna yang akan dihapus
-      fetchUsers(); // Refresh tabel manajemen pengguna
+      setIsDeleteDialogOpen(false);
+      setUserToDelete(null);
+      fetchUsers();
     } catch (error: any) {
       console.error('Error deleting user:', error.message);
       toast.error('Gagal menghapus pengguna: ' + error.message);
     }
   };
+
+  const totalPages = itemsPerPage === -1 ? 1 : Math.ceil(totalItems / itemsPerPage);
 
   if (loadingPage) {
     return (
@@ -158,6 +201,43 @@ const AdminUsers = () => {
           <CardTitle className="text-xl font-semibold">Daftar Pengguna</CardTitle>
         </CardHeader>
         <CardContent>
+          <div className="mb-4 flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-2">
+            <div className="relative flex-1 w-full sm:w-auto">
+              <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400" />
+              <Input
+                type="text"
+                placeholder="Cari berdasarkan Nama atau Email..."
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setCurrentPage(1); // Reset to first page on search
+                }}
+                className="pl-9 w-full"
+              />
+            </div>
+            <div className="flex items-center space-x-2">
+              <Label htmlFor="items-per-page" className="whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">Baris per halaman:</Label>
+              <Select
+                value={itemsPerPage.toString()}
+                onValueChange={(value) => {
+                  setItemsPerPage(Number(value));
+                  setCurrentPage(1); // Reset to first page when items per page changes
+                }}
+              >
+                <SelectTrigger className="w-[100px]">
+                  <SelectValue placeholder="10" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="10">10</SelectItem>
+                  <SelectItem value="25">25</SelectItem>
+                  <SelectItem value="50">50</SelectItem>
+                  <SelectItem value="100">100</SelectItem>
+                  <SelectItem value="-1">Semua</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
@@ -209,6 +289,40 @@ const AdminUsers = () => {
                 )}
               </TableBody>
             </Table>
+          </div>
+
+          {/* Pagination Controls */}
+          <div className="mt-6 flex flex-col sm:flex-row items-center justify-between space-y-2 sm:space-y-0">
+            <div className="text-sm text-muted-foreground">
+              Halaman {totalItems === 0 ? 0 : currentPage} dari {totalPages} ({totalItems} total item)
+            </div>
+            <Pagination>
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious
+                    onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                    disabled={currentPage === 1 || itemsPerPage === -1}
+                  />
+                </PaginationItem>
+                {[...Array(totalPages)].map((_, index) => (
+                  <PaginationItem key={index}>
+                    <PaginationLink
+                      isActive={currentPage === index + 1}
+                      onClick={() => setCurrentPage(index + 1)}
+                      disabled={itemsPerPage === -1}
+                    >
+                      {index + 1}
+                    </PaginationLink>
+                  </PaginationItem>
+                ))}
+                <PaginationItem>
+                  <PaginationNext
+                    onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                    disabled={currentPage === totalPages || itemsPerPage === -1}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
           </div>
         </CardContent>
       </Card>
