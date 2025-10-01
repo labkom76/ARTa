@@ -1,12 +1,24 @@
 import React, { useEffect, useState } from 'react';
 import { useSession } from '@/contexts/SessionContext';
+import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
-import { LayoutDashboardIcon, UsersIcon, FileTextIcon, CheckCircleIcon } from 'lucide-react';
+import { LayoutDashboardIcon, UsersIcon, FileTextIcon, CheckCircleIcon, HourglassIcon, DollarSignIcon } from 'lucide-react'; // Added HourglassIcon and DollarSignIcon
+import { toast } from 'sonner';
+import { startOfMonth, endOfMonth } from 'date-fns';
+
+interface KPIData {
+  totalUsers: number;
+  processedTagihanMonth: number;
+  totalAmountProcessedMonth: number;
+  queuedTagihan: number;
+}
 
 const AdminDashboard = () => {
   const { profile, loading: sessionLoading } = useSession();
   const [loadingPage, setLoadingPage] = useState(true);
+  const [kpiData, setKpiData] = useState<KPIData | null>(null);
+  const [loadingKPI, setLoadingKPI] = useState(true);
 
   useEffect(() => {
     if (!sessionLoading) {
@@ -14,14 +26,73 @@ const AdminDashboard = () => {
     }
   }, [sessionLoading]);
 
-  // Static data for layout purposes
-  const staticCardData = [
-    { title: 'Total Pengguna', value: '120', icon: UsersIcon, color: 'text-blue-500' },
-    { title: 'Tagihan Menunggu Registrasi', value: '15', icon: FileTextIcon, color: 'text-yellow-500' },
-    { title: 'Tagihan Menunggu Verifikasi', value: '8', icon: FileTextIcon, color: 'text-purple-500' },
-    { title: 'Tagihan Selesai Hari Ini', value: '30', icon: CheckCircleIcon, color: 'text-green-500' },
-  ];
+  const fetchKPIData = async () => {
+    if (!profile || profile.peran !== 'Administrator') {
+      setLoadingKPI(false);
+      return;
+    }
 
+    setLoadingKPI(true);
+    try {
+      const now = new Date();
+      const thisMonthStart = startOfMonth(now).toISOString();
+      const thisMonthEnd = endOfMonth(now).toISOString();
+
+      // 1. Total Pengguna Aktif
+      const { count: totalUsersCount, error: usersError } = await supabase
+        .from('profiles')
+        .select('*', { count: 'exact', head: true });
+      if (usersError) throw usersError;
+
+      // 2. Total Tagihan Diproses (Bulan Ini)
+      const { count: processedTagihanCount, error: processedCountError } = await supabase
+        .from('database_tagihan')
+        .select('*', { count: 'exact', head: true })
+        .in('status_tagihan', ['Diteruskan', 'Dikembalikan'])
+        .gte('waktu_verifikasi', thisMonthStart)
+        .lte('waktu_verifikasi', thisMonthEnd);
+      if (processedCountError) throw processedCountError;
+
+      // 3. Nilai Total Tagihan (Bulan Ini)
+      const { data: totalAmountData, error: totalAmountError } = await supabase
+        .from('database_tagihan')
+        .select('jumlah_kotor')
+        .in('status_tagihan', ['Diteruskan', 'Dikembalikan'])
+        .gte('waktu_verifikasi', thisMonthStart)
+        .lte('waktu_verifikasi', thisMonthEnd);
+      if (totalAmountError) throw totalAmountError;
+
+      const totalAmountProcessedMonth = totalAmountData.reduce((sum, tagihan) => sum + (tagihan.jumlah_kotor || 0), 0);
+
+      // 4. Tagihan Dalam Antrian
+      const { count: queuedTagihanCount, error: queuedError } = await supabase
+        .from('database_tagihan')
+        .select('*', { count: 'exact', head: true })
+        .in('status_tagihan', ['Menunggu Registrasi', 'Menunggu Verifikasi']);
+      if (queuedError) throw queuedError;
+
+      setKpiData({
+        totalUsers: totalUsersCount || 0,
+        processedTagihanMonth: processedTagihanCount || 0,
+        totalAmountProcessedMonth: totalAmountProcessedMonth,
+        queuedTagihan: queuedTagihanCount || 0,
+      });
+
+    } catch (error: any) {
+      console.error('Error fetching KPI data:', error.message);
+      toast.error('Gagal memuat data KPI: ' + error.message);
+    } finally {
+      setLoadingKPI(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!sessionLoading && profile?.peran === 'Administrator') {
+      fetchKPIData();
+    }
+  }, [sessionLoading, profile]);
+
+  // Static data for layout purposes (will be replaced by dynamic data)
   const staticBarChartData = [
     { name: 'Input SKPD', value: 100 },
     { name: 'Registrasi', value: 80 },
@@ -29,11 +100,11 @@ const AdminDashboard = () => {
     { name: 'Selesai', value: 40 },
   ];
 
-  if (loadingPage) {
+  if (loadingPage || loadingKPI) {
     return (
       <div className="p-6 bg-white rounded-lg shadow-sm border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
         <h1 className="text-3xl font-bold text-gray-800 dark:text-white mb-4">Memuat Halaman...</h1>
-        <p className="text-gray-600 dark:text-gray-400">Sedang memeriksa hak akses Anda.</p>
+        <p className="text-xl text-gray-600 dark:text-gray-400">Sedang memeriksa hak akses Anda dan mengambil data.</p>
       </div>
     );
   }
@@ -56,18 +127,49 @@ const AdminDashboard = () => {
 
       {/* Kotak Informasi (Cards) */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {staticCardData.map((item, index) => (
-          <Card key={index} className="shadow-sm rounded-lg">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">{item.title}</CardTitle>
-              <item.icon className={ `h-4 w-4 ${item.color}` } />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{item.value}</div>
-              <p className="text-xs text-muted-foreground">Data statis</p>
-            </CardContent>
-          </Card>
-        ))}
+        <Card className="shadow-sm rounded-lg">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Pengguna Aktif</CardTitle>
+            <UsersIcon className="h-4 w-4 text-blue-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{kpiData?.totalUsers}</div>
+            <p className="text-xs text-muted-foreground">Jumlah pengguna terdaftar</p>
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-sm rounded-lg">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Tagihan Diproses (Bulan Ini)</CardTitle>
+            <CheckCircleIcon className="h-4 w-4 text-green-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{kpiData?.processedTagihanMonth}</div>
+            <p className="text-xs text-muted-foreground">Tagihan diteruskan/dikembalikan</p>
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-sm rounded-lg">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Nilai Total Tagihan (Bulan Ini)</CardTitle>
+            <DollarSignIcon className="h-4 w-4 text-purple-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">Rp{kpiData?.totalAmountProcessedMonth.toLocaleString('id-ID') || '0'}</div>
+            <p className="text-xs text-muted-foreground">Jumlah kotor tagihan diproses</p>
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-sm rounded-lg">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Tagihan Dalam Antrian</CardTitle>
+            <HourglassIcon className="h-4 w-4 text-yellow-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{kpiData?.queuedTagihan}</div>
+            <p className="text-xs text-muted-foreground">Menunggu registrasi/verifikasi</p>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Grafik Batang (Bar Chart) */}
