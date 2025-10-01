@@ -95,12 +95,30 @@ const AdminUsers = () => {
     setIsDeleteDialogOpen(true);
   };
 
-  const confirmDelete = () => {
-    // Placeholder for actual delete logic in the next step
-    console.log('Delete confirmed for user:', userToDelete);
-    toast.info(`Menghapus pengguna ${userToDelete?.namaLengkap}... (fungsionalitas belum aktif)`);
-    setIsDeleteDialogOpen(false);
-    setUserToDelete(null);
+  const confirmDelete = async () => {
+    if (!userToDelete) {
+      toast.error('Tidak ada pengguna yang dipilih untuk dihapus.');
+      return;
+    }
+
+    try {
+      // Delete user from Supabase Auth
+      const { error: authError } = await supabase.auth.admin.deleteUser(userToDelete.id);
+
+      if (authError) {
+        throw authError;
+      }
+
+      // Note: The profile in the 'profiles' table will be automatically deleted
+      // due to the 'ON DELETE CASCADE' constraint on the 'id' column.
+      // The 'user_profiles_with_email' view will also reflect this change.
+
+      toast.success(`Pengguna ${userToDelete.namaLengkap} berhasil dihapus.`);
+      // Umpan balik visual (menutup modal, refresh tabel) akan ditangani di Tahap 3
+    } catch (error: any) {
+      console.error('Error deleting user:', error.message);
+      toast.error('Gagal menghapus pengguna: ' + error.message);
+    }
   };
 
   if (loadingPage) {
@@ -200,7 +218,7 @@ const AdminUsers = () => {
       <DeleteConfirmationDialog
         isOpen={isDeleteDialogOpen}
         onClose={() => setIsDeleteDialogOpen(false)}
-        onConfirm={confirmDelete} // Placeholder for now
+        onConfirm={confirmDelete}
         title="Konfirmasi Penghapusan"
         message={`Apakah Anda yakin ingin menghapus pengguna ${userToDelete?.namaLengkap || ''}? Tindakan ini tidak dapat diurungkan.`}
       />
