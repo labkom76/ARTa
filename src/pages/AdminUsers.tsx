@@ -10,7 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { PlusCircleIcon, EditIcon, Trash2Icon, SearchIcon } from 'lucide-react';
+import { PlusCircleIcon, EditIcon, Trash2Icon, SearchIcon, KeyRoundIcon } from 'lucide-react'; // Import KeyRoundIcon
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
 import AddUserDialog from '@/components/AddUserDialog';
@@ -33,6 +33,12 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"; // Import Tooltip components
 
 interface UserProfile {
   id: string;
@@ -167,6 +173,28 @@ const AdminUsers = () => {
     }
   };
 
+  const handleSendResetPassword = async (userProfile: UserProfile) => {
+    if (!userProfile.email || userProfile.email === 'N/A') {
+      toast.error('Email pengguna tidak tersedia untuk reset password.');
+      return;
+    }
+
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(userProfile.email, {
+        redirectTo: `${window.location.origin}/login`, // Redirect to login after reset
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      toast.success(`Link reset password telah dikirim ke ${userProfile.email}.`);
+    } catch (error: any) {
+      console.error('Error sending reset password link:', error.message);
+      toast.error('Gagal mengirim link reset password: ' + error.message);
+    }
+  };
+
   const totalPages = itemsPerPage === -1 ? 1 : Math.ceil(totalItems / itemsPerPage);
 
   if (loadingPage) {
@@ -271,17 +299,46 @@ const AdminUsers = () => {
                       <TableCell>{userProfile.peran || '-'}</TableCell>
                       <TableCell className="text-center">
                         <div className="flex justify-center space-x-2">
-                          <Button variant="outline" size="icon" title="Edit Pengguna" onClick={() => handleEditClick(userProfile)}>
-                            <EditIcon className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="destructive"
-                            size="icon"
-                            title="Hapus Pengguna"
-                            onClick={() => handleDeleteClick(userProfile)}
-                          >
-                            <Trash2Icon className="h-4 w-4" />
-                          </Button>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button variant="outline" size="icon" onClick={() => handleEditClick(userProfile)}>
+                                  <EditIcon className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Edit Pengguna</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button variant="outline" size="icon" onClick={() => handleSendResetPassword(userProfile)}>
+                                  <KeyRoundIcon className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Kirim Link Reset Password</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="destructive"
+                                  size="icon"
+                                  onClick={() => handleDeleteClick(userProfile)}
+                                >
+                                  <Trash2Icon className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Hapus Pengguna</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
                         </div>
                       </TableCell>
                     </TableRow>
