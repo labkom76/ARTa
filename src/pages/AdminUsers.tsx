@@ -10,7 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { PlusCircleIcon, EditIcon, Trash2Icon } from 'lucide-react'; // Import EditIcon and Trash2Icon
+import { PlusCircleIcon, EditIcon, Trash2Icon } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
 
@@ -19,7 +19,7 @@ interface UserProfile {
   nama_lengkap: string;
   asal_skpd: string;
   peran: string;
-  email: string; // Email akan diisi dengan 'N/A' karena tidak diambil langsung dari profiles
+  email: string; // Email sekarang akan diambil dari view
 }
 
 const AdminUsers = () => {
@@ -43,19 +43,19 @@ const AdminUsers = () => {
 
       setLoadingUsers(true);
       try {
-        // Mengambil semua kolom dari tabel 'profiles' secara langsung
+        // Mengambil data dari view baru yang menggabungkan profiles dan auth.users
         const { data, error } = await supabase
-          .from('profiles')
-          .select('*'); // Mengambil semua kolom dari tabel profiles
+          .from('user_profiles_with_email') // Menggunakan view baru
+          .select('id, nama_lengkap, asal_skpd, peran, email'); // Memilih kolom yang diinginkan
 
         if (error) throw error;
 
-        const usersWithEmail: UserProfile[] = data.map((userProfile: any) => ({
-          id: userProfile.id,
-          nama_lengkap: userProfile.nama_lengkap,
-          asal_skpd: userProfile.asal_skpd,
-          peran: userProfile.peran,
-          email: 'N/A', // Email tidak tersedia langsung dari tabel profiles, diisi 'N/A'
+        const usersWithEmail: UserProfile[] = data.map((user: any) => ({
+          id: user.id,
+          nama_lengkap: user.nama_lengkap,
+          asal_skpd: user.asal_skpd,
+          peran: user.peran,
+          email: user.email || 'N/A', // Email sekarang diambil dari view
         }));
 
         setUsers(usersWithEmail);
@@ -68,7 +68,7 @@ const AdminUsers = () => {
     };
 
     fetchUsers();
-  }, [sessionLoading, profile]); // Re-fetch when session or profile changes
+  }, [sessionLoading, profile]);
 
   if (loadingPage) {
     return (
