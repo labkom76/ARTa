@@ -13,7 +13,8 @@ import {
 import { PlusCircleIcon, EditIcon, Trash2Icon } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
-import AddUserDialog from '@/components/AddUserDialog'; // Import the new dialog component
+import AddUserDialog from '@/components/AddUserDialog';
+import DeleteConfirmationDialog from '@/components/DeleteConfirmationDialog'; // Import the delete confirmation dialog
 
 interface UserProfile {
   id: string;
@@ -29,7 +30,10 @@ const AdminUsers = () => {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
-  const [editingUser, setEditingUser] = useState<UserProfile | null>(null); // State for the user being edited
+  const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
+
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false); // State for delete confirmation dialog
+  const [userToDelete, setUserToDelete] = useState<{ id: string; namaLengkap: string } | null>(null); // State for user to delete
 
   useEffect(() => {
     if (!sessionLoading) {
@@ -84,6 +88,19 @@ const AdminUsers = () => {
   const handleCloseAddUserModal = () => {
     setIsAddUserModalOpen(false);
     setEditingUser(null); // Reset editingUser when modal closes
+  };
+
+  const handleDeleteClick = (user: UserProfile) => {
+    setUserToDelete({ id: user.id, namaLengkap: user.nama_lengkap || user.email });
+    setIsDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = () => {
+    // Placeholder for actual delete logic in the next step
+    console.log('Delete confirmed for user:', userToDelete);
+    toast.info(`Menghapus pengguna ${userToDelete?.namaLengkap}... (fungsionalitas belum aktif)`);
+    setIsDeleteDialogOpen(false);
+    setUserToDelete(null);
   };
 
   if (loadingPage) {
@@ -154,7 +171,12 @@ const AdminUsers = () => {
                           <Button variant="outline" size="icon" title="Edit Pengguna" onClick={() => handleEditClick(userProfile)}>
                             <EditIcon className="h-4 w-4" />
                           </Button>
-                          <Button variant="destructive" size="icon" title="Hapus Pengguna">
+                          <Button
+                            variant="destructive"
+                            size="icon"
+                            title="Hapus Pengguna"
+                            onClick={() => handleDeleteClick(userProfile)}
+                          >
                             <Trash2Icon className="h-4 w-4" />
                           </Button>
                         </div>
@@ -173,6 +195,14 @@ const AdminUsers = () => {
         onClose={handleCloseAddUserModal}
         onUserAdded={handleUserAddedOrUpdated}
         editingUser={editingUser}
+      />
+
+      <DeleteConfirmationDialog
+        isOpen={isDeleteDialogOpen}
+        onClose={() => setIsDeleteDialogOpen(false)}
+        onConfirm={confirmDelete} // Placeholder for now
+        title="Konfirmasi Penghapusan"
+        message={`Apakah Anda yakin ingin menghapus pengguna ${userToDelete?.namaLengkap || ''}? Tindakan ini tidak dapat diurungkan.`}
       />
     </div>
   );
