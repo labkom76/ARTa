@@ -41,7 +41,7 @@ interface AddUserDialogProps {
 const formSchema = z.object({
   nama_lengkap: z.string().min(1, { message: 'Nama Lengkap wajib diisi.' }),
   email: z.string().email({ message: 'Email tidak valid.' }).min(1, { message: 'Email wajib diisi.' }).optional(), // Optional for edit mode
-  password: z.string().min(6, { message: 'Password minimal 6 karakter.' }).optional(), // Optional for edit mode
+  password: z.string().optional().refine(val => !val || val.length >= 6, { message: 'Password minimal 6 karakter.' }), // Corrected validation
   asal_skpd: z.string().min(1, { message: 'Asal SKPD wajib diisi.' }),
   peran: z.enum(['SKPD', 'Staf Registrasi', 'Staf Verifikator', 'Staf Koreksi', 'Administrator'], {
     required_error: 'Peran wajib dipilih.',
@@ -187,7 +187,7 @@ const AddUserDialog: React.FC<AddUserDialogProps> = ({ isOpen, onClose, onUserAd
               id="nama_lengkap"
               {...form.register('nama_lengkap')}
               className="col-span-3"
-              disabled={isSubmitting} // Enabled in edit mode
+              disabled={isSubmitting}
             />
             {form.formState.errors.nama_lengkap && (
               <p className="col-span-4 text-right text-red-500 text-sm">
@@ -204,7 +204,7 @@ const AddUserDialog: React.FC<AddUserDialogProps> = ({ isOpen, onClose, onUserAd
               type="email"
               {...form.register('email')}
               className="col-span-3"
-              disabled={isSubmitting || isEditMode} // Disabled in edit mode
+              disabled={isSubmitting || isEditMode}
             />
             {form.formState.errors.email && (
               <p className="col-span-4 text-right text-red-500 text-sm">
@@ -221,7 +221,7 @@ const AddUserDialog: React.FC<AddUserDialogProps> = ({ isOpen, onClose, onUserAd
               type="password"
               {...form.register('password')}
               className="col-span-3"
-              disabled={isSubmitting || isEditMode} // Disabled in edit mode
+              disabled={isSubmitting || isEditMode}
               placeholder={isEditMode ? "Tidak dapat diubah" : "Masukkan password"}
             />
             {form.formState.errors.password && (
@@ -238,7 +238,7 @@ const AddUserDialog: React.FC<AddUserDialogProps> = ({ isOpen, onClose, onUserAd
               id="asal_skpd"
               {...form.register('asal_skpd')}
               className="col-span-3"
-              disabled={isSubmitting} // Enabled in edit mode
+              disabled={isSubmitting}
             />
             {form.formState.errors.asal_skpd && (
               <p className="col-span-4 text-right text-red-500 text-sm">
@@ -254,7 +254,7 @@ const AddUserDialog: React.FC<AddUserDialogProps> = ({ isOpen, onClose, onUserAd
               name="peran"
               control={form.control}
               render={({ field }) => (
-                <Select onValueChange={field.onChange} value={field.value} disabled={isSubmitting}> {/* Enabled in edit mode */}
+                <Select onValueChange={field.onChange} value={field.value} disabled={isSubmitting}>
                   <SelectTrigger className="col-span-3">
                     <SelectValue placeholder="Pilih Peran" />
                   </SelectTrigger>
@@ -275,7 +275,7 @@ const AddUserDialog: React.FC<AddUserDialogProps> = ({ isOpen, onClose, onUserAd
             )}
           </div>
           <DialogFooter>
-            <Button type="submit" disabled={isSubmitting}> {/* Enabled in edit mode */}
+            <Button type="submit" disabled={isSubmitting}>
               {isSubmitting ? (editingUser ? 'Memperbarui...' : 'Menyimpan...') : 'Simpan'}
             </Button>
           </DialogFooter>
