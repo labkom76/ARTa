@@ -199,7 +199,7 @@ const AdminDashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{kpiData?.totalSKPD}</div>
-            <p className="text-xs text-muted-foreground">Jumlah SKPD Terdaftar</p>
+            <p className="text-xs text-muted-foreground mt-2">Jumlah SKPD Terdaftar</p>
           </CardContent>
         </Card>
 
@@ -222,7 +222,7 @@ const AdminDashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{kpiData?.processedTagihanCount}</div>
-            <p className="text-xs text-muted-foreground">Tagihan {processedStatusFilter.toLowerCase()} bulan ini</p>
+            <p className="text-xs text-muted-foreground mt-2">Tagihan {processedStatusFilter.toLowerCase()} bulan ini</p>
           </CardContent>
         </Card>
 
@@ -247,7 +247,7 @@ const AdminDashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">Rp{kpiData?.totalAmountProcessed.toLocaleString('id-ID') || '0'}</div>
-            <p className="text-xs text-muted-foreground">Jumlah kotor tagihan diteruskan</p>
+            <p className="text-xs text-muted-foreground mt-2">Jumlah kotor tagihan diteruskan</p>
           </CardContent>
         </Card>
 
@@ -259,7 +259,7 @@ const AdminDashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{kpiData?.queuedTagihan}</div>
-            <p className="text-xs text-muted-foreground">Menunggu registrasi/verifikasi</p>
+            <p className="text-xs text-muted-foreground mt-2">Menunggu registrasi/verifikasi</p>
           </CardContent>
         </Card>
       </div>
