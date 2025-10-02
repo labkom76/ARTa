@@ -205,8 +205,8 @@ const AdminDashboard = () => {
 
         {/* Tagihan Diproses (Bulan Ini) Card with filter */}
         <Card className="shadow-sm rounded-lg">
-          <CardHeader className="flex flex-col items-start space-y-2 pb-2">
-            <div className="flex items-center justify-between w-full">
+          <CardHeader className="flex flex-row items-center justify-between pb-2"> {/* Changed to flex-row, justify-between, items-center */}
+            <div className="flex items-center gap-2"> {/* Group title and icon */}
               <CardTitle className="text-sm font-medium">Tagihan Diproses (Bulan Ini)</CardTitle>
               <CheckCircleIcon className="h-4 w-4 text-green-500" />
             </div>
@@ -228,8 +228,8 @@ const AdminDashboard = () => {
 
         {/* Nilai Total Tagihan Card with filter */}
         <Card className="shadow-sm rounded-lg">
-          <CardHeader className="flex flex-col items-start space-y-2 pb-2">
-            <div className="flex items-center justify-between w-full">
+          <CardHeader className="flex flex-row items-center justify-between pb-2"> {/* Changed to flex-row, justify-between, items-center */}
+            <div className="flex items-center gap-2"> {/* Group title and icon */}
               <CardTitle className="text-sm font-medium">Nilai Total Tagihan</CardTitle>
               <DollarSignIcon className="h-4 w-4 text-purple-500" />
             </div>
