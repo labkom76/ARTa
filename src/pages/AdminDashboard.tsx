@@ -14,11 +14,18 @@ interface KPIData {
   queuedTagihan: number;
 }
 
+interface BarChartDataItem {
+  name: string;
+  value: number;
+  color: string; // Add color property for each bar
+}
+
 const AdminDashboard = () => {
   const { profile, loading: sessionLoading } = useSession();
   const [loadingPage, setLoadingPage] = useState(true);
   const [kpiData, setKpiData] = useState<KPIData | null>(null);
-  const [loadingKPI, setLoadingKPI] = useState(true);
+  const [barChartData, setBarChartData] = useState<BarChartDataItem[]>([]);
+  const [loadingData, setLoadingData] = useState(true); // Combined loading state for KPI and chart
 
   useEffect(() => {
     if (!sessionLoading) {
@@ -26,13 +33,13 @@ const AdminDashboard = () => {
     }
   }, [sessionLoading]);
 
-  const fetchKPIData = async () => {
+  const fetchDashboardData = async () => {
     if (!profile || profile.peran !== 'Administrator') {
-      setLoadingKPI(false);
+      setLoadingData(false);
       return;
     }
 
-    setLoadingKPI(true);
+    setLoadingData(true);
     try {
       const now = new Date();
       const thisMonthStart = startOfMonth(now).toISOString();
@@ -78,29 +85,48 @@ const AdminDashboard = () => {
         queuedTagihan: queuedTagihanCount || 0,
       });
 
+      // Fetch data for Bar Chart
+      const { data: tagihanStatusData, error: statusError } = await supabase
+        .from('database_tagihan')
+        .select('status_tagihan');
+      if (statusError) throw statusError;
+
+      const statusCounts: { [key: string]: number } = {
+        'Menunggu Registrasi': 0,
+        'Menunggu Verifikasi': 0,
+        'Diteruskan': 0,
+        'Dikembalikan': 0,
+      };
+
+      tagihanStatusData.forEach(tagihan => {
+        if (statusCounts.hasOwnProperty(tagihan.status_tagihan)) {
+          statusCounts[tagihan.status_tagihan]++;
+        }
+      });
+
+      const dynamicBarChartData: BarChartDataItem[] = [
+        { name: 'Menunggu Registrasi', value: statusCounts['Menunggu Registrasi'], color: '#FFC107' }, // Yellow
+        { name: 'Menunggu Verifikasi', value: statusCounts['Menunggu Verifikasi'], color: '#9C27B0' }, // Purple
+        { name: 'Diteruskan', value: statusCounts['Diteruskan'], color: '#4CAF50' }, // Green
+        { name: 'Dikembalikan', value: statusCounts['Dikembalikan'], color: '#F44336' }, // Red
+      ];
+      setBarChartData(dynamicBarChartData);
+
     } catch (error: any) {
-      console.error('Error fetching KPI data:', error.message);
-      toast.error('Gagal memuat data KPI: ' + error.message);
+      console.error('Error fetching dashboard data:', error.message);
+      toast.error('Gagal memuat data dashboard: ' + error.message);
     } finally {
-      setLoadingKPI(false);
+      setLoadingData(false);
     }
   };
 
   useEffect(() => {
     if (!sessionLoading && profile?.peran === 'Administrator') {
-      fetchKPIData();
+      fetchDashboardData();
     }
   }, [sessionLoading, profile]);
 
-  // Static data for layout purposes (will be replaced by dynamic data)
-  const staticBarChartData = [
-    { name: 'Input SKPD', value: 100 },
-    { name: 'Registrasi', value: 80 },
-    { name: 'Verifikasi', value: 60 },
-    { name: 'Selesai', value: 40 },
-  ];
-
-  if (loadingPage || loadingKPI) {
+  if (loadingPage || loadingData) {
     return (
       <div className="p-6 bg-white rounded-lg shadow-sm border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
         <h1 className="text-3xl font-bold text-gray-800 dark:text-white mb-4">Memuat Halaman...</h1>
@@ -182,11 +208,11 @@ const AdminDashboard = () => {
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={staticBarChartData}>
+            <BarChart data={barChartData}>
               <XAxis dataKey="name" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
               <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
               <Tooltip cursor={{ fill: 'transparent' }} />
-              <Bar dataKey="value" fill="#8884d8" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="value" fill={(entry) => entry.color} radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </CardContent>
