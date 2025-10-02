@@ -177,7 +177,7 @@ const AdminDashboard = () => {
     return (
       <div className="p-6 bg-white rounded-lg shadow-sm border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
         <h1 className="text-3xl font-bold text-red-600 dark:text-red-400 mb-4">Akses Ditolak</h1>
-        <p className="text-gray-600 dark:text-gray-400">Anda tidak memiliki izin untuk mengakses halaman ini.</p>
+        <p className="text-xl text-gray-600 dark:text-gray-400">Anda tidak memiliki izin untuk mengakses halaman ini.</p>
       </div>
     );
   }
@@ -192,19 +192,19 @@ const AdminDashboard = () => {
       {/* Kotak Informasi (Cards) */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {/* Total SKPD Card */}
-        <Card className="shadow-sm rounded-lg">
+        <Card className="shadow-sm rounded-lg flex flex-col h-full">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total SKPD</CardTitle>
             <UsersIcon className="h-4 w-4 text-blue-500" />
           </CardHeader>
-          <CardContent>
+          <CardContent className="flex-grow flex flex-col justify-end">
             <div className="text-2xl font-bold">{kpiData?.totalSKPD}</div>
-            <p className="text-xs text-muted-foreground mt-2">Jumlah SKPD Terdaftar</p>
+            <p className="text-xs text-muted-foreground">Jumlah SKPD Terdaftar</p>
           </CardContent>
         </Card>
 
         {/* Tagihan Diproses (Bulan Ini) Card with filter */}
-        <Card className="shadow-sm rounded-lg">
+        <Card className="shadow-sm rounded-lg flex flex-col h-full">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Tagihan Diproses (Bulan Ini)</CardTitle>
             <div className="flex items-center gap-2">
@@ -220,14 +220,14 @@ const AdminDashboard = () => {
               <CheckCircleIcon className="h-4 w-4 text-green-500" />
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="flex-grow flex flex-col justify-end">
             <div className="text-2xl font-bold">{kpiData?.processedTagihanCount}</div>
-            <p className="text-xs text-muted-foreground mt-2">Tagihan {processedStatusFilter.toLowerCase()} bulan ini</p>
+            <p className="text-xs text-muted-foreground">Tagihan {processedStatusFilter.toLowerCase()} bulan ini</p>
           </CardContent>
         </Card>
 
         {/* Nilai Total Tagihan Card with filter */}
-        <Card className="shadow-sm rounded-lg">
+        <Card className="shadow-sm rounded-lg flex flex-col h-full">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Nilai Total Tagihan</CardTitle>
             <div className="flex items-center gap-2">
@@ -245,21 +245,21 @@ const AdminDashboard = () => {
               <DollarSignIcon className="h-4 w-4 text-purple-500" />
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="flex-grow flex flex-col justify-end">
             <div className="text-2xl font-bold">Rp{kpiData?.totalAmountProcessed.toLocaleString('id-ID') || '0'}</div>
-            <p className="text-xs text-muted-foreground mt-2">Jumlah kotor tagihan diteruskan</p>
+            <p className="text-xs text-muted-foreground">Jumlah kotor tagihan diteruskan</p>
           </CardContent>
         </Card>
 
         {/* Tagihan Dalam Antrian Card */}
-        <Card className="shadow-sm rounded-lg">
+        <Card className="shadow-sm rounded-lg flex flex-col h-full">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Tagihan Dalam Antrian</CardTitle>
             <HourglassIcon className="h-4 w-4 text-yellow-500" />
           </CardHeader>
-          <CardContent>
+          <CardContent className="flex-grow flex flex-col justify-end">
             <div className="text-2xl font-bold">{kpiData?.queuedTagihan}</div>
-            <p className="text-xs text-muted-foreground mt-2">Menunggu registrasi/verifikasi</p>
+            <p className="text-xs text-muted-foreground">Menunggu registrasi/verifikasi</p>
           </CardContent>
         </Card>
       </div>
