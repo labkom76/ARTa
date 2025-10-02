@@ -205,20 +205,20 @@ const AdminDashboard = () => {
 
         {/* Tagihan Diproses (Bulan Ini) Card with filter */}
         <Card className="shadow-sm rounded-lg">
-          <CardHeader className="flex flex-row items-center justify-between pb-2"> {/* Changed to flex-row, justify-between, items-center */}
-            <div className="flex items-center gap-2"> {/* Group title and icon */}
-              <CardTitle className="text-sm font-medium">Tagihan Diproses (Bulan Ini)</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">Tagihan Diproses (Bulan Ini)</CardTitle>
+            <div className="flex items-center gap-2">
+              <Select onValueChange={(value: 'Diteruskan' | 'Dikembalikan') => setProcessedStatusFilter(value)} value={processedStatusFilter}>
+                <SelectTrigger className="w-auto h-auto p-0 border-none shadow-none text-xs font-medium text-muted-foreground">
+                  <SelectValue placeholder="Filter Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Diteruskan">Diteruskan</SelectItem>
+                  <SelectItem value="Dikembalikan">Dikembalikan</SelectItem>
+                </SelectContent>
+              </Select>
               <CheckCircleIcon className="h-4 w-4 text-green-500" />
             </div>
-            <Select onValueChange={(value: 'Diteruskan' | 'Dikembalikan') => setProcessedStatusFilter(value)} value={processedStatusFilter}>
-              <SelectTrigger className="w-[140px] h-8 text-xs">
-                <SelectValue placeholder="Filter Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Diteruskan">Diteruskan</SelectItem>
-                <SelectItem value="Dikembalikan">Dikembalikan</SelectItem>
-              </SelectContent>
-            </Select>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{kpiData?.processedTagihanCount}</div>
@@ -228,22 +228,22 @@ const AdminDashboard = () => {
 
         {/* Nilai Total Tagihan Card with filter */}
         <Card className="shadow-sm rounded-lg">
-          <CardHeader className="flex flex-row items-center justify-between pb-2"> {/* Changed to flex-row, justify-between, items-center */}
-            <div className="flex items-center gap-2"> {/* Group title and icon */}
-              <CardTitle className="text-sm font-medium">Nilai Total Tagihan</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">Nilai Total Tagihan</CardTitle>
+            <div className="flex items-center gap-2">
+              <Select onValueChange={(value: 'Hari Ini' | 'Minggu Ini' | 'Bulan Ini' | 'Tahun Ini') => setTotalAmountTimeFilter(value)} value={totalAmountTimeFilter}>
+                <SelectTrigger className="w-auto h-auto p-0 border-none shadow-none text-xs font-medium text-muted-foreground">
+                  <SelectValue placeholder="Filter Waktu" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Hari Ini">Hari Ini</SelectItem>
+                  <SelectItem value="Minggu Ini">Minggu Ini</SelectItem>
+                  <SelectItem value="Bulan Ini">Bulan Ini</SelectItem>
+                  <SelectItem value="Tahun Ini">Tahun Ini</SelectItem>
+                </SelectContent>
+              </Select>
               <DollarSignIcon className="h-4 w-4 text-purple-500" />
             </div>
-            <Select onValueChange={(value: 'Hari Ini' | 'Minggu Ini' | 'Bulan Ini' | 'Tahun Ini') => setTotalAmountTimeFilter(value)} value={totalAmountTimeFilter}>
-              <SelectTrigger className="w-[140px] h-8 text-xs">
-                <SelectValue placeholder="Filter Waktu" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Hari Ini">Hari Ini</SelectItem>
-                <SelectItem value="Minggu Ini">Minggu Ini</SelectItem>
-                <SelectItem value="Bulan Ini">Bulan Ini</SelectItem>
-                <SelectItem value="Tahun Ini">Tahun Ini</SelectItem>
-              </SelectContent>
-            </Select>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">Rp{kpiData?.totalAmountProcessed.toLocaleString('id-ID') || '0'}</div>
