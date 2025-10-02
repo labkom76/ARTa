@@ -3,21 +3,28 @@ import { useSession } from '@/contexts/SessionContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
-import { LayoutDashboardIcon, UsersIcon, FileTextIcon, CheckCircleIcon, HourglassIcon, DollarSignIcon } from 'lucide-react'; // Added HourglassIcon and DollarSignIcon
+import { LayoutDashboardIcon, UsersIcon, FileTextIcon, CheckCircleIcon, HourglassIcon, DollarSignIcon } from 'lucide-react';
 import { toast } from 'sonner';
-import { startOfMonth, endOfMonth } from 'date-fns';
+import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfYear, endOfYear, startOfDay, endOfDay } from 'date-fns';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 interface KPIData {
-  totalUsers: number;
-  processedTagihanMonth: number;
-  totalAmountProcessedMonth: number;
+  totalSKPD: number;
+  processedTagihanCount: number;
+  totalAmountProcessed: number;
   queuedTagihan: number;
 }
 
 interface BarChartDataItem {
   name: string;
   value: number;
-  color: string; // Add color property for each bar
+  color: string;
 }
 
 const AdminDashboard = () => {
@@ -25,7 +32,11 @@ const AdminDashboard = () => {
   const [loadingPage, setLoadingPage] = useState(true);
   const [kpiData, setKpiData] = useState<KPIData | null>(null);
   const [barChartData, setBarChartData] = useState<BarChartDataItem[]>([]);
-  const [loadingData, setLoadingData] = useState(true); // Combined loading state for KPI and chart
+  const [loadingData, setLoadingData] = useState(true);
+
+  // State for filters
+  const [processedStatusFilter, setProcessedStatusFilter] = useState<'Diteruskan' | 'Dikembalikan'>('Diteruskan');
+  const [totalAmountTimeFilter, setTotalAmountTimeFilter] = useState<'Hari Ini' | 'Minggu Ini' | 'Bulan Ini' | 'Tahun Ini'>('Bulan Ini');
 
   useEffect(() => {
     if (!sessionLoading) {
@@ -45,31 +56,58 @@ const AdminDashboard = () => {
       const thisMonthStart = startOfMonth(now).toISOString();
       const thisMonthEnd = endOfMonth(now).toISOString();
 
-      // 1. Total Pengguna Aktif
-      const { count: totalUsersCount, error: usersError } = await supabase
+      // 1. Total SKPD
+      const { count: totalSKPDCount, error: skpdError } = await supabase
         .from('profiles')
-        .select('*', { count: 'exact', head: true });
-      if (usersError) throw usersError;
+        .select('*', { count: 'exact', head: true })
+        .eq('peran', 'SKPD');
+      if (skpdError) throw skpdError;
 
-      // 2. Total Tagihan Diproses (Bulan Ini)
+      // 2. Tagihan Diproses (Bulan Ini) - Filtered by processedStatusFilter
       const { count: processedTagihanCount, error: processedCountError } = await supabase
         .from('database_tagihan')
         .select('*', { count: 'exact', head: true })
-        .in('status_tagihan', ['Diteruskan', 'Dikembalikan'])
+        .eq('status_tagihan', processedStatusFilter)
         .gte('waktu_verifikasi', thisMonthStart)
         .lte('waktu_verifikasi', thisMonthEnd);
       if (processedCountError) throw processedCountError;
 
-      // 3. Nilai Total Tagihan (Bulan Ini)
+      // 3. Nilai Total Tagihan - Filtered by totalAmountTimeFilter (status always 'Diteruskan')
+      let timeFilterStart: string;
+      let timeFilterEnd: string;
+
+      switch (totalAmountTimeFilter) {
+        case 'Hari Ini':
+          timeFilterStart = startOfDay(now).toISOString();
+          timeFilterEnd = endOfDay(now).toISOString();
+          break;
+        case 'Minggu Ini':
+          timeFilterStart = startOfWeek(now, { weekStartsOn: 1 }).toISOString(); // Monday as start of week
+          timeFilterEnd = endOfWeek(now, { weekStartsOn: 1 }).toISOString();
+          break;
+        case 'Bulan Ini':
+          timeFilterStart = startOfMonth(now).toISOString();
+          timeFilterEnd = endOfMonth(now).toISOString();
+          break;
+        case 'Tahun Ini':
+          timeFilterStart = startOfYear(now).toISOString();
+          timeFilterEnd = endOfYear(now).toISOString();
+          break;
+        default:
+          timeFilterStart = startOfMonth(now).toISOString();
+          timeFilterEnd = endOfMonth(now).toISOString();
+          break;
+      }
+
       const { data: totalAmountData, error: totalAmountError } = await supabase
         .from('database_tagihan')
         .select('jumlah_kotor')
-        .in('status_tagihan', ['Diteruskan', 'Dikembalikan'])
-        .gte('waktu_verifikasi', thisMonthStart)
-        .lte('waktu_verifikasi', thisMonthEnd);
+        .eq('status_tagihan', 'Diteruskan') // Always 'Diteruskan' for this card
+        .gte('waktu_verifikasi', timeFilterStart)
+        .lte('waktu_verifikasi', timeFilterEnd);
       if (totalAmountError) throw totalAmountError;
 
-      const totalAmountProcessedMonth = totalAmountData.reduce((sum, tagihan) => sum + (tagihan.jumlah_kotor || 0), 0);
+      const totalAmountProcessed = totalAmountData.reduce((sum, tagihan) => sum + (tagihan.jumlah_kotor || 0), 0);
 
       // 4. Tagihan Dalam Antrian
       const { count: queuedTagihanCount, error: queuedError } = await supabase
@@ -79,9 +117,9 @@ const AdminDashboard = () => {
       if (queuedError) throw queuedError;
 
       setKpiData({
-        totalUsers: totalUsersCount || 0,
-        processedTagihanMonth: processedTagihanCount || 0,
-        totalAmountProcessedMonth: totalAmountProcessedMonth,
+        totalSKPD: totalSKPDCount || 0,
+        processedTagihanCount: processedTagihanCount || 0,
+        totalAmountProcessed: totalAmountProcessed,
         queuedTagihan: queuedTagihanCount || 0,
       });
 
@@ -124,7 +162,7 @@ const AdminDashboard = () => {
     if (!sessionLoading && profile?.peran === 'Administrator') {
       fetchDashboardData();
     }
-  }, [sessionLoading, profile]);
+  }, [sessionLoading, profile, processedStatusFilter, totalAmountTimeFilter]); // Add filters to dependencies
 
   if (loadingPage || loadingData) {
     return (
@@ -153,39 +191,67 @@ const AdminDashboard = () => {
 
       {/* Kotak Informasi (Cards) */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {/* Total SKPD Card */}
         <Card className="shadow-sm rounded-lg">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Pengguna Aktif</CardTitle>
+            <CardTitle className="text-sm font-medium">Total SKPD</CardTitle>
             <UsersIcon className="h-4 w-4 text-blue-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{kpiData?.totalUsers}</div>
-            <p className="text-xs text-muted-foreground">Jumlah pengguna terdaftar</p>
+            <div className="text-2xl font-bold">{kpiData?.totalSKPD}</div>
+            <p className="text-xs text-muted-foreground">Jumlah SKPD Terdaftar</p>
           </CardContent>
         </Card>
 
+        {/* Tagihan Diproses (Bulan Ini) Card with filter */}
         <Card className="shadow-sm rounded-lg">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Tagihan Diproses (Bulan Ini)</CardTitle>
-            <CheckCircleIcon className="h-4 w-4 text-green-500" />
+          <CardHeader className="flex flex-col items-start space-y-2 pb-2">
+            <div className="flex items-center justify-between w-full">
+              <CardTitle className="text-sm font-medium">Tagihan Diproses (Bulan Ini)</CardTitle>
+              <CheckCircleIcon className="h-4 w-4 text-green-500" />
+            </div>
+            <Select onValueChange={(value: 'Diteruskan' | 'Dikembalikan') => setProcessedStatusFilter(value)} value={processedStatusFilter}>
+              <SelectTrigger className="w-[140px] h-8 text-xs">
+                <SelectValue placeholder="Filter Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Diteruskan">Diteruskan</SelectItem>
+                <SelectItem value="Dikembalikan">Dikembalikan</SelectItem>
+              </SelectContent>
+            </Select>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{kpiData?.processedTagihanMonth}</div>
-            <p className="text-xs text-muted-foreground">Tagihan diteruskan/dikembalikan</p>
+            <div className="text-2xl font-bold">{kpiData?.processedTagihanCount}</div>
+            <p className="text-xs text-muted-foreground">Tagihan {processedStatusFilter.toLowerCase()} bulan ini</p>
           </CardContent>
         </Card>
 
+        {/* Nilai Total Tagihan Card with filter */}
         <Card className="shadow-sm rounded-lg">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Nilai Total Tagihan (Bulan Ini)</CardTitle>
-            <DollarSignIcon className="h-4 w-4 text-purple-500" />
+          <CardHeader className="flex flex-col items-start space-y-2 pb-2">
+            <div className="flex items-center justify-between w-full">
+              <CardTitle className="text-sm font-medium">Nilai Total Tagihan</CardTitle>
+              <DollarSignIcon className="h-4 w-4 text-purple-500" />
+            </div>
+            <Select onValueChange={(value: 'Hari Ini' | 'Minggu Ini' | 'Bulan Ini' | 'Tahun Ini') => setTotalAmountTimeFilter(value)} value={totalAmountTimeFilter}>
+              <SelectTrigger className="w-[140px] h-8 text-xs">
+                <SelectValue placeholder="Filter Waktu" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Hari Ini">Hari Ini</SelectItem>
+                <SelectItem value="Minggu Ini">Minggu Ini</SelectItem>
+                <SelectItem value="Bulan Ini">Bulan Ini</SelectItem>
+                <SelectItem value="Tahun Ini">Tahun Ini</SelectItem>
+              </SelectContent>
+            </Select>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">Rp{kpiData?.totalAmountProcessedMonth.toLocaleString('id-ID') || '0'}</div>
-            <p className="text-xs text-muted-foreground">Jumlah kotor tagihan diproses</p>
+            <div className="text-2xl font-bold">Rp{kpiData?.totalAmountProcessed.toLocaleString('id-ID') || '0'}</div>
+            <p className="text-xs text-muted-foreground">Jumlah kotor tagihan diteruskan</p>
           </CardContent>
         </Card>
 
+        {/* Tagihan Dalam Antrian Card */}
         <Card className="shadow-sm rounded-lg">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Tagihan Dalam Antrian</CardTitle>
