@@ -30,115 +30,143 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const location = useLocation();
+  
+  // Refs untuk mencegah duplicate operations
+  const isFetchingProfile = useRef(false);
+  const hasInitialized = useRef(false);
+  const lastFetchedUserId = useRef<string | null>(null);
 
-  // Refs untuk menyimpan nilai state terbaru
-  const latestUser = useRef<User | null>(null);
-  const latestSession = useRef<Session | null>(null); // Diperbaiki: Inisialisasi dengan null
-
-  // Update refs setiap kali state user atau session berubah
-  useEffect(() => {
-    latestUser.current = user;
-  }, [user]);
-
-  useEffect(() => {
-    latestSession.current = session;
-  }, [session]);
-
-  useEffect(() => {
-    // Fungsi untuk memeriksa sesi awal saat komponen di-mount
-    const checkInitialSession = async () => {
-      setLoading(true);
-      const { data: { session: initialSession } } = await supabase.auth.getSession();
+  const fetchProfile = async (userId: string) => {
+    // Skip jika sudah fetch untuk user yang sama
+    if (isFetchingProfile.current || lastFetchedUserId.current === userId) {
+      console.log('Skipping duplicate fetch for user:', userId);
+      return;
+    }
+    
+    isFetchingProfile.current = true;
+    
+    try {
+      console.log('Fetching profile for user:', userId);
       
-      setSession(initialSession);
-      setUser(initialSession?.user || null);
-      latestSession.current = initialSession; // Update ref
-      latestUser.current = initialSession?.user || null; // Update ref
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('nama_lengkap, asal_skpd, peran, avatar_url')
+        .eq('id', userId)
+        .single();
 
-      if (initialSession) {
-        const { data: profileData, error: profileError } = await supabase
-          .from('profiles')
-          .select('nama_lengkap, asal_skpd, peran, avatar_url')
-          .eq('id', initialSession.user.id)
-          .single();
+      console.log('Profile fetch result:', { profileData, profileError });
 
-        if (profileError) {
-          console.error('Error fetching initial profile:', profileError);
-          toast.error('Gagal memuat profil pengguna awal.');
-          setProfile(null);
-          setRole(null);
-        } else if (profileData) {
-          setProfile(profileData as Profile);
-          setRole(profileData.peran);
+      if (profileError) {
+        console.error('Error fetching profile:', profileError);
+        lastFetchedUserId.current = userId;
+        
+        if (!hasInitialized.current) {
+          toast.error('Gagal memuat profil pengguna.');
         }
+        setProfile(null);
+        setRole(null);
+      } else if (profileData) {
+        setProfile(profileData as Profile);
+        setRole(profileData.peran);
+        lastFetchedUserId.current = userId;
       } else {
+        console.warn('Profile data is null without error - likely RLS policy issue');
+        lastFetchedUserId.current = userId;
         setProfile(null);
         setRole(null);
       }
-      setLoading(false);
-    };
-
-    checkInitialSession();
-
-    // Listener untuk perubahan status autentikasi Supabase
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
-      // Selalu perbarui state session dan user ke yang terbaru
-      setSession(currentSession);
-      setUser(currentSession?.user || null);
-
-      // Tentukan apakah pengambilan profil penuh diperlukan
-      // Gunakan ref untuk mendapatkan user ID sebelumnya yang paling mutakhir
-      const previousUserId = latestUser.current?.id; 
-      const currentUserId = currentSession?.user?.id;
-
-      const isActualUserChange = (event === 'SIGNED_IN' && currentUserId) ||
-                                 (event === 'SIGNED_OUT' && !currentUserId) ||
-                                 (event === 'USER_UPDATED' && previousUserId !== currentUserId);
-
-      if (isActualUserChange) {
-        setLoading(true); // Mulai loading untuk pengambilan profil
-        if (currentSession) {
-          const { data: profileData, error: profileError } = await supabase
-            .from('profiles')
-            .select('nama_lengkap, asal_skpd, peran, avatar_url')
-            .eq('id', currentSession.user.id)
-            .single();
-
-          if (profileError) {
-            console.error('Error fetching profile:', profileError);
-            toast.error('Gagal memuat profil pengguna.');
-            setProfile(null);
-            setRole(null);
-          } else if (profileData) {
-            setProfile(profileData as Profile);
-            setRole(profileData.peran);
-          }
-        } else {
-          // Bersihkan profil jika logout
-          setProfile(null);
-          setRole(null);
-        }
-        setLoading(false); // Akhiri loading setelah pengambilan profil
-      } else if (event === 'TOKEN_REFRESHED' || (event === 'USER_UPDATED' && previousUserId === currentUserId)) {
-        // Untuk penyegaran token atau pembaruan user tanpa perubahan ID,
-        // kita sudah memperbarui session/user. Pastikan loading false.
-        setLoading(false); 
-      }
-      // Untuk event lain yang tidak memerlukan tindakan khusus, tidak perlu mengubah state loading.
-    });
-
-    return () => subscription.unsubscribe();
-  }, []); // Dependency array kosong agar listener hanya diatur sekali
+    } catch (error) {
+      console.error('Profile fetch exception:', error);
+      lastFetchedUserId.current = userId;
+      setProfile(null);
+      setRole(null);
+    } finally {
+      isFetchingProfile.current = false;
+      console.log('Profile fetch completed');
+    }
+  };
 
   useEffect(() => {
-    if (!loading) {
-      const isLoginPage = location.pathname === '/login';
+    let mounted = true;
 
-      if (!session && !isLoginPage) {
-        navigate('/login');
-        toast.info('Anda harus login untuk mengakses halaman ini.');
-      } else if (session && isLoginPage) {
-        // Redirect dari login page berdasarkan peran
+    const initializeSession = async () => {
+      try {
+        const { data: { session: initialSession } } = await supabase.auth.getSession();
+        
+        if (!mounted) return;
+
+        setSession(initialSession);
+        setUser(initialSession?.user || null);
+        
+        if (initialSession) {
+          await fetchProfile(initialSession.user.id);
+        }
+        
+        setLoading(false);
+        hasInitialized.current = true;
+        console.log('Session initialization completed');
+      } catch (error) {
+        console.error('Session initialization error:', error);
+        if (mounted) {
+          setLoading(false);
+          hasInitialized.current = true;
+        }
+      }
+    };
+
+    initializeSession();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
+      if (!mounted) return;
+
+      console.log('Auth event:', event);
+
+      // ⭐ CRITICAL FIX: Ignore TOKEN_REFRESHED setelah initialized
+      // Ini yang mencegah loading berulang saat pindah tab / minimize
+      if (event === 'TOKEN_REFRESHED' && hasInitialized.current) {
+        setSession(currentSession);
+        setUser(currentSession?.user || null);
+        return; // JANGAN fetch ulang atau set loading!
+      }
+
+      // Handle events yang benar-benar butuh action
+      if (event === 'SIGNED_IN') {
+        setLoading(true);
+        setSession(currentSession);
+        setUser(currentSession?.user || null);
+
+        if (currentSession) {
+          await fetchProfile(currentSession.user.id);
+        }
+        setLoading(false);
+      } else if (event === 'SIGNED_OUT') {
+        setSession(null);
+        setUser(null);
+        setProfile(null);
+        setRole(null);
+        lastFetchedUserId.current = null;
+      } else if (event === 'USER_UPDATED') {
+        setSession(currentSession);
+        setUser(currentSession?.user || null);
+      }
+    });
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (loading || !hasInitialized.current) return;
+
+    const isLoginPage = location.pathname === '/login';
+
+    if (!session && !isLoginPage) {
+      navigate('/login');
+      toast.info('Anda harus login untuk mengakses halaman ini.');
+    } else if (session && isLoginPage) {
+      if (role) {
         switch (role) {
           case 'SKPD':
             navigate('/dashboard-skpd');
@@ -150,15 +178,19 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
             navigate('/dashboard-verifikasi');
             break;
           case 'Staf Koreksi':
-            navigate('/dashboard-koreksi'); // Redirect Staf Koreksi ke dashboard baru
+            navigate('/dashboard-koreksi');
             break;
-          case 'Administrator': // New case for Administrator
+          case 'Administrator':
             navigate('/admin/dashboard');
             break;
           default:
             navigate('/');
             break;
         }
+      } else {
+        console.warn('Role is null, redirecting to default path');
+        navigate('/');
+        toast.warning('Profil tidak ditemukan. Silakan hubungi administrator.');
       }
     }
   }, [session, loading, role, navigate, location.pathname]);
