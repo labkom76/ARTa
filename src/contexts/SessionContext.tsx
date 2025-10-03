@@ -152,6 +152,9 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
           case 'Staf Koreksi':
             navigate('/dashboard-koreksi'); // Redirect Staf Koreksi ke dashboard baru
             break;
+          case 'Administrator': // New case for Administrator
+            navigate('/admin/dashboard');
+            break;
           default:
             navigate('/');
             break;
