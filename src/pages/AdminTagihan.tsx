@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { useSession } from '@/contexts/SessionContext';
+import { useSession } from '@/contexts/SessionContext'; // Corrected import path
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { EyeIcon, SearchIcon } from 'lucide-react';
 import { toast } from 'sonner';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, startOfDay, endOfDay } from 'date-fns'; // Import startOfDay and endOfDay
 import { id as localeId } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,6 +17,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { DateRange } from 'react-day-picker'; // Import DateRange type
+import { DateRangePickerWithPresets } from '@/components/DateRangePickerWithPresets'; // Import DateRangePickerWithPresets
 
 interface VerificationItem {
   item: string;
@@ -57,8 +59,9 @@ const AdminTagihan = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const debouncedSearchQuery = useDebounce(searchQuery, 500);
   const [selectedStatus, setSelectedStatus] = useState<string>('Semua Status');
-  const [skpdOptions, setSkpdOptions] = useState<string[]>([]); // New state for SKPD options
-  const [selectedSkpd, setSelectedSkpd] = useState<string>('Semua SKPD'); // New state for selected SKPD
+  const [skpdOptions, setSkpdOptions] = useState<string[]>([]);
+  const [selectedSkpd, setSelectedSkpd] = useState<string>('Semua SKPD');
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined); // New state for date range
 
   useEffect(() => {
     if (!sessionLoading) {
@@ -86,7 +89,7 @@ const AdminTagihan = () => {
       }
     };
     fetchSkpdOptions();
-  }, []); // Run once on component mount
+  }, []);
 
   const fetchTagihan = async () => {
     if (sessionLoading || profile?.peran !== 'Administrator') {
@@ -117,6 +120,14 @@ const AdminTagihan = () => {
         query = query.eq('nama_skpd', selectedSkpd);
       }
 
+      // Apply date range filter
+      if (dateRange?.from) {
+        query = query.gte('waktu_input', startOfDay(dateRange.from).toISOString());
+      }
+      if (dateRange?.to) {
+        query = query.lte('waktu_input', endOfDay(dateRange.to).toISOString());
+      }
+
       const { data, error } = await query;
 
       if (error) throw error;
@@ -131,7 +142,7 @@ const AdminTagihan = () => {
 
   useEffect(() => {
     fetchTagihan();
-  }, [sessionLoading, profile, debouncedSearchQuery, selectedStatus, selectedSkpd]); // Add selectedSkpd to dependencies
+  }, [sessionLoading, profile, debouncedSearchQuery, selectedStatus, selectedSkpd, dateRange]); // Add dateRange to dependencies
 
   const formatDate = (dateString: string | undefined) => {
     if (!dateString) return '-';
@@ -208,6 +219,11 @@ const AdminTagihan = () => {
                 ))}
               </SelectContent>
             </Select>
+            <DateRangePickerWithPresets
+              date={dateRange}
+              onDateChange={setDateRange}
+              className="w-full sm:w-auto"
+            />
           </div>
         </CardContent>
       </Card>
