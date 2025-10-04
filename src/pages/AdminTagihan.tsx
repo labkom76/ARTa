@@ -3,11 +3,13 @@ import { useSession } from '@/contexts/SessionContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { FileTextIcon, EyeIcon } from 'lucide-react'; // Import EyeIcon
+import { FileTextIcon, EyeIcon, SearchIcon } from 'lucide-react'; // Import EyeIcon and SearchIcon
 import { toast } from 'sonner';
 import { format, parseISO } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
 import { Button } from '@/components/ui/button'; // Import Button
+import { Input } from '@/components/ui/input'; // Import Input
+import useDebounce from '@/hooks/use-debounce'; // Import useDebounce
 
 interface VerificationItem {
   item: string;
@@ -45,6 +47,8 @@ const AdminTagihan = () => {
   const [loadingPage, setLoadingPage] = useState(true);
   const [tagihanList, setTagihanList] = useState<Tagihan[]>([]);
   const [loadingData, setLoadingData] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const debouncedSearchQuery = useDebounce(searchQuery, 500); // Debounce search input
 
   useEffect(() => {
     if (!sessionLoading) {
@@ -60,10 +64,18 @@ const AdminTagihan = () => {
 
     setLoadingData(true);
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('database_tagihan')
         .select('*') // Ambil semua kolom
         .order('waktu_input', { ascending: false }); // Urutkan dari yang terbaru
+
+      if (debouncedSearchQuery) {
+        query = query.or(
+          `nomor_spm.ilike.%${debouncedSearchQuery}%,nama_skpd.ilike.%${debouncedSearchQuery}%`
+        );
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
       setTagihanList(data as Tagihan[]);
@@ -77,7 +89,7 @@ const AdminTagihan = () => {
 
   useEffect(() => {
     fetchTagihan();
-  }, [sessionLoading, profile]); // Panggil fetchTagihan saat sesi atau profil berubah
+  }, [sessionLoading, profile, debouncedSearchQuery]); // Panggil fetchTagihan saat sesi, profil, atau debouncedSearchQuery berubah
 
   const formatDate = (dateString: string | undefined) => {
     if (!dateString) return '-';
@@ -119,9 +131,15 @@ const AdminTagihan = () => {
           <CardTitle className="text-xl font-semibold">Filter Data</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="h-16 flex items-center justify-center text-muted-foreground">
-            {/* Area untuk kontrol filter akan ditambahkan di sini */}
-            Placeholder untuk kontrol filter
+          <div className="relative flex-1 w-full">
+            <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400" />
+            <Input
+              type="text"
+              placeholder="Cari berdasarkan Nomor SPM atau Nama SKPD..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 w-full"
+            />
           </div>
         </CardContent>
       </Card>
