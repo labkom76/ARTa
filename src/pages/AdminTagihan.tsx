@@ -27,7 +27,8 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from '@/components/ui/pagination';
-import { Label } from '@/components/ui/label'; // Import Label for "Baris per halaman"
+import { Label } from '@/components/ui/label';
+import TagihanDetailDialog from '@/components/TagihanDetailDialog'; // Import TagihanDetailDialog
 
 interface VerificationItem {
   item: string;
@@ -76,6 +77,10 @@ const AdminTagihan = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [totalItems, setTotalItems] = useState(0);
+
+  // Detail Dialog states
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [selectedTagihanForDetail, setSelectedTagihanForDetail] = useState<Tagihan | null>(null);
 
   useEffect(() => {
     if (!sessionLoading) {
@@ -174,6 +179,11 @@ const AdminTagihan = () => {
       console.error("Error formatting date:", dateString, e);
       return dateString;
     }
+  };
+
+  const handleDetailClick = (tagihan: Tagihan) => {
+    setSelectedTagihanForDetail(tagihan);
+    setIsDetailModalOpen(true);
   };
 
   const totalPages = itemsPerPage === -1 ? 1 : Math.ceil(totalItems / itemsPerPage);
@@ -322,7 +332,7 @@ const AdminTagihan = () => {
                       <TableCell>{tagihan.status_tagihan}</TableCell>
                       <TableCell>{tagihan.nama_verifikator || tagihan.nama_registrator || tagihan.id_korektor ? (tagihan.nama_verifikator || tagihan.nama_registrator || 'Staf Koreksi') : '-'}</TableCell>
                       <TableCell className="text-center">
-                        <Button variant="outline" size="icon" title="Lihat Detail">
+                        <Button variant="outline" size="icon" title="Lihat Detail" onClick={() => handleDetailClick(tagihan)}>
                           <EyeIcon className="h-4 w-4" />
                         </Button>
                       </TableCell>
@@ -368,6 +378,12 @@ const AdminTagihan = () => {
           </div>
         </CardContent>
       </Card>
+
+      <TagihanDetailDialog
+        isOpen={isDetailModalOpen}
+        onClose={() => setIsDetailModalOpen(false)}
+        tagihan={selectedTagihanForDetail}
+      />
     </div>
   );
 };
