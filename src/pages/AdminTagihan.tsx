@@ -3,13 +3,20 @@ import { useSession } from '@/contexts/SessionContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { FileTextIcon, EyeIcon, SearchIcon } from 'lucide-react'; // Import EyeIcon and SearchIcon
+import { EyeIcon, SearchIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import { format, parseISO } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
-import { Button } from '@/components/ui/button'; // Import Button
-import { Input } from '@/components/ui/input'; // Import Input
-import useDebounce from '@/hooks/use-debounce'; // Import useDebounce
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import useDebounce from '@/hooks/use-debounce';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 interface VerificationItem {
   item: string;
@@ -48,7 +55,8 @@ const AdminTagihan = () => {
   const [tagihanList, setTagihanList] = useState<Tagihan[]>([]);
   const [loadingData, setLoadingData] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const debouncedSearchQuery = useDebounce(searchQuery, 500); // Debounce search input
+  const debouncedSearchQuery = useDebounce(searchQuery, 500);
+  const [selectedStatus, setSelectedStatus] = useState<string>('Semua Status'); // New state for status filter
 
   useEffect(() => {
     if (!sessionLoading) {
@@ -66,13 +74,18 @@ const AdminTagihan = () => {
     try {
       let query = supabase
         .from('database_tagihan')
-        .select('*') // Ambil semua kolom
-        .order('waktu_input', { ascending: false }); // Urutkan dari yang terbaru
+        .select('*')
+        .order('waktu_input', { ascending: false });
 
       if (debouncedSearchQuery) {
         query = query.or(
           `nomor_spm.ilike.%${debouncedSearchQuery}%,nama_skpd.ilike.%${debouncedSearchQuery}%`
         );
+      }
+
+      // Apply status filter if not 'Semua Status'
+      if (selectedStatus !== 'Semua Status') {
+        query = query.eq('status_tagihan', selectedStatus);
       }
 
       const { data, error } = await query;
@@ -89,7 +102,7 @@ const AdminTagihan = () => {
 
   useEffect(() => {
     fetchTagihan();
-  }, [sessionLoading, profile, debouncedSearchQuery]); // Panggil fetchTagihan saat sesi, profil, atau debouncedSearchQuery berubah
+  }, [sessionLoading, profile, debouncedSearchQuery, selectedStatus]); // Add selectedStatus to dependencies
 
   const formatDate = (dateString: string | undefined) => {
     if (!dateString) return '-';
@@ -131,15 +144,29 @@ const AdminTagihan = () => {
           <CardTitle className="text-xl font-semibold">Filter Data</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="relative flex-1 w-full">
-            <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400" />
-            <Input
-              type="text"
-              placeholder="Cari berdasarkan Nomor SPM atau Nama SKPD..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 w-full"
-            />
+          <div className="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-2">
+            <div className="relative flex-1 w-full sm:w-auto">
+              <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400" />
+              <Input
+                type="text"
+                placeholder="Cari berdasarkan Nomor SPM atau Nama SKPD..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 w-full"
+              />
+            </div>
+            <Select onValueChange={setSelectedStatus} value={selectedStatus}>
+              <SelectTrigger className="w-full sm:w-[200px]">
+                <SelectValue placeholder="Filter Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Semua Status">Semua Status</SelectItem>
+                <SelectItem value="Menunggu Registrasi">Menunggu Registrasi</SelectItem>
+                <SelectItem value="Menunggu Verifikasi">Menunggu Verifikasi</SelectItem>
+                <SelectItem value="Diteruskan">Diteruskan</SelectItem>
+                <SelectItem value="Dikembalikan">Dikembalikan</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </CardContent>
       </Card>
