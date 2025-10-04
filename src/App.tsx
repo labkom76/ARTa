@@ -20,7 +20,8 @@ import DashboardKoreksi from "./pages/DashboardKoreksi";
 import RekapDikembalikan from "./pages/RekapDikembalikan";
 import PrintKoreksi from "./pages/PrintKoreksi";
 import AdminUsers from "./pages/AdminUsers";
-import AdminDashboard from "./pages/AdminDashboard"; // Import the new AdminDashboard page
+import AdminDashboard from "./pages/AdminDashboard";
+import AdminTagihan from "./pages/AdminTagihan"; // Import the new AdminTagihan page
 import { SessionContextProvider } from "./contexts/SessionContext";
 
 const queryClient = new QueryClient();
@@ -49,7 +50,8 @@ const App = () => (
               <Route path="/dashboard-koreksi" element={<DashboardKoreksi />} />
               <Route path="/rekap-dikembalikan" element={<RekapDikembalikan />} />
               <Route path="/admin/users" element={<AdminUsers />} />
-              <Route path="/admin/dashboard" element={<AdminDashboard />} /> {/* New route for AdminDashboard */}
+              <Route path="/admin/dashboard" element={<AdminDashboard />} />
+              <Route path="/admin/tagihan" element={<AdminTagihan />} /> {/* New route for AdminTagihan */}
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             </Route>
             <Route path="*" element={<NotFound />} />
