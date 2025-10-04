@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { useSession } from '@/contexts/SessionContext'; // Corrected import path
+import { useSession } from '@/contexts/SessionContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { EyeIcon, SearchIcon } from 'lucide-react';
 import { toast } from 'sonner';
-import { format, parseISO, startOfDay, endOfDay } from 'date-fns'; // Import startOfDay and endOfDay
+import { format, parseISO, startOfDay, endOfDay } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,8 +17,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { DateRange } from 'react-day-picker'; // Import DateRange type
-import { DateRangePickerWithPresets } from '@/components/DateRangePickerWithPresets'; // Import DateRangePickerWithPresets
+import { DateRange } from 'react-day-picker';
+import { DateRangePickerWithPresets } from '@/components/DateRangePickerWithPresets';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '@/components/ui/pagination';
+import { Label } from '@/components/ui/label'; // Import Label for "Baris per halaman"
 
 interface VerificationItem {
   item: string;
@@ -61,7 +70,12 @@ const AdminTagihan = () => {
   const [selectedStatus, setSelectedStatus] = useState<string>('Semua Status');
   const [skpdOptions, setSkpdOptions] = useState<string[]>([]);
   const [selectedSkpd, setSelectedSkpd] = useState<string>('Semua SKPD');
-  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined); // New state for date range
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [totalItems, setTotalItems] = useState(0);
 
   useEffect(() => {
     if (!sessionLoading) {
@@ -101,7 +115,7 @@ const AdminTagihan = () => {
     try {
       let query = supabase
         .from('database_tagihan')
-        .select('*')
+        .select('*', { count: 'exact' }) // Include count for pagination
         .order('waktu_input', { ascending: false });
 
       if (debouncedSearchQuery) {
@@ -128,10 +142,18 @@ const AdminTagihan = () => {
         query = query.lte('waktu_input', endOfDay(dateRange.to).toISOString());
       }
 
-      const { data, error } = await query;
+      // Apply pagination range
+      if (itemsPerPage !== -1) { // Only apply range if not 'All'
+        const from = (currentPage - 1) * itemsPerPage;
+        const to = from + itemsPerPage - 1;
+        query = query.range(from, to);
+      }
+
+      const { data, error, count } = await query;
 
       if (error) throw error;
       setTagihanList(data as Tagihan[]);
+      setTotalItems(count || 0); // Set total items for pagination
     } catch (error: any) {
       console.error('Error fetching tagihan:', error.message);
       toast.error('Gagal memuat daftar tagihan: ' + error.message);
@@ -142,7 +164,7 @@ const AdminTagihan = () => {
 
   useEffect(() => {
     fetchTagihan();
-  }, [sessionLoading, profile, debouncedSearchQuery, selectedStatus, selectedSkpd, dateRange]); // Add dateRange to dependencies
+  }, [sessionLoading, profile, debouncedSearchQuery, selectedStatus, selectedSkpd, dateRange, currentPage, itemsPerPage]); // Add pagination states to dependencies
 
   const formatDate = (dateString: string | undefined) => {
     if (!dateString) return '-';
@@ -153,6 +175,8 @@ const AdminTagihan = () => {
       return dateString;
     }
   };
+
+  const totalPages = itemsPerPage === -1 ? 1 : Math.ceil(totalItems / itemsPerPage);
 
   if (loadingPage) {
     return (
@@ -191,11 +215,14 @@ const AdminTagihan = () => {
                 type="text"
                 placeholder="Cari berdasarkan Nomor SPM atau Nama SKPD..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setCurrentPage(1); // Reset to first page on search
+                }}
                 className="pl-9 w-full"
               />
             </div>
-            <Select onValueChange={setSelectedStatus} value={selectedStatus}>
+            <Select onValueChange={(value) => { setSelectedStatus(value); setCurrentPage(1); }} value={selectedStatus}>
               <SelectTrigger className="w-full sm:w-[200px]">
                 <SelectValue placeholder="Filter Status" />
               </SelectTrigger>
@@ -207,7 +234,7 @@ const AdminTagihan = () => {
                 <SelectItem value="Dikembalikan">Dikembalikan</SelectItem>
               </SelectContent>
             </Select>
-            <Select onValueChange={setSelectedSkpd} value={selectedSkpd}>
+            <Select onValueChange={(value) => { setSelectedSkpd(value); setCurrentPage(1); }} value={selectedSkpd}>
               <SelectTrigger className="w-full sm:w-[200px]">
                 <SelectValue placeholder="Filter SKPD" />
               </SelectTrigger>
@@ -221,7 +248,10 @@ const AdminTagihan = () => {
             </Select>
             <DateRangePickerWithPresets
               date={dateRange}
-              onDateChange={setDateRange}
+              onDateChange={(newDateRange) => {
+                setDateRange(newDateRange);
+                setCurrentPage(1); // Reset to first page on date range change
+              }}
               className="w-full sm:w-auto"
             />
           </div>
@@ -233,6 +263,29 @@ const AdminTagihan = () => {
           <CardTitle className="text-xl font-semibold">Daftar Tagihan</CardTitle>
         </CardHeader>
         <CardContent>
+          {/* "Baris per halaman" dropdown */}
+          <div className="mb-4 flex justify-end items-center space-x-2">
+            <Label htmlFor="items-per-page" className="whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">Baris per halaman:</Label>
+            <Select
+              value={itemsPerPage.toString()}
+              onValueChange={(value) => {
+                setItemsPerPage(Number(value));
+                setCurrentPage(1); // Reset to first page when items per page changes
+              }}
+            >
+              <SelectTrigger className="w-[100px]">
+                <SelectValue placeholder="10" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="10">10</SelectItem>
+                <SelectItem value="25">25</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+                <SelectItem value="100">100</SelectItem>
+                <SelectItem value="-1">Semua</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
@@ -278,6 +331,40 @@ const AdminTagihan = () => {
                 )}
               </TableBody>
             </Table>
+          </div>
+
+          {/* Pagination Controls */}
+          <div className="mt-6 flex flex-col sm:flex-row items-center justify-between space-y-2 sm:space-y-0">
+            <div className="text-sm text-muted-foreground">
+              Halaman {totalItems === 0 ? 0 : currentPage} dari {totalPages} ({totalItems} total item)
+            </div>
+            <Pagination>
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious
+                    onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                    disabled={currentPage === 1 || itemsPerPage === -1}
+                  />
+                </PaginationItem>
+                {[...Array(totalPages)].map((_, index) => (
+                  <PaginationItem key={index}>
+                    <PaginationLink
+                      isActive={currentPage === index + 1}
+                      onClick={() => setCurrentPage(index + 1)}
+                      disabled={itemsPerPage === -1}
+                    >
+                      {index + 1}
+                    </PaginationLink>
+                  </PaginationItem>
+                ))}
+                <PaginationItem>
+                  <PaginationNext
+                    onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                    disabled={currentPage === totalPages || itemsPerPage === -1}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
           </div>
         </CardContent>
       </Card>
