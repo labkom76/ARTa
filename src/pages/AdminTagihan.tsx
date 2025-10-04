@@ -56,13 +56,37 @@ const AdminTagihan = () => {
   const [loadingData, setLoadingData] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const debouncedSearchQuery = useDebounce(searchQuery, 500);
-  const [selectedStatus, setSelectedStatus] = useState<string>('Semua Status'); // New state for status filter
+  const [selectedStatus, setSelectedStatus] = useState<string>('Semua Status');
+  const [skpdOptions, setSkpdOptions] = useState<string[]>([]); // New state for SKPD options
+  const [selectedSkpd, setSelectedSkpd] = useState<string>('Semua SKPD'); // New state for selected SKPD
 
   useEffect(() => {
     if (!sessionLoading) {
       setLoadingPage(false);
     }
   }, [sessionLoading]);
+
+  // Fetch unique SKPD names for the dropdown
+  useEffect(() => {
+    const fetchSkpdOptions = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('database_tagihan')
+          .select('nama_skpd');
+
+        if (error) throw error;
+
+        const uniqueSkpd = Array.from(new Set(data.map(item => item.nama_skpd)))
+          .filter((skpd): skpd is string => skpd !== null && skpd.trim() !== '');
+
+        setSkpdOptions(['Semua SKPD', ...uniqueSkpd.sort()]);
+      } catch (error: any) {
+        console.error('Error fetching SKPD options:', error.message);
+        toast.error('Gagal memuat daftar SKPD: ' + error.message);
+      }
+    };
+    fetchSkpdOptions();
+  }, []); // Run once on component mount
 
   const fetchTagihan = async () => {
     if (sessionLoading || profile?.peran !== 'Administrator') {
@@ -88,6 +112,11 @@ const AdminTagihan = () => {
         query = query.eq('status_tagihan', selectedStatus);
       }
 
+      // Apply SKPD filter if not 'Semua SKPD'
+      if (selectedSkpd !== 'Semua SKPD') {
+        query = query.eq('nama_skpd', selectedSkpd);
+      }
+
       const { data, error } = await query;
 
       if (error) throw error;
@@ -102,7 +131,7 @@ const AdminTagihan = () => {
 
   useEffect(() => {
     fetchTagihan();
-  }, [sessionLoading, profile, debouncedSearchQuery, selectedStatus]); // Add selectedStatus to dependencies
+  }, [sessionLoading, profile, debouncedSearchQuery, selectedStatus, selectedSkpd]); // Add selectedSkpd to dependencies
 
   const formatDate = (dateString: string | undefined) => {
     if (!dateString) return '-';
@@ -165,6 +194,18 @@ const AdminTagihan = () => {
                 <SelectItem value="Menunggu Verifikasi">Menunggu Verifikasi</SelectItem>
                 <SelectItem value="Diteruskan">Diteruskan</SelectItem>
                 <SelectItem value="Dikembalikan">Dikembalikan</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select onValueChange={setSelectedSkpd} value={selectedSkpd}>
+              <SelectTrigger className="w-full sm:w-[200px]">
+                <SelectValue placeholder="Filter SKPD" />
+              </SelectTrigger>
+              <SelectContent>
+                {skpdOptions.map((skpd) => (
+                  <SelectItem key={skpd} value={skpd}>
+                    {skpd}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
