@@ -8,7 +8,7 @@ import { UploadIcon, Trash2Icon } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
-import { Switch } from '@/components/ui/switch'; // Import Switch component
+import { Switch } from '@/components/ui/switch';
 
 // Utility function to sanitize file names
 const sanitizeFileName = (name: string): string => {
@@ -33,7 +33,23 @@ const AdminCustomLogin = () => {
   const [backgroundImages, setBackgroundImages] = useState<{ name: string; url: string }[]>([]);
   const [loadingImages, setLoadingImages] = useState(true);
   const [selectedBackgroundUrl, setSelectedBackgroundUrl] = useState<string | null>(null);
-  const [isSavingSettings, setIsSavingSettings] = useState(false);
+  // isSavingSettings is no longer needed for the main settings, but kept for image operations if desired.
+  // const [isSavingSettings, setIsSavingSettings] = useState(false);
+
+  // Generic function to update a setting in app_settings table
+  const updateSetting = useCallback(async (key: string, value: string) => {
+    try {
+      const { error } = await supabase
+        .from('app_settings')
+        .upsert({ key, value }, { onConflict: 'key' });
+
+      if (error) throw error;
+      toast.success('Pengaturan disimpan!');
+    } catch (error: any) {
+      console.error(`Error saving setting ${key}:`, error.message);
+      toast.error('Gagal menyimpan pengaturan: ' + error.message);
+    }
+  }, []);
 
   const fetchSettings = useCallback(async () => {
     try {
@@ -96,8 +112,8 @@ const AdminCustomLogin = () => {
     }
 
     const file = event.target.files[0];
-    const sanitizedOriginalFileName = sanitizeFileName(file.name); // Sanitize the original file name
-    const fileName = `${Date.now()}-${sanitizedOriginalFileName}`; // Prepend timestamp for uniqueness
+    const sanitizedOriginalFileName = sanitizeFileName(file.name);
+    const fileName = `${Date.now()}-${sanitizedOriginalFileName}`;
 
     try {
       const { error } = await supabase.storage
@@ -110,7 +126,7 @@ const AdminCustomLogin = () => {
       if (error) throw error;
 
       toast.success('Gambar berhasil diunggah!');
-      fetchBackgroundImages(); // Refresh the image list
+      fetchBackgroundImages();
     } catch (error: any) {
       console.error('Error uploading image:', error.message);
       toast.error('Gagal mengunggah gambar: ' + error.message);
@@ -132,12 +148,12 @@ const AdminCustomLogin = () => {
       // If the deleted image was the currently selected background, clear it
       const { data: publicUrlData } = supabase.storage.from('login-backgrounds').getPublicUrl(imageName);
       if (selectedBackgroundUrl === publicUrlData.publicUrl) {
-        await supabase.from('app_settings').upsert({ key: 'login_background_url', value: '' }, { onConflict: 'key' });
+        await updateSetting('login_background_url', ''); // Use updateSetting for consistency
         setSelectedBackgroundUrl(null);
       }
 
       toast.success('Gambar berhasil dihapus!');
-      fetchBackgroundImages(); // Refresh the image list
+      fetchBackgroundImages();
     } catch (error: any) {
       console.error('Error deleting image:', error.message);
       toast.error('Gagal menghapus gambar: ' + error.message);
@@ -146,41 +162,12 @@ const AdminCustomLogin = () => {
 
   const handleSelectImage = async (imageUrl: string) => {
     try {
-      const { error } = await supabase
-        .from('app_settings')
-        .upsert({ key: 'login_background_url', value: imageUrl }, { onConflict: 'key' }); // Use upsert for settings
-
-      if (error) throw error;
-
+      await updateSetting('login_background_url', imageUrl); // Use updateSetting
       setSelectedBackgroundUrl(imageUrl);
       toast.success('Gambar latar belakang login berhasil diperbarui!');
     } catch (error: any) {
       console.error('Error setting background image:', error.message);
       toast.error('Gagal mengatur gambar latar belakang: ' + error.message);
-    }
-  };
-
-  const handleSaveSettings = async () => {
-    setIsSavingSettings(true);
-    try {
-      const settingsToUpdate = [
-        { key: 'login_layout_random', value: String(randomLayout) },
-        { key: 'login_form_position', value: formPosition },
-        { key: 'login_background_effect', value: String(backgroundEffect) },
-      ];
-
-      const { error } = await supabase
-        .from('app_settings')
-        .upsert(settingsToUpdate, { onConflict: 'key' });
-
-      if (error) throw error;
-
-      toast.success('Pengaturan login berhasil disimpan!');
-    } catch (error: any) {
-      console.error('Error saving settings:', error.message);
-      toast.error('Gagal menyimpan pengaturan login: ' + error.message);
-    } finally {
-      setIsSavingSettings(false);
     }
   };
 
@@ -206,7 +193,7 @@ const AdminCustomLogin = () => {
     <div className="space-y-6">
       <h1 className="text-3xl font-bold text-gray-800 dark:text-white">Kustomisasi Halaman Login</h1>
       <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
-        Di sini Anda dapat mengelola pengaturan tampilan dan fungsionalitas halaman login.
+        Di sini Anda dapat mengelola pengaturan tampilan dan fungsionalitas halaman login. Perubahan akan disimpan secara otomatis.
       </p>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -223,16 +210,22 @@ const AdminCustomLogin = () => {
                 <Switch
                   id="random-layout"
                   checked={randomLayout}
-                  onCheckedChange={setRandomLayout}
+                  onCheckedChange={(checked) => {
+                    setRandomLayout(checked);
+                    updateSetting('login_layout_random', String(checked));
+                  }}
                   aria-label="Toggle random layout"
-                  className="data-[state=checked]:bg-green-500" // Apply green color when checked
+                  className="data-[state=checked]:bg-green-500"
                 />
               </div>
               <div className="space-y-2">
                 <Label>Posisi Form Login:</Label>
                 <RadioGroup
                   value={formPosition}
-                  onValueChange={setFormPosition}
+                  onValueChange={(value) => {
+                    setFormPosition(value);
+                    updateSetting('login_form_position', value);
+                  }}
                   className="flex flex-col space-y-1"
                 >
                   <div className="flex items-center space-x-2">
@@ -262,15 +255,16 @@ const AdminCustomLogin = () => {
               <Switch
                 id="background-effect"
                 checked={backgroundEffect}
-                onCheckedChange={setBackgroundEffect}
+                onCheckedChange={(checked) => {
+                  setBackgroundEffect(checked);
+                  updateSetting('login_background_effect', String(checked));
+                }}
                 aria-label="Toggle background effect"
-                className="data-[state=checked]:bg-green-500" // Apply green color when checked
+                className="data-[state=checked]:bg-green-500"
               />
             </CardContent>
           </Card>
-          <Button onClick={handleSaveSettings} disabled={isSavingSettings} className="w-full">
-            {isSavingSettings ? 'Menyimpan...' : 'Simpan Perubahan Pengaturan'}
-          </Button>
+          {/* Removed the "Simpan Perubahan Pengaturan" button */}
         </div>
 
         {/* Right Column */}
