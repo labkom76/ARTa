@@ -1,14 +1,14 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useSession } from '@/contexts/SessionContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Toggle } from '@/components/ui/toggle';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { UploadIcon, Trash2Icon } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Input } from '@/components/ui/input'; // Import Input for file upload
+import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch'; // Import Switch component
 
 // Utility function to sanitize file names
 const sanitizeFileName = (name: string): string => {
@@ -220,11 +220,12 @@ const AdminCustomLogin = () => {
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between">
                 <Label htmlFor="random-layout">Acak Tata Letak</Label>
-                <Toggle
+                <Switch
                   id="random-layout"
-                  pressed={randomLayout}
-                  onPressedChange={setRandomLayout}
+                  checked={randomLayout}
+                  onCheckedChange={setRandomLayout}
                   aria-label="Toggle random layout"
+                  className="data-[state=checked]:bg-green-500" // Apply green color when checked
                 />
               </div>
               <div className="space-y-2">
@@ -258,11 +259,12 @@ const AdminCustomLogin = () => {
             </CardHeader>
             <CardContent className="flex items-center justify-between">
               <Label htmlFor="background-effect">Aktifkan Efek Latar</Label>
-              <Toggle
+              <Switch
                 id="background-effect"
-                pressed={backgroundEffect}
-                onPressedChange={setBackgroundEffect}
+                checked={backgroundEffect}
+                onCheckedChange={setBackgroundEffect}
                 aria-label="Toggle background effect"
+                className="data-[state=checked]:bg-green-500" // Apply green color when checked
               />
             </CardContent>
           </Card>
