@@ -1,14 +1,29 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { HomeIcon, LayoutDashboardIcon, FileTextIcon, UserIcon, HistoryIcon, ListFilterIcon, UsersIcon } from 'lucide-react';
+import { HomeIcon, LayoutDashboardIcon, FileTextIcon, HistoryIcon, ListFilterIcon, UsersIcon, ChevronDownIcon, PaletteIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSession } from '@/contexts/SessionContext';
-import { Button } from '@/components/ui/button';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 interface SidebarProps {
   isCollapsed: boolean;
   onLinkClick?: () => void;
 }
+
+interface NavItem {
+  to: string;
+  icon: React.ElementType;
+  label: string;
+}
+
+interface CollapsibleNavItem {
+  type: 'collapsible';
+  label: string;
+  icon: React.ElementType;
+  children: NavItem[];
+}
+
+type SidebarNavItem = NavItem | CollapsibleNavItem;
 
 const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onLinkClick }) => {
   const { role, loading } = useSession();
@@ -32,7 +47,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onLinkClick }) => {
     );
   }
 
-  const navItems = [];
+  const navItems: SidebarNavItem[] = [];
 
   if (role === 'SKPD') {
     navItems.push(
@@ -60,8 +75,16 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onLinkClick }) => {
   } else if (role === 'Administrator') {
     navItems.push(
       { to: '/admin/dashboard', icon: LayoutDashboardIcon, label: 'Dashboard Admin' },
-      { to: '/admin/users', icon: UsersIcon, label: 'Manajemen Pengguna' },
-      { to: '/admin/tagihan', icon: FileTextIcon, label: 'Manajemen Tagihan' }, // New link for Admin Tagihan
+      {
+        type: 'collapsible',
+        label: 'Manajemen',
+        icon: UsersIcon, // Icon for the parent 'Manajemen' menu
+        children: [
+          { to: '/admin/users', icon: UsersIcon, label: 'Pengguna' },
+          { to: '/admin/tagihan', icon: FileTextIcon, label: 'Manajemen Tagihan' },
+          { to: '/admin/custom-login', icon: PaletteIcon, label: 'Kustom Login' }, // Using PaletteIcon for customization
+        ]
+      },
     );
   } else {
     navItems.push(
@@ -79,20 +102,71 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onLinkClick }) => {
         <HomeIcon className={cn("h-6 w-6 text-sidebar-primary dark:text-sidebar-primary-foreground", !isCollapsed && "hidden")} />
       </div>
       <nav className="flex-1 p-2 space-y-1">
-        {navItems.map((item) => (
-          <Link
-            key={item.to}
-            to={item.to}
-            onClick={onLinkClick}
-            className={cn(
-              "flex items-center gap-3 rounded-md px-3 py-2 text-sidebar-foreground dark:text-sidebar-foreground hover:bg-sidebar-accent dark:hover:bg-sidebar-accent hover:text-sidebar-accent-foreground dark:hover:text-sidebar-accent-foreground transition-colors duration-200",
-              isCollapsed && "justify-center"
-            )}
-          >
-            <item.icon className="h-5 w-5" />
-            <span className={cn("text-sm", isCollapsed && "hidden")}>{item.label}</span>
-          </Link>
-        ))}
+        {navItems.map((item, index) => {
+          if ('type' in item && item.type === 'collapsible') {
+            if (isCollapsed) {
+              // When collapsed, render as a simple link with just the icon
+              return (
+                <Link
+                  key={item.label}
+                  to={item.children[0].to} // Link to the first child item as a default action
+                  onClick={onLinkClick}
+                  className={cn(
+                    "flex items-center justify-center gap-3 rounded-md px-3 py-2 text-sidebar-foreground dark:text-sidebar-foreground hover:bg-sidebar-accent dark:hover:bg-sidebar-accent hover:text-sidebar-accent-foreground dark:hover:text-sidebar-accent-foreground transition-colors duration-200",
+                  )}
+                  title={item.label} // Add title for tooltip on collapsed icon
+                >
+                  <item.icon className="h-5 w-5" />
+                </Link>
+              );
+            } else {
+              // When not collapsed, render as an Accordion
+              return (
+                <Accordion key={item.label} type="single" collapsible className="w-full">
+                  <AccordionItem value={`item-${index}`} className="border-b-0">
+                    <AccordionTrigger className="flex items-center gap-3 rounded-md px-3 py-2 text-sidebar-foreground dark:text-sidebar-foreground hover:bg-sidebar-accent dark:hover:bg-sidebar-accent hover:text-sidebar-accent-foreground dark:hover:text-sidebar-accent-foreground transition-colors duration-200">
+                      <item.icon className="h-5 w-5" />
+                      <span className="text-sm flex-1 text-left">{item.label}</span>
+                      <ChevronDownIcon className="h-4 w-4 shrink-0 transition-transform duration-200" />
+                    </AccordionTrigger>
+                    <AccordionContent className="pl-3">
+                      <div className="space-y-1">
+                        {item.children.map((child) => (
+                          <Link
+                            key={child.to}
+                            to={child.to}
+                            onClick={onLinkClick}
+                            className="flex items-center gap-3 rounded-md px-3 py-2 text-sidebar-foreground dark:text-sidebar-foreground hover:bg-sidebar-accent dark:hover:bg-sidebar-accent hover:text-sidebar-accent-foreground dark:hover:text-sidebar-accent-foreground transition-colors duration-200"
+                          >
+                            <child.icon className="h-4 w-4 ml-2" />
+                            <span className="text-sm">{child.label}</span>
+                          </Link>
+                        ))}
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+                </Accordion>
+              );
+            }
+          } else {
+            // Render simple link items
+            return (
+              <Link
+                key={item.to}
+                to={item.to}
+                onClick={onLinkClick}
+                className={cn(
+                  "flex items-center gap-3 rounded-md px-3 py-2 text-sidebar-foreground dark:text-sidebar-foreground hover:bg-sidebar-accent dark:hover:bg-sidebar-accent hover:text-sidebar-accent-foreground dark:hover:text-sidebar-accent-foreground transition-colors duration-200",
+                  isCollapsed && "justify-center"
+                )}
+                title={isCollapsed ? item.label : undefined} // Add title for tooltip on collapsed icon
+              >
+                <item.icon className="h-5 w-5" />
+                <span className={cn("text-sm", isCollapsed && "hidden")}>{item.label}</span>
+              </Link>
+            );
+          }
+        })}
       </nav>
     </aside>
   );
