@@ -75,13 +75,13 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onLinkClick }) => {
   } else if (role === 'Administrator') {
     navItems.push(
       { to: '/admin/dashboard', icon: LayoutDashboardIcon, label: 'Dashboard Admin' },
+      { to: '/admin/tagihan', icon: FileTextIcon, label: 'Manajemen Tagihan' }, // Moved up
       {
         type: 'collapsible',
         label: 'Manajemen',
         icon: UsersIcon, // Icon for the parent 'Manajemen' menu
         children: [
           { to: '/admin/users', icon: UsersIcon, label: 'Pengguna' },
-          { to: '/admin/tagihan', icon: FileTextIcon, label: 'Manajemen Tagihan' },
           { to: '/admin/custom-login', icon: PaletteIcon, label: 'Kustom Login' }, // Using PaletteIcon for customization
         ]
       },
