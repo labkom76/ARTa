@@ -1,17 +1,54 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSession } from '@/contexts/SessionContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Toggle } from '@/components/ui/toggle';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { UploadIcon } from 'lucide-react';
+import { UploadIcon, Trash2Icon } from 'lucide-react'; // Import Trash2Icon
+import { supabase } from '@/integrations/supabase/client'; // Import supabase client
+import { toast } from 'sonner'; // Import toast for notifications
 
 const AdminCustomLogin = () => {
   const { profile, loading: sessionLoading } = useSession();
-  const [randomLayout, setRandomLayout] = useState(false); // State for toggle
-  const [formPosition, setFormPosition] = useState('center'); // State for radio group
-  const [backgroundEffect, setBackgroundEffect] = useState(false); // State for toggle
+  const [randomLayout, setRandomLayout] = useState(false);
+  const [formPosition, setFormPosition] = useState('center');
+  const [backgroundEffect, setBackgroundEffect] = useState(false);
+  const [backgroundImages, setBackgroundImages] = useState<string[]>([]);
+  const [loadingImages, setLoadingImages] = useState(true);
+
+  useEffect(() => {
+    const fetchBackgroundImages = async () => {
+      setLoadingImages(true);
+      try {
+        const { data, error } = await supabase.storage.from('backgrounds').list('', {
+          limit: 100,
+          offset: 0,
+          sortBy: { column: 'name', order: 'asc' },
+        });
+
+        if (error) {
+          throw error;
+        }
+
+        const imageUrls = data
+          .filter(file => file.name !== '.emptyFolderPlaceholder') // Filter out placeholder file
+          .map(file => {
+            const { data: publicUrlData } = supabase.storage.from('backgrounds').getPublicUrl(file.name);
+            return publicUrlData.publicUrl;
+          });
+
+        setBackgroundImages(imageUrls);
+      } catch (error: any) {
+        console.error('Error fetching background images:', error.message);
+        toast.error('Gagal memuat gambar latar belakang: ' + error.message);
+      } finally {
+        setLoadingImages(false);
+      }
+    };
+
+    fetchBackgroundImages();
+  }, []);
 
   if (sessionLoading) {
     return (
@@ -109,20 +146,28 @@ const AdminCustomLogin = () => {
               </Button>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {Array.from({ length: 8 }).map((_, index) => (
-                  <div key={index} className="relative aspect-video overflow-hidden rounded-md border border-gray-200 dark:border-gray-700">
-                    <img
-                      src="/placeholder.svg"
-                      alt={`Placeholder Image ${index + 1}`}
-                      className="w-full h-full object-cover"
-                    />
-                    <div className="absolute inset-0 bg-black bg-opacity-20 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity duration-200">
-                      <span className="text-white text-sm">Gambar {index + 1}</span>
+              {loadingImages ? (
+                <p className="text-center text-gray-600 dark:text-gray-400">Memuat gambar...</p>
+              ) : backgroundImages.length === 0 ? (
+                <p className="text-center text-gray-600 dark:text-gray-400">Tidak ada gambar latar belakang ditemukan.</p>
+              ) : (
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {backgroundImages.map((imageUrl, index) => (
+                    <div key={index} className="relative aspect-video overflow-hidden rounded-md border border-gray-200 dark:border-gray-700 group">
+                      <img
+                        src={imageUrl}
+                        alt={`Background Image ${index + 1}`}
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute inset-0 bg-black bg-opacity-20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                        <Button variant="destructive" size="icon" className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                          <Trash2Icon className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
