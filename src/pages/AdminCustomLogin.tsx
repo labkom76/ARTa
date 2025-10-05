@@ -21,7 +21,7 @@ const AdminCustomLogin = () => {
     const fetchBackgroundImages = async () => {
       setLoadingImages(true);
       try {
-        const { data, error } = await supabase.storage.from('backgrounds').list('', {
+        const { data, error } = await supabase.storage.from('login-backgrounds').list('', { // Updated bucket name here
           limit: 100,
           offset: 0,
           sortBy: { column: 'name', order: 'asc' },
@@ -34,7 +34,7 @@ const AdminCustomLogin = () => {
         const imageUrls = data
           .filter(file => file.name !== '.emptyFolderPlaceholder') // Filter out placeholder file
           .map(file => {
-            const { data: publicUrlData } = supabase.storage.from('backgrounds').getPublicUrl(file.name);
+            const { data: publicUrlData } = supabase.storage.from('login-backgrounds').getPublicUrl(file.name); // Updated bucket name here
             return publicUrlData.publicUrl;
           });
 
