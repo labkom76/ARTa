@@ -10,6 +10,21 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Input } from '@/components/ui/input'; // Import Input for file upload
 
+// Utility function to sanitize file names
+const sanitizeFileName = (name: string): string => {
+  // Replace any character that is not alphanumeric, hyphen, underscore, or period with an empty string
+  let sanitized = name.replace(/[^a-zA-Z0-9-._]/g, '');
+  // Replace multiple hyphens with a single hyphen
+  sanitized = sanitized.replace(/-+/g, '-');
+  // Trim leading/trailing hyphens or periods
+  sanitized = sanitized.replace(/^[.-]+|[.-]+$/g, '');
+  // Ensure it's not empty after sanitization
+  if (sanitized === '') {
+    return `untitled-${Date.now()}`; // Fallback name with timestamp
+  }
+  return sanitized;
+};
+
 const AdminCustomLogin = () => {
   const { profile, loading: sessionLoading } = useSession();
   const [randomLayout, setRandomLayout] = useState(false);
@@ -81,7 +96,8 @@ const AdminCustomLogin = () => {
     }
 
     const file = event.target.files[0];
-    const fileName = `${Date.now()}-${file.name}`; // Unique file name
+    const sanitizedOriginalFileName = sanitizeFileName(file.name); // Sanitize the original file name
+    const fileName = `${Date.now()}-${sanitizedOriginalFileName}`; // Prepend timestamp for uniqueness
 
     try {
       const { error } = await supabase.storage
@@ -116,7 +132,7 @@ const AdminCustomLogin = () => {
       // If the deleted image was the currently selected background, clear it
       const { data: publicUrlData } = supabase.storage.from('login-backgrounds').getPublicUrl(imageName);
       if (selectedBackgroundUrl === publicUrlData.publicUrl) {
-        await supabase.from('app_settings').update({ value: '' }).eq('key', 'login_background_url');
+        await supabase.from('app_settings').upsert({ key: 'login_background_url', value: '' }, { onConflict: 'key' });
         setSelectedBackgroundUrl(null);
       }
 
@@ -132,8 +148,7 @@ const AdminCustomLogin = () => {
     try {
       const { error } = await supabase
         .from('app_settings')
-        .update({ value: imageUrl })
-        .eq('key', 'login_background_url');
+        .upsert({ key: 'login_background_url', value: imageUrl }, { onConflict: 'key' }); // Use upsert for settings
 
       if (error) throw error;
 
