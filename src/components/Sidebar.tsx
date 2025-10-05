@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { HomeIcon, LayoutDashboardIcon, FileTextIcon, HistoryIcon, ListFilterIcon, UsersIcon, ChevronDownIcon, PaletteIcon } from 'lucide-react';
+import { HomeIcon, LayoutDashboardIcon, FileTextIcon, HistoryIcon, ListFilterIcon, UsersIcon, PaletteIcon } from 'lucide-react'; // Menghapus ChevronDownIcon dari import karena sudah ada di AccordionTrigger
 import { cn } from '@/lib/utils';
 import { useSession } from '@/contexts/SessionContext';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -75,7 +75,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onLinkClick }) => {
   } else if (role === 'Administrator') {
     navItems.push(
       { to: '/admin/dashboard', icon: LayoutDashboardIcon, label: 'Dashboard Admin' },
-      { to: '/admin/tagihan', icon: FileTextIcon, label: 'Manajemen Tagihan' }, // Moved up
+      { to: '/admin/tagihan', icon: FileTextIcon, label: 'Manajemen Tagihan' },
       {
         type: 'collapsible',
         label: 'Manajemen',
@@ -127,7 +127,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onLinkClick }) => {
                     <AccordionTrigger className="flex items-center gap-3 rounded-md px-3 py-2 text-sidebar-foreground dark:text-sidebar-foreground hover:bg-sidebar-accent dark:hover:bg-sidebar-accent hover:text-sidebar-accent-foreground dark:hover:text-sidebar-accent-foreground transition-colors duration-200">
                       <item.icon className="h-5 w-5" />
                       <span className="text-sm flex-1 text-left">{item.label}</span>
-                      <ChevronDownIcon className="h-4 w-4 shrink-0 transition-transform duration-200" />
+                      {/* Menghapus ChevronDownIcon yang duplikat di sini */}
                     </AccordionTrigger>
                     <AccordionContent className="pl-3">
                       <div className="space-y-1">
