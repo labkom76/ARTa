@@ -21,6 +21,7 @@ const Login = () => {
   const [allBackgroundImages, setAllBackgroundImages] = useState<string[]>([]); // Stores all image URLs for slider
   const [currentImageIndex, setCurrentImageIndex] = useState(0); // Current index for slider
   const [isSliderEnabled, setIsSliderEnabled] = useState(false); // State to control slider logic
+  const [backgroundOpacity, setBackgroundOpacity] = useState(1); // New state for opacity to control fade
 
   const fetchLoginSettings = useCallback(async () => {
     setLoadingSettings(true);
@@ -40,10 +41,12 @@ const Login = () => {
         login_background_slider: settingsMap.get('login_background_slider') || 'false', // Get new setting
       };
       setLoginSettings(fetchedSettings);
+      console.log('Fetched settings:', fetchedSettings);
 
       const isRandomLayout = fetchedSettings.login_layout_random === 'true';
       const isSliderActive = fetchedSettings.login_background_slider === 'true';
       setIsSliderEnabled(isSliderActive);
+      console.log('isSliderActive:', isSliderActive, 'isRandomLayout:', isRandomLayout);
 
       let resolvedBackground: string | null = null;
       let resolvedFormPosition: string = fetchedSettings.login_form_position;
@@ -71,6 +74,7 @@ const Login = () => {
           resolvedBackground = null;
         }
         setAllBackgroundImages([]); // Clear slider images if random is active
+        setCurrentImageIndex(0); // Reset index
       } else if (isSliderActive) {
         // If slider is active, fetch all images
         const { data: images, error: imageError } = await supabase.storage.from('login-backgrounds').list('', {
@@ -87,16 +91,19 @@ const Login = () => {
           return publicUrlData.publicUrl;
         });
         setAllBackgroundImages(fetchedAllImages);
+        console.log('Fetched all background images for slider:', fetchedAllImages);
 
         if (fetchedAllImages.length > 0) {
           resolvedBackground = fetchedAllImages[0]; // Set initial background for slider
         } else {
           resolvedBackground = null;
         }
+        setCurrentImageIndex(0); // Reset index
       } else {
         // Default: use single configured background
         resolvedBackground = fetchedSettings.login_background_url;
         setAllBackgroundImages([]); // Clear slider images
+        setCurrentImageIndex(0); // Reset index
       }
 
       setCurrentBackground(resolvedBackground);
@@ -115,6 +122,7 @@ const Login = () => {
       setCurrentFormPosition('center');
       setAllBackgroundImages([]);
       setIsSliderEnabled(false);
+      setCurrentImageIndex(0);
     } finally {
       setLoadingSettings(false);
     }
@@ -124,15 +132,26 @@ const Login = () => {
     fetchLoginSettings();
   }, [fetchLoginSettings]);
 
-  // Effect for background image slider
+  // Effect for background image slider with fade transition
   useEffect(() => {
     let intervalId: NodeJS.Timeout;
     if (isSliderEnabled && allBackgroundImages.length > 1) {
+      console.log('Slider enabled, starting interval. Images:', allBackgroundImages.length);
       intervalId = setInterval(() => {
-        setCurrentImageIndex(prevIndex =>
-          (prevIndex + 1) % allBackgroundImages.length
-        );
-      }, 10000); // Change image every 10 seconds
+        setBackgroundOpacity(0); // Start fade out
+        setTimeout(() => {
+          setCurrentImageIndex(prevIndex => {
+            const nextIndex = (prevIndex + 1) % allBackgroundImages.length;
+            console.log('Changing image to index:', nextIndex);
+            return nextIndex;
+          });
+          setBackgroundOpacity(1); // Fade in new image
+        }, 1000); // Wait for fade out (1s) before changing image and fading in
+      }, 10000); // Change image every 10 seconds (total cycle: 1s fade out, 9s display, 1s fade in)
+    } else {
+      console.log('Slider not enabled or not enough images for slider. Clearing interval.');
+      clearInterval(intervalId);
+      setBackgroundOpacity(1); // Ensure opacity is 1 if slider is off
     }
     return () => clearInterval(intervalId);
   }, [isSliderEnabled, allBackgroundImages.length]);
@@ -141,8 +160,12 @@ const Login = () => {
   useEffect(() => {
     if (isSliderEnabled && allBackgroundImages.length > 0) {
       setCurrentBackground(allBackgroundImages[currentImageIndex]);
+      console.log('Current background updated to:', allBackgroundImages[currentImageIndex]);
+    } else if (!isSliderEnabled && loginSettings.login_background_url) {
+      // If slider is disabled, revert to the single selected background
+      setCurrentBackground(loginSettings.login_background_url);
     }
-  }, [currentImageIndex, isSliderEnabled, allBackgroundImages]);
+  }, [currentImageIndex, isSliderEnabled, allBackgroundImages, loginSettings.login_background_url]);
 
 
   const handleGoogleLogin = async () => {
@@ -171,8 +194,8 @@ const Login = () => {
   );
 
   const backgroundStyle = currentBackground
-    ? { backgroundImage: `url(${currentBackground})` }
-    : {};
+    ? { backgroundImage: `url(${currentBackground})`, opacity: backgroundOpacity }
+    : { opacity: backgroundOpacity }; // Apply opacity even if no background image
 
   const backgroundOverlayClasses = cn(
     "absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ease-in-out", // Added transition for fade effect
