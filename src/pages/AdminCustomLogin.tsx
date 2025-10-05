@@ -30,11 +30,10 @@ const AdminCustomLogin = () => {
   const [randomLayout, setRandomLayout] = useState(false);
   const [formPosition, setFormPosition] = useState('center');
   const [backgroundEffect, setBackgroundEffect] = useState(false);
+  const [enableSlider, setEnableSlider] = useState(false); // New state for slider
   const [backgroundImages, setBackgroundImages] = useState<{ name: string; url: string }[]>([]);
   const [loadingImages, setLoadingImages] = useState(true);
   const [selectedBackgroundUrl, setSelectedBackgroundUrl] = useState<string | null>(null);
-  // isSavingSettings is no longer needed for the main settings, but kept for image operations if desired.
-  // const [isSavingSettings, setIsSavingSettings] = useState(false);
 
   // Generic function to update a setting in app_settings table
   const updateSetting = useCallback(async (key: string, value: string) => {
@@ -64,6 +63,7 @@ const AdminCustomLogin = () => {
       setRandomLayout(settingsMap.get('login_layout_random') === 'true');
       setFormPosition(settingsMap.get('login_form_position') || 'center');
       setBackgroundEffect(settingsMap.get('login_background_effect') === 'true');
+      setEnableSlider(settingsMap.get('login_background_slider') === 'true'); // Fetch new setting
       setSelectedBackgroundUrl(settingsMap.get('login_background_url') || null);
     } catch (error: any) {
       console.error('Error fetching settings:', error.message);
@@ -264,7 +264,6 @@ const AdminCustomLogin = () => {
               />
             </CardContent>
           </Card>
-          {/* Removed the "Simpan Perubahan Pengaturan" button */}
         </div>
 
         {/* Right Column */}
@@ -273,16 +272,31 @@ const AdminCustomLogin = () => {
           <Card className="shadow-sm rounded-lg">
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-xl font-semibold">Galeri Gambar</CardTitle>
-              <Input
-                id="file-upload"
-                type="file"
-                accept="image/*"
-                onChange={handleFileUpload}
-                className="hidden"
-              />
-              <Button variant="outline" className="flex items-center gap-2" onClick={() => document.getElementById('file-upload')?.click()}>
-                <UploadIcon className="h-4 w-4" /> Unggah Gambar Baru
-              </Button>
+              <div className="flex items-center space-x-4"> {/* Container for switch and upload button */}
+                <div className="flex items-center space-x-2">
+                  <Label htmlFor="enable-slider">Aktifkan Slider Gambar</Label>
+                  <Switch
+                    id="enable-slider"
+                    checked={enableSlider}
+                    onCheckedChange={(checked) => {
+                      setEnableSlider(checked);
+                      updateSetting('login_background_slider', String(checked));
+                    }}
+                    aria-label="Toggle background image slider"
+                    className="data-[state=checked]:bg-green-500"
+                  />
+                </div>
+                <Input
+                  id="file-upload"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                />
+                <Button variant="outline" className="flex items-center gap-2" onClick={() => document.getElementById('file-upload')?.click()}>
+                  <UploadIcon className="h-4 w-4" /> Unggah Gambar Baru
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               {loadingImages ? (

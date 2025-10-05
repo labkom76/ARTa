@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { MadeWithDyad } from '@/components/made-with-dyad';
 import { Button } from '@/components/ui/button';
 import { ChromeIcon } from 'lucide-react';
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { cn } from '@/lib/utils'; // Import cn utility for class merging
 
 const Login = () => {
@@ -13,10 +13,14 @@ const Login = () => {
     login_form_position: 'center',
     login_layout_random: 'false',
     login_background_effect: 'false',
+    login_background_slider: 'false', // New setting
   });
   const [loadingSettings, setLoadingSettings] = useState(true);
   const [currentBackground, setCurrentBackground] = useState<string | null>(null); // Stores the actual background URL to use
   const [currentFormPosition, setCurrentFormPosition] = useState<string>('center'); // Stores the actual form position to use
+  const [allBackgroundImages, setAllBackgroundImages] = useState<string[]>([]); // Stores all image URLs for slider
+  const [currentImageIndex, setCurrentImageIndex] = useState(0); // Current index for slider
+  const [isSliderEnabled, setIsSliderEnabled] = useState(false); // State to control slider logic
 
   const fetchLoginSettings = useCallback(async () => {
     setLoadingSettings(true);
@@ -33,21 +37,25 @@ const Login = () => {
         login_form_position: settingsMap.get('login_form_position') || 'center',
         login_layout_random: settingsMap.get('login_layout_random') || 'false',
         login_background_effect: settingsMap.get('login_background_effect') || 'false',
+        login_background_slider: settingsMap.get('login_background_slider') || 'false', // Get new setting
       };
       setLoginSettings(fetchedSettings);
 
+      const isRandomLayout = fetchedSettings.login_layout_random === 'true';
+      const isSliderActive = fetchedSettings.login_background_slider === 'true';
+      setIsSliderEnabled(isSliderActive);
+
       let resolvedBackground: string | null = null;
       let resolvedFormPosition: string = fetchedSettings.login_form_position;
+      let fetchedAllImages: string[] = [];
 
-      // Handle random layout logic
-      if (fetchedSettings.login_layout_random === 'true') {
-        // Pick a random position
+      if (isRandomLayout) {
+        // Random layout takes precedence for single image selection
         const positions = ['left', 'center', 'right', 'top', 'bottom'];
         resolvedFormPosition = positions[Math.floor(Math.random() * positions.length)];
 
-        // Pick a random background image from storage
         const { data: images, error: imageError } = await supabase.storage.from('login-backgrounds').list('', {
-          limit: 100, // Adjust limit as needed
+          limit: 100,
           offset: 0,
           sortBy: { column: 'name', order: 'asc' },
         });
@@ -60,11 +68,35 @@ const Login = () => {
           const { data: publicUrlData } = supabase.storage.from('login-backgrounds').getPublicUrl(validImages[randomIndex].name);
           resolvedBackground = publicUrlData.publicUrl;
         } else {
-          resolvedBackground = null; // No images to pick from
+          resolvedBackground = null;
+        }
+        setAllBackgroundImages([]); // Clear slider images if random is active
+      } else if (isSliderActive) {
+        // If slider is active, fetch all images
+        const { data: images, error: imageError } = await supabase.storage.from('login-backgrounds').list('', {
+          limit: 100,
+          offset: 0,
+          sortBy: { column: 'name', order: 'asc' },
+        });
+
+        if (imageError) throw imageError;
+
+        const validImages = images.filter(file => file.name !== '.emptyFolderPlaceholder');
+        fetchedAllImages = validImages.map(file => {
+          const { data: publicUrlData } = supabase.storage.from('login-backgrounds').getPublicUrl(file.name);
+          return publicUrlData.publicUrl;
+        });
+        setAllBackgroundImages(fetchedAllImages);
+
+        if (fetchedAllImages.length > 0) {
+          resolvedBackground = fetchedAllImages[0]; // Set initial background for slider
+        } else {
+          resolvedBackground = null;
         }
       } else {
-        // Use configured background and position
+        // Default: use single configured background
         resolvedBackground = fetchedSettings.login_background_url;
+        setAllBackgroundImages([]); // Clear slider images
       }
 
       setCurrentBackground(resolvedBackground);
@@ -72,15 +104,17 @@ const Login = () => {
 
     } catch (error: any) {
       console.error('Error fetching login settings:', error.message);
-      // Fallback to default settings on error
       setLoginSettings({
         login_background_url: '',
         login_form_position: 'center',
         login_layout_random: 'false',
         login_background_effect: 'false',
+        login_background_slider: 'false',
       });
       setCurrentBackground(null);
       setCurrentFormPosition('center');
+      setAllBackgroundImages([]);
+      setIsSliderEnabled(false);
     } finally {
       setLoadingSettings(false);
     }
@@ -89,6 +123,27 @@ const Login = () => {
   useEffect(() => {
     fetchLoginSettings();
   }, [fetchLoginSettings]);
+
+  // Effect for background image slider
+  useEffect(() => {
+    let intervalId: NodeJS.Timeout;
+    if (isSliderEnabled && allBackgroundImages.length > 1) {
+      intervalId = setInterval(() => {
+        setCurrentImageIndex(prevIndex =>
+          (prevIndex + 1) % allBackgroundImages.length
+        );
+      }, 10000); // Change image every 10 seconds
+    }
+    return () => clearInterval(intervalId);
+  }, [isSliderEnabled, allBackgroundImages.length]);
+
+  // Effect to update currentBackground when currentImageIndex changes (for slider)
+  useEffect(() => {
+    if (isSliderEnabled && allBackgroundImages.length > 0) {
+      setCurrentBackground(allBackgroundImages[currentImageIndex]);
+    }
+  }, [currentImageIndex, isSliderEnabled, allBackgroundImages]);
+
 
   const handleGoogleLogin = async () => {
     const { error } = await supabase.auth.signInWithOAuth({
@@ -110,8 +165,8 @@ const Login = () => {
       'items-center justify-center': currentFormPosition === 'center',
       'items-start justify-center': currentFormPosition === 'left',
       'items-end justify-center': currentFormPosition === 'right',
-      'items-center justify-start pt-20': currentFormPosition === 'top', // Add padding for visual offset
-      'items-center justify-end pb-20': currentFormPosition === 'bottom', // Add padding for visual offset
+      'items-center justify-start pt-20': currentFormPosition === 'top',
+      'items-center justify-end pb-20': currentFormPosition === 'bottom',
     }
   );
 
@@ -119,12 +174,10 @@ const Login = () => {
     ? { backgroundImage: `url(${currentBackground})` }
     : {};
 
-  // Removed filter from backgroundOverlayClasses as per user's request for backdrop-filter on form
   const backgroundOverlayClasses = cn(
-    "absolute inset-0 bg-cover bg-center transition-all duration-500",
+    "absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ease-in-out", // Added transition for fade effect
   );
 
-  // Classes for the form container
   const formContainerClasses = cn(
     "w-full max-w-md p-8 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 z-10",
     {
@@ -150,7 +203,7 @@ const Login = () => {
         ></div>
       )}
 
-      <div className={formContainerClasses}> {/* Applied dynamic classes here */}
+      <div className={formContainerClasses}>
         <h2 className="text-2xl font-bold text-center text-gray-800 dark:text-white mb-2">ARTa - BKAD</h2>
         <p className="text-sm text-center text-gray-600 dark:text-gray-400 mb-1">(Aplikasi Registrasi Tagihan)</p>
         <p className="text-sm text-center text-gray-600 dark:text-gray-400 mb-6">Pemerintah Daerah Kabupaten Gorontalo</p>
