@@ -119,10 +119,17 @@ const Login = () => {
     ? { backgroundImage: `url(${currentBackground})` }
     : {};
 
+  // Removed filter from backgroundOverlayClasses as per user's request for backdrop-filter on form
   const backgroundOverlayClasses = cn(
     "absolute inset-0 bg-cover bg-center transition-all duration-500",
+  );
+
+  // Classes for the form container
+  const formContainerClasses = cn(
+    "w-full max-w-md p-8 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 z-10",
     {
-      'filter blur-sm brightness-75': loginSettings.login_background_effect === 'true', // Apply blur and brightness
+      'bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm': loginSettings.login_background_effect === 'true',
+      'bg-white dark:bg-gray-800': loginSettings.login_background_effect !== 'true',
     }
   );
 
@@ -143,7 +150,7 @@ const Login = () => {
         ></div>
       )}
 
-      <div className="w-full max-w-md bg-white dark:bg-gray-800 p-8 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 z-10">
+      <div className={formContainerClasses}> {/* Applied dynamic classes here */}
         <h2 className="text-2xl font-bold text-center text-gray-800 dark:text-white mb-2">ARTa - BKAD</h2>
         <p className="text-sm text-center text-gray-600 dark:text-gray-400 mb-1">(Aplikasi Registrasi Tagihan)</p>
         <p className="text-sm text-center text-gray-600 dark:text-gray-400 mb-6">Pemerintah Daerah Kabupaten Gorontalo</p>
