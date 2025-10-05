@@ -23,7 +23,9 @@ const Login = () => {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-900 p-4">
       <div className="w-full max-w-md bg-white dark:bg-gray-800 p-8 rounded-lg shadow-md border border-gray-200 dark:border-gray-700">
-        <h2 className="text-2xl font-bold text-center text-gray-800 dark:text-white mb-6">Selamat Datang</h2>
+        <h2 className="text-2xl font-bold text-center text-gray-800 dark:text-white mb-2">ARTa - BKAD</h2>
+        <p className="text-sm text-center text-gray-600 dark:text-gray-400 mb-1">(Aplikasi Registrasi Tagihan)</p>
+        <p className="text-sm text-center text-gray-600 dark:text-gray-400 mb-6">Pemerintah Daerah Kabupaten Gorontalo</p>
         <Auth
           supabaseClient={supabase}
           providers={[]} // Keep providers empty as we're adding a custom Google button
@@ -45,6 +47,40 @@ const Login = () => {
           }}
           theme="light"
           redirectTo={window.location.origin} // Redirect to root after login, SessionContext will handle further role-based redirect
+          localization={{
+            variables: {
+              sign_in: {
+                email_label: 'Email Anda',
+                password_label: 'Password Anda',
+                email_input_placeholder: 'Masukkan email',
+                password_input_placeholder: 'Masukkan password',
+                button_label: 'Login',
+                social_auth_button_text: 'Login dengan {{provider}}',
+                link_text: 'Sudah punya akun? Login',
+              },
+              sign_up: {
+                email_label: 'Email Anda',
+                password_label: 'Buat Password',
+                email_input_placeholder: 'Masukkan email',
+                password_input_placeholder: 'Buat password',
+                button_label: 'Daftar',
+                social_auth_button_text: 'Daftar dengan {{provider}}',
+                link_text: 'Belum punya akun? Daftar',
+              },
+              forgotten_password: {
+                email_label: 'Email Anda',
+                password_label: 'Password Baru',
+                email_input_placeholder: 'Masukkan email Anda',
+                button_label: 'Kirim instruksi reset password',
+                link_text: 'Lupa password?',
+              },
+              update_password: {
+                password_label: 'Password Baru',
+                password_input_placeholder: 'Masukkan password baru Anda',
+                button_label: 'Perbarui password',
+              },
+            },
+          }}
         />
         <div className="relative flex justify-center text-xs uppercase my-6">
           <span className="bg-white dark:bg-gray-800 px-2 text-muted-foreground">Atau lanjutkan dengan</span>
