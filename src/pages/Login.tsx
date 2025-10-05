@@ -15,7 +15,8 @@ const Login = () => {
     login_background_effect: 'false',
   });
   const [loadingSettings, setLoadingSettings] = useState(true);
-  const [currentBackground, setCurrentBackground] = useState<string | null>(null);
+  const [currentBackground, setCurrentBackground] = useState<string | null>(null); // Stores the actual background URL to use
+  const [currentFormPosition, setCurrentFormPosition] = useState<string>('center'); // Stores the actual form position to use
 
   const fetchLoginSettings = useCallback(async () => {
     setLoadingSettings(true);
@@ -35,10 +36,18 @@ const Login = () => {
       };
       setLoginSettings(fetchedSettings);
 
-      // Handle random background logic
+      let resolvedBackground: string | null = null;
+      let resolvedFormPosition: string = fetchedSettings.login_form_position;
+
+      // Handle random layout logic
       if (fetchedSettings.login_layout_random === 'true') {
+        // Pick a random position
+        const positions = ['left', 'center', 'right', 'top', 'bottom'];
+        resolvedFormPosition = positions[Math.floor(Math.random() * positions.length)];
+
+        // Pick a random background image from storage
         const { data: images, error: imageError } = await supabase.storage.from('login-backgrounds').list('', {
-          limit: 100,
+          limit: 100, // Adjust limit as needed
           offset: 0,
           sortBy: { column: 'name', order: 'asc' },
         });
@@ -49,13 +58,17 @@ const Login = () => {
         if (validImages.length > 0) {
           const randomIndex = Math.floor(Math.random() * validImages.length);
           const { data: publicUrlData } = supabase.storage.from('login-backgrounds').getPublicUrl(validImages[randomIndex].name);
-          setCurrentBackground(publicUrlData.publicUrl);
+          resolvedBackground = publicUrlData.publicUrl;
         } else {
-          setCurrentBackground(null); // No images to pick from
+          resolvedBackground = null; // No images to pick from
         }
       } else {
-        setCurrentBackground(fetchedSettings.login_background_url);
+        // Use configured background and position
+        resolvedBackground = fetchedSettings.login_background_url;
       }
+
+      setCurrentBackground(resolvedBackground);
+      setCurrentFormPosition(resolvedFormPosition);
 
     } catch (error: any) {
       console.error('Error fetching login settings:', error.message);
@@ -67,6 +80,7 @@ const Login = () => {
         login_background_effect: 'false',
       });
       setCurrentBackground(null);
+      setCurrentFormPosition('center');
     } finally {
       setLoadingSettings(false);
     }
@@ -89,20 +103,15 @@ const Login = () => {
     }
   };
 
+  // Dynamic classes for the main container
   const loginContainerClasses = cn(
-    "min-h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-900 p-4 relative overflow-hidden",
+    "min-h-screen flex flex-col p-4 relative overflow-hidden bg-gray-50 dark:bg-gray-900",
     {
-      'justify-start pt-20': loginSettings.login_form_position === 'top', // Example for top, adjust as needed
-      'justify-end pb-20': loginSettings.login_form_position === 'bottom', // Example for bottom, adjust as needed
-    }
-  );
-
-  const loginFormWrapperClasses = cn(
-    "w-full max-w-md bg-white dark:bg-gray-800 p-8 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 z-10",
-    {
-      'self-start ml-20': loginSettings.login_form_position === 'left',
-      'self-center': loginSettings.login_form_position === 'center',
-      'self-end mr-20': loginSettings.login_form_position === 'right',
+      'items-center justify-center': currentFormPosition === 'center',
+      'items-start justify-center': currentFormPosition === 'left',
+      'items-end justify-center': currentFormPosition === 'right',
+      'items-center justify-start pt-20': currentFormPosition === 'top', // Add padding for visual offset
+      'items-center justify-end pb-20': currentFormPosition === 'bottom', // Add padding for visual offset
     }
   );
 
@@ -113,7 +122,7 @@ const Login = () => {
   const backgroundOverlayClasses = cn(
     "absolute inset-0 bg-cover bg-center transition-all duration-500",
     {
-      'filter blur-sm brightness-75': loginSettings.login_background_effect === 'true',
+      'filter blur-sm brightness-75': loginSettings.login_background_effect === 'true', // Apply blur and brightness
     }
   );
 
@@ -134,7 +143,7 @@ const Login = () => {
         ></div>
       )}
 
-      <div className={loginFormWrapperClasses}>
+      <div className="w-full max-w-md bg-white dark:bg-gray-800 p-8 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 z-10">
         <h2 className="text-2xl font-bold text-center text-gray-800 dark:text-white mb-2">ARTa - BKAD</h2>
         <p className="text-sm text-center text-gray-600 dark:text-gray-400 mb-1">(Aplikasi Registrasi Tagihan)</p>
         <p className="text-sm text-center text-gray-600 dark:text-gray-400 mb-6">Pemerintah Daerah Kabupaten Gorontalo</p>
