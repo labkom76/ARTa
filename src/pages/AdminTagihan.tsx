@@ -3,7 +3,7 @@ import { useSession } from '@/contexts/SessionContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { EyeIcon, SearchIcon } from 'lucide-react';
+import { EyeIcon, SearchIcon, EditIcon, Trash2Icon } from 'lucide-react'; // Import EditIcon and Trash2Icon
 import { toast } from 'sonner';
 import { format, parseISO, startOfDay, endOfDay } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
@@ -28,7 +28,9 @@ import {
   PaginationPrevious,
 } from '@/components/ui/pagination';
 import { Label } from '@/components/ui/label';
-import TagihanDetailDialog from '@/components/TagihanDetailDialog'; // Import TagihanDetailDialog
+import TagihanDetailDialog from '@/components/TagihanDetailDialog';
+import EditTagihanDialog from '@/components/EditTagihanDialog'; // Import EditTagihanDialog
+import DeleteConfirmationDialog from '@/components/DeleteConfirmationDialog'; // Import DeleteConfirmationDialog
 
 interface VerificationItem {
   item: string;
@@ -81,6 +83,14 @@ const AdminTagihan = () => {
   // Detail Dialog states
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [selectedTagihanForDetail, setSelectedTagihanForDetail] = useState<Tagihan | null>(null);
+
+  // Edit Dialog states
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingTagihan, setEditingTagihan] = useState<Tagihan | null>(null);
+
+  // Delete Dialog states
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [tagihanToDelete, setTagihanToDelete] = useState<{ id: string; nomorSpm: string } | null>(null);
 
   useEffect(() => {
     if (!sessionLoading) {
@@ -184,6 +194,45 @@ const AdminTagihan = () => {
   const handleDetailClick = (tagihan: Tagihan) => {
     setSelectedTagihanForDetail(tagihan);
     setIsDetailModalOpen(true);
+  };
+
+  const handleEditClick = (tagihan: Tagihan) => {
+    setEditingTagihan(tagihan);
+    setIsEditModalOpen(true);
+  };
+
+  const handleCloseEditModal = () => {
+    setIsEditModalOpen(false);
+    setEditingTagihan(null);
+  };
+
+  const handleDeleteClick = (tagihan: Tagihan) => {
+    setTagihanToDelete({ id: tagihan.id_tagihan, nomorSpm: tagihan.nomor_spm });
+    setIsDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!tagihanToDelete) {
+      toast.error('Tidak ada tagihan yang dipilih untuk dihapus.');
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('database_tagihan')
+        .delete()
+        .eq('id_tagihan', tagihanToDelete.id);
+
+      if (error) throw error;
+
+      toast.success(`Tagihan dengan Nomor SPM: ${tagihanToDelete.nomorSpm} berhasil dihapus.`);
+      setIsDeleteDialogOpen(false);
+      setTagihanToDelete(null);
+      fetchTagihan(); // Refresh the list
+    } catch (error: any) {
+      console.error('Error deleting tagihan:', error.message);
+      toast.error('Gagal menghapus tagihan: ' + error.message);
+    }
   };
 
   const totalPages = itemsPerPage === -1 ? 1 : Math.ceil(totalItems / itemsPerPage);
@@ -332,9 +381,17 @@ const AdminTagihan = () => {
                       <TableCell>{tagihan.status_tagihan}</TableCell>
                       <TableCell>{tagihan.nama_verifikator || tagihan.nama_registrator || tagihan.id_korektor ? (tagihan.nama_verifikator || tagihan.nama_registrator || 'Staf Koreksi') : '-'}</TableCell>
                       <TableCell className="text-center">
-                        <Button variant="outline" size="icon" title="Lihat Detail" onClick={() => handleDetailClick(tagihan)}>
-                          <EyeIcon className="h-4 w-4" />
-                        </Button>
+                        <div className="flex justify-center space-x-2">
+                          <Button variant="outline" size="icon" title="Lihat Detail" onClick={() => handleDetailClick(tagihan)}>
+                            <EyeIcon className="h-4 w-4" />
+                          </Button>
+                          <Button variant="outline" size="icon" title="Edit Tagihan" onClick={() => handleEditClick(tagihan)}>
+                            <EditIcon className="h-4 w-4" />
+                          </Button>
+                          <Button variant="destructive" size="icon" title="Hapus Tagihan" onClick={() => handleDeleteClick(tagihan)}>
+                            <Trash2Icon className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))
@@ -383,6 +440,21 @@ const AdminTagihan = () => {
         isOpen={isDetailModalOpen}
         onClose={() => setIsDetailModalOpen(false)}
         tagihan={selectedTagihanForDetail}
+      />
+
+      <EditTagihanDialog
+        isOpen={isEditModalOpen}
+        onClose={handleCloseEditModal}
+        onTagihanUpdated={fetchTagihan}
+        editingTagihan={editingTagihan}
+      />
+
+      <DeleteConfirmationDialog
+        isOpen={isDeleteDialogOpen}
+        onClose={() => setIsDeleteDialogOpen(false)}
+        onConfirm={confirmDelete}
+        title="Konfirmasi Penghapusan Tagihan"
+        message={`Apakah Anda yakin ingin menghapus tagihan dengan Nomor SPM: ${tagihanToDelete?.nomorSpm || ''}? Tindakan ini tidak dapat diurungkan.`}
       />
     </div>
   );
