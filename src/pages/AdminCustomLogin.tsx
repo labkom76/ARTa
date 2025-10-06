@@ -30,7 +30,9 @@ const AdminCustomLogin = () => {
   const [randomLayout, setRandomLayout] = useState(false);
   const [formPosition, setFormPosition] = useState('center');
   const [backgroundEffect, setBackgroundEffect] = useState(false);
-  const [enableSlider, setEnableSlider] = useState(false); // New state for slider
+  const [enableSlider, setEnableSlider] = useState(false);
+  const [backgroundBlur, setBackgroundBlur] = useState(false); // New state for background blur
+  const [showHelpLinks, setShowHelpLinks] = useState(true); // New state for help links
   const [backgroundImages, setBackgroundImages] = useState<{ name: string; url: string }[]>([]);
   const [loadingImages, setLoadingImages] = useState(true);
   const [selectedBackgroundUrl, setSelectedBackgroundUrl] = useState<string | null>(null);
@@ -63,7 +65,9 @@ const AdminCustomLogin = () => {
       setRandomLayout(settingsMap.get('login_layout_random') === 'true');
       setFormPosition(settingsMap.get('login_form_position') || 'center');
       setBackgroundEffect(settingsMap.get('login_background_effect') === 'true');
-      setEnableSlider(settingsMap.get('login_background_slider') === 'true'); // Fetch new setting
+      setEnableSlider(settingsMap.get('login_background_slider') === 'true');
+      setBackgroundBlur(settingsMap.get('login_background_blur') === 'true'); // Fetch new setting
+      setShowHelpLinks(settingsMap.get('login_show_help_links') === 'true'); // Fetch new setting
       setSelectedBackgroundUrl(settingsMap.get('login_background_url') || null);
     } catch (error: any) {
       console.error('Error fetching settings:', error.message);
@@ -250,16 +254,51 @@ const AdminCustomLogin = () => {
             <CardHeader>
               <CardTitle className="text-xl font-semibold">Efek Latar Belakang</CardTitle>
             </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="background-effect">Aktifkan Efek Latar</Label>
+                <Switch
+                  id="background-effect"
+                  checked={backgroundEffect}
+                  onCheckedChange={(checked) => {
+                    setBackgroundEffect(checked);
+                    updateSetting('login_background_effect', String(checked));
+                  }}
+                  aria-label="Toggle background effect"
+                  className="data-[state=checked]:bg-green-500"
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="background-blur">Aktifkan Efek Blur Latar</Label>
+                <Switch
+                  id="background-blur"
+                  checked={backgroundBlur}
+                  onCheckedChange={(checked) => {
+                    setBackgroundBlur(checked);
+                    updateSetting('login_background_blur', String(checked));
+                  }}
+                  aria-label="Toggle background blur effect"
+                  className="data-[state=checked]:bg-green-500"
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Pengaturan Tampilan Form Card (New Card) */}
+          <Card className="shadow-sm rounded-lg">
+            <CardHeader>
+              <CardTitle className="text-xl font-semibold">Pengaturan Tampilan Form</CardTitle>
+            </CardHeader>
             <CardContent className="flex items-center justify-between">
-              <Label htmlFor="background-effect">Aktifkan Efek Latar</Label>
+              <Label htmlFor="show-help-links">Tampilkan Opsi Bantuan Akun</Label>
               <Switch
-                id="background-effect"
-                checked={backgroundEffect}
+                id="show-help-links"
+                checked={showHelpLinks}
                 onCheckedChange={(checked) => {
-                  setBackgroundEffect(checked);
-                  updateSetting('login_background_effect', String(checked));
+                  setShowHelpLinks(checked);
+                  updateSetting('login_show_help_links', String(checked));
                 }}
-                aria-label="Toggle background effect"
+                aria-label="Toggle account help links"
                 className="data-[state=checked]:bg-green-500"
               />
             </CardContent>

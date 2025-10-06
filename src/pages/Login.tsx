@@ -13,7 +13,9 @@ const Login = () => {
     login_form_position: 'center',
     login_layout_random: 'false',
     login_background_effect: 'false',
-    login_background_slider: 'false', // New setting
+    login_background_slider: 'false',
+    login_background_blur: 'false', // New setting
+    login_show_help_links: 'true', // New setting
   });
   const [loadingSettings, setLoadingSettings] = useState(true);
   const [currentBackground, setCurrentBackground] = useState<string | null>(null); // Stores the actual background URL to use
@@ -38,7 +40,9 @@ const Login = () => {
         login_form_position: settingsMap.get('login_form_position') || 'center',
         login_layout_random: settingsMap.get('login_layout_random') || 'false',
         login_background_effect: settingsMap.get('login_background_effect') || 'false',
-        login_background_slider: settingsMap.get('login_background_slider') || 'false', // Get new setting
+        login_background_slider: settingsMap.get('login_background_slider') || 'false',
+        login_background_blur: settingsMap.get('login_background_blur') || 'false', // Get new setting
+        login_show_help_links: settingsMap.get('login_show_help_links') || 'true', // Get new setting
       };
       setLoginSettings(fetchedSettings);
       console.log('Fetched settings:', fetchedSettings);
@@ -117,6 +121,8 @@ const Login = () => {
         login_layout_random: 'false',
         login_background_effect: 'false',
         login_background_slider: 'false',
+        login_background_blur: 'false',
+        login_show_help_links: 'true',
       });
       setCurrentBackground(null);
       setCurrentFormPosition('center');
@@ -193,9 +199,13 @@ const Login = () => {
     }
   );
 
-  const backgroundStyle = currentBackground
-    ? { backgroundImage: `url(${currentBackground})`, opacity: backgroundOpacity }
-    : { opacity: backgroundOpacity }; // Apply opacity even if no background image
+  const backgroundStyle: React.CSSProperties = currentBackground
+    ? {
+        backgroundImage: `url(${currentBackground})`,
+        opacity: backgroundOpacity,
+        filter: loginSettings.login_background_blur === 'true' ? 'blur(8px)' : 'none',
+      }
+    : { opacity: backgroundOpacity, filter: loginSettings.login_background_blur === 'true' ? 'blur(8px)' : 'none' };
 
   const backgroundOverlayClasses = cn(
     "absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ease-in-out", // Added transition for fade effect
@@ -260,7 +270,7 @@ const Login = () => {
                 password_input_placeholder: 'Masukkan password',
                 button_label: 'Login',
                 social_auth_button_text: 'Login dengan {{provider}}',
-                link_text: 'Sudah punya akun? Login',
+                link_text: loginSettings.login_show_help_links === 'true' ? 'Sudah punya akun? Login' : '',
               },
               sign_up: {
                 email_label: 'Email Anda',
@@ -269,14 +279,14 @@ const Login = () => {
                 password_input_placeholder: 'Buat password',
                 button_label: 'Daftar',
                 social_auth_button_text: 'Daftar dengan {{provider}}',
-                link_text: 'Belum punya akun? Daftar',
+                link_text: loginSettings.login_show_help_links === 'true' ? 'Belum punya akun? Daftar' : '',
               },
               forgotten_password: {
                 email_label: 'Email Anda',
                 password_label: 'Password Baru',
                 email_input_placeholder: 'Masukkan email Anda',
                 button_label: 'Kirim instruksi reset password',
-                link_text: 'Lupa password?',
+                link_text: loginSettings.login_show_help_links === 'true' ? 'Lupa password?' : '',
               },
               update_password: {
                 password_label: 'Password Baru',
