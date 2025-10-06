@@ -14,8 +14,9 @@ const Login = () => {
     login_layout_random: 'false',
     login_background_effect: 'false',
     login_background_slider: 'false',
-    login_background_blur: 'false', // New setting
-    login_show_help_links: 'true', // New setting
+    login_background_blur: 'false',
+    login_show_forgot_password: 'true', // New setting
+    login_show_signup: 'true', // New setting
   });
   const [loadingSettings, setLoadingSettings] = useState(true);
   const [currentBackground, setCurrentBackground] = useState<string | null>(null); // Stores the actual background URL to use
@@ -41,8 +42,9 @@ const Login = () => {
         login_layout_random: settingsMap.get('login_layout_random') || 'false',
         login_background_effect: settingsMap.get('login_background_effect') || 'false',
         login_background_slider: settingsMap.get('login_background_slider') || 'false',
-        login_background_blur: settingsMap.get('login_background_blur') || 'false', // Get new setting
-        login_show_help_links: settingsMap.get('login_show_help_links') || 'true', // Get new setting
+        login_background_blur: settingsMap.get('login_background_blur') || 'false',
+        login_show_forgot_password: settingsMap.get('login_show_forgot_password') || 'true', // Get new setting
+        login_show_signup: settingsMap.get('login_show_signup') || 'true', // Get new setting
       };
       setLoginSettings(fetchedSettings);
       console.log('Fetched settings:', fetchedSettings);
@@ -122,7 +124,8 @@ const Login = () => {
         login_background_effect: 'false',
         login_background_slider: 'false',
         login_background_blur: 'false',
-        login_show_help_links: 'true',
+        login_show_forgot_password: 'true',
+        login_show_signup: 'true',
       });
       setCurrentBackground(null);
       setCurrentFormPosition('center');
@@ -270,7 +273,7 @@ const Login = () => {
                 password_input_placeholder: 'Masukkan password',
                 button_label: 'Login',
                 social_auth_button_text: 'Login dengan {{provider}}',
-                link_text: loginSettings.login_show_help_links === 'true' ? 'Sudah punya akun? Login' : '',
+                link_text: loginSettings.login_show_signup === 'true' ? 'Belum punya akun? Daftar' : '',
               },
               sign_up: {
                 email_label: 'Email Anda',
@@ -279,14 +282,14 @@ const Login = () => {
                 password_input_placeholder: 'Buat password',
                 button_label: 'Daftar',
                 social_auth_button_text: 'Daftar dengan {{provider}}',
-                link_text: loginSettings.login_show_help_links === 'true' ? 'Belum punya akun? Daftar' : '',
+                link_text: loginSettings.login_show_signup === 'true' ? 'Sudah punya akun? Login' : '',
               },
               forgotten_password: {
                 email_label: 'Email Anda',
                 password_label: 'Password Baru',
                 email_input_placeholder: 'Masukkan email Anda',
                 button_label: 'Kirim instruksi reset password',
-                link_text: loginSettings.login_show_help_links === 'true' ? 'Lupa password?' : '',
+                link_text: loginSettings.login_show_forgot_password === 'true' ? 'Lupa password?' : '',
               },
               update_password: {
                 password_label: 'Password Baru',

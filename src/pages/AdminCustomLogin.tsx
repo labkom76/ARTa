@@ -31,8 +31,9 @@ const AdminCustomLogin = () => {
   const [formPosition, setFormPosition] = useState('center');
   const [backgroundEffect, setBackgroundEffect] = useState(false);
   const [enableSlider, setEnableSlider] = useState(false);
-  const [backgroundBlur, setBackgroundBlur] = useState(false); // New state for background blur
-  const [showHelpLinks, setShowHelpLinks] = useState(true); // New state for help links
+  const [backgroundBlur, setBackgroundBlur] = useState(false);
+  const [showForgotPasswordLink, setShowForgotPasswordLink] = useState(true); // New state
+  const [showSignupLink, setShowSignupLink] = useState(true); // New state
   const [backgroundImages, setBackgroundImages] = useState<{ name: string; url: string }[]>([]);
   const [loadingImages, setLoadingImages] = useState(true);
   const [selectedBackgroundUrl, setSelectedBackgroundUrl] = useState<string | null>(null);
@@ -66,8 +67,9 @@ const AdminCustomLogin = () => {
       setFormPosition(settingsMap.get('login_form_position') || 'center');
       setBackgroundEffect(settingsMap.get('login_background_effect') === 'true');
       setEnableSlider(settingsMap.get('login_background_slider') === 'true');
-      setBackgroundBlur(settingsMap.get('login_background_blur') === 'true'); // Fetch new setting
-      setShowHelpLinks(settingsMap.get('login_show_help_links') === 'true'); // Fetch new setting
+      setBackgroundBlur(settingsMap.get('login_background_blur') === 'true');
+      setShowForgotPasswordLink(settingsMap.get('login_show_forgot_password') === 'true'); // Fetch new setting
+      setShowSignupLink(settingsMap.get('login_show_signup') === 'true'); // Fetch new setting
       setSelectedBackgroundUrl(settingsMap.get('login_background_url') || null);
     } catch (error: any) {
       console.error('Error fetching settings:', error.message);
@@ -284,23 +286,38 @@ const AdminCustomLogin = () => {
             </CardContent>
           </Card>
 
-          {/* Pengaturan Tampilan Form Card (New Card) */}
+          {/* Pengaturan Tampilan Form Card */}
           <Card className="shadow-sm rounded-lg">
             <CardHeader>
               <CardTitle className="text-xl font-semibold">Pengaturan Tampilan Form</CardTitle>
             </CardHeader>
-            <CardContent className="flex items-center justify-between">
-              <Label htmlFor="show-help-links">Tampilkan Opsi Bantuan Akun</Label>
-              <Switch
-                id="show-help-links"
-                checked={showHelpLinks}
-                onCheckedChange={(checked) => {
-                  setShowHelpLinks(checked);
-                  updateSetting('login_show_help_links', String(checked));
-                }}
-                aria-label="Toggle account help links"
-                className="data-[state=checked]:bg-green-500"
-              />
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="show-forgot-password-link">Tampilkan Tombol Lupa Password</Label>
+                <Switch
+                  id="show-forgot-password-link"
+                  checked={showForgotPasswordLink}
+                  onCheckedChange={(checked) => {
+                    setShowForgotPasswordLink(checked);
+                    updateSetting('login_show_forgot_password', String(checked));
+                  }}
+                  aria-label="Toggle forgot password link"
+                  className="data-[state=checked]:bg-green-500"
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="show-signup-link">Tampilkan Tombol Daftar Akun Baru</Label>
+                <Switch
+                  id="show-signup-link"
+                  checked={showSignupLink}
+                  onCheckedChange={(checked) => {
+                    setShowSignupLink(checked);
+                    updateSetting('login_show_signup', String(checked));
+                  }}
+                  aria-label="Toggle signup link"
+                  className="data-[state=checked]:bg-green-500"
+                />
+              </div>
             </CardContent>
           </Card>
         </div>
