@@ -252,14 +252,14 @@ const Login = () => {
         ></div>
       )}
 
-      {/* Main App Name/Logo (outside form) */}
-      <div className="text-center mb-8 z-10">
+      {/* Branding Section - Moved outside the form container */}
+      <div className="text-center mb-8 z-10 flex items-center justify-center gap-4"> {/* Added flex, items-center, justify-center, gap-4 */}
         {appLogoUrl && (
-          <div className="flex justify-center mb-4">
-            <img src={appLogoUrl} alt="App Logo" className="max-h-24 object-contain" />
+          <div className="flex-shrink-0"> {/* Added flex-shrink-0 to prevent logo from shrinking */}
+            <img src={appLogoUrl} alt="App Logo" className="h-16 object-contain" /> {/* Adjusted height */}
           </div>
         )}
-        <h2 className="text-4xl font-bold text-gray-800 dark:text-white mb-2">{appName}</h2>
+        <h2 className="text-4xl font-bold text-gray-800 dark:text-white">{appName}</h2> {/* Removed mb-2 */}
       </div>
 
       <div className={formContainerClasses}>
