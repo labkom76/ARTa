@@ -252,16 +252,19 @@ const Login = () => {
         ></div>
       )}
 
-      <div className={formContainerClasses}>
+      {/* Branding Section - Moved outside the form container */}
+      <div className="text-center mb-8 z-10">
         {appLogoUrl && (
           <div className="flex justify-center mb-4">
-            <img src={appLogoUrl} alt="App Logo" className="max-h-20 object-contain" />
+            <img src={appLogoUrl} alt="App Logo" className="max-h-24 object-contain" />
           </div>
         )}
-        <h2 className="text-2xl font-bold text-center text-gray-800 dark:text-white mb-2">{appName}</h2>
-        <p className="text-sm text-center text-gray-600 dark:text-gray-400 mb-1">(Aplikasi Registrasi Tagihan)</p>
-        <p className="text-sm text-center text-gray-600 dark:text-gray-400 mb-6">Pemerintah Daerah Kabupaten Gorontalo</p>
-        
+        <h2 className="text-4xl font-bold text-gray-800 dark:text-white mb-2">{appName}</h2>
+        <p className="text-lg text-gray-600 dark:text-gray-400 mb-1">(Aplikasi Registrasi Tagihan)</p>
+        <p className="text-md text-gray-600 dark:text-gray-400">Pemerintah Daerah Kabupaten Gorontalo</p>
+      </div>
+
+      <div className={formContainerClasses}>
         {loginSettings.login_show_email_password === 'true' && (
           <Auth
             supabaseClient={supabase}
