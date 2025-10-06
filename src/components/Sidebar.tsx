@@ -128,13 +128,22 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onLinkClick }) => {
       isCollapsed ? "w-16" : "w-64"
     )}>
       <div className="flex items-center justify-center h-16 border-b border-sidebar-border dark:border-sidebar-border">
-        {appLogoUrl && !isCollapsed ? (
-          <img src={appLogoUrl} alt="App Logo" className="h-10 object-contain" />
+        {!isCollapsed ? (
+          <div className="flex items-center gap-2"> {/* Container for logo and name when open */}
+            {appLogoUrl && (
+              <img src={appLogoUrl} alt="App Logo" className="h-10 object-contain" />
+            )}
+            <span className="font-bold text-xl text-sidebar-primary dark:text-sidebar-primary-foreground">{appName}</span>
+          </div>
         ) : (
-          <span className={cn("font-bold text-xl text-sidebar-primary dark:text-sidebar-primary-foreground", isCollapsed && "hidden")}>{appName}</span>
+          <> {/* Fragment for collapsed state */}
+            {appLogoUrl ? (
+              <img src={appLogoUrl} alt="App Logo" className="h-8 w-8 object-contain" />
+            ) : (
+              <HomeIcon className="h-6 w-6 text-sidebar-primary dark:text-sidebar-primary-foreground" />
+            )}
+          </>
         )}
-        {isCollapsed && !appLogoUrl && <HomeIcon className="h-6 w-6 text-sidebar-primary dark:text-sidebar-primary-foreground" />}
-        {isCollapsed && appLogoUrl && <img src={appLogoUrl} alt="App Logo" className="h-8 w-8 object-contain" />}
       </div>
       <nav className="flex-1 p-2 space-y-1">
         {navItems.map((item, index) => {
