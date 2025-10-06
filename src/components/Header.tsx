@@ -37,7 +37,7 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
         <Button variant="ghost" size="icon" onClick={toggleSidebar} className="lg:hidden mr-2">
           <MenuIcon className="h-5 w-5 text-gray-600 dark:text-gray-300" />
         </Button>
-        <h1 className="text-xl font-semibold text-gray-800 dark:text-white">Aplikasi Manajemen</h1>
+        {/* <h1 className="text-xl font-semibold text-gray-800 dark:text-white">Aplikasi Manajemen</h1> */}
       </div>
       <div className="flex items-center space-x-4">
         {user && (
