@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { UploadIcon, Trash2Icon } from 'lucide-react';
+import { UploadIcon, Trash2Icon, ImageOffIcon } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
@@ -34,49 +34,25 @@ const AdminCustomLogin = () => {
   const [backgroundBlur, setBackgroundBlur] = useState(false);
   const [showForgotPasswordLink, setShowForgotPasswordLink] = useState(true);
   const [showSignupLink, setShowSignupLink] = useState(true);
-  const [showEmailPasswordLogin, setShowEmailPasswordLogin] = useState(true); // New state for email/password login
+  const [showEmailPasswordLogin, setShowEmailPasswordLogin] = useState(true);
   const [backgroundImages, setBackgroundImages] = useState<{ name: string; url: string }[]>([]);
   const [loadingImages, setLoadingImages] = useState(true);
   const [selectedBackgroundUrl, setSelectedBackgroundUrl] = useState<string | null>(null);
 
-  // Generic function to update a setting in app_settings table
-  const updateSetting = useCallback(async (key: string, value: string) => {
-    try {
-      const { error } = await supabase
-        .from('app_settings')
-        .upsert({ key, value }, { onConflict: 'key' });
+  // New states for branding (no functionality yet)
+  const [appName, setAppName] = useState('Aplikasi Tagihan'); // Placeholder state
+  const [appLogoUrl, setAppLogoUrl] = useState<string | null>(null); // Placeholder state
 
-      if (error) throw error;
-      toast.success('Pengaturan disimpan!');
-    } catch (error: any) {
-      console.error(`Error saving setting ${key}:`, error.message);
-      toast.error('Gagal menyimpan pengaturan: ' + error.message);
-    }
+  // Generic function to update a setting in app_settings table (will be used later)
+  const updateSetting = useCallback(async (key: string, value: string) => {
+    // Placeholder for future functionality
+    console.log(`Attempting to update setting: ${key} with value: ${value}`);
+    toast.info(`(Placeholder) Pengaturan ${key} akan disimpan: ${value}`);
   }, []);
 
   const fetchSettings = useCallback(async () => {
-    try {
-      const { data, error } = await supabase
-        .from('app_settings')
-        .select('key, value');
-
-      if (error) throw error;
-
-      const settingsMap = new Map(data.map(item => [item.key, item.value]));
-
-      setRandomLayout(settingsMap.get('login_layout_random') === 'true');
-      setFormPosition(settingsMap.get('login_form_position') || 'center');
-      setBackgroundEffect(settingsMap.get('login_background_effect') === 'true');
-      setEnableSlider(settingsMap.get('login_background_slider') === 'true');
-      setBackgroundBlur(settingsMap.get('login_background_blur') === 'true');
-      setShowForgotPasswordLink(settingsMap.get('login_show_forgot_password') === 'true');
-      setShowSignupLink(settingsMap.get('login_show_signup') === 'true');
-      setShowEmailPasswordLogin(settingsMap.get('login_show_email_password') === 'true'); // Fetch new setting
-      setSelectedBackgroundUrl(settingsMap.get('login_background_url') || null);
-    } catch (error: any) {
-      console.error('Error fetching settings:', error.message);
-      toast.error('Gagal memuat pengaturan login: ' + error.message);
-    }
+    // Placeholder for future functionality
+    console.log('Fetching settings (placeholder)');
   }, []);
 
   const fetchBackgroundImages = useCallback(async () => {
@@ -109,75 +85,45 @@ const AdminCustomLogin = () => {
   }, []);
 
   useEffect(() => {
-    fetchSettings();
+    fetchSettings(); // Placeholder call
     fetchBackgroundImages();
   }, [fetchSettings, fetchBackgroundImages]);
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (!event.target.files || event.target.files.length === 0) {
-      toast.error('Pilih file untuk diunggah.');
-      return;
-    }
-
-    const file = event.target.files[0];
-    const sanitizedOriginalFileName = sanitizeFileName(file.name);
-    const fileName = `${Date.now()}-${sanitizedOriginalFileName}`;
-
-    try {
-      const { error } = await supabase.storage
-        .from('login-backgrounds')
-        .upload(fileName, file, {
-          cacheControl: '3600',
-          upsert: false,
-        });
-
-      if (error) throw error;
-
-      toast.success('Gambar berhasil diunggah!');
-      fetchBackgroundImages();
-    } catch (error: any) {
-      console.error('Error uploading image:', error.message);
-      toast.error('Gagal mengunggah gambar: ' + error.message);
-    }
+    // Placeholder for future functionality
+    toast.info('(Placeholder) File akan diunggah.');
   };
 
   const handleDeleteImage = async (imageName: string) => {
-    if (!window.confirm('Apakah Anda yakin ingin menghapus gambar ini?')) {
-      return;
-    }
-
-    try {
-      const { error } = await supabase.storage
-        .from('login-backgrounds')
-        .remove([imageName]);
-
-      if (error) throw error;
-
-      // If the deleted image was the currently selected background, clear it
-      const { data: publicUrlData } = supabase.storage.from('login-backgrounds').getPublicUrl(imageName);
-      if (selectedBackgroundUrl === publicUrlData.publicUrl) {
-        await updateSetting('login_background_url', ''); // Use updateSetting for consistency
-        setSelectedBackgroundUrl(null);
-      }
-
-      toast.success('Gambar berhasil dihapus!');
-      fetchBackgroundImages();
-    } catch (error: any) {
-      console.error('Error deleting image:', error.message);
-      toast.error('Gagal menghapus gambar: ' + error.message);
-    }
+    // Placeholder for future functionality
+    toast.info(`(Placeholder) Gambar ${imageName} akan dihapus.`);
   };
 
   const handleSelectImage = async (imageUrl: string) => {
-    try {
-      await updateSetting('login_background_url', imageUrl); // Use updateSetting
-      setSelectedBackgroundUrl(imageUrl);
-      toast.success('Gambar latar belakang login berhasil diperbarui!');
-    } catch (error: any) {
-      console.error('Error setting background image:', error.message);
-      toast.error('Gagal mengatur gambar latar belakang: ' + error.message);
+    // Placeholder for future functionality
+    toast.info(`(Placeholder) Gambar ${imageUrl} akan dipilih.`);
+  };
+
+  // Placeholder handlers for branding (no functionality yet)
+  const handleAppNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setAppName(e.target.value);
+    toast.info(`(Placeholder) Nama aplikasi akan diubah menjadi: ${e.target.value}`);
+  };
+
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const file = e.target.files[0];
+      toast.info(`(Placeholder) Logo ${file.name} akan diunggah.`);
+      // For visual feedback only, not actual upload
+      setAppLogoUrl(URL.createObjectURL(file)); 
     }
   };
+
+  const handleRemoveLogo = () => {
+    toast.info('(Placeholder) Logo akan dihapus.');
+    setAppLogoUrl(null);
+  };
+
 
   if (sessionLoading) {
     return (
@@ -207,6 +153,53 @@ const AdminCustomLogin = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column */}
         <div className="lg:col-span-1 space-y-6">
+          {/* Pengaturan Branding Card (New Card) */}
+          <Card className="shadow-sm rounded-lg">
+            <CardHeader>
+              <CardTitle className="text-xl font-semibold">Pengaturan Branding</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-2">
+                <Label htmlFor="app-name">Nama Aplikasi</Label>
+                <Input
+                  id="app-name"
+                  value={appName}
+                  onChange={handleAppNameChange}
+                  placeholder="Masukkan nama aplikasi"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label>Logo Aplikasi</Label>
+                <div className="flex items-center space-x-2">
+                  <Input
+                    id="logo-upload"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleLogoUpload}
+                    className="hidden"
+                  />
+                  <Button variant="outline" className="flex-1 flex items-center gap-2" onClick={() => document.getElementById('logo-upload')?.click()}>
+                    <UploadIcon className="h-4 w-4" /> Unggah Logo Baru
+                  </Button>
+                  {appLogoUrl && (
+                    <Button variant="destructive" size="icon" onClick={handleRemoveLogo} title="Hapus Logo">
+                      <Trash2Icon className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+                {appLogoUrl ? (
+                  <div className="mt-2 flex justify-center items-center border rounded-md p-2 h-24">
+                    <img src={appLogoUrl} alt="App Logo" className="max-h-full max-w-full object-contain" />
+                  </div>
+                ) : (
+                  <div className="mt-2 flex justify-center items-center border rounded-md p-2 h-24 text-muted-foreground">
+                    <ImageOffIcon className="h-8 w-8 mr-2" /> Tidak ada logo
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Pengaturan Tata Letak Card */}
           <Card className="shadow-sm rounded-lg">
             <CardHeader>
@@ -220,7 +213,7 @@ const AdminCustomLogin = () => {
                   checked={randomLayout}
                   onCheckedChange={(checked) => {
                     setRandomLayout(checked);
-                    updateSetting('login_layout_random', String(checked));
+                    // updateSetting('login_layout_random', String(checked)); // Placeholder
                   }}
                   aria-label="Toggle random layout"
                   className="data-[state=checked]:bg-green-500"
@@ -232,7 +225,7 @@ const AdminCustomLogin = () => {
                   value={formPosition}
                   onValueChange={(value) => {
                     setFormPosition(value);
-                    updateSetting('login_form_position', value);
+                    // updateSetting('login_form_position', value); // Placeholder
                   }}
                   className="flex flex-col space-y-1"
                 >
@@ -266,7 +259,7 @@ const AdminCustomLogin = () => {
                   checked={backgroundEffect}
                   onCheckedChange={(checked) => {
                     setBackgroundEffect(checked);
-                    updateSetting('login_background_effect', String(checked));
+                    // updateSetting('login_background_effect', String(checked)); // Placeholder
                   }}
                   aria-label="Toggle background effect"
                   className="data-[state=checked]:bg-green-500"
@@ -279,7 +272,7 @@ const AdminCustomLogin = () => {
                   checked={backgroundBlur}
                   onCheckedChange={(checked) => {
                     setBackgroundBlur(checked);
-                    updateSetting('login_background_blur', String(checked));
+                    // updateSetting('login_background_blur', String(checked)); // Placeholder
                   }}
                   aria-label="Toggle background blur effect"
                   className="data-[state=checked]:bg-green-500"
@@ -301,7 +294,7 @@ const AdminCustomLogin = () => {
                   checked={showForgotPasswordLink}
                   onCheckedChange={(checked) => {
                     setShowForgotPasswordLink(checked);
-                    updateSetting('login_show_forgot_password', String(checked));
+                    // updateSetting('login_show_forgot_password', String(checked)); // Placeholder
                   }}
                   aria-label="Toggle forgot password link"
                   className="data-[state=checked]:bg-green-500"
@@ -314,7 +307,7 @@ const AdminCustomLogin = () => {
                   checked={showSignupLink}
                   onCheckedChange={(checked) => {
                     setShowSignupLink(checked);
-                    updateSetting('login_show_signup', String(checked));
+                    // updateSetting('login_show_signup', String(checked)); // Placeholder
                   }}
                   aria-label="Toggle signup link"
                   className="data-[state=checked]:bg-green-500"
@@ -327,7 +320,7 @@ const AdminCustomLogin = () => {
                   checked={showEmailPasswordLogin}
                   onCheckedChange={(checked) => {
                     setShowEmailPasswordLogin(checked);
-                    updateSetting('login_show_email_password', String(checked));
+                    // updateSetting('login_show_email_password', String(checked)); // Placeholder
                   }}
                   aria-label="Toggle email/password login form"
                   className="data-[state=checked]:bg-green-500"
@@ -351,7 +344,7 @@ const AdminCustomLogin = () => {
                     checked={enableSlider}
                     onCheckedChange={(checked) => {
                       setEnableSlider(checked);
-                      updateSetting('login_background_slider', String(checked));
+                      // updateSetting('login_background_slider', String(checked)); // Placeholder
                     }}
                     aria-label="Toggle background image slider"
                     className="data-[state=checked]:bg-green-500"
