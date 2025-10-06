@@ -127,16 +127,19 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onLinkClick }) => {
       "fixed inset-y-0 left-0 z-50 flex flex-col h-full bg-sidebar dark:bg-sidebar-background border-r border-sidebar-border dark:border-sidebar-border transition-all duration-300",
       isCollapsed ? "w-16" : "w-64"
     )}>
-      <div className="flex items-center justify-start h-16 border-b border-sidebar-border dark:border-sidebar-border px-4"> {/* Changed justify-center to justify-start and added px-4 */}
+      <div className="flex items-center justify-start h-16 border-b border-sidebar-border dark:border-sidebar-border px-4">
         {!isCollapsed ? (
-          <div className="flex items-center gap-2"> {/* Container for logo and name when open */}
-            {appLogoUrl && (
+          <div className="flex items-center gap-2">
+            {appLogoUrl ? (
               <img src={appLogoUrl} alt="App Logo" className="h-10 object-contain" />
+            ) : (
+              // Placeholder to maintain spacing if no logo
+              <div className="h-10 w-10 flex-shrink-0"></div> 
             )}
             <span className="font-bold text-xl text-sidebar-primary dark:text-sidebar-primary-foreground">{appName}</span>
           </div>
         ) : (
-          <> {/* Fragment for collapsed state */}
+          <>
             {appLogoUrl ? (
               <img src={appLogoUrl} alt="App Logo" className="h-8 w-8 object-contain" />
             ) : (
@@ -149,29 +152,26 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onLinkClick }) => {
         {navItems.map((item, index) => {
           if ('type' in item && item.type === 'collapsible') {
             if (isCollapsed) {
-              // When collapsed, render as a simple link with just the icon
               return (
                 <Link
                   key={item.label}
-                  to={item.children[0].to} // Link to the first child item as a default action
+                  to={item.children[0].to}
                   onClick={onLinkClick}
                   className={cn(
                     "flex items-center justify-center gap-3 rounded-md px-3 py-2 text-sidebar-foreground dark:text-sidebar-foreground hover:bg-sidebar-accent dark:hover:bg-sidebar-accent hover:text-sidebar-accent-foreground dark:hover:text-sidebar-accent-foreground transition-colors duration-200",
                   )}
-                  title={item.label} // Add title for tooltip on collapsed icon
+                  title={item.label}
                 >
                   <item.icon className="h-5 w-5" />
                 </Link>
               );
             } else {
-              // When not collapsed, render as an Accordion
               return (
                 <Accordion key={item.label} type="single" collapsible className="w-full">
                   <AccordionItem value={`item-${index}`} className="border-b-0">
                     <AccordionTrigger className="flex items-center gap-3 rounded-md px-3 py-2 text-sidebar-foreground dark:text-sidebar-foreground hover:bg-sidebar-accent dark:hover:bg-sidebar-accent hover:text-sidebar-accent-foreground dark:hover:text-sidebar-accent-foreground transition-colors duration-200">
                       <item.icon className="h-5 w-5" />
                       <span className="text-sm flex-1 text-left">{item.label}</span>
-                      {/* Menghapus ChevronDownIcon yang duplikat di sini */}
                     </AccordionTrigger>
                     <AccordionContent className="pl-3">
                       <div className="space-y-1">
@@ -193,7 +193,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onLinkClick }) => {
               );
             }
           } else {
-            // Render simple link items
             return (
               <Link
                 key={item.to}
@@ -203,7 +202,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onLinkClick }) => {
                   "flex items-center gap-3 rounded-md px-3 py-2 text-sidebar-foreground dark:text-sidebar-foreground hover:bg-sidebar-accent dark:hover:bg-sidebar-accent hover:text-sidebar-accent-foreground dark:hover:text-sidebar-accent-foreground transition-colors duration-200",
                   isCollapsed && "justify-center"
                 )}
-                title={isCollapsed ? item.label : undefined} // Add title for tooltip on collapsed icon
+                title={isCollapsed ? item.label : undefined}
               >
                 <item.icon className="h-5 w-5" />
                 <span className={cn("text-sm", isCollapsed && "hidden")}>{item.label}</span>
