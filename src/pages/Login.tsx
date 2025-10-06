@@ -15,8 +15,9 @@ const Login = () => {
     login_background_effect: 'false',
     login_background_slider: 'false',
     login_background_blur: 'false',
-    login_show_forgot_password: 'true', // New setting
-    login_show_signup: 'true', // New setting
+    login_show_forgot_password: 'true',
+    login_show_signup: 'true',
+    login_show_email_password: 'true', // New setting
   });
   const [loadingSettings, setLoadingSettings] = useState(true);
   const [currentBackground, setCurrentBackground] = useState<string | null>(null); // Stores the actual background URL to use
@@ -43,8 +44,9 @@ const Login = () => {
         login_background_effect: settingsMap.get('login_background_effect') || 'false',
         login_background_slider: settingsMap.get('login_background_slider') || 'false',
         login_background_blur: settingsMap.get('login_background_blur') || 'false',
-        login_show_forgot_password: settingsMap.get('login_show_forgot_password') || 'true', // Get new setting
-        login_show_signup: settingsMap.get('login_show_signup') || 'true', // Get new setting
+        login_show_forgot_password: settingsMap.get('login_show_forgot_password') || 'true',
+        login_show_signup: settingsMap.get('login_show_signup') || 'true',
+        login_show_email_password: settingsMap.get('login_show_email_password') || 'true', // Get new setting
       };
       setLoginSettings(fetchedSettings);
       console.log('Fetched settings:', fetchedSettings);
@@ -126,6 +128,7 @@ const Login = () => {
         login_background_blur: 'false',
         login_show_forgot_password: 'true',
         login_show_signup: 'true',
+        login_show_email_password: 'true',
       });
       setCurrentBackground(null);
       setCurrentFormPosition('center');
@@ -243,65 +246,72 @@ const Login = () => {
         <h2 className="text-2xl font-bold text-center text-gray-800 dark:text-white mb-2">ARTa - BKAD</h2>
         <p className="text-sm text-center text-gray-600 dark:text-gray-400 mb-1">(Aplikasi Registrasi Tagihan)</p>
         <p className="text-sm text-center text-gray-600 dark:text-gray-400 mb-6">Pemerintah Daerah Kabupaten Gorontalo</p>
-        <Auth
-          supabaseClient={supabase}
-          providers={[]}
-          appearance={{
-            theme: ThemeSupa,
-            variables: {
-              default: {
-                colors: {
-                  brand: 'hsl(217.2 91.2% 59.8%)',
-                  brandAccent: 'hsl(217.2 91.2% 49.8%)',
-                  inputBackground: 'hsl(0 0% 100%)',
-                  inputBorder: 'hsl(214.3 31.8% 91.4%)',
-                  inputBorderHover: 'hsl(217.2 91.2% 59.8%)',
-                  inputBorderFocus: 'hsl(217.2 91.2% 59.8%)',
-                  inputText: 'hsl(222.2 84% 4.9%)',
+        
+        {loginSettings.login_show_email_password === 'true' && (
+          <Auth
+            supabaseClient={supabase}
+            providers={[]}
+            appearance={{
+              theme: ThemeSupa,
+              variables: {
+                default: {
+                  colors: {
+                    brand: 'hsl(217.2 91.2% 59.8%)',
+                    brandAccent: 'hsl(217.2 91.2% 49.8%)',
+                    inputBackground: 'hsl(0 0% 100%)',
+                    inputBorder: 'hsl(214.3 31.8% 91.4%)',
+                    inputBorderHover: 'hsl(217.2 91.2% 59.8%)',
+                    inputBorderFocus: 'hsl(217.2 91.2% 59.8%)',
+                    inputText: 'hsl(222.2 84% 4.9%)',
+                  },
                 },
               },
-            },
-          }}
-          theme="light"
-          redirectTo={window.location.origin}
-          localization={{
-            variables: {
-              sign_in: {
-                email_label: 'Email Anda',
-                password_label: 'Password Anda',
-                email_input_placeholder: 'Masukkan email',
-                password_input_placeholder: 'Masukkan password',
-                button_label: 'Login',
-                social_auth_button_text: 'Login dengan {{provider}}',
-                link_text: loginSettings.login_show_signup === 'true' ? 'Belum punya akun? Daftar' : '',
+            }}
+            theme="light"
+            redirectTo={window.location.origin}
+            localization={{
+              variables: {
+                sign_in: {
+                  email_label: 'Email Anda',
+                  password_label: 'Password Anda',
+                  email_input_placeholder: 'Masukkan email',
+                  password_input_placeholder: 'Masukkan password',
+                  button_label: 'Login',
+                  social_auth_button_text: 'Login dengan {{provider}}',
+                  link_text: loginSettings.login_show_signup === 'true' ? 'Belum punya akun? Daftar' : '',
+                },
+                sign_up: {
+                  email_label: 'Email Anda',
+                  password_label: 'Buat Password',
+                  email_input_placeholder: 'Masukkan email',
+                  password_input_placeholder: 'Buat password',
+                  button_label: 'Daftar',
+                  social_auth_button_text: 'Daftar dengan {{provider}}',
+                  link_text: loginSettings.login_show_signup === 'true' ? 'Sudah punya akun? Login' : '',
+                },
+                forgotten_password: {
+                  email_label: 'Email Anda',
+                  password_label: 'Password Baru',
+                  email_input_placeholder: 'Masukkan email Anda',
+                  button_label: 'Kirim instruksi reset password',
+                  link_text: loginSettings.login_show_forgot_password === 'true' ? 'Lupa password?' : '',
+                },
+                update_password: {
+                  password_label: 'Password Baru',
+                  password_input_placeholder: 'Masukkan password baru Anda',
+                  button_label: 'Perbarui password',
+                },
               },
-              sign_up: {
-                email_label: 'Email Anda',
-                password_label: 'Buat Password',
-                email_input_placeholder: 'Masukkan email',
-                password_input_placeholder: 'Buat password',
-                button_label: 'Daftar',
-                social_auth_button_text: 'Daftar dengan {{provider}}',
-                link_text: loginSettings.login_show_signup === 'true' ? 'Sudah punya akun? Login' : '',
-              },
-              forgotten_password: {
-                email_label: 'Email Anda',
-                password_label: 'Password Baru',
-                email_input_placeholder: 'Masukkan email Anda',
-                button_label: 'Kirim instruksi reset password',
-                link_text: loginSettings.login_show_forgot_password === 'true' ? 'Lupa password?' : '',
-              },
-              update_password: {
-                password_label: 'Password Baru',
-                password_input_placeholder: 'Masukkan password baru Anda',
-                button_label: 'Perbarui password',
-              },
-            },
-          }}
-        />
-        <div className="relative flex justify-center text-xs uppercase my-6">
-          <span className="bg-white dark:bg-gray-800 px-2 text-muted-foreground">Atau lanjutkan dengan</span>
-        </div>
+            }}
+          />
+        )}
+
+        {loginSettings.login_show_email_password === 'true' && (
+          <div className="relative flex justify-center text-xs uppercase my-6">
+            <span className="bg-white dark:bg-gray-800 px-2 text-muted-foreground">Atau lanjutkan dengan</span>
+          </div>
+        )}
+        
         <Button
           variant="outline"
           className="w-full flex items-center justify-center gap-2"

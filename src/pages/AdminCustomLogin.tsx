@@ -32,8 +32,9 @@ const AdminCustomLogin = () => {
   const [backgroundEffect, setBackgroundEffect] = useState(false);
   const [enableSlider, setEnableSlider] = useState(false);
   const [backgroundBlur, setBackgroundBlur] = useState(false);
-  const [showForgotPasswordLink, setShowForgotPasswordLink] = useState(true); // New state
-  const [showSignupLink, setShowSignupLink] = useState(true); // New state
+  const [showForgotPasswordLink, setShowForgotPasswordLink] = useState(true);
+  const [showSignupLink, setShowSignupLink] = useState(true);
+  const [showEmailPasswordLogin, setShowEmailPasswordLogin] = useState(true); // New state for email/password login
   const [backgroundImages, setBackgroundImages] = useState<{ name: string; url: string }[]>([]);
   const [loadingImages, setLoadingImages] = useState(true);
   const [selectedBackgroundUrl, setSelectedBackgroundUrl] = useState<string | null>(null);
@@ -68,8 +69,9 @@ const AdminCustomLogin = () => {
       setBackgroundEffect(settingsMap.get('login_background_effect') === 'true');
       setEnableSlider(settingsMap.get('login_background_slider') === 'true');
       setBackgroundBlur(settingsMap.get('login_background_blur') === 'true');
-      setShowForgotPasswordLink(settingsMap.get('login_show_forgot_password') === 'true'); // Fetch new setting
-      setShowSignupLink(settingsMap.get('login_show_signup') === 'true'); // Fetch new setting
+      setShowForgotPasswordLink(settingsMap.get('login_show_forgot_password') === 'true');
+      setShowSignupLink(settingsMap.get('login_show_signup') === 'true');
+      setShowEmailPasswordLogin(settingsMap.get('login_show_email_password') === 'true'); // Fetch new setting
       setSelectedBackgroundUrl(settingsMap.get('login_background_url') || null);
     } catch (error: any) {
       console.error('Error fetching settings:', error.message);
@@ -315,6 +317,19 @@ const AdminCustomLogin = () => {
                     updateSetting('login_show_signup', String(checked));
                   }}
                   aria-label="Toggle signup link"
+                  className="data-[state=checked]:bg-green-500"
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="show-email-password-login">Tampilkan login dengan Email/Password</Label>
+                <Switch
+                  id="show-email-password-login"
+                  checked={showEmailPasswordLogin}
+                  onCheckedChange={(checked) => {
+                    setShowEmailPasswordLogin(checked);
+                    updateSetting('login_show_email_password', String(checked));
+                  }}
+                  aria-label="Toggle email/password login form"
                   className="data-[state=checked]:bg-green-500"
                 />
               </div>
