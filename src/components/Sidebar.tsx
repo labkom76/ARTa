@@ -127,7 +127,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onLinkClick }) => {
       "fixed inset-y-0 left-0 z-50 flex flex-col h-full bg-sidebar dark:bg-sidebar-background border-r border-sidebar-border dark:border-sidebar-border transition-all duration-300",
       isCollapsed ? "w-16" : "w-64"
     )}>
-      <div className="flex items-center justify-center h-16 border-b border-sidebar-border dark:border-sidebar-border">
+      <div className="flex items-center justify-start h-16 border-b border-sidebar-border dark:border-sidebar-border px-4"> {/* Changed justify-center to justify-start and added px-4 */}
         {!isCollapsed ? (
           <div className="flex items-center gap-2"> {/* Container for logo and name when open */}
             {appLogoUrl && (
