@@ -39,20 +39,57 @@ const AdminCustomLogin = () => {
   const [loadingImages, setLoadingImages] = useState(true);
   const [selectedBackgroundUrl, setSelectedBackgroundUrl] = useState<string | null>(null);
 
-  // New states for branding (no functionality yet)
-  const [appName, setAppName] = useState('Aplikasi Tagihan'); // Placeholder state
-  const [appLogoUrl, setAppLogoUrl] = useState<string | null>(null); // Placeholder state
+  // New states for branding
+  const [appName, setAppName] = useState('Aplikasi Tagihan');
+  const [appLogoUrl, setAppLogoUrl] = useState<string | null>(null);
+  const [loadingBranding, setLoadingBranding] = useState(true);
 
-  // Generic function to update a setting in app_settings table (will be used later)
+  // Generic function to update a setting in app_settings table
   const updateSetting = useCallback(async (key: string, value: string) => {
-    // Placeholder for future functionality
-    console.log(`Attempting to update setting: ${key} with value: ${value}`);
-    toast.info(`(Placeholder) Pengaturan ${key} akan disimpan: ${value}`);
+    try {
+      const { error } = await supabase
+        .from('app_settings')
+        .upsert({ key, value }, { onConflict: 'key' });
+
+      if (error) throw error;
+      toast.success('Pengaturan disimpan!');
+    } catch (error: any) {
+      console.error(`Error saving setting ${key}:`, error.message);
+      toast.error('Gagal menyimpan pengaturan: ' + error.message);
+    }
   }, []);
 
   const fetchSettings = useCallback(async () => {
-    // Placeholder for future functionality
-    console.log('Fetching settings (placeholder)');
+    setLoadingBranding(true);
+    try {
+      const { data, error } = await supabase
+        .from('app_settings')
+        .select('key, value');
+
+      if (error) throw error;
+
+      const settingsMap = new Map(data.map(item => [item.key, item.value]));
+
+      setRandomLayout(settingsMap.get('login_layout_random') === 'true');
+      setFormPosition(settingsMap.get('login_form_position') || 'center');
+      setBackgroundEffect(settingsMap.get('login_background_effect') === 'true');
+      setEnableSlider(settingsMap.get('login_background_slider') === 'true');
+      setBackgroundBlur(settingsMap.get('login_background_blur') === 'true');
+      setShowForgotPasswordLink(settingsMap.get('login_show_forgot_password') === 'true');
+      setShowSignupLink(settingsMap.get('login_show_signup') === 'true');
+      setShowEmailPasswordLogin(settingsMap.get('login_show_email_password') === 'true');
+      setSelectedBackgroundUrl(settingsMap.get('login_background_url') || null);
+
+      // Fetch branding settings
+      setAppName(settingsMap.get('app_name') || 'Aplikasi Tagihan');
+      setAppLogoUrl(settingsMap.get('app_logo_url') || null);
+
+    } catch (error: any) {
+      console.error('Error fetching settings:', error.message);
+      toast.error('Gagal memuat pengaturan login: ' + error.message);
+    } finally {
+      setLoadingBranding(false);
+    }
   }, []);
 
   const fetchBackgroundImages = useCallback(async () => {
@@ -85,47 +122,135 @@ const AdminCustomLogin = () => {
   }, []);
 
   useEffect(() => {
-    fetchSettings(); // Placeholder call
+    fetchSettings();
     fetchBackgroundImages();
   }, [fetchSettings, fetchBackgroundImages]);
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    // Placeholder for future functionality
-    toast.info('(Placeholder) File akan diunggah.');
-  };
+    if (!event.target.files || event.target.files.length === 0) {
+      toast.error('Pilih file untuk diunggah.');
+      return;
+    }
 
-  const handleDeleteImage = async (imageName: string) => {
-    // Placeholder for future functionality
-    toast.info(`(Placeholder) Gambar ${imageName} akan dihapus.`);
-  };
+    const file = event.target.files[0];
+    const sanitizedOriginalFileName = sanitizeFileName(file.name);
+    const fileName = `${Date.now()}-${sanitizedOriginalFileName}`;
 
-  const handleSelectImage = async (imageUrl: string) => {
-    // Placeholder for future functionality
-    toast.info(`(Placeholder) Gambar ${imageUrl} akan dipilih.`);
-  };
+    try {
+      const { error } = await supabase.storage
+        .from('login-backgrounds')
+        .upload(fileName, file, {
+          cacheControl: '3600',
+          upsert: false,
+        });
 
-  // Placeholder handlers for branding (no functionality yet)
-  const handleAppNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setAppName(e.target.value);
-    toast.info(`(Placeholder) Nama aplikasi akan diubah menjadi: ${e.target.value}`);
-  };
+      if (error) throw error;
 
-  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      const file = e.target.files[0];
-      toast.info(`(Placeholder) Logo ${file.name} akan diunggah.`);
-      // For visual feedback only, not actual upload
-      setAppLogoUrl(URL.createObjectURL(file)); 
+      toast.success('Gambar berhasil diunggah!');
+      fetchBackgroundImages();
+    } catch (error: any) {
+      console.error('Error uploading image:', error.message);
+      toast.error('Gagal mengunggah gambar: ' + error.message);
     }
   };
 
-  const handleRemoveLogo = () => {
-    toast.info('(Placeholder) Logo akan dihapus.');
-    setAppLogoUrl(null);
+  const handleDeleteImage = async (imageName: string) => {
+    if (!window.confirm('Apakah Anda yakin ingin menghapus gambar ini?')) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase.storage
+        .from('login-backgrounds')
+        .remove([imageName]);
+
+      if (error) throw error;
+
+      // If the deleted image was the currently selected background, clear it
+      const { data: publicUrlData } = supabase.storage.from('login-backgrounds').getPublicUrl(imageName);
+      if (selectedBackgroundUrl === publicUrlData.publicUrl) {
+        await updateSetting('login_background_url', ''); // Use updateSetting for consistency
+        setSelectedBackgroundUrl(null);
+      }
+
+      toast.success('Gambar berhasil dihapus!');
+      fetchBackgroundImages();
+    } catch (error: any) {
+      console.error('Error deleting image:', error.message);
+      toast.error('Gagal menghapus gambar: ' + error.message);
+    }
+  };
+
+  const handleSelectImage = async (imageUrl: string) => {
+    try {
+      await updateSetting('login_background_url', imageUrl); // Use updateSetting
+      setSelectedBackgroundUrl(imageUrl);
+      toast.success('Gambar latar belakang login berhasil diperbarui!');
+    } catch (error: any) {
+      console.error('Error setting background image:', error.message);
+      toast.error('Gagal mengatur gambar latar belakang: ' + error.message);
+    }
+  };
+
+  const handleLogoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!event.target.files || event.target.files.length === 0) {
+      toast.error('Pilih file logo untuk diunggah.');
+      return;
+    }
+
+    const file = event.target.files[0];
+    const fileName = `app_logo_${Date.now()}.${file.name.split('.').pop()}`; // Unique filename
+
+    try {
+      // Delete old logo if exists
+      if (appLogoUrl) {
+        const oldFileName = appLogoUrl.split('/').pop();
+        if (oldFileName) {
+          await supabase.storage.from('branding').remove([oldFileName]);
+        }
+      }
+
+      const { error: uploadError } = await supabase.storage
+        .from('branding')
+        .upload(fileName, file, {
+          cacheControl: '3600',
+          upsert: false,
+        });
+
+      if (uploadError) throw uploadError;
+
+      const { data: publicUrlData } = supabase.storage.from('branding').getPublicUrl(fileName);
+      await updateSetting('app_logo_url', publicUrlData.publicUrl);
+      setAppLogoUrl(publicUrlData.publicUrl);
+      toast.success('Logo aplikasi berhasil diunggah!');
+    } catch (error: any) {
+      console.error('Error uploading logo:', error.message);
+      toast.error('Gagal mengunggah logo: ' + error.message);
+    }
+  };
+
+  const handleRemoveLogo = async () => {
+    if (!window.confirm('Apakah Anda yakin ingin menghapus logo ini?')) {
+      return;
+    }
+    try {
+      if (appLogoUrl) {
+        const fileName = appLogoUrl.split('/').pop();
+        if (fileName) {
+          await supabase.storage.from('branding').remove([fileName]);
+        }
+      }
+      await updateSetting('app_logo_url', '');
+      setAppLogoUrl(null);
+      toast.success('Logo aplikasi berhasil dihapus!');
+    } catch (error: any) {
+      console.error('Error removing logo:', error.message);
+      toast.error('Gagal menghapus logo: ' + error.message);
+    }
   };
 
 
-  if (sessionLoading) {
+  if (sessionLoading || loadingBranding) {
     return (
       <div className="p-6 bg-white rounded-lg shadow-sm border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
         <h1 className="text-3xl font-bold text-gray-800 dark:text-white mb-4">Memuat Halaman...</h1>
@@ -164,7 +289,8 @@ const AdminCustomLogin = () => {
                 <Input
                   id="app-name"
                   value={appName}
-                  onChange={handleAppNameChange}
+                  onChange={(e) => setAppName(e.target.value)}
+                  onBlur={() => updateSetting('app_name', appName)}
                   placeholder="Masukkan nama aplikasi"
                 />
               </div>
@@ -213,7 +339,7 @@ const AdminCustomLogin = () => {
                   checked={randomLayout}
                   onCheckedChange={(checked) => {
                     setRandomLayout(checked);
-                    // updateSetting('login_layout_random', String(checked)); // Placeholder
+                    updateSetting('login_layout_random', String(checked));
                   }}
                   aria-label="Toggle random layout"
                   className="data-[state=checked]:bg-green-500"
@@ -225,7 +351,7 @@ const AdminCustomLogin = () => {
                   value={formPosition}
                   onValueChange={(value) => {
                     setFormPosition(value);
-                    // updateSetting('login_form_position', value); // Placeholder
+                    updateSetting('login_form_position', value);
                   }}
                   className="flex flex-col space-y-1"
                 >
@@ -259,7 +385,7 @@ const AdminCustomLogin = () => {
                   checked={backgroundEffect}
                   onCheckedChange={(checked) => {
                     setBackgroundEffect(checked);
-                    // updateSetting('login_background_effect', String(checked)); // Placeholder
+                    updateSetting('login_background_effect', String(checked));
                   }}
                   aria-label="Toggle background effect"
                   className="data-[state=checked]:bg-green-500"
@@ -272,7 +398,7 @@ const AdminCustomLogin = () => {
                   checked={backgroundBlur}
                   onCheckedChange={(checked) => {
                     setBackgroundBlur(checked);
-                    // updateSetting('login_background_blur', String(checked)); // Placeholder
+                    updateSetting('login_background_blur', String(checked));
                   }}
                   aria-label="Toggle background blur effect"
                   className="data-[state=checked]:bg-green-500"
@@ -294,7 +420,7 @@ const AdminCustomLogin = () => {
                   checked={showForgotPasswordLink}
                   onCheckedChange={(checked) => {
                     setShowForgotPasswordLink(checked);
-                    // updateSetting('login_show_forgot_password', String(checked)); // Placeholder
+                    updateSetting('login_show_forgot_password', String(checked));
                   }}
                   aria-label="Toggle forgot password link"
                   className="data-[state=checked]:bg-green-500"
@@ -307,7 +433,7 @@ const AdminCustomLogin = () => {
                   checked={showSignupLink}
                   onCheckedChange={(checked) => {
                     setShowSignupLink(checked);
-                    // updateSetting('login_show_signup', String(checked)); // Placeholder
+                    updateSetting('login_show_signup', String(checked));
                   }}
                   aria-label="Toggle signup link"
                   className="data-[state=checked]:bg-green-500"
@@ -320,7 +446,7 @@ const AdminCustomLogin = () => {
                   checked={showEmailPasswordLogin}
                   onCheckedChange={(checked) => {
                     setShowEmailPasswordLogin(checked);
-                    // updateSetting('login_show_email_password', String(checked)); // Placeholder
+                    updateSetting('login_show_email_password', String(checked));
                   }}
                   aria-label="Toggle email/password login form"
                   className="data-[state=checked]:bg-green-500"
@@ -344,7 +470,7 @@ const AdminCustomLogin = () => {
                     checked={enableSlider}
                     onCheckedChange={(checked) => {
                       setEnableSlider(checked);
-                      // updateSetting('login_background_slider', String(checked)); // Placeholder
+                      updateSetting('login_background_slider', String(checked));
                     }}
                     aria-label="Toggle background image slider"
                     className="data-[state=checked]:bg-green-500"
