@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { HomeIcon, LayoutDashboardIcon, FileTextIcon, HistoryIcon, ListFilterIcon, UsersIcon, PaletteIcon } from 'lucide-react'; // Menghapus ChevronDownIcon dari import karena sudah ada di AccordionTrigger
+import { HomeIcon, LayoutDashboardIcon, FileTextIcon, HistoryIcon, ListFilterIcon, UsersIcon, PaletteIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSession } from '@/contexts/SessionContext';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { supabase } from '@/integrations/supabase/client'; // Import supabase
 
 interface SidebarProps {
   isCollapsed: boolean;
@@ -27,8 +28,37 @@ type SidebarNavItem = NavItem | CollapsibleNavItem;
 
 const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onLinkClick }) => {
   const { role, loading } = useSession();
+  const [appName, setAppName] = useState('Aplikasi'); // Default app name
+  const [appLogoUrl, setAppLogoUrl] = useState<string | null>(null); // Default app logo
+  const [loadingBranding, setLoadingBranding] = useState(true);
 
-  if (loading) {
+  useEffect(() => {
+    const fetchBrandingSettings = async () => {
+      setLoadingBranding(true);
+      try {
+        const { data, error } = await supabase
+          .from('app_settings')
+          .select('key, value')
+          .in('key', ['app_name', 'app_logo_url']);
+
+        if (error) throw error;
+
+        const settingsMap = new Map(data.map(item => [item.key, item.value]));
+        setAppName(settingsMap.get('app_name') || 'Aplikasi');
+        setAppLogoUrl(settingsMap.get('app_logo_url') || null);
+      } catch (error: any) {
+        console.error('Error fetching branding settings for sidebar:', error.message);
+        setAppName('Aplikasi'); // Fallback
+        setAppLogoUrl(null); // Fallback
+      } finally {
+        setLoadingBranding(false);
+      }
+    };
+
+    fetchBrandingSettings();
+  }, []);
+
+  if (loading || loadingBranding) {
     return (
       <aside className={cn(
         "fixed inset-y-0 left-0 z-50 flex flex-col h-full bg-sidebar dark:bg-sidebar-background border-r border-sidebar-border dark:border-sidebar-border transition-all duration-300",
@@ -98,8 +128,13 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onLinkClick }) => {
       isCollapsed ? "w-16" : "w-64"
     )}>
       <div className="flex items-center justify-center h-16 border-b border-sidebar-border dark:border-sidebar-border">
-        <span className={cn("font-bold text-xl text-sidebar-primary dark:text-sidebar-primary-foreground", isCollapsed && "hidden")}>Aplikasi</span>
-        <HomeIcon className={cn("h-6 w-6 text-sidebar-primary dark:text-sidebar-primary-foreground", !isCollapsed && "hidden")} />
+        {appLogoUrl && !isCollapsed ? (
+          <img src={appLogoUrl} alt="App Logo" className="h-10 object-contain" />
+        ) : (
+          <span className={cn("font-bold text-xl text-sidebar-primary dark:text-sidebar-primary-foreground", isCollapsed && "hidden")}>{appName}</span>
+        )}
+        {isCollapsed && !appLogoUrl && <HomeIcon className="h-6 w-6 text-sidebar-primary dark:text-sidebar-primary-foreground" />}
+        {isCollapsed && appLogoUrl && <img src={appLogoUrl} alt="App Logo" className="h-8 w-8 object-contain" />}
       </div>
       <nav className="flex-1 p-2 space-y-1">
         {navItems.map((item, index) => {

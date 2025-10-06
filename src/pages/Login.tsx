@@ -27,6 +27,10 @@ const Login = () => {
   const [isSliderEnabled, setIsSliderEnabled] = useState(false); // State to control slider logic
   const [backgroundOpacity, setBackgroundOpacity] = useState(1); // New state for opacity to control fade
 
+  // New states for branding
+  const [appName, setAppName] = useState('ARTa - BKAD');
+  const [appLogoUrl, setAppLogoUrl] = useState<string | null>(null);
+
   const fetchLoginSettings = useCallback(async () => {
     setLoadingSettings(true);
     try {
@@ -50,6 +54,10 @@ const Login = () => {
       };
       setLoginSettings(fetchedSettings);
       console.log('Fetched settings:', fetchedSettings);
+
+      // Fetch branding settings
+      setAppName(settingsMap.get('app_name') || 'ARTa - BKAD');
+      setAppLogoUrl(settingsMap.get('app_logo_url') || null);
 
       const isRandomLayout = fetchedSettings.login_layout_random === 'true';
       const isSliderActive = fetchedSettings.login_background_slider === 'true';
@@ -135,6 +143,8 @@ const Login = () => {
       setAllBackgroundImages([]);
       setIsSliderEnabled(false);
       setCurrentImageIndex(0);
+      setAppName('ARTa - BKAD'); // Reset app name on error
+      setAppLogoUrl(null); // Reset app logo on error
     } finally {
       setLoadingSettings(false);
     }
@@ -243,7 +253,12 @@ const Login = () => {
       )}
 
       <div className={formContainerClasses}>
-        <h2 className="text-2xl font-bold text-center text-gray-800 dark:text-white mb-2">ARTa - BKAD</h2>
+        {appLogoUrl && (
+          <div className="flex justify-center mb-4">
+            <img src={appLogoUrl} alt="App Logo" className="max-h-20 object-contain" />
+          </div>
+        )}
+        <h2 className="text-2xl font-bold text-center text-gray-800 dark:text-white mb-2">{appName}</h2>
         <p className="text-sm text-center text-gray-600 dark:text-gray-400 mb-1">(Aplikasi Registrasi Tagihan)</p>
         <p className="text-sm text-center text-gray-600 dark:text-gray-400 mb-6">Pemerintah Daerah Kabupaten Gorontalo</p>
         
