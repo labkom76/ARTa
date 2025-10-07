@@ -22,7 +22,8 @@ import PrintKoreksi from "./pages/PrintKoreksi";
 import AdminUsers from "./pages/AdminUsers";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminTagihan from "./pages/AdminTagihan";
-import AdminCustomLogin from "./pages/AdminCustomLogin"; // Import the new AdminCustomLogin page
+import AdminCustomLogin from "./pages/AdminCustomLogin";
+import LengkapiProfil from "./pages/LengkapiProfil"; // Import the new LengkapiProfil page
 import { SessionContextProvider } from "./contexts/SessionContext";
 
 const queryClient = new QueryClient();
@@ -38,6 +39,7 @@ const App = () => (
             <Route path="/login" element={<Login />} />
             <Route path="/print-verifikasi" element={<PrintVerifikasi />} />
             <Route path="/print-koreksi" element={<PrintKoreksi />} />
+            <Route path="/lengkapi-profil" element={<LengkapiProfil />} /> {/* New route for LengkapiProfil */}
             <Route element={<MainLayout />}>
               <Route path="/" element={<Index />} />
               <Route path="/dashboard-skpd" element={<DashboardSKPD />} />
@@ -53,7 +55,7 @@ const App = () => (
               <Route path="/admin/users" element={<AdminUsers />} />
               <Route path="/admin/dashboard" element={<AdminDashboard />} />
               <Route path="/admin/tagihan" element={<AdminTagihan />} />
-              <Route path="/admin/custom-login" element={<AdminCustomLogin />} /> {/* New route for AdminCustomLogin */}
+              <Route path="/admin/custom-login" element={<AdminCustomLogin />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             </Route>
             <Route path="*" element={<NotFound />} />
