@@ -298,8 +298,8 @@ const Login = () => {
                   password_input_placeholder: 'Masukkan password',
                   button_label: 'Login',
                   social_auth_button_text: 'Login dengan {{provider}}',
-                  // Corrected: link_text for sign_in should lead to sign_up
-                  link_text: loginSettings.login_show_signup === 'true' ? 'Belum punya akun? Daftar' : '',
+                  // Mengubah link_text untuk sign_in agar menampilkan teks yang seharusnya muncul di formulir pendaftaran
+                  link_text: loginSettings.login_show_signup === 'true' ? 'Sudah punya akun? Login' : '',
                 },
                 sign_up: {
                   email_label: 'Email Anda',
@@ -308,8 +308,8 @@ const Login = () => {
                   password_input_placeholder: 'Buat password',
                   button_label: 'Daftar',
                   social_auth_button_text: 'Daftar dengan {{provider}}',
-                  // Corrected: link_text for sign_up should lead to sign_in
-                  link_text: loginSettings.login_show_signup === 'true' ? 'Sudah punya akun? Login' : '',
+                  // Mengubah link_text untuk sign_up agar menampilkan teks yang seharusnya muncul di formulir login
+                  link_text: loginSettings.login_show_signup === 'true' ? 'Belum punya akun? Daftar' : '',
                 },
                 forgotten_password: {
                   email_label: 'Email Anda',
