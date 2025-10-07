@@ -21,7 +21,8 @@ import RekapDikembalikan from "./pages/RekapDikembalikan";
 import PrintKoreksi from "./pages/PrintKoreksi";
 import AdminUsers from "./pages/AdminUsers";
 import AdminDashboard from "./pages/AdminDashboard";
-import AdminTagihan from "./pages/AdminTagihan"; // Import the new AdminTagihan page
+import AdminTagihan from "./pages/AdminTagihan";
+import AdminCustomLogin from "./pages/AdminCustomLogin"; // Import the new AdminCustomLogin page
 import { SessionContextProvider } from "./contexts/SessionContext";
 
 const queryClient = new QueryClient();
@@ -51,7 +52,8 @@ const App = () => (
               <Route path="/rekap-dikembalikan" element={<RekapDikembalikan />} />
               <Route path="/admin/users" element={<AdminUsers />} />
               <Route path="/admin/dashboard" element={<AdminDashboard />} />
-              <Route path="/admin/tagihan" element={<AdminTagihan />} /> {/* New route for AdminTagihan */}
+              <Route path="/admin/tagihan" element={<AdminTagihan />} />
+              <Route path="/admin/custom-login" element={<AdminCustomLogin />} /> {/* New route for AdminCustomLogin */}
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             </Route>
             <Route path="*" element={<NotFound />} />

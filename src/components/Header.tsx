@@ -34,10 +34,9 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
   return (
     <header className="flex items-center justify-between h-16 px-4 bg-white border-b border-gray-200 shadow-sm dark:bg-gray-800 dark:border-gray-700">
       <div className="flex items-center">
-        <Button variant="ghost" size="icon" onClick={toggleSidebar} className="lg:hidden mr-2">
+        <Button variant="ghost" size="icon" onClick={toggleSidebar} className="mr-2"> {/* Removed lg:hidden */}
           <MenuIcon className="h-5 w-5 text-gray-600 dark:text-gray-300" />
         </Button>
-        <h1 className="text-xl font-semibold text-gray-800 dark:text-white">Aplikasi Manajemen</h1>
       </div>
       <div className="flex items-center space-x-4">
         {user && (
