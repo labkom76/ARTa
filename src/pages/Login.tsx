@@ -298,6 +298,7 @@ const Login = () => {
                   password_input_placeholder: 'Masukkan password',
                   button_label: 'Login',
                   social_auth_button_text: 'Login dengan {{provider}}',
+                  // Corrected: link_text for sign_in should lead to sign_up
                   link_text: loginSettings.login_show_signup === 'true' ? 'Belum punya akun? Daftar' : '',
                 },
                 sign_up: {
@@ -307,6 +308,7 @@ const Login = () => {
                   password_input_placeholder: 'Buat password',
                   button_label: 'Daftar',
                   social_auth_button_text: 'Daftar dengan {{provider}}',
+                  // Corrected: link_text for sign_up should lead to sign_in
                   link_text: loginSettings.login_show_signup === 'true' ? 'Sudah punya akun? Login' : '',
                 },
                 forgotten_password: {
