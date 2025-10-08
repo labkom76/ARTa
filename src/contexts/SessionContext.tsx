@@ -37,7 +37,7 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
   const lastFetchedUserId = useRef<string | null>(null);
   const hasNavigated = useRef(false);
 
-  const fetchProfile = async (userId: string): Promise<boolean> => {
+  const fetchProfile = async (userId: string, currentPath: string): Promise<boolean> => {
     // Skip jika sudah fetch untuk user yang sama
     if (isFetchingProfile.current || lastFetchedUserId.current === userId) {
       console.log('Skipping duplicate fetch for user:', userId);
@@ -68,27 +68,38 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
         setRole(null);
         return false;
       } else if (profileData) {
-        setProfile(profileData as Profile);
-        setRole(profileData.peran);
-        lastFetchedUserId.current = userId;
-        console.log('✅ Profile loaded:', profileData.peran);
-        return true;
+        // MODIFIKASI: Tambahkan logika untuk memeriksa nama_lengkap
+        if (!profileData.nama_lengkap && currentPath !== '/lengkapi-profil') {
+          setProfile(profileData as Profile); // Tetap set profil, meskipun belum lengkap
+          setRole(profileData.peran); // Tetap set peran
+          lastFetchedUserId.current = userId;
+          console.log('⚠️ Profil belum lengkap, mengarahkan ke /lengkapi-profil');
+          navigate('/lengkapi-profil', { replace: true });
+          toast.info('Harap lengkapi profil Anda untuk melanjutkan.');
+          return true; // Data profil ditemukan, meskipun belum lengkap
+        } else {
+          setProfile(profileData as Profile);
+          setRole(profileData.peran);
+          lastFetchedUserId.current = userId;
+          console.log('✅ Profil dimuat:', profileData.peran);
+          return true;
+        }
       } else {
-        console.warn('Profile data is null without error - likely RLS policy issue');
+        console.warn('Data profil null tanpa error - kemungkinan masalah kebijakan RLS');
         lastFetchedUserId.current = userId;
         setProfile(null);
         setRole(null);
         return false;
       }
     } catch (error) {
-      console.error('Profile fetch exception:', error);
+      console.error('Pengecualian saat mengambil profil:', error);
       lastFetchedUserId.current = userId;
       setProfile(null);
       setRole(null);
       return false;
     } finally {
       isFetchingProfile.current = false;
-      console.log('Profile fetch completed');
+      console.log('Pengambilan profil selesai');
     }
   };
 
@@ -98,38 +109,38 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
 
     const initializeSession = async () => {
       try {
-        console.log('🔄 Starting session initialization...');
+        console.log('🔄 Memulai inisialisasi sesi...');
         
-        // Safety timeout - force loading false after 5 seconds
+        // Safety timeout - paksa loading false setelah 5 detik
         timeoutId = setTimeout(() => {
           if (mounted && loading) {
-            console.warn('⚠️ TIMEOUT: Forcing loading to false after 5s');
+            console.warn('⚠️ TIMEOUT: Memaksa loading menjadi false setelah 5 detik');
             setLoading(false);
             hasInitialized.current = true;
-            toast.error('Timeout loading data. Silakan refresh halaman.');
+            toast.error('Waktu habis saat memuat data. Silakan refresh halaman.');
           }
         }, 5000);
         
         const { data: { session: initialSession }, error: sessionError } = await supabase.auth.getSession();
         
         if (sessionError) {
-          console.error('❌ Session error:', sessionError);
+          console.error('❌ Error sesi:', sessionError);
           throw sessionError;
         }
         
         if (!mounted) return;
 
-        console.log('📦 Initial session:', initialSession ? 'exists' : 'null');
+        console.log('📦 Sesi awal:', initialSession ? 'ada' : 'null');
 
         if (initialSession) {
           setSession(initialSession);
           setUser(initialSession.user);
           
-          // 🔥 CRITICAL: Tunggu profile selesai sebelum set loading false
-          const profileLoaded = await fetchProfile(initialSession.user.id);
+          // MODIFIKASI: Teruskan navigate dan location.pathname ke fetchProfile
+          const profileLoaded = await fetchProfile(initialSession.user.id, location.pathname);
           
           if (!profileLoaded) {
-            console.error('❌ Profile failed to load');
+            console.error('❌ Profil gagal dimuat');
             toast.error('Gagal memuat profil. Silakan login ulang.');
           }
         } else {
@@ -139,17 +150,17 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
           setRole(null);
         }
         
-        // Clear timeout jika berhasil
+        // Hapus timeout jika berhasil
         clearTimeout(timeoutId);
         
         // Set loading false HANYA setelah semua data siap
         if (mounted) {
           setLoading(false);
           hasInitialized.current = true;
-          console.log('✅ Session initialization completed, loading=false');
+          console.log('✅ Inisialisasi sesi selesai, loading=false');
         }
       } catch (error) {
-        console.error('❌ Session initialization error:', error);
+        console.error('❌ Error inisialisasi sesi:', error);
         clearTimeout(timeoutId);
         if (mounted) {
           setLoading(false);
@@ -161,58 +172,59 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
 
     initializeSession();
 
-    // 🔥 FIX: Subscribe to auth changes - ini yang tadinya salah posisi!
+    // 🔥 FIX: Subscribe ke perubahan otentikasi
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
       if (!mounted) return;
 
-      console.log('🔔 Auth event:', event, 'hasInitialized:', hasInitialized.current);
+      console.log('🔔 Event otentikasi:', event, 'hasInitialized:', hasInitialized.current);
 
-      // 🔥 CRITICAL: Ignore ALL events jika belum initialized
-      // Ini mencegah race condition saat page load
+      // 🔥 KRITIS: Abaikan SEMUA event jika belum diinisialisasi
+      // Ini mencegah kondisi balapan saat pemuatan halaman
       if (!hasInitialized.current && event !== 'SIGNED_OUT') {
-        console.log('⏭️ Skipping event - not initialized yet');
+        console.log('⏭️ Melewati event - belum diinisialisasi');
         return;
       }
 
-      // Ignore TOKEN_REFRESHED setelah initialized
+      // Abaikan TOKEN_REFRESHED setelah diinisialisasi
       if (event === 'TOKEN_REFRESHED' && hasInitialized.current) {
         setSession(currentSession);
         setUser(currentSession?.user || null);
-        console.log('♻️ Token refreshed, skipping profile refetch');
+        console.log('♻️ Token diperbarui, melewati pengambilan ulang profil');
         return;
       }
 
-      // Ignore INITIAL_SESSION - sudah di-handle di initializeSession
+      // Abaikan INITIAL_SESSION - sudah ditangani di initializeSession
       if (event === 'INITIAL_SESSION') {
-        console.log('⏭️ Skipping INITIAL_SESSION - already handled');
+        console.log('⏭️ Melewati INITIAL_SESSION - sudah ditangani');
         return;
       }
 
-      // Handle SIGNED_IN
+      // Tangani SIGNED_IN
       if (event === 'SIGNED_IN') {
-        console.log('🔐 User signed in - starting profile fetch');
+        console.log('🔐 Pengguna masuk - memulai pengambilan profil');
         setLoading(true);
-        hasNavigated.current = false; // Reset navigation flag
+        hasNavigated.current = false; // Reset flag navigasi
         
         if (currentSession) {
           setSession(currentSession);
           setUser(currentSession.user);
-          const profileLoaded = await fetchProfile(currentSession.user.id);
+          // MODIFIKASI: Teruskan navigate dan location.pathname ke fetchProfile
+          const profileLoaded = await fetchProfile(currentSession.user.id, location.pathname);
           
           if (profileLoaded) {
-            console.log('✅ Login successful, profile loaded');
+            console.log('✅ Login berhasil, profil dimuat');
           } else {
-            console.error('❌ Login successful but profile failed to load');
+            console.error('❌ Login berhasil tetapi profil gagal dimuat');
             toast.error('Gagal memuat profil. Silakan coba lagi.');
           }
         }
         
         setLoading(false);
-        console.log('✅ SIGNED_IN handling completed');
+        console.log('✅ Penanganan SIGNED_IN selesai');
       } 
-      // Handle SIGNED_OUT
+      // Tangani SIGNED_OUT
       else if (event === 'SIGNED_OUT') {
-        console.log('🚪 User signed out');
+        console.log('🚪 Pengguna keluar');
         setSession(null);
         setUser(null);
         setProfile(null);
@@ -220,9 +232,9 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
         lastFetchedUserId.current = null;
         hasNavigated.current = false;
       } 
-      // Handle USER_UPDATED
+      // Tangani USER_UPDATED
       else if (event === 'USER_UPDATED') {
-        console.log('👤 User updated');
+        console.log('👤 Pengguna diperbarui');
         setSession(currentSession);
         setUser(currentSession?.user || null);
       }
@@ -233,49 +245,55 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
       if (timeoutId) clearTimeout(timeoutId);
       subscription.unsubscribe();
     };
-  }, []);
+  }, [navigate, location.pathname]); // Tambahkan navigate dan location.pathname ke dependensi
 
-  // 🔥 FIXED: Navigation effect dengan proper guards
+  // Reset hasNavigated saat location berubah (pengguna menavigasi secara manual)
   useEffect(() => {
-    // Jangan navigate jika masih loading atau belum initialized
+    if (hasInitialized.current && !loading) {
+      hasNavigated.current = false;
+    }
+  }, [location.pathname, loading]);
+
+  useEffect(() => {
+    // Jangan menavigasi jika masih memuat atau belum diinisialisasi
     if (loading || !hasInitialized.current) {
-      console.log('⏳ Skipping navigation - loading or not initialized');
+      console.log('⏳ Melewati navigasi - memuat atau belum diinisialisasi');
       return;
     }
 
-    // Jangan navigate jika sudah pernah navigate di session ini
+    // Jangan menavigasi jika sudah pernah menavigasi di sesi ini
     if (hasNavigated.current) {
-      console.log('🚫 Skipping navigation - already navigated');
+      console.log('🚫 Melewati navigasi - sudah dinavigasi');
       return;
     }
 
     const isLoginPage = location.pathname === '/login';
     const currentPath = location.pathname;
     
-    console.log('🧭 Navigation check:', { 
+    console.log('🧭 Pemeriksaan navigasi:', { 
       hasSession: !!session, 
       isLoginPage, 
       role,
       currentPath 
     });
 
-    // Redirect ke login jika tidak ada session dan bukan di login page
+    // Arahkan ke login jika tidak ada sesi dan bukan di halaman login
     if (!session && !isLoginPage) {
-      console.log('➡️ Redirecting to login');
+      console.log('➡️ Mengarahkan ke login');
       hasNavigated.current = true;
       navigate('/login', { replace: true });
       toast.info('Anda harus login untuk mengakses halaman ini.');
       return;
     }
 
-    // Redirect dari login page jika sudah login
+    // Arahkan dari halaman login jika sudah login
     if (session && isLoginPage) {
       if (!role) {
-        console.warn('⚠️ Session exists but role is null, waiting...');
+        console.warn('⚠️ Sesi ada tetapi peran null, menunggu...');
         return;
       }
 
-      console.log('➡️ Redirecting from login to dashboard');
+      console.log('➡️ Mengarahkan dari login ke dashboard');
       hasNavigated.current = true;
 
       let targetPath = '/';
@@ -296,7 +314,7 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
           targetPath = '/admin/dashboard';
           break;
         default:
-          console.warn('⚠️ Unknown role:', role);
+          console.warn('⚠️ Peran tidak dikenal:', role);
           toast.warning('Profil tidak ditemukan. Silakan hubungi administrator.');
           break;
       }
@@ -305,8 +323,8 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
       return;
     }
 
-    // 🆕 Jika sudah di path yang benar, mark as navigated
-    // Ini mencegah infinite check loop
+    // 🆕 Jika sudah di jalur yang benar, tandai sebagai sudah dinavigasi
+    // Ini mencegah loop pemeriksaan tak terbatas
     if (session && role && !isLoginPage) {
       const validPaths = [
         '/dashboard-skpd',
@@ -321,22 +339,18 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
         '/rekap-dikembalikan',
         '/admin/users',
         '/admin/dashboard',
+        '/admin/tagihan',
+        '/admin/custom-login',
+        '/lengkapi-profil', // MODIFIKASI: Tambahkan halaman lengkapi profil ke jalur yang valid
         '/'
       ];
 
       if (validPaths.includes(currentPath)) {
-        console.log('✅ Already at valid path, marking as navigated');
+        console.log('✅ Sudah di jalur yang valid, menandai sebagai sudah dinavigasi');
         hasNavigated.current = true;
       }
     }
-  }, [session, loading, role, navigate, location.pathname]);
-
-  // Reset hasNavigated saat location berubah (user manually navigate)
-  useEffect(() => {
-    if (hasInitialized.current && !loading) {
-      hasNavigated.current = false;
-    }
-  }, [location.pathname, loading]);
+  }, [session, loading, role, navigate, location.pathname, profile]); // Tambahkan profil ke dependensi
 
   return (
     <SessionContext.Provider value={{ session, user, profile, role, loading }}>

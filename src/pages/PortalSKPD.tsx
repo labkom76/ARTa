@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useSession } from '@/contexts/SessionContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -102,6 +102,9 @@ const PortalSKPD = () => {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false); // New state for detail modal
   const [selectedTagihanForDetail, setSelectedTagihanForDetail] = useState<Tagihan | null>(null); // New state for detail tagihan
 
+  const [isAccountVerified, setIsAccountVerified] = useState(true); // New state for account verification
+  const toastShownRef = useRef(false); // Ref to ensure toast is shown only once
+
   const form = useForm<TagihanFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -112,6 +115,21 @@ const PortalSKPD = () => {
       jenis_tagihan: '',
     },
   });
+
+  useEffect(() => {
+    if (!sessionLoading && profile) {
+      if (profile.peran === 'SKPD' && !profile.asal_skpd) {
+        setIsAccountVerified(false);
+        if (!toastShownRef.current) {
+          toast.error('Akun belum diverifikasi. Silakan hubungi admin untuk melanjutkan.');
+          toastShownRef.current = true;
+        }
+      } else {
+        setIsAccountVerified(true);
+        toastShownRef.current = false; // Reset if account becomes verified
+      }
+    }
+  }, [sessionLoading, profile]);
 
   const fetchTagihan = async () => {
     if (!user || sessionLoading) return;
@@ -170,6 +188,10 @@ const PortalSKPD = () => {
       toast.error('Anda harus login untuk membuat/mengedit tagihan.');
       return;
     }
+    if (!isAccountVerified) {
+      toast.error('Akun Anda belum diverifikasi. Tidak dapat menginput tagihan.');
+      return;
+    }
 
     try {
       if (editingTagihan) {
@@ -214,11 +236,19 @@ const PortalSKPD = () => {
   };
 
   const handleEdit = (tagihan: Tagihan) => {
+    if (!isAccountVerified) {
+      toast.error('Akun Anda belum diverifikasi. Tidak dapat mengedit tagihan.');
+      return;
+    }
     setEditingTagihan(tagihan);
     setIsModalOpen(true);
   };
 
   const handleDeleteClick = (tagihanId: string, nomorSpm: string) => {
+    if (!isAccountVerified) {
+      toast.error('Akun Anda belum diverifikasi. Tidak dapat menghapus tagihan.');
+      return;
+    }
     setTagihanToDelete({ id: tagihanId, nomorSpm: nomorSpm });
     setIsDeleteDialogOpen(true);
   };
@@ -260,7 +290,7 @@ const PortalSKPD = () => {
     <div className="p-6 bg-white rounded-lg shadow-sm border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold text-gray-800 dark:text-white">Portal SKPD</h1>
-        <Button onClick={() => { setEditingTagihan(null); setIsModalOpen(true); }} className="flex items-center gap-2">
+        <Button onClick={() => { setEditingTagihan(null); setIsModalOpen(true); }} className="flex items-center gap-2" disabled={!isAccountVerified}>
           <PlusCircleIcon className="h-4 w-4" /> Input Tagihan Baru
         </Button>
       </div>
@@ -338,6 +368,7 @@ const PortalSKPD = () => {
                             size="icon"
                             onClick={() => handleEdit(tagihan)}
                             title="Edit Tagihan"
+                            disabled={!isAccountVerified}
                           >
                             <EditIcon className="h-4 w-4" />
                           </Button>
@@ -346,6 +377,7 @@ const PortalSKPD = () => {
                             size="icon"
                             onClick={() => handleDeleteClick(tagihan.id_tagihan, tagihan.nomor_spm)}
                             title="Hapus Tagihan"
+                            disabled={!isAccountVerified}
                           >
                             <Trash2Icon className="h-4 w-4" />
                           </Button>
@@ -370,16 +402,16 @@ const PortalSKPD = () => {
                 />
               </PaginationItem>
               {[...Array(totalPages)].map((_, index) => (
-                <PaginationItem key={index}>
-                  <PaginationLink
-                    isActive={currentPage === index + 1}
-                    onClick={() => setCurrentPage(index + 1)}
-                    disabled={itemsPerPage === -1}
-                  >
-                    {index + 1}
-                  </PaginationLink>
-                </PaginationItem>
-              ))}
+                  <PaginationItem key={index}>
+                    <PaginationLink
+                      isActive={currentPage === index + 1}
+                      onClick={() => setCurrentPage(index + 1)}
+                      disabled={itemsPerPage === -1}
+                    >
+                      {index + 1}
+                    </PaginationLink>
+                  </PaginationItem>
+                ))}
               <PaginationItem>
                 <PaginationNext
                   onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
@@ -408,6 +440,7 @@ const PortalSKPD = () => {
                 id="nomor_spm"
                 {...form.register('nomor_spm')}
                 className="col-span-3"
+                disabled={!isAccountVerified}
               />
               {form.formState.errors.nomor_spm && (
                 <p className="col-span-4 text-right text-red-500 text-sm">
@@ -419,7 +452,7 @@ const PortalSKPD = () => {
               <Label htmlFor="jenis_spm" className="text-right">
                 Jenis SPM
               </Label>
-              <Select onValueChange={(value) => form.setValue('jenis_spm', value)} value={form.watch('jenis_spm')}>
+              <Select onValueChange={(value) => form.setValue('jenis_spm', value)} value={form.watch('jenis_spm')} disabled={!isAccountVerified}>
                 <SelectTrigger className="col-span-3">
                   <SelectValue placeholder="Pilih Jenis SPM" />
                 </SelectTrigger>
@@ -440,7 +473,7 @@ const PortalSKPD = () => {
               <Label htmlFor="jenis_tagihan" className="text-right">
                 Jenis Tagihan
               </Label>
-              <Select onValueChange={(value) => form.setValue('jenis_tagihan', value)} value={form.watch('jenis_tagihan')}>
+              <Select onValueChange={(value) => form.setValue('jenis_tagihan', value)} value={form.watch('jenis_tagihan')} disabled={!isAccountVerified}>
                 <SelectTrigger className="col-span-3">
                   <SelectValue placeholder="Pilih Jenis Tagihan" />
                 </SelectTrigger>
@@ -466,6 +499,7 @@ const PortalSKPD = () => {
                 {...form.register('uraian')}
                 className="col-span-3"
                 rows={3}
+                disabled={!isAccountVerified}
               />
               {form.formState.errors.uraian && (
                 <p className="col-span-4 text-right text-red-500 text-sm">
@@ -482,6 +516,7 @@ const PortalSKPD = () => {
                 type="number"
                 {...form.register('jumlah_kotor')}
                 className="col-span-3"
+                disabled={!isAccountVerified}
               />
               {form.formState.errors.jumlah_kotor && (
                 <p className="col-span-4 text-right text-red-500 text-sm">
@@ -490,7 +525,7 @@ const PortalSKPD = () => {
               )}
             </div>
             <DialogFooter>
-              <Button type="submit" disabled={form.formState.isSubmitting}>
+              <Button type="submit" disabled={form.formState.isSubmitting || !isAccountVerified}>
                 {form.formState.isSubmitting ? (editingTagihan ? 'Memperbarui...' : 'Menyimpan...') : 'Simpan'}
               </Button>
             </DialogFooter>
