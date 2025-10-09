@@ -120,6 +120,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onLinkClick }) => {
         label: 'Data Master',
         icon: ListFilterIcon, // You can choose a more appropriate icon
         children: [
+          { to: '/admin/kode-wilayah', icon: FileTextIcon, label: 'Kode Wilayah' }, // New item
           { to: '/admin/kode-skpd', icon: FileTextIcon, label: 'Kode SKPD' },
           { to: '/admin/jadwal-penganggaran', icon: HistoryIcon, label: 'Jadwal Penganggaran' },
         ]
