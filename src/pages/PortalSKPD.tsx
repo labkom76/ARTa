@@ -46,7 +46,6 @@ import TagihanDetailDialog from '@/components/TagihanDetailDialog'; // Import th
 
 // Zod schema for form validation
 const formSchema = z.object({
-  // nomor_spm dihapus
   uraian: z.string().min(1, { message: 'Uraian wajib diisi.' }),
   jumlah_kotor: z.preprocess(
     (val) => Number(val),
@@ -54,6 +53,7 @@ const formSchema = z.object({
   ),
   jenis_spm: z.string().min(1, { message: 'Jenis SPM wajib dipilih.' }),
   jenis_tagihan: z.string().min(1, { message: 'Jenis Tagihan wajib dipilih.' }),
+  kode_jadwal: z.string().min(1, { message: 'Kode Jadwal Penganggaran wajib dipilih.' }), // New field
 });
 
 type TagihanFormValues = z.infer<typeof formSchema>;
@@ -62,6 +62,12 @@ interface VerificationItem {
   item: string;
   memenuhi_syarat: boolean;
   keterangan: string;
+}
+
+interface ScheduleOption {
+  id: string;
+  kode_jadwal: string;
+  deskripsi_jadwal: string;
 }
 
 interface Tagihan {
@@ -83,6 +89,7 @@ interface Tagihan {
   detail_verifikasi?: VerificationItem[];
   nomor_verifikasi?: string;
   nama_registrator?: string;
+  kode_jadwal?: string; // Add kode_jadwal to Tagihan interface
 }
 
 const PortalSKPD = () => {
@@ -99,20 +106,22 @@ const PortalSKPD = () => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [tagihanToDelete, setTagihanToDelete] = useState<{ id: string; nomorSpm: string } | null>(null);
 
-  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false); // New state for detail modal
-  const [selectedTagihanForDetail, setSelectedTagihanForDetail] = useState<Tagihan | null>(null); // New state for detail tagihan
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [selectedTagihanForDetail, setSelectedTagihanForDetail] = useState<Tagihan | null>(null);
 
-  const [isAccountVerified, setIsAccountVerified] = useState(true); // New state for account verification
-  const toastShownRef = useRef(false); // Ref to ensure toast is shown only once
+  const [isAccountVerified, setIsAccountVerified] = useState(true);
+  const toastShownRef = useRef(false);
+
+  const [scheduleOptions, setScheduleOptions] = useState<ScheduleOption[]>([]); // State for schedule options
 
   const form = useForm<TagihanFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      // nomor_spm dihapus
       uraian: '',
       jumlah_kotor: 0,
       jenis_spm: '',
       jenis_tagihan: '',
+      kode_jadwal: '', // Default value for new field
     },
   });
 
@@ -130,6 +139,24 @@ const PortalSKPD = () => {
       }
     }
   }, [sessionLoading, profile]);
+
+  // Fetch Schedule Options
+  useEffect(() => {
+    const fetchScheduleOptions = async () => {
+      const { data, error } = await supabase
+        .from('master_jadwal')
+        .select('id, kode_jadwal, deskripsi_jadwal')
+        .order('kode_jadwal', { ascending: true });
+      if (error) {
+        console.error('Error fetching schedule options:', error.message);
+        toast.error('Gagal memuat daftar jadwal penganggaran.');
+        setScheduleOptions([]);
+      } else {
+        setScheduleOptions(data || []);
+      }
+    };
+    fetchScheduleOptions();
+  }, []);
 
   const fetchTagihan = async () => {
     if (!user || sessionLoading) return;
@@ -172,11 +199,11 @@ const PortalSKPD = () => {
   useEffect(() => {
     if (editingTagihan) {
       form.reset({
-        // nomor_spm dihapus
         uraian: editingTagihan.uraian,
         jumlah_kotor: editingTagihan.jumlah_kotor,
         jenis_spm: editingTagihan.jenis_spm,
         jenis_tagihan: editingTagihan.jenis_tagihan,
+        kode_jadwal: editingTagihan.kode_jadwal || '', // Set existing kode_jadwal
       });
     } else {
       form.reset();
@@ -198,11 +225,11 @@ const PortalSKPD = () => {
         const { error } = await supabase
           .from('database_tagihan')
           .update({
-            // nomor_spm dihapus
             uraian: values.uraian,
             jumlah_kotor: values.jumlah_kotor,
             jenis_spm: values.jenis_spm,
             jenis_tagihan: values.jenis_tagihan,
+            kode_jadwal: values.kode_jadwal, // Update kode_jadwal
           })
           .eq('id_tagihan', editingTagihan.id_tagihan)
           .eq('id_pengguna_input', user.id);
@@ -213,11 +240,11 @@ const PortalSKPD = () => {
         const { error } = await supabase.from('database_tagihan').insert({
           id_pengguna_input: user.id,
           nama_skpd: profile.asal_skpd,
-          // nomor_spm dihapus
           uraian: values.uraian,
           jumlah_kotor: values.jumlah_kotor,
           jenis_spm: values.jenis_spm,
           jenis_tagihan: values.jenis_tagihan,
+          kode_jadwal: values.kode_jadwal, // Insert kode_jadwal
           status_tagihan: 'Menunggu Registrasi',
         });
 
@@ -472,6 +499,28 @@ const PortalSKPD = () => {
               {form.formState.errors.jenis_tagihan && (
                 <p className="col-span-4 text-right text-red-500 text-sm">
                   {form.formState.errors.jenis_tagihan.message}
+                </p>
+              )}
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="kode_jadwal" className="text-right">
+                Jadwal Penganggaran
+              </Label>
+              <Select onValueChange={(value) => form.setValue('kode_jadwal', value)} value={form.watch('kode_jadwal')} disabled={!isAccountVerified}>
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder="Pilih Jadwal" />
+                </SelectTrigger>
+                <SelectContent>
+                  {scheduleOptions.map((schedule) => (
+                    <SelectItem key={schedule.id} value={schedule.kode_jadwal}>
+                      {schedule.deskripsi_jadwal} ({schedule.kode_jadwal})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {form.formState.errors.kode_jadwal && (
+                <p className="col-span-4 text-right text-red-500 text-sm">
+                  {form.formState.errors.kode_jadwal.message}
                 </p>
               )}
             </div>
