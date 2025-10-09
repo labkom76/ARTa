@@ -13,6 +13,7 @@ import {
 import { PlusCircleIcon, EditIcon, Trash2Icon } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import AddSkpdDialog from '@/components/AddSkpdDialog'; // Import the new dialog component
 
 interface SkpdData {
   id: string;
@@ -26,6 +27,7 @@ const AdminKodeSKPD = () => {
   const [loadingPage, setLoadingPage] = useState(true);
   const [skpdList, setSkpdList] = useState<SkpdData[]>([]);
   const [loadingData, setLoadingData] = useState(true);
+  const [isAddSkpdModalOpen, setIsAddSkpdModalOpen] = useState(false); // State for controlling the dialog
 
   useEffect(() => {
     if (!sessionLoading) {
@@ -60,6 +62,10 @@ const AdminKodeSKPD = () => {
     fetchSkpdData();
   }, [sessionLoading, profile]);
 
+  const handleSkpdAdded = () => {
+    fetchSkpdData(); // Refresh the list after a new SKPD is added
+  };
+
   if (loadingPage) {
     return (
       <div className="p-6 bg-white rounded-lg shadow-sm border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
@@ -82,7 +88,7 @@ const AdminKodeSKPD = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold text-gray-800 dark:text-white">Manajemen Kode SKPD</h1>
-        <Button className="flex items-center gap-2">
+        <Button onClick={() => setIsAddSkpdModalOpen(true)} className="flex items-center gap-2">
           <PlusCircleIcon className="h-4 w-4" /> Tambah SKPD Baru
         </Button>
       </div>
@@ -137,6 +143,12 @@ const AdminKodeSKPD = () => {
           </div>
         </CardContent>
       </Card>
+
+      <AddSkpdDialog
+        isOpen={isAddSkpdModalOpen}
+        onClose={() => setIsAddSkpdModalOpen(false)}
+        onSkpdAdded={handleSkpdAdded}
+      />
     </div>
   );
 };
