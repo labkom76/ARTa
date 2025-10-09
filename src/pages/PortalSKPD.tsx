@@ -44,6 +44,7 @@ import { Textarea } from '@/components/ui/textarea';
 import DeleteConfirmationDialog from '@/components/DeleteConfirmationDialog';
 import TagihanDetailDialog from '@/components/TagihanDetailDialog'; // Import the new detail dialog
 import { format } from 'date-fns'; // Import format from date-fns
+import { generateNomorSpm, getJenisTagihanCode } from '@/utils/spmGenerator'; // Import utility functions
 
 // Zod schema for form validation
 const formSchema = z.object({
@@ -245,14 +246,8 @@ const PortalSKPD = () => {
     fetchScheduleOptions();
   }, []);
 
-  // Helper function to extract the code from Jenis Tagihan full description
-  const getJenisTagihanCode = (fullDescription: string): string => {
-    const match = fullDescription.match(/\(([^)]+)\)/);
-    return match ? match[1] : fullDescription; // Fallback to full description if no code found
-  };
-
   // Function to generate Nomor SPM
-  const generateNomorSpm = useCallback(async (
+  const generateNomorSpmCallback = useCallback(async (
     jenisTagihanFull: string,
     kodeJadwal: string,
     currentKodeSkpd: string | null,
@@ -262,31 +257,21 @@ const PortalSKPD = () => {
     if (!jenisTagihanFull || !kodeJadwal || !currentKodeSkpd || !currentKodeWilayah || nomorUrutTagihan === null || nomorUrutTagihan === undefined) {
       return null;
     }
-
-    const jenisTagihanCode = getJenisTagihanCode(jenisTagihanFull);
-
-    const now = new Date();
-    const currentMonth = format(now, 'MM');
-    const currentYear = format(now, 'yyyy');
-
-    const formattedSequence = String(nomorUrutTagihan).padStart(6, '0'); // Pad with 6 zeros
-
-    // Final SPM string construction
-    return `${currentKodeWilayah}/${formattedSequence}/${jenisTagihanCode}/${currentKodeSkpd}/${kodeJadwal}/${currentMonth}/${currentYear}`;
+    return generateNomorSpm(jenisTagihanFull, kodeJadwal, currentKodeSkpd, currentKodeWilayah, nomorUrutTagihan);
   }, []);
 
   // Effect to trigger SPM number generation
   useEffect(() => {
     const updateNomorSpm = async () => {
       if (jenisTagihanWatch && kodeJadwalWatch && kodeSkpd && kodeWilayah && nomorUrutTagihanWatch !== null && nomorUrutTagihanWatch !== undefined) {
-        const newNomorSpm = await generateNomorSpm(jenisTagihanWatch, kodeJadwalWatch, kodeSkpd, kodeWilayah, nomorUrutTagihanWatch);
+        const newNomorSpm = await generateNomorSpmCallback(jenisTagihanWatch, kodeJadwalWatch, kodeSkpd, kodeWilayah, nomorUrutTagihanWatch);
         setGeneratedNomorSpm(newNomorSpm);
       } else {
         setGeneratedNomorSpm(null);
       }
     };
     updateNomorSpm();
-  }, [jenisTagihanWatch, kodeJadwalWatch, kodeSkpd, kodeWilayah, nomorUrutTagihanWatch, generateNomorSpm]);
+  }, [jenisTagihanWatch, kodeJadwalWatch, kodeSkpd, kodeWilayah, nomorUrutTagihanWatch, generateNomorSpmCallback]);
 
   const fetchTagihan = async () => {
     if (!user || sessionLoading) return;
