@@ -55,6 +55,10 @@ const formSchema = z.object({
   jenis_spm: z.string().min(1, { message: 'Jenis SPM wajib dipilih.' }),
   jenis_tagihan: z.string().min(1, { message: 'Jenis Tagihan wajib dipilih.' }),
   kode_jadwal: z.string().min(1, { message: 'Kode Jadwal Penganggaran wajib dipilih.' }), // New field
+  nomor_urut_tagihan: z.preprocess(
+    (val) => Number(val),
+    z.number().min(1, { message: 'Nomor Urut Tagihan wajib diisi dan harus angka positif.' })
+  ),
 });
 
 type TagihanFormValues = z.infer<typeof formSchema>;
@@ -115,6 +119,7 @@ const PortalSKPD = () => {
 
   const [scheduleOptions, setScheduleOptions] = useState<ScheduleOption[]>([]); // State for schedule options
   const [kodeWilayah, setKodeWilayah] = useState<string | null>(null); // State for kode_wilayah
+  const [kodeSkpd, setKodeSkpd] = useState<string | null>(null); // New state for kode_skpd
   const [generatedNomorSpm, setGeneratedNomorSpm] = useState<string | null>(null); // State for generated Nomor SPM
 
   const form = useForm<TagihanFormValues>({
@@ -125,12 +130,14 @@ const PortalSKPD = () => {
       jenis_spm: '',
       jenis_tagihan: '',
       kode_jadwal: '', // Default value for new field
+      nomor_urut_tagihan: 1, // Default value for new field
     },
   });
 
   // Watch for changes in form fields that affect SPM generation
   const jenisTagihanWatch = form.watch('jenis_tagihan');
   const kodeJadwalWatch = form.watch('kode_jadwal');
+  const nomorUrutTagihanWatch = form.watch('nomor_urut_tagihan');
 
   useEffect(() => {
     if (!sessionLoading && profile) {
@@ -165,6 +172,29 @@ const PortalSKPD = () => {
     fetchAppSetting();
   }, []);
 
+  // Fetch Kode SKPD for the logged-in user's SKPD
+  useEffect(() => {
+    const fetchKodeSkpd = async () => {
+      if (profile?.asal_skpd) {
+        const { data, error } = await supabase
+          .from('master_skpd')
+          .select('kode_skpd')
+          .eq('nama_skpd', profile.asal_skpd)
+          .single();
+        if (error) {
+          console.error('Error fetching kode_skpd:', error.message);
+          toast.error('Gagal memuat Kode SKPD Anda.');
+          setKodeSkpd(null);
+        } else if (data) {
+          setKodeSkpd(data.kode_skpd);
+        }
+      } else {
+        setKodeSkpd(null);
+      }
+    };
+    fetchKodeSkpd();
+  }, [profile?.asal_skpd]);
+
   // Fetch Schedule Options
   useEffect(() => {
     const fetchScheduleOptions = async () => {
@@ -190,73 +220,41 @@ const PortalSKPD = () => {
   };
 
   // Function to generate Nomor SPM
-  const generateNomorSpm = useCallback(async (jenisTagihanFull: string, kodeJadwal: string, namaSkpd: string, currentKodeWilayah: string | null) => {
-    if (!jenisTagihanFull || !kodeJadwal || !namaSkpd || !currentKodeWilayah) {
+  const generateNomorSpm = useCallback(async (
+    jenisTagihanFull: string,
+    kodeJadwal: string,
+    currentKodeSkpd: string | null,
+    currentKodeWilayah: string | null,
+    nomorUrutTagihan: number | null | undefined
+  ) => {
+    if (!jenisTagihanFull || !kodeJadwal || !currentKodeSkpd || !currentKodeWilayah || nomorUrutTagihan === null || nomorUrutTagihan === undefined) {
       return null;
     }
 
-    const jenisTagihanCode = getJenisTagihanCode(jenisTagihanFull); // Use the extracted code
-
-    // Fetch kode_skpd from master_skpd using namaSkpd
-    const { data: skpdData, error: skpdError } = await supabase
-      .from('master_skpd')
-      .select('kode_skpd')
-      .eq('nama_skpd', namaSkpd)
-      .single();
-
-    if (skpdError || !skpdData) {
-      console.error('Error fetching kode_skpd for nama_skpd:', namaSkpd, skpdError?.message);
-      toast.error('Gagal mendapatkan Kode SKPD dari profil Anda.');
-      return null;
-    }
-    const kodeSkpd = skpdData.kode_skpd;
+    const jenisTagihanCode = getJenisTagihanCode(jenisTagihanFull);
 
     const now = new Date();
     const currentMonth = format(now, 'MM');
     const currentYear = format(now, 'yyyy');
 
-    // Fetch last SPM number for the current month, year, SKPD, Jenis Tagihan, and Kode Jadwal
-    // The LIKE pattern needs to be updated with '/' and the correct jenisTagihanCode
-    const { data, error } = await supabase
-      .from('database_tagihan')
-      .select('nomor_spm')
-      .eq('nama_skpd', namaSkpd)
-      .eq('jenis_tagihan', jenisTagihanFull) // Keep full description for filtering if needed, or change to code
-      .eq('kode_jadwal', kodeJadwal)
-      .like('nomor_spm', `${currentKodeWilayah}/%/${jenisTagihanCode}/${kodeSkpd}/${kodeJadwal}/${currentMonth}/${currentYear}`) // Updated LIKE pattern
-      .order('nomor_spm', { ascending: false })
-      .limit(1);
-
-    let nextSequence = 1;
-    if (data && data.length > 0 && data[0].nomor_spm) {
-      const lastNomorSpm = data[0].nomor_spm;
-      const parts = lastNomorSpm.split('/'); // Changed separator to '/'
-      if (parts.length === 7) { // Still 7 parts
-        const lastSequenceStr = parts[1]; // Second part is the sequence
-        const lastSequenceNum = parseInt(lastSequenceStr, 10);
-        if (!isNaN(lastSequenceNum)) {
-          nextSequence = lastSequenceNum + 1;
-        }
-      }
-    }
-    const formattedSequence = String(nextSequence).padStart(6, '0'); // Changed padding to 6 zeros
+    const formattedSequence = String(nomorUrutTagihan).padStart(6, '0'); // Pad with 6 zeros
 
     // Final SPM string construction
-    return `${currentKodeWilayah}/${formattedSequence}/${jenisTagihanCode}/${kodeSkpd}/${kodeJadwal}/${currentMonth}/${currentYear}`;
+    return `${currentKodeWilayah}/${formattedSequence}/${jenisTagihanCode}/${currentKodeSkpd}/${kodeJadwal}/${currentMonth}/${currentYear}`;
   }, []);
 
   // Effect to trigger SPM number generation
   useEffect(() => {
     const updateNomorSpm = async () => {
-      if (jenisTagihanWatch && kodeJadwalWatch && profile?.asal_skpd && kodeWilayah) {
-        const newNomorSpm = await generateNomorSpm(jenisTagihanWatch, kodeJadwalWatch, profile.asal_skpd, kodeWilayah);
+      if (jenisTagihanWatch && kodeJadwalWatch && kodeSkpd && kodeWilayah && nomorUrutTagihanWatch !== null && nomorUrutTagihanWatch !== undefined) {
+        const newNomorSpm = await generateNomorSpm(jenisTagihanWatch, kodeJadwalWatch, kodeSkpd, kodeWilayah, nomorUrutTagihanWatch);
         setGeneratedNomorSpm(newNomorSpm);
       } else {
         setGeneratedNomorSpm(null);
       }
     };
     updateNomorSpm();
-  }, [jenisTagihanWatch, kodeJadwalWatch, profile?.asal_skpd, kodeWilayah, generateNomorSpm]);
+  }, [jenisTagihanWatch, kodeJadwalWatch, kodeSkpd, kodeWilayah, nomorUrutTagihanWatch, generateNomorSpm]);
 
   const fetchTagihan = async () => {
     if (!user || sessionLoading) return;
@@ -297,18 +295,32 @@ const PortalSKPD = () => {
   }, [user, sessionLoading, searchQuery, currentPage, itemsPerPage]);
 
   useEffect(() => {
-    if (editingTagihan) {
-      form.reset({
-        uraian: editingTagihan.uraian,
-        jumlah_kotor: editingTagihan.jumlah_kotor,
-        jenis_spm: editingTagihan.jenis_spm,
-        jenis_tagihan: editingTagihan.jenis_tagihan,
-        kode_jadwal: editingTagihan.kode_jadwal || '', // Set existing kode_jadwal
-      });
-    } else {
-      form.reset();
+    if (isModalOpen) { // Only reset when modal opens
+      if (editingTagihan) {
+        // Extract sequence number from existing nomor_spm
+        const spmParts = editingTagihan.nomor_spm.split('/');
+        const extractedNomorUrut = spmParts.length > 1 ? parseInt(spmParts[1], 10) : 1;
+
+        form.reset({
+          uraian: editingTagihan.uraian,
+          jumlah_kotor: editingTagihan.jumlah_kotor,
+          jenis_spm: editingTagihan.jenis_spm,
+          jenis_tagihan: editingTagihan.jenis_tagihan,
+          kode_jadwal: editingTagihan.kode_jadwal || '',
+          nomor_urut_tagihan: extractedNomorUrut,
+        });
+      } else {
+        form.reset({
+          uraian: '',
+          jumlah_kotor: 0,
+          jenis_spm: '',
+          jenis_tagihan: '',
+          kode_jadwal: '',
+          nomor_urut_tagihan: 1, // Default for new tagihan
+        });
+      }
     }
-  }, [editingTagihan, form]);
+  }, [isModalOpen, editingTagihan, form]);
 
   const onSubmit = async (values: TagihanFormValues) => {
     if (!user || !profile) {
@@ -564,6 +576,25 @@ const PortalSKPD = () => {
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4">
+            {/* Input Nomor Urut Tagihan */}
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="nomor_urut_tagihan" className="text-right">
+                Nomor Urut Tagihan
+              </Label>
+              <Input
+                id="nomor_urut_tagihan"
+                type="number"
+                {...form.register('nomor_urut_tagihan', { valueAsNumber: true })}
+                className="col-span-3"
+                disabled={!isAccountVerified || !!editingTagihan} // Disable if editing or not verified
+              />
+              {form.formState.errors.nomor_urut_tagihan && (
+                <p className="col-span-4 text-right text-red-500 text-sm">
+                  {form.formState.errors.nomor_urut_tagihan.message}
+                </p>
+              )}
+            </div>
+
             {/* Pratinjau Nomor SPM Otomatis */}
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="nomor_spm_otomatis" className="text-right">
@@ -574,7 +605,7 @@ const PortalSKPD = () => {
                 value={generatedNomorSpm || 'Membuat Nomor SPM...'}
                 readOnly
                 className="col-span-3 font-mono text-sm"
-                disabled={!isAccountVerified}
+                disabled={true} // Always disabled as it's a preview
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
