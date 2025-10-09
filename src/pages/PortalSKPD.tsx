@@ -614,6 +614,19 @@ error('Error deleting tagihan:', error.message);
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4">
+            {/* Pratinjau Nomor SPM Otomatis */}
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="nomor_spm_otomatis" className="text-right">
+                Nomor SPM (Otomatis)
+              </Label>
+              <Input
+                id="nomor_spm_otomatis"
+                value={generatedNomorSpm || 'Membuat Nomor SPM...'}
+                readOnly
+                className="col-span-3 font-mono text-sm"
+                disabled={true} // Always disabled as it's a preview
+              />
+            </div>
             {/* Input Nomor Urut Tagihan */}
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="nomor_urut_tagihan" className="text-right">
@@ -633,19 +646,6 @@ error('Error deleting tagihan:', error.message);
               )}
             </div>
 
-            {/* Pratinjau Nomor SPM Otomatis */}
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="nomor_spm_otomatis" className="text-right">
-                Nomor SPM (Otomatis)
-              </Label>
-              <Input
-                id="nomor_spm_otomatis"
-                value={generatedNomorSpm || 'Membuat Nomor SPM...'}
-                readOnly
-                className="col-span-3 font-mono text-sm"
-                disabled={true} // Always disabled as it's a preview
-              />
-            </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="jenis_spm" className="text-right">
                 Jenis SPM
