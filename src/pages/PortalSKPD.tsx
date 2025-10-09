@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useSession } from '@/contexts/SessionContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -43,6 +43,7 @@ import { PlusCircleIcon, SearchIcon, EditIcon, Trash2Icon } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import DeleteConfirmationDialog from '@/components/DeleteConfirmationDialog';
 import TagihanDetailDialog from '@/components/TagihanDetailDialog'; // Import the new detail dialog
+import { format } from 'date-fns'; // Import format from date-fns
 
 // Zod schema for form validation
 const formSchema = z.object({
@@ -113,6 +114,8 @@ const PortalSKPD = () => {
   const toastShownRef = useRef(false);
 
   const [scheduleOptions, setScheduleOptions] = useState<ScheduleOption[]>([]); // State for schedule options
+  const [kodeWilayah, setKodeWilayah] = useState<string | null>(null); // State for kode_wilayah
+  const [generatedNomorSpm, setGeneratedNomorSpm] = useState<string | null>(null); // State for generated Nomor SPM
 
   const form = useForm<TagihanFormValues>({
     resolver: zodResolver(formSchema),
@@ -124,6 +127,10 @@ const PortalSKPD = () => {
       kode_jadwal: '', // Default value for new field
     },
   });
+
+  // Watch for changes in form fields that affect SPM generation
+  const jenisTagihanWatch = form.watch('jenis_tagihan');
+  const kodeJadwalWatch = form.watch('kode_jadwal');
 
   useEffect(() => {
     if (!sessionLoading && profile) {
@@ -139,6 +146,24 @@ const PortalSKPD = () => {
       }
     }
   }, [sessionLoading, profile]);
+
+  // Fetch Kode Wilayah from app_settings
+  useEffect(() => {
+    const fetchAppSetting = async () => {
+      const { data, error } = await supabase
+        .from('app_settings')
+        .select('value')
+        .eq('key', 'kode_wilayah')
+        .single();
+      if (error && error.code !== 'PGRST116') { // PGRST116 means no rows found
+        console.error('Error fetching kode_wilayah:', error.message);
+        toast.error('Gagal memuat Kode Wilayah.');
+      } else if (data) {
+        setKodeWilayah(data.value);
+      }
+    };
+    fetchAppSetting();
+  }, []);
 
   // Fetch Schedule Options
   useEffect(() => {
@@ -157,6 +182,71 @@ const PortalSKPD = () => {
     };
     fetchScheduleOptions();
   }, []);
+
+  // Function to generate Nomor SPM
+  const generateNomorSpm = useCallback(async (jenisTagihan: string, kodeJadwal: string, namaSkpd: string, currentKodeWilayah: string | null) => {
+    if (!jenisTagihan || !kodeJadwal || !namaSkpd || !currentKodeWilayah) {
+      return null;
+    }
+
+    // Fetch kode_skpd from master_skpd using namaSkpd
+    const { data: skpdData, error: skpdError } = await supabase
+      .from('master_skpd')
+      .select('kode_skpd')
+      .eq('nama_skpd', namaSkpd)
+      .single();
+
+    if (skpdError || !skpdData) {
+      console.error('Error fetching kode_skpd for nama_skpd:', namaSkpd, skpdError?.message);
+      toast.error('Gagal mendapatkan Kode SKPD dari profil Anda.');
+      return null;
+    }
+    const kodeSkpd = skpdData.kode_skpd;
+
+    const now = new Date();
+    const currentMonth = format(now, 'MM');
+    const currentYear = format(now, 'yyyy');
+
+    // Fetch last SPM number for the current month, year, SKPD, Jenis Tagihan, and Kode Jadwal
+    const { data, error } = await supabase
+      .from('database_tagihan')
+      .select('nomor_spm')
+      .eq('nama_skpd', namaSkpd) // Use nama_skpd for filtering as it's stored in database_tagihan
+      .eq('jenis_tagihan', jenisTagihan)
+      .eq('kode_jadwal', kodeJadwal)
+      .like('nomor_spm', `${currentKodeWilayah}-%-${jenisTagihan}-${kodeSkpd}-${kodeJadwal}-${currentMonth}-${currentYear}`)
+      .order('nomor_spm', { ascending: false })
+      .limit(1);
+
+    let nextSequence = 1;
+    if (data && data.length > 0 && data[0].nomor_spm) {
+      const lastNomorSpm = data[0].nomor_spm;
+      const parts = lastNomorSpm.split('-');
+      if (parts.length === 7) { // Ensure correct format
+        const lastSequenceStr = parts[1]; // Second part is the sequence
+        const lastSequenceNum = parseInt(lastSequenceStr, 10);
+        if (!isNaN(lastSequenceNum)) {
+          nextSequence = lastSequenceNum + 1;
+        }
+      }
+    }
+    const formattedSequence = String(nextSequence).padStart(3, '0'); // Pad with 3 zeros, e.g., 001, 010, 100
+
+    return `${currentKodeWilayah}-${formattedSequence}-${jenisTagihan}-${kodeSkpd}-${kodeJadwal}-${currentMonth}-${currentYear}`;
+  }, []);
+
+  // Effect to trigger SPM number generation
+  useEffect(() => {
+    const updateNomorSpm = async () => {
+      if (jenisTagihanWatch && kodeJadwalWatch && profile?.asal_skpd && kodeWilayah) {
+        const newNomorSpm = await generateNomorSpm(jenisTagihanWatch, kodeJadwalWatch, profile.asal_skpd, kodeWilayah);
+        setGeneratedNomorSpm(newNomorSpm);
+      } else {
+        setGeneratedNomorSpm(null);
+      }
+    };
+    updateNomorSpm();
+  }, [jenisTagihanWatch, kodeJadwalWatch, profile?.asal_skpd, kodeWilayah, generateNomorSpm]);
 
   const fetchTagihan = async () => {
     if (!user || sessionLoading) return;
@@ -237,9 +327,14 @@ const PortalSKPD = () => {
         if (error) throw error;
         toast.success('Tagihan berhasil diperbarui!');
       } else {
+        if (!generatedNomorSpm) {
+          toast.error('Gagal membuat Nomor SPM otomatis. Harap coba lagi.');
+          return;
+        }
         const { error } = await supabase.from('database_tagihan').insert({
           id_pengguna_input: user.id,
           nama_skpd: profile.asal_skpd,
+          nomor_spm: generatedNomorSpm, // Insert generated Nomor SPM
           uraian: values.uraian,
           jumlah_kotor: values.jumlah_kotor,
           jenis_spm: values.jenis_spm,
