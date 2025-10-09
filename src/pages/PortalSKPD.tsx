@@ -645,7 +645,29 @@ error('Error deleting tagihan:', error.message);
                 </p>
               )}
             </div>
-
+            {/* Jadwal Penganggaran */}
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="kode_jadwal" className="text-right">
+                Jadwal Penganggaran
+              </Label>
+              <Select onValueChange={(value) => form.setValue('kode_jadwal', value)} value={form.watch('kode_jadwal')} disabled={!isAccountVerified}>
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder="Pilih Jadwal" />
+                </SelectTrigger>
+                <SelectContent>
+                  {scheduleOptions.map((schedule) => (
+                    <SelectItem key={schedule.id} value={schedule.kode_jadwal}>
+                      {schedule.deskripsi_jadwal} ({schedule.kode_jadwal})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {form.formState.errors.kode_jadwal && (
+                <p className="col-span-4 text-right text-red-500 text-sm">
+                  {form.formState.errors.kode_jadwal.message}
+                </p>
+              )}
+            </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="jenis_spm" className="text-right">
                 Jenis SPM
@@ -685,28 +707,6 @@ error('Error deleting tagihan:', error.message);
               {form.formState.errors.jenis_tagihan && (
                 <p className="col-span-4 text-right text-red-500 text-sm">
                   {form.formState.errors.jenis_tagihan.message}
-                </p>
-              )}
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="kode_jadwal" className="text-right">
-                Jadwal Penganggaran
-              </Label>
-              <Select onValueChange={(value) => form.setValue('kode_jadwal', value)} value={form.watch('kode_jadwal')} disabled={!isAccountVerified}>
-                <SelectTrigger className="col-span-3">
-                  <SelectValue placeholder="Pilih Jadwal" />
-                </SelectTrigger>
-                <SelectContent>
-                  {scheduleOptions.map((schedule) => (
-                    <SelectItem key={schedule.id} value={schedule.kode_jadwal}>
-                      {schedule.deskripsi_jadwal} ({schedule.kode_jadwal})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {form.formState.errors.kode_jadwal && (
-                <p className="col-span-4 text-right text-red-500 text-sm">
-                  {form.formState.errors.kode_jadwal.message}
                 </p>
               )}
             </div>
