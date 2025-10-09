@@ -13,7 +13,9 @@ import {
 import { PlusCircleIcon, EditIcon, Trash2Icon } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import AddScheduleDialog from '@/components/AddScheduleDialog'; // Import the new dialog component
+import AddScheduleDialog from '@/components/AddScheduleDialog';
+import EditScheduleDialog from '@/components/EditScheduleDialog'; // Import the new dialog component
+import DeleteConfirmationDialog from '@/components/DeleteConfirmationDialog'; // Import the delete confirmation dialog
 
 interface ScheduleData {
   id: string;
@@ -28,6 +30,11 @@ const AdminJadwalPenganggaran = () => {
   const [scheduleList, setScheduleList] = useState<ScheduleData[]>([]);
   const [loadingData, setLoadingData] = useState(true);
   const [isAddScheduleModalOpen, setIsAddScheduleModalOpen] = useState(false); // State for add dialog
+  const [isEditScheduleModalOpen, setIsEditScheduleModalOpen] = useState(false); // State for edit dialog
+  const [editingSchedule, setEditingSchedule] = useState<ScheduleData | null>(null); // State for schedule being edited
+
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false); // State for delete dialog
+  const [scheduleToDelete, setScheduleToDelete] = useState<{ id: string; kodeJadwal: string } | null>(null); // State for schedule to delete
 
   useEffect(() => {
     if (!sessionLoading) {
@@ -62,8 +69,47 @@ const AdminJadwalPenganggaran = () => {
     fetchScheduleData();
   }, [sessionLoading, profile]);
 
-  const handleScheduleAdded = () => {
-    fetchScheduleData(); // Refresh the list after a new schedule is added
+  const handleScheduleAddedOrUpdated = () => {
+    fetchScheduleData(); // Refresh the list after a new schedule is added or updated
+  };
+
+  const handleEditClick = (schedule: ScheduleData) => {
+    setEditingSchedule(schedule);
+    setIsEditScheduleModalOpen(true);
+  };
+
+  const handleCloseEditModal = () => {
+    setIsEditScheduleModalOpen(false);
+    setEditingSchedule(null);
+  };
+
+  const handleDeleteClick = (schedule: ScheduleData) => {
+    setScheduleToDelete({ id: schedule.id, kodeJadwal: schedule.kode_jadwal });
+    setIsDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!scheduleToDelete) {
+      toast.error('Tidak ada jadwal yang dipilih untuk dihapus.');
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('master_jadwal')
+        .delete()
+        .eq('id', scheduleToDelete.id);
+
+      if (error) throw error;
+
+      toast.success(`Jadwal dengan Kode "${scheduleToDelete.kodeJadwal}" berhasil dihapus.`);
+      setIsDeleteDialogOpen(false);
+      setScheduleToDelete(null);
+      fetchScheduleData(); // Refresh the list
+    } catch (error: any) {
+      console.error('Error deleting schedule:', error.message);
+      toast.error('Gagal menghapus jadwal: ' + error.message);
+    }
   };
 
   if (loadingPage) {
@@ -127,10 +173,10 @@ const AdminJadwalPenganggaran = () => {
                       <TableCell>{schedule.deskripsi_jadwal}</TableCell>
                       <TableCell className="text-center">
                         <div className="flex justify-center space-x-2">
-                          <Button variant="outline" size="icon" title="Edit Jadwal">
+                          <Button variant="outline" size="icon" title="Edit Jadwal" onClick={() => handleEditClick(schedule)}>
                             <EditIcon className="h-4 w-4" />
                           </Button>
-                          <Button variant="destructive" size="icon" title="Hapus Jadwal">
+                          <Button variant="destructive" size="icon" title="Hapus Jadwal" onClick={() => handleDeleteClick(schedule)}>
                             <Trash2Icon className="h-4 w-4" />
                           </Button>
                         </div>
@@ -147,7 +193,22 @@ const AdminJadwalPenganggaran = () => {
       <AddScheduleDialog
         isOpen={isAddScheduleModalOpen}
         onClose={() => setIsAddScheduleModalOpen(false)}
-        onScheduleAdded={handleScheduleAdded}
+        onScheduleAdded={handleScheduleAddedOrUpdated}
+      />
+
+      <EditScheduleDialog
+        isOpen={isEditScheduleModalOpen}
+        onClose={handleCloseEditModal}
+        onScheduleUpdated={handleScheduleAddedOrUpdated}
+        editingSchedule={editingSchedule}
+      />
+
+      <DeleteConfirmationDialog
+        isOpen={isDeleteDialogOpen}
+        onClose={() => setIsDeleteDialogOpen(false)}
+        onConfirm={confirmDelete}
+        title="Konfirmasi Penghapusan Jadwal"
+        message={`Apakah Anda yakin ingin menghapus jadwal dengan Kode "${scheduleToDelete?.kodeJadwal || ''}"? Tindakan ini tidak dapat diurungkan.`}
       />
     </div>
   );
