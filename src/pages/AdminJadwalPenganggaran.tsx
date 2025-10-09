@@ -13,6 +13,7 @@ import {
 import { PlusCircleIcon, EditIcon, Trash2Icon } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import AddScheduleDialog from '@/components/AddScheduleDialog'; // Import the new dialog component
 
 interface ScheduleData {
   id: string;
@@ -26,6 +27,7 @@ const AdminJadwalPenganggaran = () => {
   const [loadingPage, setLoadingPage] = useState(true);
   const [scheduleList, setScheduleList] = useState<ScheduleData[]>([]);
   const [loadingData, setLoadingData] = useState(true);
+  const [isAddScheduleModalOpen, setIsAddScheduleModalOpen] = useState(false); // State for add dialog
 
   useEffect(() => {
     if (!sessionLoading) {
@@ -60,6 +62,10 @@ const AdminJadwalPenganggaran = () => {
     fetchScheduleData();
   }, [sessionLoading, profile]);
 
+  const handleScheduleAdded = () => {
+    fetchScheduleData(); // Refresh the list after a new schedule is added
+  };
+
   if (loadingPage) {
     return (
       <div className="p-6 bg-white rounded-lg shadow-sm border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
@@ -82,7 +88,7 @@ const AdminJadwalPenganggaran = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold text-gray-800 dark:text-white">Manajemen Jadwal Penganggaran</h1>
-        <Button className="flex items-center gap-2">
+        <Button onClick={() => setIsAddScheduleModalOpen(true)} className="flex items-center gap-2">
           <PlusCircleIcon className="h-4 w-4" /> Tambah Jadwal Baru
         </Button>
       </div>
@@ -137,6 +143,12 @@ const AdminJadwalPenganggaran = () => {
           </div>
         </CardContent>
       </Card>
+
+      <AddScheduleDialog
+        isOpen={isAddScheduleModalOpen}
+        onClose={() => setIsAddScheduleModalOpen(false)}
+        onScheduleAdded={handleScheduleAdded}
+      />
     </div>
   );
 };
