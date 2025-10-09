@@ -60,6 +60,7 @@ const formSchema = z.object({
     (val) => Number(val),
     z.number().min(1, { message: 'Nomor Urut Tagihan wajib diisi dan harus angka positif.' })
   ),
+  sumber_dana: z.string().min(1, { message: 'Sumber Dana wajib dipilih.' }), // New field for Sumber Dana
 });
 
 type TagihanFormValues = z.infer<typeof formSchema>;
@@ -97,6 +98,7 @@ interface Tagihan {
   nama_registrator?: string;
   kode_jadwal?: string; // Add kode_jadwal to Tagihan interface
   nomor_urut?: number; // Add nomor_urut to Tagihan interface
+  sumber_dana?: string; // Add sumber_dana to Tagihan interface
 }
 
 // --- FUNGSI BARU: isNomorSpmDuplicate (MODIFIED) ---
@@ -170,6 +172,7 @@ const PortalSKPD = () => {
       jenis_tagihan: '',
       kode_jadwal: '', // Default value for new field
       nomor_urut_tagihan: 1, // Default value for new field
+      sumber_dana: '', // Default value for new field
     },
   });
 
@@ -328,6 +331,7 @@ const PortalSKPD = () => {
           jenis_tagihan: editingTagihan.jenis_tagihan,
           kode_jadwal: editingTagihan.kode_jadwal || '',
           nomor_urut_tagihan: editingTagihan.nomor_urut || 1, // Menggunakan nomor_urut langsung
+          sumber_dana: editingTagihan.sumber_dana || '', // Set sumber_dana for editing
         });
       } else {
         form.reset({
@@ -337,6 +341,7 @@ const PortalSKPD = () => {
           jenis_tagihan: '',
           kode_jadwal: '',
           nomor_urut_tagihan: 1, // Default for new tagihan
+          sumber_dana: '', // Default for new tagihan
         });
       }
     }
@@ -393,8 +398,8 @@ const PortalSKPD = () => {
 
         if (isDuplicate) {
           toast.error('Nomor Urut Tagihan ini sudah digunakan untuk SKPD dan Jadwal yang sama di tahun ini. Silakan gunakan nomor lain.');
-          setIsSubmitting(false);
-          return;
+          setIsSubmitting(false); // Ensure submitting state is reset
+          return; // Stop the submission process
         }
       }
 
@@ -409,6 +414,7 @@ const PortalSKPD = () => {
             kode_jadwal: values.kode_jadwal, // Update kode_jadwal
             nomor_urut: values.nomor_urut_tagihan, // Update nomor_urut
             nomor_spm: newNomorSpm, // Update with the newly generated SPM
+            sumber_dana: values.sumber_dana, // Update sumber_dana
           })
           .eq('id_tagihan', editingTagihan.id_tagihan)
           .eq('id_pengguna_input', user.id);
@@ -426,6 +432,7 @@ const PortalSKPD = () => {
           jenis_tagihan: values.jenis_tagihan,
           kode_jadwal: values.kode_jadwal, // Insert kode_jadwal
           nomor_urut: values.nomor_urut_tagihan, // Insert nomor_urut
+          sumber_dana: values.sumber_dana, // Insert sumber_dana
           status_tagihan: 'Menunggu Registrasi',
         });
 
@@ -735,6 +742,33 @@ error('Error deleting tagihan:', error.message);
               {form.formState.errors.jenis_tagihan && (
                 <p className="col-span-4 text-right text-red-500 text-sm">
                   {form.formState.errors.jenis_tagihan.message}
+                </p>
+              )}
+            </div>
+            {/* New: Sumber Dana Dropdown */}
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="sumber_dana" className="text-right">
+                Sumber Dana
+              </Label>
+              <Select onValueChange={(value) => form.setValue('sumber_dana', value)} value={form.watch('sumber_dana')} disabled={!isAccountVerified}>
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder="Pilih Sumber Dana" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Pendapatan Asli Daerah">Pendapatan Asli Daerah</SelectItem>
+                  <SelectItem value="Dana Bagi Hasil">Dana Bagi Hasil</SelectItem>
+                  <SelectItem value="DAU - BG">DAU - BG</SelectItem>
+                  <SelectItem value="DAU - SG">DAU - SG</SelectItem>
+                  <SelectItem value="DAK - Fisik">DAK - Fisik</SelectItem>
+                  <SelectItem value="DAK - Non Fisik">DAK - Non Fisik</SelectItem>
+                  <SelectItem value="Dana Desa">Dana Desa</SelectItem>
+                  <SelectItem value="Insentif Fiskal">Insentif Fiskal</SelectItem>
+                  <SelectItem value="Pendapatan Transfer Antar Daerah">Pendapatan Transfer Antar Daerah</SelectItem>
+                </SelectContent>
+              </Select>
+              {form.formState.errors.sumber_dana && (
+                <p className="col-span-4 text-right text-red-500 text-sm">
+                  {form.formState.errors.sumber_dana.message}
                 </p>
               )}
             </div>
