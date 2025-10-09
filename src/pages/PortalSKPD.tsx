@@ -329,19 +329,13 @@ const PortalSKPD = () => {
   useEffect(() => {
     if (isModalOpen) { // Only reset when modal opens
       if (editingTagihan) {
-        // Extract sequence number from existing nomor_spm
-        // The SPM format is: KODE_WILAYAH/NOMOR_URUT/JENIS_TAGIHAN_CODE/KODE_SKPD/KODE_JADWAL/MM/YYYY
-        // We need the NOMOR_URUT part, which is the second segment (index 1)
-        const spmParts = editingTagihan.nomor_spm.split('/');
-        const extractedNomorUrut = spmParts.length > 1 ? parseInt(spmParts[1], 10) : 1;
-
         form.reset({
           uraian: editingTagihan.uraian,
           jumlah_kotor: editingTagihan.jumlah_kotor,
           jenis_spm: editingTagihan.jenis_spm,
           jenis_tagihan: editingTagihan.jenis_tagihan,
           kode_jadwal: editingTagihan.kode_jadwal || '',
-          nomor_urut_tagihan: extractedNomorUrut,
+          nomor_urut_tagihan: editingTagihan.nomor_urut || 1, // Menggunakan nomor_urut langsung
         });
       } else {
         form.reset({
