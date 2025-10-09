@@ -104,16 +104,23 @@ const isNomorSpmDuplicate = async (
   nomorUrutToCheck: number,
   namaSkpd: string,
   kodeJadwal: string,
-  currentYear: string
+  currentYear: string,
+  excludeTagihanId: string | null = null // Add parameter to exclude current tagihan during edit
 ): Promise<boolean> => {
   try {
-    const { count, error } = await supabase
+    let query = supabase
       .from('database_tagihan')
       .select('id_tagihan', { count: 'exact', head: true })
       .eq('nomor_urut', nomorUrutToCheck)
       .eq('nama_skpd', namaSkpd)
       .eq('kode_jadwal', kodeJadwal)
       .like('nomor_spm', `%/${currentYear}`); // Filter by year from SPM string
+
+    if (excludeTagihanId) {
+      query = query.neq('id_tagihan', excludeTagihanId);
+    }
+
+    const { count, error } = await query;
 
     if (error) {
       console.error('Error checking for duplicate nomor_urut:', error.message);
@@ -347,6 +354,50 @@ const PortalSKPD = () => {
 
     setIsSubmitting(true); // Set submitting state to true
     try {
+      // Ensure kodeSkpd and kodeWilayah are available for SPM generation
+      if (!kodeSkpd || !kodeWilayah) {
+        toast.error('Kode SKPD atau Kode Wilayah tidak tersedia. Gagal memperbarui Nomor SPM.');
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Regenerate Nomor SPM based on current form values
+      const newNomorSpm = await generateNomorSpmCallback(
+        values.jenis_tagihan,
+        values.kode_jadwal,
+        kodeSkpd,
+        kodeWilayah,
+        values.nomor_urut_tagihan
+      );
+
+      if (!newNomorSpm) {
+        toast.error('Gagal membuat Nomor SPM baru. Harap periksa input.');
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Check for duplicate nomor_urut if any relevant field has changed
+      const currentYear = format(new Date(), 'yyyy');
+      const hasRelevantFieldsChanged =
+        (editingTagihan && values.nomor_urut_tagihan !== editingTagihan.nomor_urut) ||
+        (editingTagihan && values.kode_jadwal !== editingTagihan.kode_jadwal);
+      
+      if (hasRelevantFieldsChanged || !editingTagihan) { // Always check for new tagihan
+        const isDuplicate = await isNomorSpmDuplicate(
+          values.nomor_urut_tagihan,
+          profile.asal_skpd,
+          values.kode_jadwal,
+          currentYear,
+          editingTagihan?.id_tagihan // Exclude current tagihan from duplicate check if editing
+        );
+
+        if (isDuplicate) {
+          toast.error('Nomor Urut Tagihan ini sudah digunakan untuk SKPD dan Jadwal yang sama di tahun ini. Silakan gunakan nomor lain.');
+          setIsSubmitting(false);
+          return;
+        }
+      }
+
       if (editingTagihan) {
         const { error } = await supabase
           .from('database_tagihan')
@@ -357,6 +408,7 @@ const PortalSKPD = () => {
             jenis_tagihan: values.jenis_tagihan,
             kode_jadwal: values.kode_jadwal, // Update kode_jadwal
             nomor_urut: values.nomor_urut_tagihan, // Update nomor_urut
+            nomor_spm: newNomorSpm, // Update with the newly generated SPM
           })
           .eq('id_tagihan', editingTagihan.id_tagihan)
           .eq('id_pengguna_input', user.id);
@@ -364,32 +416,10 @@ const PortalSKPD = () => {
         if (error) throw error;
         toast.success('Tagihan berhasil diperbarui!');
       } else {
-        if (!generatedNomorSpm || !profile.asal_skpd || !kodeJadwalWatch || !nomorUrutTagihanWatch) {
-          toast.error('Gagal membuat Nomor SPM otomatis. Harap coba lagi.');
-          setIsSubmitting(false); // Reset submitting state on error
-          return;
-        }
-
-        // --- START VALIDASI DUPLIKAT NOMOR URUT ---
-        const currentYear = format(new Date(), 'yyyy');
-        const isDuplicate = await isNomorSpmDuplicate(
-          nomorUrutTagihanWatch,
-          profile.asal_skpd,
-          kodeJadwalWatch,
-          currentYear
-        );
-
-        if (isDuplicate) {
-          toast.error('Nomor Urut Tagihan ini sudah digunakan untuk SKPD dan Jadwal yang sama di tahun ini. Silakan gunakan nomor lain.');
-          setIsSubmitting(false); // Ensure submitting state is reset
-          return; // Stop the submission process
-        }
-        // --- END VALIDASI DUPLIKAT NOMOR URUT ---
-
         const { error } = await supabase.from('database_tagihan').insert({
           id_pengguna_input: user.id,
           nama_skpd: profile.asal_skpd,
-          nomor_spm: generatedNomorSpm, // Insert generated Nomor SPM
+          nomor_spm: newNomorSpm, // Insert generated Nomor SPM
           uraian: values.uraian,
           jumlah_kotor: values.jumlah_kotor,
           jenis_spm: values.jenis_spm,
