@@ -95,26 +95,34 @@ interface Tagihan {
   nomor_verifikasi?: string;
   nama_registrator?: string;
   kode_jadwal?: string; // Add kode_jadwal to Tagihan interface
+  nomor_urut?: number; // Add nomor_urut to Tagihan interface
 }
 
-// --- FUNGSI BARU: isNomorSpmDuplicate ---
-const isNomorSpmDuplicate = async (nomorSpmToCheck: string): Promise<boolean> => {
+// --- FUNGSI BARU: isNomorSpmDuplicate (MODIFIED) ---
+const isNomorSpmDuplicate = async (
+  nomorUrutToCheck: number,
+  namaSkpd: string,
+  kodeJadwal: string,
+  currentYear: string
+): Promise<boolean> => {
   try {
     const { count, error } = await supabase
       .from('database_tagihan')
       .select('id_tagihan', { count: 'exact', head: true })
-      .eq('nomor_spm', nomorSpmToCheck);
+      .eq('nomor_urut', nomorUrutToCheck)
+      .eq('nama_skpd', namaSkpd)
+      .eq('kode_jadwal', kodeJadwal)
+      .like('nomor_spm', `%/${currentYear}`); // Filter by year from SPM string
 
     if (error) {
-      console.error('Error checking for duplicate SPM:', error.message);
+      console.error('Error checking for duplicate nomor_urut:', error.message);
       throw error;
     }
 
     return (count || 0) > 0;
   } catch (error: any) {
     console.error('Exception in isNomorSpmDuplicate:', error.message);
-    // Re-throw or handle as appropriate, for now, assume no duplicate on error
-    return false; 
+    return false;
   }
 };
 // --- AKHIR FUNGSI BARU ---
@@ -322,6 +330,8 @@ const PortalSKPD = () => {
     if (isModalOpen) { // Only reset when modal opens
       if (editingTagihan) {
         // Extract sequence number from existing nomor_spm
+        // The SPM format is: KODE_WILAYAH/NOMOR_URUT/JENIS_TAGIHAN_CODE/KODE_SKPD/KODE_JADWAL/MM/YYYY
+        // We need the NOMOR_URUT part, which is the second segment (index 1)
         const spmParts = editingTagihan.nomor_spm.split('/');
         const extractedNomorUrut = spmParts.length > 1 ? parseInt(spmParts[1], 10) : 1;
 
@@ -367,6 +377,7 @@ const PortalSKPD = () => {
             jenis_spm: values.jenis_spm,
             jenis_tagihan: values.jenis_tagihan,
             kode_jadwal: values.kode_jadwal, // Update kode_jadwal
+            nomor_urut: values.nomor_urut_tagihan, // Update nomor_urut
           })
           .eq('id_tagihan', editingTagihan.id_tagihan)
           .eq('id_pengguna_input', user.id);
@@ -374,21 +385,27 @@ const PortalSKPD = () => {
         if (error) throw error;
         toast.success('Tagihan berhasil diperbarui!');
       } else {
-        if (!generatedNomorSpm) {
+        if (!generatedNomorSpm || !profile.asal_skpd || !kodeJadwalWatch || !nomorUrutTagihanWatch) {
           toast.error('Gagal membuat Nomor SPM otomatis. Harap coba lagi.');
           setIsSubmitting(false); // Reset submitting state on error
           return;
         }
 
-        // --- START VALIDASI DUPLIKAT NOMOR SPM ---
-        const isDuplicate = await isNomorSpmDuplicate(generatedNomorSpm);
+        // --- START VALIDASI DUPLIKAT NOMOR URUT ---
+        const currentYear = format(new Date(), 'yyyy');
+        const isDuplicate = await isNomorSpmDuplicate(
+          nomorUrutTagihanWatch,
+          profile.asal_skpd,
+          kodeJadwalWatch,
+          currentYear
+        );
 
         if (isDuplicate) {
-          toast.error('Nomor Urut Tagihan ini sudah digunakan. Silakan gunakan nomor lain.');
+          toast.error('Nomor Urut Tagihan ini sudah digunakan untuk SKPD dan Jadwal yang sama di tahun ini. Silakan gunakan nomor lain.');
           setIsSubmitting(false); // Ensure submitting state is reset
           return; // Stop the submission process
         }
-        // --- END VALIDASI DUPLIKAT NOMOR SPM ---
+        // --- END VALIDASI DUPLIKAT NOMOR URUT ---
 
         const { error } = await supabase.from('database_tagihan').insert({
           id_pengguna_input: user.id,
@@ -399,6 +416,7 @@ const PortalSKPD = () => {
           jenis_spm: values.jenis_spm,
           jenis_tagihan: values.jenis_tagihan,
           kode_jadwal: values.kode_jadwal, // Insert kode_jadwal
+          nomor_urut: values.nomor_urut_tagihan, // Insert nomor_urut
           status_tagihan: 'Menunggu Registrasi',
         });
 
