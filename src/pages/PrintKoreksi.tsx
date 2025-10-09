@@ -29,6 +29,7 @@ interface Tagihan {
   id_korektor?: string;
   waktu_koreksi?: string;
   catatan_koreksi?: string;
+  sumber_dana?: string; // Add sumber_dana
 }
 
 const PrintKoreksi = () => {
@@ -268,6 +269,12 @@ const PrintKoreksi = () => {
             <span className="info-separator">:</span>
             <span className="info-value">{tagihan.jenis_tagihan || '-'}</span>
           </div>
+          {/* New: Sumber Dana */}
+          <div className="info-row">
+            <span className="info-label">Sumber Dana</span>
+            <span className="info-separator">:</span>
+            <span className="info-value">{tagihan.sumber_dana || '-'}</span>
+          </div>
           <div className="info-row">
             <span className="info-label">Jenis SPM</span>
             <span className="info-separator">:</span>
@@ -312,8 +319,10 @@ const PrintKoreksi = () => {
               </th>
             </tr>
             <tr>
-              <th>Ya</th>
-              <th>Tidak</th>
+              <td></td>
+              <td>
+                <span className="checkmark">✓</span>
+              </td>
             </tr>
           </thead>
           <tbody>
