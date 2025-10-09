@@ -97,6 +97,28 @@ interface Tagihan {
   kode_jadwal?: string; // Add kode_jadwal to Tagihan interface
 }
 
+// --- FUNGSI BARU: isNomorSpmDuplicate ---
+const isNomorSpmDuplicate = async (nomorSpmToCheck: string): Promise<boolean> => {
+  try {
+    const { count, error } = await supabase
+      .from('database_tagihan')
+      .select('id_tagihan', { count: 'exact', head: true })
+      .eq('nomor_spm', nomorSpmToCheck);
+
+    if (error) {
+      console.error('Error checking for duplicate SPM:', error.message);
+      throw error;
+    }
+
+    return (count || 0) > 0;
+  } catch (error: any) {
+    console.error('Exception in isNomorSpmDuplicate:', error.message);
+    // Re-throw or handle as appropriate, for now, assume no duplicate on error
+    return false; 
+  }
+};
+// --- AKHIR FUNGSI BARU ---
+
 const PortalSKPD = () => {
   const { user, profile, loading: sessionLoading } = useSession();
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -353,6 +375,26 @@ const PortalSKPD = () => {
           toast.error('Gagal membuat Nomor SPM otomatis. Harap coba lagi.');
           return;
         }
+
+        // --- START VALIDASI DUPLIKAT NOMOR SPM (akan dipindahkan ke fungsi isNomorSpmDuplicate) ---
+        // const { data: existingTagihan, error: checkError } = await supabase
+        //   .from('database_tagihan')
+        //   .select('id_tagihan')
+        //   .eq('nomor_spm', generatedNomorSpm)
+        //   .single();
+
+        // if (checkError && checkError.code !== 'PGRST116') { // PGRST116 means no rows found, which is good
+        //   throw checkError; // Other errors should be thrown
+        // }
+
+        // if (existingTagihan) {
+        //   // If data is returned, it means a duplicate exists
+        //   toast.error('Nomor Urut Tagihan ini sudah digunakan. Silakan gunakan nomor lain.');
+        //   setIsSubmitting(false); // Ensure submitting state is reset
+        //   return; // Stop the submission process
+        // }
+        // --- END VALIDASI DUPLIKAT NOMOR SPM ---
+
         const { error } = await supabase.from('database_tagihan').insert({
           id_pengguna_input: user.id,
           nama_skpd: profile.asal_skpd,
@@ -376,6 +418,8 @@ const PortalSKPD = () => {
     } catch (error: any) {
       console.error('Error saving tagihan:', error.message);
       toast.error('Gagal menyimpan tagihan: ' + error.message);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
