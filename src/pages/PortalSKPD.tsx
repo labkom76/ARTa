@@ -143,6 +143,7 @@ const PortalSKPD = () => {
   const [kodeWilayah, setKodeWilayah] = useState<string | null>(null); // State for kode_wilayah
   const [kodeSkpd, setKodeSkpd] = useState<string | null>(null); // New state for kode_skpd
   const [generatedNomorSpm, setGeneratedNomorSpm] = useState<string | null>(null); // State for generated Nomor SPM
+  const [isSubmitting, setIsSubmitting] = useState(false); // Deklarasi state isSubmitting yang hilang
 
   const form = useForm<TagihanFormValues>({
     resolver: zodResolver(formSchema),
@@ -744,8 +745,8 @@ error('Error deleting tagihan:', error.message);
               )}
             </div>
             <DialogFooter>
-              <Button type="submit" disabled={form.formState.isSubmitting || !isAccountVerified}>
-                {form.formState.isSubmitting ? (editingTagihan ? 'Memperbarui...' : 'Menyimpan...') : 'Simpan'}
+              <Button type="submit" disabled={isSubmitting || !isAccountVerified}>
+                {isSubmitting ? (editingTagihan ? 'Memperbarui...' : 'Menyimpan...') : 'Simpan'}
               </Button>
             </DialogFooter>
           </form>
