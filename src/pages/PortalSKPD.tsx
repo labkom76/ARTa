@@ -354,6 +354,7 @@ const PortalSKPD = () => {
       return;
     }
 
+    setIsSubmitting(true); // Set submitting state to true
     try {
       if (editingTagihan) {
         const { error } = await supabase
@@ -373,26 +374,18 @@ const PortalSKPD = () => {
       } else {
         if (!generatedNomorSpm) {
           toast.error('Gagal membuat Nomor SPM otomatis. Harap coba lagi.');
+          setIsSubmitting(false); // Reset submitting state on error
           return;
         }
 
-        // --- START VALIDASI DUPLIKAT NOMOR SPM (akan dipindahkan ke fungsi isNomorSpmDuplicate) ---
-        // const { data: existingTagihan, error: checkError } = await supabase
-        //   .from('database_tagihan')
-        //   .select('id_tagihan')
-        //   .eq('nomor_spm', generatedNomorSpm)
-        //   .single();
+        // --- START VALIDASI DUPLIKAT NOMOR SPM ---
+        const isDuplicate = await isNomorSpmDuplicate(generatedNomorSpm);
 
-        // if (checkError && checkError.code !== 'PGRST116') { // PGRST116 means no rows found, which is good
-        //   throw checkError; // Other errors should be thrown
-        // }
-
-        // if (existingTagihan) {
-        //   // If data is returned, it means a duplicate exists
-        //   toast.error('Nomor Urut Tagihan ini sudah digunakan. Silakan gunakan nomor lain.');
-        //   setIsSubmitting(false); // Ensure submitting state is reset
-        //   return; // Stop the submission process
-        // }
+        if (isDuplicate) {
+          toast.error('Nomor Urut Tagihan ini sudah digunakan. Silakan gunakan nomor lain.');
+          setIsSubmitting(false); // Ensure submitting state is reset
+          return; // Stop the submission process
+        }
         // --- END VALIDASI DUPLIKAT NOMOR SPM ---
 
         const { error } = await supabase.from('database_tagihan').insert({
@@ -459,7 +452,7 @@ const PortalSKPD = () => {
       toast.success('Tagihan berhasil dihapus!');
       fetchTagihan();
     } catch (error: any) {
-      console.error('Error deleting tagihan:', error.message);
+error('Error deleting tagihan:', error.message);
       toast.error('Gagal menghapus tagihan: ' + error.message);
     } finally {
       setIsDeleteDialogOpen(false);
