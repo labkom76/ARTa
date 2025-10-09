@@ -183,11 +183,19 @@ const PortalSKPD = () => {
     fetchScheduleOptions();
   }, []);
 
+  // Helper function to extract the code from Jenis Tagihan full description
+  const getJenisTagihanCode = (fullDescription: string): string => {
+    const match = fullDescription.match(/\(([^)]+)\)/);
+    return match ? match[1] : fullDescription; // Fallback to full description if no code found
+  };
+
   // Function to generate Nomor SPM
-  const generateNomorSpm = useCallback(async (jenisTagihan: string, kodeJadwal: string, namaSkpd: string, currentKodeWilayah: string | null) => {
-    if (!jenisTagihan || !kodeJadwal || !namaSkpd || !currentKodeWilayah) {
+  const generateNomorSpm = useCallback(async (jenisTagihanFull: string, kodeJadwal: string, namaSkpd: string, currentKodeWilayah: string | null) => {
+    if (!jenisTagihanFull || !kodeJadwal || !namaSkpd || !currentKodeWilayah) {
       return null;
     }
+
+    const jenisTagihanCode = getJenisTagihanCode(jenisTagihanFull); // Use the extracted code
 
     // Fetch kode_skpd from master_skpd using namaSkpd
     const { data: skpdData, error: skpdError } = await supabase
@@ -208,21 +216,22 @@ const PortalSKPD = () => {
     const currentYear = format(now, 'yyyy');
 
     // Fetch last SPM number for the current month, year, SKPD, Jenis Tagihan, and Kode Jadwal
+    // The LIKE pattern needs to be updated with '/' and the correct jenisTagihanCode
     const { data, error } = await supabase
       .from('database_tagihan')
       .select('nomor_spm')
-      .eq('nama_skpd', namaSkpd) // Use nama_skpd for filtering as it's stored in database_tagihan
-      .eq('jenis_tagihan', jenisTagihan)
+      .eq('nama_skpd', namaSkpd)
+      .eq('jenis_tagihan', jenisTagihanFull) // Keep full description for filtering if needed, or change to code
       .eq('kode_jadwal', kodeJadwal)
-      .like('nomor_spm', `${currentKodeWilayah}-%-${jenisTagihan}-${kodeSkpd}-${kodeJadwal}-${currentMonth}-${currentYear}`)
+      .like('nomor_spm', `${currentKodeWilayah}/%/${jenisTagihanCode}/${kodeSkpd}/${kodeJadwal}/${currentMonth}/${currentYear}`) // Updated LIKE pattern
       .order('nomor_spm', { ascending: false })
       .limit(1);
 
     let nextSequence = 1;
     if (data && data.length > 0 && data[0].nomor_spm) {
       const lastNomorSpm = data[0].nomor_spm;
-      const parts = lastNomorSpm.split('-');
-      if (parts.length === 7) { // Ensure correct format
+      const parts = lastNomorSpm.split('/'); // Changed separator to '/'
+      if (parts.length === 7) { // Still 7 parts
         const lastSequenceStr = parts[1]; // Second part is the sequence
         const lastSequenceNum = parseInt(lastSequenceStr, 10);
         if (!isNaN(lastSequenceNum)) {
@@ -230,9 +239,10 @@ const PortalSKPD = () => {
         }
       }
     }
-    const formattedSequence = String(nextSequence).padStart(3, '0'); // Pad with 3 zeros, e.g., 001, 010, 100
+    const formattedSequence = String(nextSequence).padStart(6, '0'); // Changed padding to 6 zeros
 
-    return `${currentKodeWilayah}-${formattedSequence}-${jenisTagihan}-${kodeSkpd}-${kodeJadwal}-${currentMonth}-${currentYear}`;
+    // Final SPM string construction
+    return `${currentKodeWilayah}/${formattedSequence}/${jenisTagihanCode}/${kodeSkpd}/${kodeJadwal}/${currentMonth}/${currentYear}`;
   }, []);
 
   // Effect to trigger SPM number generation
