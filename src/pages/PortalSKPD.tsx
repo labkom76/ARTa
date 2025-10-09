@@ -218,12 +218,13 @@ const PortalSKPD = () => {
     fetchKodeSkpd();
   }, [profile?.asal_skpd]);
 
-  // Fetch Schedule Options
+  // Fetch Schedule Options - MODIFIED TO FILTER BY is_active
   useEffect(() => {
     const fetchScheduleOptions = async () => {
       const { data, error } = await supabase
         .from('master_jadwal')
         .select('id, kode_jadwal, deskripsi_jadwal')
+        .eq('is_active', true) // ONLY FETCH ACTIVE SCHEDULES
         .order('kode_jadwal', { ascending: true });
       if (error) {
         console.error('Error fetching schedule options:', error.message);

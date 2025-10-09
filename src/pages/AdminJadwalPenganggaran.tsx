@@ -10,7 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { PlusCircleIcon, EditIcon, Trash2Icon } from 'lucide-react';
+import { PlusCircleIcon, EditIcon, Trash2Icon, CheckCircleIcon } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import AddScheduleDialog from '@/components/AddScheduleDialog';
@@ -22,6 +22,7 @@ interface ScheduleData {
   kode_jadwal: string;
   deskripsi_jadwal: string;
   created_at: string; // Assuming created_at is automatically added by Supabase
+  is_active?: boolean; // Add is_active to the interface
 }
 
 const AdminJadwalPenganggaran = () => {
@@ -112,6 +113,32 @@ const AdminJadwalPenganggaran = () => {
     }
   };
 
+  const handleActivateSchedule = async (scheduleId: string) => {
+    try {
+      // Deactivate all other schedules
+      const { error: deactivateError } = await supabase
+        .from('master_jadwal')
+        .update({ is_active: false })
+        .neq('id', scheduleId); // Exclude the current schedule from deactivation
+
+      if (deactivateError) throw deactivateError;
+
+      // Activate the selected schedule
+      const { error: activateError } = await supabase
+        .from('master_jadwal')
+        .update({ is_active: true })
+        .eq('id', scheduleId);
+
+      if (activateError) throw activateError;
+
+      toast.success('Jadwal berhasil diaktifkan!');
+      fetchScheduleData(); // Refresh the list to show updated status
+    } catch (error: any) {
+      console.error('Error activating schedule:', error.message);
+      toast.error('Gagal mengaktifkan jadwal: ' + error.message);
+    }
+  };
+
   if (loadingPage) {
     return (
       <div className="p-6 bg-white rounded-lg shadow-sm border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
@@ -150,19 +177,20 @@ const AdminJadwalPenganggaran = () => {
                 <TableRow>
                   <TableHead>Kode Jadwal</TableHead>
                   <TableHead>Deskripsi Jadwal</TableHead>
+                  <TableHead className="text-center">Status</TableHead> {/* New TableHead */}
                   <TableHead className="text-center">Aksi</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loadingData ? (
                   <TableRow>
-                    <TableCell colSpan={3} className="text-center text-muted-foreground py-8">
+                    <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
                       Memuat data jadwal...
                     </TableCell>
                   </TableRow>
                 ) : scheduleList.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={3} className="text-center text-muted-foreground py-8">
+                    <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
                       Tidak ada data jadwal ditemukan.
                     </TableCell>
                   </TableRow>
@@ -171,6 +199,17 @@ const AdminJadwalPenganggaran = () => {
                     <TableRow key={schedule.id}>
                       <TableCell className="font-medium">{schedule.kode_jadwal}</TableCell>
                       <TableCell>{schedule.deskripsi_jadwal}</TableCell>
+                      <TableCell className="text-center">
+                        {schedule.is_active ? (
+                          <Button variant="success" size="sm" disabled className="bg-green-500 text-white hover:bg-green-600">
+                            <CheckCircleIcon className="h-4 w-4 mr-2" /> Aktif
+                          </Button>
+                        ) : (
+                          <Button variant="outline" size="sm" onClick={() => handleActivateSchedule(schedule.id)}>
+                            Aktifkan
+                          </Button>
+                        )}
+                      </TableCell>
                       <TableCell className="text-center">
                         <div className="flex justify-center space-x-2">
                           <Button variant="outline" size="icon" title="Edit Jadwal" onClick={() => handleEditClick(schedule)}>
