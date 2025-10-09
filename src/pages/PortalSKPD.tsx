@@ -554,7 +554,19 @@ const PortalSKPD = () => {
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4">
-            {/* Input Nomor SPM telah dihapus */}
+            {/* Pratinjau Nomor SPM Otomatis */}
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="nomor_spm_otomatis" className="text-right">
+                Nomor SPM (Otomatis)
+              </Label>
+              <Input
+                id="nomor_spm_otomatis"
+                value={generatedNomorSpm || 'Membuat Nomor SPM...'}
+                readOnly
+                className="col-span-3 font-mono text-sm"
+                disabled={!isAccountVerified}
+              />
+            </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="jenis_spm" className="text-right">
                 Jenis SPM
