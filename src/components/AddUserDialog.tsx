@@ -42,7 +42,7 @@ const formSchema = z.object({
   nama_lengkap: z.string().min(1, { message: 'Nama Lengkap wajib diisi.' }),
   email: z.string().email({ message: 'Email tidak valid.' }).min(1, { message: 'Email wajib diisi.' }).optional(), // Optional for edit mode
   password: z.string().optional().refine(val => !val || val.length >= 6, { message: 'Password minimal 6 karakter.' }), // Corrected validation
-  asal_skpd: z.string().min(1, { message: 'Asal SKPD wajib diisi.' }),
+  asal_skpd: z.string().min(1, { message: 'Asal SKPD wajib dipilih.' }), // Changed validation for select
   peran: z.enum(['SKPD', 'Staf Registrasi', 'Staf Verifikator', 'Staf Koreksi', 'Administrator'], {
     required_error: 'Peran wajib dipilih.',
   }),
@@ -52,6 +52,7 @@ type AddUserFormValues = z.infer<typeof formSchema>;
 
 const AddUserDialog: React.FC<AddUserDialogProps> = ({ isOpen, onClose, onUserAdded, editingUser }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [skpdOptions, setSkpdOptions] = useState<string[]>([]); // State to store SKPD options
 
   const form = useForm<AddUserFormValues>({
     resolver: zodResolver(formSchema),
@@ -63,6 +64,28 @@ const AddUserDialog: React.FC<AddUserDialogProps> = ({ isOpen, onClose, onUserAd
       peran: 'SKPD', // Default role
     },
   });
+
+  // Fetch SKPD options when dialog opens
+  useEffect(() => {
+    const fetchSkpdOptions = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('master_skpd')
+          .select('nama_skpd')
+          .order('nama_skpd', { ascending: true });
+
+        if (error) throw error;
+        setSkpdOptions(data.map(item => item.nama_skpd));
+      } catch (error: any) {
+        console.error('Error fetching SKPD options:', error.message);
+        toast.error('Gagal memuat daftar SKPD: ' + error.message);
+      }
+    };
+
+    if (isOpen) {
+      fetchSkpdOptions();
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     if (isOpen && editingUser) {
@@ -80,7 +103,7 @@ const AddUserDialog: React.FC<AddUserDialogProps> = ({ isOpen, onClose, onUserAd
         nama_lengkap: '',
         email: '',
         password: '',
-        asal_skpd: '',
+        asal_skpd: '', // Reset to empty string for new user
         peran: 'SKPD',
       });
     }
@@ -234,11 +257,23 @@ const AddUserDialog: React.FC<AddUserDialogProps> = ({ isOpen, onClose, onUserAd
             <Label htmlFor="asal_skpd" className="text-right">
               Asal SKPD
             </Label>
-            <Input
-              id="asal_skpd"
-              {...form.register('asal_skpd')}
-              className="col-span-3"
-              disabled={isSubmitting}
+            <Controller
+              name="asal_skpd"
+              control={form.control}
+              render={({ field }) => (
+                <Select onValueChange={field.onChange} value={field.value} disabled={isSubmitting}>
+                  <SelectTrigger className="col-span-3">
+                    <SelectValue placeholder="Pilih Asal SKPD" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {skpdOptions.map((skpd) => (
+                      <SelectItem key={skpd} value={skpd}>
+                        {skpd}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             />
             {form.formState.errors.asal_skpd && (
               <p className="col-span-4 text-right text-red-500 text-sm">
