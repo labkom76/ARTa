@@ -46,7 +46,7 @@ import TagihanDetailDialog from '@/components/TagihanDetailDialog'; // Import th
 
 // Zod schema for form validation
 const formSchema = z.object({
-  nomor_spm: z.string().min(1, { message: 'Nomor SPM wajib diisi.' }),
+  // nomor_spm dihapus
   uraian: z.string().min(1, { message: 'Uraian wajib diisi.' }),
   jumlah_kotor: z.preprocess(
     (val) => Number(val),
@@ -108,7 +108,7 @@ const PortalSKPD = () => {
   const form = useForm<TagihanFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      nomor_spm: '',
+      // nomor_spm dihapus
       uraian: '',
       jumlah_kotor: 0,
       jenis_spm: '',
@@ -172,7 +172,7 @@ const PortalSKPD = () => {
   useEffect(() => {
     if (editingTagihan) {
       form.reset({
-        nomor_spm: editingTagihan.nomor_spm,
+        // nomor_spm dihapus
         uraian: editingTagihan.uraian,
         jumlah_kotor: editingTagihan.jumlah_kotor,
         jenis_spm: editingTagihan.jenis_spm,
@@ -198,7 +198,7 @@ const PortalSKPD = () => {
         const { error } = await supabase
           .from('database_tagihan')
           .update({
-            nomor_spm: values.nomor_spm,
+            // nomor_spm dihapus
             uraian: values.uraian,
             jumlah_kotor: values.jumlah_kotor,
             jenis_spm: values.jenis_spm,
@@ -213,7 +213,7 @@ const PortalSKPD = () => {
         const { error } = await supabase.from('database_tagihan').insert({
           id_pengguna_input: user.id,
           nama_skpd: profile.asal_skpd,
-          nomor_spm: values.nomor_spm,
+          // nomor_spm dihapus
           uraian: values.uraian,
           jumlah_kotor: values.jumlah_kotor,
           jenis_spm: values.jenis_spm,
@@ -432,22 +432,7 @@ const PortalSKPD = () => {
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="nomor_spm" className="text-right">
-                Nomor SPM
-              </Label>
-              <Input
-                id="nomor_spm"
-                {...form.register('nomor_spm')}
-                className="col-span-3"
-                disabled={!isAccountVerified}
-              />
-              {form.formState.errors.nomor_spm && (
-                <p className="col-span-4 text-right text-red-500 text-sm">
-                  {form.formState.errors.nomor_spm.message}
-                </p>
-              )}
-            </div>
+            {/* Input Nomor SPM telah dihapus */}
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="jenis_spm" className="text-right">
                 Jenis SPM
