@@ -115,6 +115,15 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onLinkClick }) => {
           { to: '/admin/custom-login', icon: PaletteIcon, label: 'Kustom Login' }, // Using PaletteIcon for customization
         ]
       },
+      { // New collapsible menu for Data Master
+        type: 'collapsible',
+        label: 'Data Master',
+        icon: ListFilterIcon, // You can choose a more appropriate icon
+        children: [
+          { to: '/admin/kode-skpd', icon: FileTextIcon, label: 'Kode SKPD' },
+          { to: '/admin/jadwal-penganggaran', icon: HistoryIcon, label: 'Jadwal Penganggaran' },
+        ]
+      },
     );
   } else {
     navItems.push(
