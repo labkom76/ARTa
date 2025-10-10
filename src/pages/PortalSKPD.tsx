@@ -577,6 +577,7 @@ error('Error deleting tagihan:', error.message);
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-[50px]">No.</TableHead> {/* New TableHead for "No." */}
                   <TableHead>Nomor SPM</TableHead>
                   <TableHead>Jenis SPM</TableHead>
                   <TableHead>Jenis Tagihan</TableHead>
@@ -588,8 +589,9 @@ error('Error deleting tagihan:', error.message);
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {tagihanList.map((tagihan) => (
+                {tagihanList.map((tagihan, index) => (
                   <TableRow key={tagihan.id_tagihan}>
+                    <TableCell>{(currentPage - 1) * itemsPerPage + index + 1}</TableCell> {/* New TableCell for numbering */}
                     <TableCell className="font-medium">{tagihan.nomor_spm}</TableCell>
                     <TableCell>{tagihan.jenis_spm}</TableCell>
                     <TableCell>{tagihan.jenis_tagihan}</TableCell>
