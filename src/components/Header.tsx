@@ -5,38 +5,60 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useSession } from '@/contexts/SessionContext';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu';
+import { formatDistanceToNow, parseISO } from 'date-fns';
+import { id as localeId } from 'date-fns/locale';
 
 interface HeaderProps {
   toggleSidebar: () => void;
 }
 
+interface Notification {
+  id: string;
+  user_id: string;
+  message: string;
+  is_read: boolean;
+  created_at: string;
+}
+
 const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
   const { profile, user } = useSession();
-  const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
 
-  const fetchUnreadNotifications = async () => {
+  const fetchNotifications = async () => {
     if (!user) {
-      setUnreadNotificationsCount(0);
+      setNotifications([]);
+      setUnreadCount(0);
       return;
     }
     try {
-      const { count, error } = await supabase
+      const { data, error } = await supabase
         .from('notifications')
-        .select('*', { count: 'exact', head: true })
+        .select('*')
         .eq('user_id', user.id)
-        .eq('is_read', false);
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setUnreadNotificationsCount(count || 0);
+
+      setNotifications(data || []);
+      setUnreadCount(data?.filter(n => !n.is_read).length || 0);
     } catch (error: any) {
-      console.error('Error fetching unread notifications:', error.message);
+      console.error('Error fetching notifications:', error.message);
       // toast.error('Gagal memuat notifikasi.'); // Avoid spamming toast on every error
-      setUnreadNotificationsCount(0);
+      setNotifications([]);
+      setUnreadCount(0);
     }
   };
 
   useEffect(() => {
-    fetchUnreadNotifications();
+    fetchNotifications();
 
     // Setup real-time subscription for notifications
     const channel = supabase
@@ -51,7 +73,7 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
         },
         (payload) => {
           console.log('Realtime notification change:', payload);
-          fetchUnreadNotifications(); // Re-fetch count on any change
+          fetchNotifications(); // Re-fetch all notifications on any change
         }
       )
       .subscribe();
@@ -87,15 +109,48 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
         </Button>
       </div>
       <div className="flex items-center space-x-4">
-        {/* Notifikasi Lonceng dengan Indikator */}
-        <div className="relative">
-          <Button variant="ghost" size="icon" className="text-gray-600 dark:text-gray-300">
-            <BellIcon className="h-5 w-5" />
-          </Button>
-          {unreadNotificationsCount > 0 && (
-            <span className="absolute top-1 right-1 block h-2 w-2 rounded-full bg-red-500 ring-2 ring-white dark:ring-gray-800" />
-          )}
-        </div>
+        {/* Notifikasi Lonceng dengan Indikator dan Dropdown */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="relative text-gray-600 dark:text-gray-300">
+              <BellIcon className="h-5 w-5" />
+              {unreadCount > 0 && (
+                <span className="absolute top-1 right-1 block h-2 w-2 rounded-full bg-red-500 ring-2 ring-white dark:ring-gray-800" />
+              )}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent className="w-80 p-2" align="end">
+            <div className="font-semibold text-sm px-2 py-1">Notifikasi Anda ({unreadCount} belum dibaca)</div>
+            <DropdownMenuSeparator />
+            {notifications.length === 0 ? (
+              <DropdownMenuItem className="text-muted-foreground text-sm text-center py-4" disabled>
+                Tidak ada notifikasi.
+              </DropdownMenuItem>
+            ) : (
+              notifications.map((notification) => (
+                <DropdownMenuItem
+                  key={notification.id}
+                  className={`flex flex-col items-start space-y-1 py-2 px-3 rounded-md cursor-default ${!notification.is_read ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}
+                >
+                  <p className={`text-sm ${!notification.is_read ? 'font-medium text-blue-700 dark:text-blue-300' : 'text-gray-800 dark:text-gray-200'}`}>
+                    {notification.message}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {formatDistanceToNow(parseISO(notification.created_at), { addSuffix: true, locale: localeId })}
+                  </p>
+                </DropdownMenuItem>
+              ))
+            )}
+            {notifications.length > 0 && (
+              <DropdownMenuSeparator />
+            )}
+            {/* Tombol "Tandai semua sudah dibaca" (belum berfungsi) */}
+            <DropdownMenuItem className="text-center text-sm text-blue-600 hover:text-blue-700 cursor-pointer" disabled={unreadCount === 0}>
+              Tandai semua sudah dibaca
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
         {user && (
           <div className="flex items-center space-x-2">
             <Avatar>
