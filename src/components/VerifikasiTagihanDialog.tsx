@@ -227,11 +227,35 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
         throw error;
       }
 
+      // --- START NEW NOTIFICATION LOGIC ---
+      let notificationMessage = '';
+      if (values.status_keputusan === 'Diteruskan') {
+        notificationMessage = `Selamat! Tagihan SPM ${tagihan.nomor_spm} Anda telah DITERUSKAN.`;
+      } else if (values.status_keputusan === 'Dikembalikan') {
+        notificationMessage = `Perhatian! Tagihan SPM ${tagihan.nomor_spm} DIKEMBALIKAN. Silakan periksa detailnya.`;
+      }
+
+      if (notificationMessage) {
+        const { error: notificationError } = await supabase
+          .from('notifications')
+          .insert({
+            user_id: tagihan.id_pengguna_input, // ID pengguna SKPD
+            message: notificationMessage,
+            is_read: false,
+          });
+
+        if (notificationError) {
+          console.error('Error inserting notification:', notificationError.message);
+          // Don't throw error here, as tagihan update is more critical
+        }
+      }
+      // --- END NEW NOTIFICATION LOGIC ---
+
       toast.success(`Tagihan ${tagihan.nomor_spm} berhasil ${values.status_keputusan.toLowerCase()}!`);
       onVerificationSuccess();
       onClose();
     } catch (error: any) {
-      console.error('Error processing verification:', error.message);
+      console.error('Error processing verifikasi:', error.message);
       toast.error('Gagal memproses verifikasi: ' + error.message);
     } finally {
       setIsSubmitting(false);
