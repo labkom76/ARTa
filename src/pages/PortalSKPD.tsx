@@ -593,7 +593,9 @@ error('Error deleting tagihan:', error.message);
                 {tagihanList.map((tagihan, index) => (
                   <TableRow key={tagihan.id_tagihan}>
                     <TableCell>{(currentPage - 1) * itemsPerPage + index + 1}</TableCell> {/* New TableCell for numbering */}
-                    <TableCell className="font-medium">{tagihan.nomor_spm}</TableCell>
+                    <TableCell className="font-medium max-w-[250px] whitespace-nowrap overflow-hidden text-ellipsis block">
+                      {tagihan.nomor_spm}
+                    </TableCell>
                     <TableCell>{tagihan.jenis_spm}</TableCell>
                     <TableCell>{tagihan.jenis_tagihan}</TableCell>
                     <TableCell>{tagihan.sumber_dana || '-'}</TableCell>{/* New Table Cell */}
