@@ -272,7 +272,8 @@ const PortalRegistrasi = () => {
   const confirmRegistrasi = async (tagihanId: string, nomorRegistrasi: string) => {
     setIsConfirming(true);
     try {
-      const { error } = await supabase
+      // Update tagihan status
+      const { error: updateError } = await supabase
         .from('database_tagihan')
         .update({
           status_tagihan: 'Menunggu Verifikasi',
@@ -282,14 +283,38 @@ const PortalRegistrasi = () => {
         })
         .eq('id_tagihan', tagihanId);
 
-      if (error) throw error;
+      if (updateError) throw updateError;
+
+      // Fetch the updated tagihan to get id_pengguna_input
+      const { data: updatedTagihan, error: fetchTagihanError } = await supabase
+        .from('database_tagihan')
+        .select('nomor_spm, id_pengguna_input')
+        .eq('id_tagihan', tagihanId)
+        .single();
+
+      if (fetchTagihanError) throw fetchTagihanError;
+      if (!updatedTagihan) throw new Error('Tagihan tidak ditemukan setelah update.');
+
+      // Insert notification for the SKPD user
+      const { error: notificationError } = await supabase
+        .from('notifications')
+        .insert({
+          user_id: updatedTagihan.id_pengguna_input,
+          message: `Tagihan SPM ${updatedTagihan.nomor_spm} Anda telah diregistrasi.`,
+          is_read: false,
+        });
+
+      if (notificationError) {
+        console.error('Error inserting notification:', notificationError.message);
+        // Don't throw error here, as tagihan update is more critical
+      }
 
       toast.success('Tagihan berhasil diregistrasi!');
       setIsRegistrasiModalOpen(false);
       fetchQueueTagihan(); // Refresh the queue list
       fetchHistoryTagihan(); // Refresh the history list
     } catch (error: any) {
-      console.error('Error confirming registration:', error.message);
+      console.error('Error confirming registrasi:', error.message);
       toast.error('Gagal mengkonfirmasi registrasi: ' + error.message);
     } finally {
       setIsConfirming(false);
