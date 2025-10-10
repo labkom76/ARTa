@@ -35,6 +35,7 @@ import {
   PaginationPrevious,
 } from '@/components/ui/pagination';
 import { Label } from '@/components/ui/label';
+import StatusBadge from '@/components/StatusBadge'; // Import StatusBadge
 
 interface VerificationItem {
   item: string;
@@ -243,7 +244,7 @@ const RiwayatRegistrasi = () => {
                   <TableCell>{tagihan.nomor_spm}</TableCell>
                   <TableCell>{tagihan.nama_skpd}</TableCell>
                   <TableCell>Rp{tagihan.jumlah_kotor.toLocaleString('id-ID')}</TableCell>
-                  <TableCell>{tagihan.status_tagihan}</TableCell>
+                  <TableCell><StatusBadge status={tagihan.status_tagihan} /></TableCell>
                   <TableCell className="text-center">
                     <Button variant="outline" size="icon" title="Lihat Detail" onClick={() => handleDetailClick(tagihan)}>
                       <EyeIcon className="h-4 w-4" />

@@ -31,6 +31,7 @@ import { Label } from '@/components/ui/label';
 import TagihanDetailDialog from '@/components/TagihanDetailDialog';
 import EditTagihanDialog from '@/components/EditTagihanDialog'; // Import EditTagihanDialog
 import DeleteConfirmationDialog from '@/components/DeleteConfirmationDialog'; // Import DeleteConfirmationDialog
+import StatusBadge from '@/components/StatusBadge'; // Import StatusBadge
 
 interface VerificationItem {
   item: string;
@@ -378,7 +379,7 @@ const AdminTagihan = () => {
                       <TableCell className="font-medium">{tagihan.nomor_spm}</TableCell>
                       <TableCell>{tagihan.nama_skpd}</TableCell>
                       <TableCell>Rp{tagihan.jumlah_kotor.toLocaleString('id-ID')}</TableCell>
-                      <TableCell>{tagihan.status_tagihan}</TableCell>
+                      <TableCell><StatusBadge status={tagihan.status_tagihan} /></TableCell>
                       <TableCell>{tagihan.nama_verifikator || tagihan.nama_registrator || tagihan.id_korektor ? (tagihan.nama_verifikator || tagihan.nama_registrator || 'Staf Koreksi') : '-'}</TableCell>
                       <TableCell className="text-center">
                         <div className="flex justify-center space-x-2">

@@ -36,6 +36,7 @@ import {
 } from '@/components/ui/pagination';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'; // Import Card components
+import StatusBadge from '@/components/StatusBadge'; // Import StatusBadge
 
 interface VerificationItem {
   item: string;
@@ -297,7 +298,7 @@ const RiwayatVerifikasi = () => {
                       <TableCell>{tagihan.nama_skpd}</TableCell>
                       <TableCell>{tagihan.nomor_spm}</TableCell>
                       <TableCell>Rp{tagihan.jumlah_kotor.toLocaleString('id-ID')}</TableCell>
-                      <TableCell>{tagihan.status_tagihan}</TableCell>
+                      <TableCell><StatusBadge status={tagihan.status_tagihan} /></TableCell>
                       <TableCell>{tagihan.nama_verifikator || '-'}</TableCell>
                       <TableCell className="text-center">
                         <div className="flex justify-center space-x-2">

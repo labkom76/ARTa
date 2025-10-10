@@ -33,6 +33,7 @@ import { toast } from 'sonner';
 import useDebounce from '@/hooks/use-debounce';
 import RegistrasiConfirmationDialog from '@/components/RegistrasiConfirmationDialog';
 import TagihanDetailDialog from '@/components/TagihanDetailDialog'; // Import the detail dialog
+import StatusBadge from '@/components/StatusBadge'; // Import StatusBadge
 
 interface VerificationItem {
   item: string;

@@ -36,6 +36,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import useDebounce from '@/hooks/use-debounce';
 import KoreksiTagihanSidePanel from '@/components/KoreksiTagihanSidePanel'; // Import the new component
+import StatusBadge from '@/components/StatusBadge'; // Import StatusBadge
 
 interface VerificationItem {
   item: string;
@@ -783,7 +784,7 @@ const PortalVerifikasi = () => {
                         </TableCell>
                         <TableCell>{tagihan.nama_skpd}</TableCell>
                         <TableCell>{tagihan.nomor_spm}</TableCell>
-                        <TableCell>{tagihan.status_tagihan}</TableCell>
+                        <TableCell><StatusBadge status={tagihan.status_tagihan} /></TableCell>
                         <TableCell className="text-center">
                           <div className="flex justify-center space-x-2">
                             <Button variant="outline" size="icon" title="Lihat Detail" onClick={() => handleDetailClick(tagihan)}>

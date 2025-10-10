@@ -45,6 +45,7 @@ import DeleteConfirmationDialog from '@/components/DeleteConfirmationDialog';
 import TagihanDetailDialog from '@/components/TagihanDetailDialog'; // Import the new detail dialog
 import { format } from 'date-fns'; // Import format from date-fns
 import { generateNomorSpm, getJenisTagihanCode } from '@/utils/spmGenerator'; // Import utility functions
+import StatusBadge from '@/components/StatusBadge'; // Import StatusBadge
 
 // Zod schema for form validation
 const formSchema = z.object({
@@ -598,7 +599,7 @@ error('Error deleting tagihan:', error.message);
                     <TableCell>{tagihan.sumber_dana || '-'}</TableCell>{/* New Table Cell */}
                     <TableCell>{tagihan.uraian}</TableCell>
                     <TableCell>Rp{tagihan.jumlah_kotor.toLocaleString('id-ID')}</TableCell>
-                    <TableCell>{tagihan.status_tagihan}</TableCell>
+                    <TableCell><StatusBadge status={tagihan.status_tagihan} /></TableCell>
                     <TableCell className="text-center">
                       {tagihan.status_tagihan === 'Menunggu Registrasi' ? (
                         <div className="flex justify-center space-x-2">

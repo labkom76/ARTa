@@ -19,14 +19,33 @@
     --secondary: 210 40% 96.1%;
     --secondary-foreground: 222.2 47.4% 11.2%;
 
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
     --muted: 210 40% 96.1%;
     --muted-foreground: 215.4 16.3% 46.9%;
 
     --accent: 210 40% 96.1%;
     --accent-foreground: 222.2 47.4% 11.2%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    --popover: {
+          DEFAULT: "hsl(var(--popover))",
+          foreground: "hsl(var(--popover-foreground))",
+        };
+    --card: {
+          DEFAULT: "hsl(var(--card))",
+          foreground: "hsl(var(--card-foreground))",
+        };
+    --sidebar: {
+          DEFAULT: "hsl(var(--sidebar-background))",
+          foreground: "hsl(var(--sidebar-foreground))",
+          primary: "hsl(var(--sidebar-primary))",
+          "primary-foreground": "hsl(var(--sidebar-primary-foreground))",
+          accent: "hsl(var(--sidebar-accent))",
+          "accent-foreground": "hsl(var(--sidebar-accent-foreground))",
+          border: "hsl(var(--sidebar-border))",
+          ring: "hsl(var(--sidebar-ring))",
+        };
 
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
@@ -49,6 +68,16 @@
     --sidebar-border: 220 13% 91%;
 
     --sidebar-ring: 217.2 91.2% 59.8%;
+
+    /* NEW VARIANTS */
+    --success: 142.1 76.2% 36.3%;
+    --success-foreground: 142.1 70.6% 45.3%;
+    --warning: 48 96% 50%;
+    --warning-foreground: 48 96% 20%;
+    --info: 217.2 91.2% 59.8%; /* Reusing primary color for info */
+    --info-foreground: 210 40% 98%; /* Reusing primary-foreground for info */
+    --error: 0 84.2% 60.2%; /* Reusing destructive color for error */
+    --error-foreground: 210 40% 98%; /* Reusing destructive-foreground for error */
   }
 
   .dark {
@@ -87,6 +116,16 @@
     --sidebar-accent-foreground: 240 4.8% 95.9%;
     --sidebar-border: 240 3.7% 15.9%;
     --sidebar-ring: 217.2 91.2% 59.8%;
+
+    /* NEW VARIANTS for dark mode */
+    --success: 142.1 76.2% 36.3%; /* Same as light for now, adjust if needed */
+    --success-foreground: 142.1 70.6% 45.3%;
+    --warning: 48 96% 50%;
+    --warning-foreground: 48 96% 20%;
+    --info: 217.2 91.2% 59.8%;
+    --info-foreground: 210 40% 98%;
+    --error: 0 62.8% 30.6%;
+    --error-foreground: 210 40% 98%;
   }
 }
 
