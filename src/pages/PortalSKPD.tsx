@@ -46,6 +46,11 @@ import TagihanDetailDialog from '@/components/TagihanDetailDialog'; // Import th
 import { format } from 'date-fns'; // Import format from date-fns
 import { generateNomorSpm, getJenisTagihanCode } from '@/utils/spmGenerator'; // Import utility functions
 import StatusBadge from '@/components/StatusBadge'; // Import StatusBadge
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"; // Import Tooltip components
 
 // Zod schema for form validation
 const formSchema = z.object({
@@ -593,8 +598,15 @@ error('Error deleting tagihan:', error.message);
                 {tagihanList.map((tagihan, index) => (
                   <TableRow key={tagihan.id_tagihan}>
                     <TableCell>{(currentPage - 1) * itemsPerPage + index + 1}</TableCell> {/* New TableCell for numbering */}
-                    <TableCell className="font-medium max-w-[250px] whitespace-nowrap overflow-hidden text-ellipsis block">
-                      {tagihan.nomor_spm}
+                    <TableCell className="font-medium">
+                      <Tooltip>
+                        <TooltipTrigger className="max-w-[250px] whitespace-nowrap overflow-hidden text-ellipsis block">
+                          {tagihan.nomor_spm}
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{tagihan.nomor_spm}</p>
+                        </TooltipContent>
+                      </Tooltip>
                     </TableCell>
                     <TableCell>{tagihan.jenis_spm}</TableCell>
                     <TableCell>{tagihan.jenis_tagihan}</TableCell>
