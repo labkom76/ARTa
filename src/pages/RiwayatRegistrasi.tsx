@@ -215,6 +215,7 @@ const RiwayatRegistrasi = () => {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-[50px]">No.</TableHead> {/* New TableHead for "No." */}
               <TableHead>Waktu Registrasi</TableHead>
               <TableHead>Nomor Registrasi</TableHead>
               <TableHead>Nomor SPM</TableHead>
@@ -227,13 +228,14 @@ const RiwayatRegistrasi = () => {
           <TableBody>
             {tagihanList.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center text-muted-foreground">
+                <TableCell colSpan={8} className="text-center text-muted-foreground">
                   Tidak ada data riwayat registrasi.
                 </TableCell>
               </TableRow>
             ) : (
-              tagihanList.map((tagihan) => (
+              tagihanList.map((tagihan, index) => (
                 <TableRow key={tagihan.id_tagihan}>
+                  <TableCell>{(currentPage - 1) * itemsPerPage + index + 1}</TableCell> {/* New TableCell for numbering */}
                   <TableCell>
                     {tagihan.waktu_registrasi ? format(parseISO(tagihan.waktu_registrasi), 'dd MMMM yyyy HH:mm', { locale: localeId }) : '-'}
                   </TableCell>
