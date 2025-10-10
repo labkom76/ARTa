@@ -23,6 +23,7 @@ interface Tagihan {
   status_tagihan: string;
   waktu_input: string;
   id_pengguna_input: string;
+  sumber_dana?: string; // Add sumber_dana
 }
 
 interface RegistrasiConfirmationDialogProps {
@@ -83,6 +84,11 @@ const RegistrasiConfirmationDialog: React.FC<RegistrasiConfirmationDialogProps> 
           <div className="grid grid-cols-3 items-center gap-4">
             <Label className="text-right">Jenis Tagihan:</Label>
             <p className="col-span-2">{tagihan.jenis_tagihan}</p>
+          </div>
+          {/* New: Sumber Dana */}
+          <div className="grid grid-cols-3 items-center gap-4">
+            <Label className="text-right">Sumber Dana:</Label>
+            <p className="col-span-2">{tagihan.sumber_dana || '-'}</p>
           </div>
           <div className="grid grid-cols-3 items-center gap-4">
             <Label className="text-right">Uraian:</Label>

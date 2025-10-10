@@ -62,6 +62,7 @@ interface Tagihan {
   nama_verifikator?: string;
   locked_by?: string;
   locked_at?: string;
+  sumber_dana?: string; // Add sumber_dana
 }
 
 interface VerifikasiTagihanDialogProps {
@@ -287,6 +288,11 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
                 <div>
                   <Label className="text-muted-foreground">Jenis Tagihan</Label>
                   <p className="font-medium">{tagihan.jenis_tagihan}</p>
+                </div>
+                {/* New: Sumber Dana */}
+                <div>
+                  <Label className="text-muted-foreground">Sumber Dana</Label>
+                  <p className="font-medium">{tagihan.sumber_dana || '-'}</p>
                 </div>
                 <div className="col-span-2">
                   <Label className="text-muted-foreground">Uraian</Label>

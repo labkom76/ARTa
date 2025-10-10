@@ -31,6 +31,7 @@ interface Tagihan {
   detail_verifikasi?: VerificationItem[];
   nomor_verifikasi?: string;
   nama_verifikator?: string;
+  sumber_dana?: string; // Add sumber_dana
 }
 
 const checklistItems = [
@@ -284,6 +285,12 @@ const PrintVerifikasi = () => {
             <span className="info-label">Jenis Tagihan</span>
             <span className="info-separator">:</span>
             <span className="info-value">{tagihan.jenis_tagihan || '-'}</span>
+          </div>
+          {/* New: Sumber Dana */}
+          <div className="info-row">
+            <span className="info-label">Sumber Dana</span>
+            <span className="info-separator">:</span>
+            <span className="info-value">{tagihan.sumber_dana || '-'}</span>
           </div>
           <div className="info-row">
             <span className="info-label">Jenis SPM</span>

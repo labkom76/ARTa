@@ -24,6 +24,9 @@ import AdminDashboard from "./pages/AdminDashboard";
 import AdminTagihan from "./pages/AdminTagihan";
 import AdminCustomLogin from "./pages/AdminCustomLogin";
 import LengkapiProfil from "./pages/LengkapiProfil"; // Import the new LengkapiProfil page
+import AdminKodeSKPD from "./pages/AdminKodeSKPD"; // Import new AdminKodeSKPD page
+import AdminJadwalPenganggaran from "./pages/AdminJadwalPenganggaran"; // Import new AdminJadwalPenganggaran page
+import AdminKodeWilayah from "./pages/AdminKodeWilayah"; // Import new AdminKodeWilayah page
 import { SessionContextProvider } from "./contexts/SessionContext";
 
 const queryClient = new QueryClient();
@@ -56,6 +59,9 @@ const App = () => (
               <Route path="/admin/dashboard" element={<AdminDashboard />} />
               <Route path="/admin/tagihan" element={<AdminTagihan />} />
               <Route path="/admin/custom-login" element={<AdminCustomLogin />} />
+              <Route path="/admin/kode-skpd" element={<AdminKodeSKPD />} /> {/* Existing route */}
+              <Route path="/admin/jadwal-penganggaran" element={<AdminJadwalPenganggaran />} /> {/* Existing route */}
+              <Route path="/admin/kode-wilayah" element={<AdminKodeWilayah />} /> {/* New route */}
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             </Route>
             <Route path="*" element={<NotFound />} />
