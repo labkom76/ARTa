@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { MenuIcon, LogOutIcon } from 'lucide-react';
+import { MenuIcon, LogOutIcon, BellIcon } from 'lucide-react'; // Import BellIcon
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useSession } from '@/contexts/SessionContext';
@@ -39,6 +39,10 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
         </Button>
       </div>
       <div className="flex items-center space-x-4">
+        {/* Notifikasi Lonceng */}
+        <Button variant="ghost" size="icon" className="text-gray-600 dark:text-gray-300">
+          <BellIcon className="h-5 w-5" />
+        </Button>
         {user && (
           <div className="flex items-center space-x-2">
             <Avatar>
