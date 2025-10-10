@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { formatDistanceToNow, parseISO } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
+import TagihanDetailDialog from './TagihanDetailDialog'; // Import TagihanDetailDialog
 
 interface HeaderProps {
   toggleSidebar: () => void;
@@ -25,13 +26,44 @@ interface Notification {
   message: string;
   is_read: boolean;
   created_at: string;
-  tagihan_id?: string; // Add tagihan_id to the interface
+  tagihan_id?: string;
+}
+
+// Define Tagihan interface for the detail dialog
+interface Tagihan {
+  id_tagihan: string;
+  nama_skpd: string;
+  nomor_spm: string;
+  jenis_spm: string;
+  jenis_tagihan: string;
+  uraian: string;
+  jumlah_kotor: number;
+  status_tagihan: string;
+  waktu_input: string;
+  id_pengguna_input: string;
+  catatan_verifikator?: string;
+  nomor_registrasi?: string;
+  waktu_registrasi?: string;
+  nama_registrator?: string;
+  waktu_verifikasi?: string;
+  detail_verifikasi?: { item: string; memenuhi_syarat: boolean; keterangan: string }[];
+  nomor_verifikasi?: string;
+  nama_verifikator?: string;
+  nomor_koreksi?: string;
+  id_korektor?: string;
+  waktu_koreksi?: string;
+  catatan_koreksi?: string;
+  sumber_dana?: string;
 }
 
 const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
   const { profile, user } = useSession();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+
+  // State for Tagihan Detail Dialog
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [selectedTagihanForDetail, setSelectedTagihanForDetail] = useState<Tagihan | null>(null);
 
   const fetchNotifications = async () => {
     if (!user) {
@@ -42,9 +74,10 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
     try {
       const { data, error } = await supabase
         .from('notifications')
-        .select('*, tagihan_id') // Select tagihan_id
+        .select('*, tagihan_id')
         .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(6); // Limit to 6 latest notifications
 
       if (error) throw error;
 
@@ -52,7 +85,6 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
       setUnreadCount(data?.filter(n => !n.is_read).length || 0);
     } catch (error: any) {
       console.error('Error fetching notifications:', error.message);
-      // toast.error('Gagal memuat notifikasi.'); // Avoid spamming toast on every error
       setNotifications([]);
       setUnreadCount(0);
     }
@@ -61,20 +93,19 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
   useEffect(() => {
     fetchNotifications();
 
-    // Setup real-time subscription for notifications
     const channel = supabase
       .channel('notifications-channel')
       .on(
         'postgres_changes',
         {
-          event: '*', // Listen for INSERT, UPDATE, DELETE
+          event: '*',
           schema: 'public',
           table: 'notifications',
-          filter: `user_id=eq.${user?.id}`, // Only listen for current user's notifications
+          filter: `user_id=eq.${user?.id}`,
         },
         (payload) => {
           console.log('Realtime notification change:', payload);
-          fetchNotifications(); // Re-fetch all notifications on any change
+          fetchNotifications();
         }
       )
       .subscribe();
@@ -82,7 +113,7 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
     return () => {
       channel.unsubscribe();
     };
-  }, [user]); // Re-run effect if user changes
+  }, [user]);
 
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
@@ -105,10 +136,56 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
 
       if (error) throw error;
       console.log('All unread notifications marked as read.');
-      // The real-time subscription will trigger fetchNotifications and update UI
     } catch (error: any) {
       console.error('Error marking notifications as read:', error.message);
       toast.error('Gagal menandai notifikasi sudah dibaca: ' + error.message);
+    }
+  };
+
+  const markNotificationAsRead = async (notificationId: string) => {
+    if (!user) return;
+    try {
+      const { error } = await supabase
+        .from('notifications')
+        .update({ is_read: true })
+        .eq('id', notificationId)
+        .eq('user_id', user.id)
+        .eq('is_read', false); // Only update if not already read
+
+      if (error) throw error;
+      console.log(`Notification ${notificationId} marked as read.`);
+    } catch (error: any) {
+      console.error('Error marking single notification as read:', error.message);
+    }
+  };
+
+  const handleNotificationClick = async (notification: Notification) => {
+    if (!notification.tagihan_id) {
+      toast.info('Detail tagihan tidak tersedia untuk notifikasi ini.');
+      return;
+    }
+
+    // Mark notification as read
+    if (!notification.is_read) {
+      await markNotificationAsRead(notification.id);
+    }
+
+    // Fetch tagihan details
+    try {
+      const { data, error } = await supabase
+        .from('database_tagihan')
+        .select('*')
+        .eq('id_tagihan', notification.tagihan_id)
+        .single();
+
+      if (error) throw error;
+      if (!data) throw new Error('Tagihan tidak ditemukan.');
+
+      setSelectedTagihanForDetail(data as Tagihan);
+      setIsDetailModalOpen(true);
+    } catch (error: any) {
+      console.error('Error fetching tagihan details:', error.message);
+      toast.error('Gagal memuat detail tagihan: ' + error.message);
     }
   };
 
@@ -154,7 +231,8 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
               notifications.map((notification) => (
                 <DropdownMenuItem
                   key={notification.id}
-                  className={`flex flex-col items-start space-y-1 py-2 px-3 rounded-md cursor-default ${!notification.is_read ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}
+                  className={`flex flex-col items-start space-y-1 py-2 px-3 rounded-md cursor-pointer ${!notification.is_read ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}
+                  onClick={() => handleNotificationClick(notification)}
                 >
                   <p className={`text-sm ${!notification.is_read ? 'font-medium text-blue-700 dark:text-blue-300' : 'text-gray-800 dark:text-gray-200'}`}>
                     {notification.message}
@@ -168,7 +246,6 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
             {notifications.length > 0 && (
               <DropdownMenuSeparator />
             )}
-            {/* Tombol "Tandai semua sudah dibaca" (sekarang dinonaktifkan karena otomatis) */}
             <DropdownMenuItem className="text-center text-sm text-blue-600 hover:text-blue-700 cursor-pointer" disabled>
               Tandai semua sudah dibaca
             </DropdownMenuItem>
@@ -193,6 +270,12 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
           <LogOutIcon className="h-5 w-5" />
         </Button>
       </div>
+
+      <TagihanDetailDialog
+        isOpen={isDetailModalOpen}
+        onClose={() => setIsDetailModalOpen(false)}
+        tagihan={selectedTagihanForDetail}
+      />
     </header>
   );
 };
