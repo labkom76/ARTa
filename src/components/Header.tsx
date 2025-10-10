@@ -92,6 +92,25 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
     }
   };
 
+  const markAllAsRead = async () => {
+    if (!user || unreadCount === 0) return;
+
+    try {
+      const { error } = await supabase
+        .from('notifications')
+        .update({ is_read: true })
+        .eq('user_id', user.id)
+        .eq('is_read', false);
+
+      if (error) throw error;
+      console.log('All unread notifications marked as read.');
+      // The real-time subscription will trigger fetchNotifications and update UI
+    } catch (error: any) {
+      console.error('Error marking notifications as read:', error.message);
+      toast.error('Gagal menandai notifikasi sudah dibaca: ' + error.message);
+    }
+  };
+
   const getInitials = (name: string | undefined) => {
     if (!name) return '??';
     const parts = name.split(' ');
@@ -110,7 +129,11 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
       </div>
       <div className="flex items-center space-x-4">
         {/* Notifikasi Lonceng dengan Indikator dan Dropdown */}
-        <DropdownMenu>
+        <DropdownMenu onOpenChange={(open) => {
+          if (open) { // When the dropdown is opened
+            markAllAsRead();
+          }
+        }}>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="relative text-gray-600 dark:text-gray-300">
               <BellIcon className="h-5 w-5" />
@@ -144,8 +167,8 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
             {notifications.length > 0 && (
               <DropdownMenuSeparator />
             )}
-            {/* Tombol "Tandai semua sudah dibaca" (belum berfungsi) */}
-            <DropdownMenuItem className="text-center text-sm text-blue-600 hover:text-blue-700 cursor-pointer" disabled={unreadCount === 0}>
+            {/* Tombol "Tandai semua sudah dibaca" (sekarang dinonaktifkan karena otomatis) */}
+            <DropdownMenuItem className="text-center text-sm text-blue-600 hover:text-blue-700 cursor-pointer" disabled>
               Tandai semua sudah dibaca
             </DropdownMenuItem>
           </DropdownMenuContent>
