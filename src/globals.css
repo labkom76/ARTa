@@ -71,7 +71,7 @@
 
     /* NEW VARIANTS */
     --success: 142.1 76.2% 36.3%;
-    --success-foreground: 142.1 70.6% 45.3%;
+    --success-foreground: 222.2 47.4% 11.2%; /* Dark color for light green background */
     --warning: 48 96% 50%;
     --warning-foreground: 48 96% 20%;
     --info: 217.2 91.2% 59.8%; /* Reusing primary color for info */
@@ -119,7 +119,7 @@
 
     /* NEW VARIANTS for dark mode */
     --success: 142.1 76.2% 36.3%; /* Same as light for now, adjust if needed */
-    --success-foreground: 142.1 70.6% 45.3%;
+    --success-foreground: 210 40% 98%; /* Light color for dark green background */
     --warning: 48 96% 50%;
     --warning-foreground: 48 96% 20%;
     --info: 217.2 91.2% 59.8%;
