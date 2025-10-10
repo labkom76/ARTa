@@ -147,6 +147,7 @@ const PortalSKPD = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [totalItems, setTotalItems] = useState(0);
+  const [selectedStatus, setSelectedStatus] = useState<string>('Semua Status'); // New state for status filter
 
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [tagihanToDelete, setTagihanToDelete] = useState<{ id: string; nomorSpm: string } | null>(null);
@@ -297,6 +298,11 @@ const PortalSKPD = () => {
         query = query.ilike('nomor_spm', `%${searchQuery}%`);
       }
 
+      // Apply status filter if not 'Semua Status'
+      if (selectedStatus !== 'Semua Status') {
+        query = query.eq('status_tagihan', selectedStatus);
+      }
+
       query = query.order('waktu_input', { ascending: false });
 
       if (itemsPerPage !== -1) {
@@ -319,7 +325,7 @@ const PortalSKPD = () => {
 
   useEffect(() => {
     fetchTagihan();
-  }, [user, sessionLoading, searchQuery, currentPage, itemsPerPage]);
+  }, [user, sessionLoading, searchQuery, selectedStatus, currentPage, itemsPerPage]); // Add selectedStatus to dependencies
 
   useEffect(() => {
     if (isModalOpen) { // Only reset when modal opens
@@ -512,8 +518,8 @@ error('Error deleting tagihan:', error.message);
         </Button>
       </div>
 
-      <div className="mb-4 flex items-center space-x-2">
-        <div className="relative flex-1">
+      <div className="mb-4 flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-2"> {/* Added flex-col for mobile stacking */}
+        <div className="relative flex-1 w-full sm:w-auto"> {/* Added w-full for mobile */}
           <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400" />
           <Input
             type="text"
@@ -523,10 +529,22 @@ error('Error deleting tagihan:', error.message);
               setSearchQuery(e.target.value);
               setCurrentPage(1);
             }}
-            className="pl-9"
+            className="pl-9 w-full" // Added w-full for mobile
           />
         </div>
-        <div className="flex items-center space-x-2">
+        <Select onValueChange={(value) => { setSelectedStatus(value); setCurrentPage(1); }} value={selectedStatus}>
+          <SelectTrigger className="w-full sm:w-[200px]"> {/* Added w-full for mobile */}
+            <SelectValue placeholder="Filter berdasarkan Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="Semua Status">Semua Status</SelectItem>
+            <SelectItem value="Menunggu Registrasi">Menunggu Registrasi</SelectItem>
+            <SelectItem value="Menunggu Verifikasi">Menunggu Verifikasi</SelectItem>
+            <SelectItem value="Diteruskan">Diteruskan</SelectItem>
+            <SelectItem value="Dikembalikan">Dikembalikan</SelectItem>
+          </SelectContent>
+        </Select>
+        <div className="flex items-center space-x-2 w-full sm:w-auto justify-end"> {/* Added w-full and justify-end for mobile */}
           <Label htmlFor="items-per-page" className="whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">Per halaman:</Label>
           <Select
             value={itemsPerPage.toString()}
