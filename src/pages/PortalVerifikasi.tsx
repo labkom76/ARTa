@@ -134,9 +134,9 @@ const PortalVerifikasi = () => {
 
   // Fetch unique SKPD names for the history filter dropdown
   useEffect(() => {
-    const fetchHistorySkpdOptions = async () => {
-      if (!user || !profile?.peran) return;
+    if (!user || !profile?.peran) return;
 
+    const fetchHistorySkpdOptions = async () => {
       try {
         const todayStart = startOfDay(new Date()).toISOString();
         const todayEnd = endOfDay(new Date()).toISOString();
@@ -609,6 +609,7 @@ const PortalVerifikasi = () => {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead className="w-[50px]">No.</TableHead> {/* New TableHead for "No." */}
                       <TableHead>Nomor Registrasi</TableHead>
                       <TableHead>Waktu Registrasi</TableHead>
                       <TableHead>Nomor SPM</TableHead>
@@ -618,7 +619,7 @@ const PortalVerifikasi = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {queueTagihanList.map((tagihan) => {
+                    {queueTagihanList.map((tagihan, index) => {
                       const isLockedByOther = tagihan.locked_by && tagihan.locked_by !== user?.id;
                       const isStaleLock = tagihan.locked_at && (new Date().getTime() - parseISO(tagihan.locked_at).getTime()) > LOCK_TIMEOUT_MINUTES * 60 * 1000;
 
@@ -626,6 +627,7 @@ const PortalVerifikasi = () => {
 
                       return (
                         <TableRow key={tagihan.id_tagihan}>
+                          <TableCell>{(queueCurrentPage - 1) * queueItemsPerPage + index + 1}</TableCell> {/* New TableCell for numbering */}
                           <TableCell className="font-medium">{tagihan.nomor_registrasi || '-'}</TableCell>
                           <TableCell>
                             {tagihan.waktu_registrasi ? format(parseISO(tagihan.waktu_registrasi), 'dd MMMM yyyy HH:mm', { locale: localeId }) : '-'}
@@ -758,6 +760,7 @@ const PortalVerifikasi = () => {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead className="w-[50px]">No.</TableHead> {/* New TableHead for "No." */}
                       <TableHead>{profile?.peran === 'Staf Koreksi' ? 'Waktu Koreksi' : 'Waktu Verifikasi'}</TableHead>
                       <TableHead>{profile?.peran === 'Staf Koreksi' ? 'Nomor Koreksi' : 'Nomor Verifikasi'}</TableHead>
                       <TableHead>Nama SKPD</TableHead>
@@ -767,8 +770,9 @@ const PortalVerifikasi = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {historyTagihanList.map((tagihan) => (
+                    {historyTagihanList.map((tagihan, index) => (
                       <TableRow key={tagihan.id_tagihan}>
+                        <TableCell>{(historyCurrentPage - 1) * historyItemsPerPage + index + 1}</TableCell> {/* New TableCell for numbering */}
                         <TableCell>
                           {profile?.peran === 'Staf Koreksi'
                             ? (tagihan.waktu_koreksi ? format(parseISO(tagihan.waktu_koreksi), 'dd MMMM yyyy HH:mm', { locale: localeId }) : '-')
