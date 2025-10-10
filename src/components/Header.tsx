@@ -223,26 +223,30 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
           <DropdownMenuContent className="w-80 p-2" align="end">
             <div className="font-semibold text-sm px-2 py-1">Notifikasi Anda ({unreadCount} belum dibaca)</div>
             <DropdownMenuSeparator />
-            {notifications.length === 0 ? (
-              <DropdownMenuItem className="text-muted-foreground text-sm text-center py-4" disabled>
-                Tidak ada notifikasi.
-              </DropdownMenuItem>
-            ) : (
-              notifications.map((notification) => (
-                <DropdownMenuItem
-                  key={notification.id}
-                  className={`flex flex-col items-start space-y-1 py-2 px-3 rounded-md cursor-pointer ${!notification.is_read ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}
-                  onClick={() => handleNotificationClick(notification)}
-                >
-                  <p className={`text-sm ${!notification.is_read ? 'font-medium text-blue-700 dark:text-blue-300' : 'text-gray-800 dark:text-gray-200'}`}>
-                    {notification.message}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {formatDistanceToNow(parseISO(notification.created_at), { addSuffix: true, locale: localeId })}
-                  </p>
+            {/* Kontainer notifikasi dengan tinggi maksimum dan scrollbar */}
+            <div className="max-h-[400px] overflow-y-auto">
+              {notifications.length === 0 ? (
+                <DropdownMenuItem className="text-muted-foreground text-sm text-center py-4" disabled>
+                  Tidak ada notifikasi.
                 </DropdownMenuItem>
-              ))
-            )}
+              ) : (
+                notifications.map((notification) => (
+                  <DropdownMenuItem
+                    key={notification.id}
+                    className={`flex flex-col items-start space-y-1 py-2 px-3 rounded-md cursor-pointer ${!notification.is_read ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}
+                    onClick={() => handleNotificationClick(notification)}
+                  >
+                    {/* Teks notifikasi dengan word-break */}
+                    <p className={`text-sm break-words ${!notification.is_read ? 'font-medium text-blue-700 dark:text-blue-300' : 'text-gray-800 dark:text-gray-200'}`}>
+                      {notification.message}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {formatDistanceToNow(parseISO(notification.created_at), { addSuffix: true, locale: localeId })}
+                    </p>
+                  </DropdownMenuItem>
+                ))
+              )}
+            </div>
             {notifications.length > 0 && (
               <DropdownMenuSeparator />
             )}
