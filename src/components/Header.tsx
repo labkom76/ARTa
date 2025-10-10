@@ -25,6 +25,7 @@ interface Notification {
   message: string;
   is_read: boolean;
   created_at: string;
+  tagihan_id?: string; // Add tagihan_id to the interface
 }
 
 const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
@@ -41,7 +42,7 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
     try {
       const { data, error } = await supabase
         .from('notifications')
-        .select('*')
+        .select('*, tagihan_id') // Select tagihan_id
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 

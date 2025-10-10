@@ -227,6 +227,7 @@ const KoreksiTagihanSidePanel: React.FC<KoreksiTagihanSidePanelProps> = ({ isOpe
           user_id: tagihan.id_pengguna_input, // ID pengguna SKPD
           message: notificationMessage,
           is_read: false,
+          tagihan_id: tagihan.id_tagihan, // Include tagihan_id
         });
 
       if (notificationError) {

@@ -302,6 +302,7 @@ const PortalRegistrasi = () => {
           user_id: updatedTagihan.id_pengguna_input,
           message: `Tagihan SPM ${updatedTagihan.nomor_spm} Anda telah diregistrasi.`,
           is_read: false,
+          tagihan_id: tagihanId, // Include tagihan_id
         });
 
       if (notificationError) {
