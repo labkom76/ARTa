@@ -115,6 +115,9 @@ const DashboardSKPD = () => {
 
         if (error) throw error;
 
+        // DEBUG: Log raw data
+        console.log("RAW TIMELINE DATA:", data); 
+
         // Sort manually by the latest available date if Supabase's multiple order doesn't yield desired COALESCE behavior
         const sortedData = (data || []).sort((a, b) => {
           const dateA = parseISO(a.waktu_koreksi || a.waktu_verifikasi || a.waktu_registrasi || a.waktu_input);
