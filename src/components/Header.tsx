@@ -287,10 +287,17 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
                 <p className="text-xs text-muted-foreground">Nama Lengkap</p>
                 <p className="text-sm font-medium">{profile?.nama_lengkap || '-'}</p>
               </DropdownMenuItem>
-              <DropdownMenuItem className="flex flex-col items-start space-y-1" disabled>
-                <p className="text-xs text-muted-foreground">Asal SKPD</p>
-                <p className="text-sm font-medium">{profile?.asal_skpd || '-'}</p>
-              </DropdownMenuItem>
+              {profile?.peran === 'SKPD' ? (
+                <DropdownMenuItem className="flex flex-col items-start space-y-1" disabled>
+                  <p className="text-xs text-muted-foreground">Asal SKPD</p>
+                  <p className="text-sm font-medium">{profile?.asal_skpd || '-'}</p>
+                </DropdownMenuItem>
+              ) : (
+                <DropdownMenuItem className="flex flex-col items-start space-y-1" disabled>
+                  <p className="text-xs text-muted-foreground">Peran</p>
+                  <p className="text-sm font-medium">{profile?.peran || '-'}</p>
+                </DropdownMenuItem>
+              )}
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleLogout} className="cursor-pointer">
                 <LogOutIcon className="mr-2 h-4 w-4" />
