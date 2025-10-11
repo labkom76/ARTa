@@ -15,6 +15,7 @@ import {
 import { formatDistanceToNow, parseISO } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
 import TagihanDetailDialog from './TagihanDetailDialog'; // Import TagihanDetailDialog
+import { cn } from '@/lib/utils'; // Import cn for class merging
 
 interface HeaderProps {
   toggleSidebar: () => void;
@@ -220,11 +221,11 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
               )}
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent className="w-80 p-2" align="end">
+          <DropdownMenuContent className="w-80 p-2 md:w-[400px]" align="end"> {/* Adjusted width for larger screens */}
             <div className="font-semibold text-sm px-2 py-1">Notifikasi Anda ({unreadCount} belum dibaca)</div>
             <DropdownMenuSeparator />
             {/* Kontainer notifikasi dengan tinggi maksimum dan scrollbar */}
-            <div className="max-h-[400px] overflow-y-auto">
+            <div className="max-h-[400px] overflow-y-auto overflow-x-hidden"> {/* Added overflow-x-hidden */}
               {notifications.length === 0 ? (
                 <DropdownMenuItem className="text-muted-foreground text-sm text-center py-4" disabled>
                   Tidak ada notifikasi.
@@ -237,7 +238,10 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
                     onClick={() => handleNotificationClick(notification)}
                   >
                     {/* Teks notifikasi dengan word-break */}
-                    <p className={`text-sm break-words ${!notification.is_read ? 'font-medium text-blue-700 dark:text-blue-300' : 'text-gray-800 dark:text-gray-200'}`}>
+                    <p className={cn(
+                      `text-sm break-words whitespace-normal`, // Added whitespace-normal and break-words
+                      !notification.is_read ? 'font-medium text-blue-700 dark:text-blue-300' : 'text-gray-800 dark:text-gray-200'
+                    )}>
                       {notification.message}
                     </p>
                     <p className="text-xs text-muted-foreground">
