@@ -607,19 +607,9 @@ const PortalVerifikasi = () => {
           ) : (
             <>
               <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-[50px]">No.</TableHead> {/* New TableHead for "No." */}
-                      <TableHead>Nomor Registrasi</TableHead>
-                      <TableHead>Waktu Registrasi</TableHead>
-                      <TableHead>Nomor SPM</TableHead>
-                      <TableHead>Nama SKPD</TableHead>
-                      <TableHead>Jumlah Kotor</TableHead>
-                      <TableHead className="text-center">Aksi</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
+                <Table><TableHeader><TableRow>
+                      <TableHead className="w-[50px]">No.</TableHead><TableHead>Nomor Registrasi</TableHead><TableHead>Waktu Registrasi</TableHead><TableHead>Nomor SPM</TableHead><TableHead>Nama SKPD</TableHead><TableHead>Jumlah Kotor</TableHead><TableHead className="text-center">Aksi</TableHead>
+                    </TableRow></TableHeader><TableBody>
                     {queueTagihanList.map((tagihan, index) => {
                       const isLockedByOther = tagihan.locked_by && tagihan.locked_by !== user?.id;
                       const isStaleLock = tagihan.locked_at && (new Date().getTime() - parseISO(tagihan.locked_at).getTime()) > LOCK_TIMEOUT_MINUTES * 60 * 1000;
@@ -628,15 +618,9 @@ const PortalVerifikasi = () => {
 
                       return (
                         <TableRow key={tagihan.id_tagihan}>
-                          <TableCell>{(queueCurrentPage - 1) * queueItemsPerPage + index + 1}</TableCell> {/* New TableCell for numbering */}
-                          <TableCell className="font-medium">{tagihan.nomor_registrasi || '-'}</TableCell>
-                          <TableCell>
+                          <TableCell>{(queueCurrentPage - 1) * queueItemsPerPage + index + 1}</TableCell><TableCell className="font-medium">{tagihan.nomor_registrasi || '-'}</TableCell><TableCell>
                             {tagihan.waktu_registrasi ? format(parseISO(tagihan.waktu_registrasi), 'dd MMMM yyyy HH:mm', { locale: localeId }) : '-'}
-                          </TableCell>
-                          <TableCell>{tagihan.nomor_spm}</TableCell>
-                          <TableCell>{tagihan.nama_skpd}</TableCell>
-                          <TableCell>Rp{tagihan.jumlah_kotor.toLocaleString('id-ID')}</TableCell>
-                          <TableCell className="text-center">
+                          </TableCell><TableCell>{tagihan.nomor_spm}</TableCell><TableCell>{tagihan.nama_skpd}</TableCell><TableCell>Rp{tagihan.jumlah_kotor.toLocaleString('id-ID')}</TableCell><TableCell className="text-center">
                             <Button
                               variant="ghost"
                               size="icon"
@@ -654,8 +638,7 @@ const PortalVerifikasi = () => {
                         </TableRow>
                       );
                     })}
-                  </TableBody>
-                </Table>
+                  </TableBody></Table>
               </div>
               <div className="mt-6 flex flex-col sm:flex-row items-center justify-between space-y-2 sm:space-y-0">
                 <div className="text-sm text-muted-foreground">
@@ -758,34 +741,18 @@ const PortalVerifikasi = () => {
           ) : (
             <>
               <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-[50px]">No.</TableHead> {/* New TableHead for "No." */}
-                      <TableHead>{profile?.peran === 'Staf Koreksi' ? 'Waktu Koreksi' : 'Waktu Verifikasi'}</TableHead>
-                      <TableHead>{profile?.peran === 'Staf Koreksi' ? 'Nomor Koreksi' : 'Nomor Verifikasi'}</TableHead>
-                      <TableHead>Nama SKPD</TableHead>
-                      <TableHead>Nomor SPM</TableHead>
-                      <TableHead>Status Tagihan</TableHead>
-                      <TableHead className="text-center">Aksi</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
+                <Table><TableHeader><TableRow>
+                      <TableHead className="w-[50px]">No.</TableHead><TableHead>{profile?.peran === 'Staf Koreksi' ? 'Waktu Koreksi' : 'Waktu Verifikasi'}</TableHead><TableHead>{profile?.peran === 'Staf Koreksi' ? 'Nomor Koreksi' : 'Nomor Verifikasi'}</TableHead><TableHead>Nama SKPD</TableHead><TableHead>Nomor SPM</TableHead><TableHead>Status Tagihan</TableHead><TableHead className="text-center">Aksi</TableHead>
+                    </TableRow></TableHeader><TableBody>
                     {historyTagihanList.map((tagihan, index) => (
                       <TableRow key={tagihan.id_tagihan}>
-                        <TableCell>{(historyCurrentPage - 1) * historyItemsPerPage + index + 1}</TableCell> {/* New TableCell for numbering */}
-                        <TableCell>
+                        <TableCell>{(historyCurrentPage - 1) * historyItemsPerPage + index + 1}</TableCell><TableCell>
                           {profile?.peran === 'Staf Koreksi'
                             ? (tagihan.waktu_koreksi ? format(parseISO(tagihan.waktu_koreksi), 'dd MMMM yyyy HH:mm', { locale: localeId }) : '-')
                             : (tagihan.waktu_verifikasi ? format(parseISO(tagihan.waktu_verifikasi), 'dd MMMM yyyy HH:mm', { locale: localeId }) : '-')}
-                        </TableCell>
-                        <TableCell className="font-medium">
+                        </TableCell><TableCell className="font-medium">
                           {profile?.peran === 'Staf Koreksi' ? (tagihan.nomor_koreksi || '-') : (tagihan.nomor_verifikasi || '-')}
-                        </TableCell>
-                        <TableCell>{tagihan.nama_skpd}</TableCell>
-                        <TableCell>{tagihan.nomor_spm}</TableCell>
-                        <TableCell><StatusBadge status={tagihan.status_tagihan} /></TableCell>
-                        <TableCell className="text-center">
+                        </TableCell><TableCell>{tagihan.nama_skpd}</TableCell><TableCell>{tagihan.nomor_spm}</TableCell><TableCell><StatusBadge status={tagihan.status_tagihan} /></TableCell><TableCell className="text-center">
                           <div className="flex justify-center space-x-2">
                             <Button variant="outline" size="icon" title="Lihat Detail" onClick={() => handleDetailClick(tagihan)}>
                               <EyeIcon className="h-4 w-4" />
@@ -797,8 +764,7 @@ const PortalVerifikasi = () => {
                         </TableCell>
                       </TableRow>
                     ))}
-                  </TableBody>
-                </Table>
+                  </TableBody></Table>
               </div>
               <div className="mt-6 flex flex-col sm:flex-row items-center justify-between space-y-2 sm:space-y-0">
                 <div className="text-sm text-muted-foreground">

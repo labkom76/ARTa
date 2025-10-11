@@ -333,19 +333,12 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
             {/* Checklist Verifikasi */}
             <div className="grid gap-2 mt-4">
               <h3 className="text-lg font-semibold">Checklist Verifikasi</h3>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Uraian</TableHead>
-                    <TableHead className="w-[120px] text-center">Memenuhi Syarat</TableHead>
-                    <TableHead>Keterangan</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
+              <Table><TableHeader><TableRow>
+                    <TableHead>Uraian</TableHead><TableHead className="w-[120px] text-center">Memenuhi Syarat</TableHead><TableHead>Keterangan</TableHead>
+                  </TableRow></TableHeader><TableBody>
                   {checklistItems.map((item, index) => (
                     <TableRow key={item}>
-                      <TableCell>{item}</TableCell>
-                      <TableCell className="text-center">
+                      <TableCell>{item}</TableCell><TableCell className="text-center">
                         <Controller
                           name={`detail_verifikasi.${index}.memenuhi_syarat`}
                           control={form.control}
@@ -356,8 +349,7 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
                             />
                           )}
                         />
-                      </TableCell>
-                      <TableCell>
+                      </TableCell><TableCell>
                         <Controller
                           name={`detail_verifikasi.${index}.keterangan`}
                           control={form.control}
@@ -372,8 +364,7 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
                       </TableCell>
                     </TableRow>
                   ))}
-                </TableBody>
-              </Table>
+                </TableBody></Table>
               {form.formState.errors.detail_verifikasi && (
                 <p className="text-red-500 text-sm mt-2">
                   {form.formState.errors.detail_verifikasi.message}

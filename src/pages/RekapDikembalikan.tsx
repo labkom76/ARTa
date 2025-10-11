@@ -232,18 +232,9 @@ const RekapDikembalikan = () => {
           </div>
 
           <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Waktu Koreksi</TableHead>
-                  <TableHead>Nomor Koreksi</TableHead>
-                  <TableHead>Nomor SPM</TableHead>
-                  <TableHead>Nama SKPD</TableHead>
-                  <TableHead>Keterangan</TableHead>
-                  <TableHead className="text-center">Aksi</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+            <Table><TableHeader><TableRow>
+                  <TableHead>Waktu Koreksi</TableHead><TableHead>Nomor Koreksi</TableHead><TableHead>Nomor SPM</TableHead><TableHead>Nama SKPD</TableHead><TableHead>Keterangan</TableHead><TableHead className="text-center">Aksi</TableHead>
+                </TableRow></TableHeader><TableBody>
                 {tagihanList.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
@@ -255,12 +246,7 @@ const RekapDikembalikan = () => {
                     <TableRow key={tagihan.id_tagihan}>
                       <TableCell>
                         {tagihan.waktu_koreksi ? format(parseISO(tagihan.waktu_koreksi), 'dd MMMM yyyy HH:mm', { locale: localeId }) : '-'}
-                      </TableCell>
-                      <TableCell className="font-medium">{tagihan.nomor_koreksi || '-'}</TableCell>
-                      <TableCell>{tagihan.nomor_spm}</TableCell>
-                      <TableCell>{tagihan.nama_skpd}</TableCell>
-                      <TableCell>{tagihan.catatan_koreksi || '-'}</TableCell>
-                      <TableCell className="text-center">
+                      </TableCell><TableCell className="font-medium">{tagihan.nomor_koreksi || '-'}</TableCell><TableCell>{tagihan.nomor_spm}</TableCell><TableCell>{tagihan.nama_skpd}</TableCell><TableCell>{tagihan.catatan_koreksi || '-'}</TableCell><TableCell className="text-center">
                         <div className="flex justify-center space-x-2">
                           <Button variant="outline" size="icon" title="Lihat Detail" onClick={() => handleDetailClick(tagihan)}>
                             <EyeIcon className="h-4 w-4" />
@@ -273,8 +259,7 @@ const RekapDikembalikan = () => {
                     </TableRow>
                   ))
                 )}
-              </TableBody>
-            </Table>
+              </TableBody></Table>
           </div>
 
           {/* Pagination Controls */}

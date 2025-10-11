@@ -226,8 +226,8 @@ const PortalSKPD = () => {
 
   // Fetch Kode SKPD for the logged-in user's SKPD
   useEffect(() => {
-    const fetchKodeSkpd = async () => {
-      if (profile?.asal_skpd) {
+    if (profile?.asal_skpd) {
+      const fetchKodeSkpd = async () => {
         const { data, error } = await supabase
           .from('master_skpd')
           .select('kode_skpd')
@@ -240,11 +240,11 @@ const PortalSKPD = () => {
         } else if (data) {
           setKodeSkpd(data.kode_skpd);
         }
-      } else {
-        setKodeSkpd(null);
-      }
-    };
-    fetchKodeSkpd();
+      };
+      fetchKodeSkpd();
+    } else {
+      setKodeSkpd(null);
+    }
   }, [profile?.asal_skpd]);
 
   // Fetch Schedule Options - MODIFIED TO FILTER BY is_active
@@ -628,27 +628,14 @@ error('Error deleting tagihan:', error.message);
       ) : (
         <>
           <div className="overflow-x-auto">
-            <Table key={`${selectedStatus}-${currentPage}`}> {/* Added key here */}
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[50px]">No.</TableHead>
-                  <TableHead>Nomor SPM</TableHead>
-                  <TableHead>Jenis SPM</TableHead>
-                  <TableHead>Jenis Tagihan</TableHead>
-                  <TableHead>Sumber Dana</TableHead>
-                  <TableHead className="min-w-[280px]">Uraian</TableHead> {/* Applied min-width */}
-                  <TableHead>Jumlah Kotor</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-center">Aksi</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+            <Table key={`${selectedStatus}-${currentPage}`}><TableHeader><TableRow>
+                  <TableHead className="w-[50px]">No.</TableHead><TableHead>Nomor SPM</TableHead><TableHead>Jenis SPM</TableHead><TableHead>Jenis Tagihan</TableHead><TableHead>Sumber Dana</TableHead><TableHead className="min-w-[280px]">Uraian</TableHead><TableHead>Jumlah Kotor</TableHead><TableHead>Status</TableHead><TableHead className="text-center">Aksi</TableHead>
+                </TableRow></TableHeader><TableBody>
                 {tagihanList.map((tagihan, index) => {
                   console.log(`Rendering tagihan ${tagihan.nomor_spm} with status: ${tagihan.status_tagihan}`); // Log each rendered item's status
                   return (
                     <TableRow key={tagihan.id_tagihan}>
-                      <TableCell>{(currentPage - 1) * itemsPerPage + index + 1}</TableCell>
-                      <TableCell className="font-medium">
+                      <TableCell>{(currentPage - 1) * itemsPerPage + index + 1}</TableCell><TableCell className="font-medium">
                         <Tooltip>
                           <TooltipTrigger className="max-w-[250px] whitespace-nowrap overflow-hidden text-ellipsis block">
                             {tagihan.nomor_spm}
@@ -657,14 +644,7 @@ error('Error deleting tagihan:', error.message);
                             <p>{tagihan.nomor_spm}</p>
                           </TooltipContent>
                         </Tooltip>
-                      </TableCell>
-                      <TableCell>{tagihan.jenis_spm}</TableCell>
-                      <TableCell>{tagihan.jenis_tagihan}</TableCell>
-                      <TableCell>{tagihan.sumber_dana || '-'}</TableCell>
-                      <TableCell className="min-w-[280px]">{tagihan.uraian}</TableCell> {/* Applied min-width */}
-                      <TableCell>Rp{tagihan.jumlah_kotor.toLocaleString('id-ID')}</TableCell>
-                      <TableCell><StatusBadge status={tagihan.status_tagihan} /></TableCell>
-                      <TableCell className="text-center">
+                      </TableCell><TableCell>{tagihan.jenis_spm}</TableCell><TableCell>{tagihan.jenis_tagihan}</TableCell><TableCell>{tagihan.sumber_dana || '-'}</TableCell><TableCell className="min-w-[280px]">{tagihan.uraian}</TableCell><TableCell>Rp{tagihan.jumlah_kotor.toLocaleString('id-ID')}</TableCell><TableCell><StatusBadge status={tagihan.status_tagihan} /></TableCell><TableCell className="text-center">
                         {tagihan.status_tagihan === 'Menunggu Registrasi' ? (
                           <div className="flex justify-center space-x-2">
                             <Button
@@ -695,8 +675,7 @@ error('Error deleting tagihan:', error.message);
                     </TableRow>
                   );
                 })}
-              </TableBody>
-            </Table>
+              </TableBody></Table>
           </div>
           <Pagination className="mt-4">
             <PaginationContent>

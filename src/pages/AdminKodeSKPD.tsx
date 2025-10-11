@@ -145,15 +145,9 @@ const AdminKodeSKPD = () => {
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nama SKPD</TableHead>
-                  <TableHead>Kode SKPD</TableHead>
-                  <TableHead className="text-center">Aksi</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+            <Table><TableHeader><TableRow>
+                  <TableHead>Nama SKPD</TableHead><TableHead>Kode SKPD</TableHead><TableHead className="text-center">Aksi</TableHead>
+                </TableRow></TableHeader><TableBody>
                 {loadingData ? (
                   <TableRow>
                     <TableCell colSpan={3} className="text-center text-muted-foreground py-8">
@@ -169,9 +163,7 @@ const AdminKodeSKPD = () => {
                 ) : (
                   skpdList.map((skpd) => (
                     <TableRow key={skpd.id}>
-                      <TableCell className="font-medium">{skpd.nama_skpd}</TableCell>
-                      <TableCell>{skpd.kode_skpd}</TableCell>
-                      <TableCell className="text-center">
+                      <TableCell className="font-medium">{skpd.nama_skpd}</TableCell><TableCell>{skpd.kode_skpd}</TableCell><TableCell className="text-center">
                         <div className="flex justify-center space-x-2">
                           <Button variant="outline" size="icon" title="Edit SKPD" onClick={() => handleEditClick(skpd)}>
                             <EditIcon className="h-4 w-4" />
@@ -184,8 +176,7 @@ const AdminKodeSKPD = () => {
                     </TableRow>
                   ))
                 )}
-              </TableBody>
-            </Table>
+              </TableBody></Table>
           </div>
         </CardContent>
       </Card>
