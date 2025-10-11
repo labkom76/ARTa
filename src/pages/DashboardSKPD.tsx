@@ -230,9 +230,6 @@ const DashboardSKPD = () => {
           ) : (
             <ol className="relative border-l border-gray-200 dark:border-gray-700 ml-4">
               {timelineActivities.map((activity, index) => {
-                // Debug log to check the status_tagihan value
-                console.log('Activity status:', activity.status_tagihan, 'Nomor SPM:', activity.nomor_spm);
-
                 const latestDate = getLatestActivityDate(activity);
                 const relativeTime = latestDate ? formatDistanceToNow(latestDate, { addSuffix: true, locale: localeId }) : '-';
                 
