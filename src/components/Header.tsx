@@ -295,7 +295,9 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
               ) : (
                 <DropdownMenuItem className="flex flex-col items-start space-y-1" disabled>
                   <p className="text-xs text-muted-foreground">Peran</p>
-                  <p className="text-sm font-medium">{profile?.peran || '-'}</p>
+                  <p className="text-sm font-medium">
+                    {profile?.peran === 'Staf Koreksi' ? 'Kuasa BUD' : (profile?.peran || '-')}
+                  </p>
                 </DropdownMenuItem>
               )}
               <DropdownMenuSeparator />
