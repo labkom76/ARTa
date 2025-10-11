@@ -260,15 +260,16 @@ const DashboardSKPD = () => {
                 return (
                   <li key={activity.id_tagihan} className="mb-6 ml-6">
                     <span className="absolute flex items-center justify-center w-3 h-3 bg-blue-200 rounded-full -left-1.5 ring-8 ring-white dark:ring-gray-900 dark:bg-blue-900"></span>
-                    <h4 className="flex items-center mb-1 text-sm font-semibold text-gray-900 dark:text-white">
-                      {activity.nomor_spm}
-                    </h4>
-                    <time className="block mb-2 text-xs font-normal leading-none text-gray-400 dark:text-gray-500">
-                      {relativeTime}
-                    </time>
-                    <p className={`text-sm font-normal ${statusColor}`}>
-                      {message}
-                    </p>
+                    
+                    {/* Gabungkan pesan dan waktu di sini */}
+                    <div className="flex flex-col">
+                      <p className={`text-sm font-normal ${statusColor}`}>
+                        {message}
+                      </p>
+                      <time className="text-xs font-normal text-gray-400 dark:text-gray-500">
+                        {relativeTime}
+                      </time>
+                    </div>
                   </li>
                 );
               })}
