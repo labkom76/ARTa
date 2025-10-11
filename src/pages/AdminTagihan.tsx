@@ -26,6 +26,7 @@ import {
   PaginationLink,
   PaginationNext,
   PaginationPrevious,
+
 } from '@/components/ui/pagination';
 import { Label } from '@/components/ui/label';
 import TagihanDetailDialog from '@/components/TagihanDetailDialog';
@@ -354,7 +355,7 @@ const AdminTagihan = () => {
                   <TableHead>Nomor SPM</TableHead>
                   <TableHead>Nama SKPD</TableHead>
                   <TableHead>Jumlah Kotor</TableHead>
-                  <TableHead className="min-w-[450px]">Uraian</TableHead> {/* Applied min-width */}
+                  <TableHead className="min-w-[280px]">Uraian</TableHead> {/* Applied min-width */}
                   <TableHead>Status</TableHead>
                   <TableHead>Diperiksa oleh</TableHead>
                   <TableHead className="text-center">Aksi</TableHead>
@@ -380,7 +381,7 @@ const AdminTagihan = () => {
                       <TableCell className="font-medium">{tagihan.nomor_spm}</TableCell>
                       <TableCell>{tagihan.nama_skpd}</TableCell>
                       <TableCell>Rp{tagihan.jumlah_kotor.toLocaleString('id-ID')}</TableCell>
-                      <TableCell className="min-w-[450px]">{tagihan.uraian}</TableCell> {/* Applied min-width */}
+                      <TableCell className="min-w-[280px]">{tagihan.uraian}</TableCell> {/* Applied min-width */}
                       <TableCell><StatusBadge status={tagihan.status_tagihan} /></TableCell>
                       <TableCell>{tagihan.nama_verifikator || tagihan.nama_registrator || tagihan.id_korektor ? (tagihan.nama_verifikator || tagihan.nama_registrator || 'Staf Koreksi') : '-'}</TableCell>
                       <TableCell className="text-center">

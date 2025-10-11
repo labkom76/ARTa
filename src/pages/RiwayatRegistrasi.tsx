@@ -221,7 +221,7 @@ const RiwayatRegistrasi = () => {
               <TableHead>Nomor Registrasi</TableHead>
               <TableHead>Nomor SPM</TableHead>
               <TableHead>Nama SKPD</TableHead>
-              <TableHead className="min-w-[450px]">Uraian</TableHead> {/* Applied min-width */}
+              <TableHead className="min-w-[280px]">Uraian</TableHead> {/* Applied min-width */}
               <TableHead>Jumlah Kotor</TableHead>
               <TableHead>Status Tagihan</TableHead>
               <TableHead className="text-center">Aksi</TableHead>
@@ -244,7 +244,7 @@ const RiwayatRegistrasi = () => {
                   <TableCell className="font-medium">{tagihan.nomor_registrasi || '-'}</TableCell>
                   <TableCell>{tagihan.nomor_spm}</TableCell>
                   <TableCell>{tagihan.nama_skpd}</TableCell>
-                  <TableCell className="min-w-[450px]">{tagihan.uraian}</TableCell> {/* Applied min-width */}
+                  <TableCell className="min-w-[280px]">{tagihan.uraian}</TableCell> {/* Applied min-width */}
                   <TableCell>Rp{tagihan.jumlah_kotor.toLocaleString('id-ID')}</TableCell>
                   <TableCell><StatusBadge status={tagihan.status_tagihan} /></TableCell>
                   <TableCell className="text-center">

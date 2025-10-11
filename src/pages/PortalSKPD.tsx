@@ -636,7 +636,7 @@ error('Error deleting tagihan:', error.message);
                   <TableHead>Jenis SPM</TableHead>
                   <TableHead>Jenis Tagihan</TableHead>
                   <TableHead>Sumber Dana</TableHead>
-                  <TableHead className="min-w-[450px]">Uraian</TableHead> {/* Applied min-width */}
+                  <TableHead className="min-w-[280px]">Uraian</TableHead> {/* Applied min-width */}
                   <TableHead>Jumlah Kotor</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-center">Aksi</TableHead>
@@ -661,7 +661,7 @@ error('Error deleting tagihan:', error.message);
                       <TableCell>{tagihan.jenis_spm}</TableCell>
                       <TableCell>{tagihan.jenis_tagihan}</TableCell>
                       <TableCell>{tagihan.sumber_dana || '-'}</TableCell>
-                      <TableCell className="min-w-[450px]">{tagihan.uraian}</TableCell> {/* Applied min-width */}
+                      <TableCell className="min-w-[280px]">{tagihan.uraian}</TableCell> {/* Applied min-width */}
                       <TableCell>Rp{tagihan.jumlah_kotor.toLocaleString('id-ID')}</TableCell>
                       <TableCell><StatusBadge status={tagihan.status_tagihan} /></TableCell>
                       <TableCell className="text-center">
