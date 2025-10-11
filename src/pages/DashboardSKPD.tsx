@@ -107,13 +107,10 @@ const DashboardSKPD = () => {
           .from('database_tagihan')
           .select('id_tagihan, nomor_spm, status_tagihan, waktu_input, waktu_registrasi, waktu_verifikasi, waktu_koreksi')
           .eq('id_pengguna_input', user.id)
-          .order('waktu_input', { ascending: false }) // <-- PERUBAHAN UTAMA DI SINI
+          .order('waktu_input', { ascending: false }) 
           .limit(5);
 
         if (error) throw error;
-
-        // DEBUG: Log raw data
-        console.log("RAW TIMELINE DATA:", data); 
 
         // Sort manually by the latest available date if Supabase's multiple order doesn't yield desired COALESCE behavior
         const sortedData = (data || []).sort((a, b) => {
