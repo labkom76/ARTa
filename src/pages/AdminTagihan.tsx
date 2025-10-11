@@ -354,6 +354,7 @@ const AdminTagihan = () => {
                   <TableHead>Nomor SPM</TableHead>
                   <TableHead>Nama SKPD</TableHead>
                   <TableHead>Jumlah Kotor</TableHead>
+                  <TableHead className="min-w-[450px]">Uraian</TableHead> {/* Applied min-width */}
                   <TableHead>Status</TableHead>
                   <TableHead>Diperiksa oleh</TableHead>
                   <TableHead className="text-center">Aksi</TableHead>
@@ -362,13 +363,13 @@ const AdminTagihan = () => {
               <TableBody>
                 {loadingData ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                    <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
                       Memuat data tagihan...
                     </TableCell>
                   </TableRow>
                 ) : tagihanList.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                    <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
                       Tidak ada data tagihan.
                     </TableCell>
                   </TableRow>
@@ -379,6 +380,7 @@ const AdminTagihan = () => {
                       <TableCell className="font-medium">{tagihan.nomor_spm}</TableCell>
                       <TableCell>{tagihan.nama_skpd}</TableCell>
                       <TableCell>Rp{tagihan.jumlah_kotor.toLocaleString('id-ID')}</TableCell>
+                      <TableCell className="min-w-[450px]">{tagihan.uraian}</TableCell> {/* Applied min-width */}
                       <TableCell><StatusBadge status={tagihan.status_tagihan} /></TableCell>
                       <TableCell>{tagihan.nama_verifikator || tagihan.nama_registrator || tagihan.id_korektor ? (tagihan.nama_verifikator || tagihan.nama_registrator || 'Staf Koreksi') : '-'}</TableCell>
                       <TableCell className="text-center">
