@@ -297,15 +297,15 @@ const PortalSKPD = () => {
     if (!user || sessionLoading) return;
 
     setLoading(true);
-    console.log('--- fetchTagihan START ---');
-    console.log('Current selectedStatus state:', selectedStatus); // Log selectedStatus state
-    console.log('Fetching tagihan with filters:', {
-      userId: user.id,
-      searchQuery,
-      selectedStatus,
-      currentPage,
-      itemsPerPage
-    });
+    // console.log('--- fetchTagihan START ---');
+    // console.log('Current selectedStatus state:', selectedStatus); // Log selectedStatus state
+    // console.log('Fetching tagihan with filters:', {
+    //   userId: user.id,
+    //   searchQuery,
+    //   selectedStatus,
+    //   currentPage,
+    //   itemsPerPage
+    // });
     try {
       let query = supabase
         .from('database_tagihan')
@@ -318,10 +318,10 @@ const PortalSKPD = () => {
 
       // Apply status filter if not 'Semua Status'
       if (selectedStatus !== 'Semua Status') {
-        console.log('Applying status filter:', selectedStatus); // Log when filter is applied
+        // console.log('Applying status filter:', selectedStatus); // Log when filter is applied
         query = query.eq('status_tagihan', selectedStatus);
       } else {
-        console.log('No status filter applied (selectedStatus is Semua Status)');
+        // console.log('No status filter applied (selectedStatus is Semua Status)');
       }
 
       query = query.order('waktu_input', { ascending: false });
@@ -337,21 +337,21 @@ const PortalSKPD = () => {
         throw error;
       }
 
-      console.log('Supabase query result:', { data, count }); // Log data and count
+      // console.log('Supabase query result:', { data, count }); // Log data and count
       // NEW LOG HERE: Inspect data array content
-      data.forEach((item: any, idx: number) => {
-        console.log(`Supabase data item ${idx}: status = ${item.status_tagihan}, nomor_spm = ${item.nomor_spm}`);
-      });
+      // data.forEach((item: any, idx: number) => {
+      //   console.log(`Supabase data item ${idx}: status = ${item.status_tagihan}, nomor_spm = ${item.nomor_spm}`);
+      // });
       // END NEW LOG
       setTagihanList(data as Tagihan[]);
       setTotalItems(count || 0);
-      console.log('tagihanList after setTagihanList:', data); // Log the data that was just set
+      // console.log('tagihanList after setTagihanList:', data); // Log the data that was just set
     } catch (error: any) {
       console.error('Error fetching tagihan:', error.message);
       toast.error('Gagal memuat daftar tagihan: ' + error.message);
     } finally {
       setLoading(false);
-      console.log('--- fetchTagihan END ---');
+      // console.log('--- fetchTagihan END ---');
     }
   };
 
@@ -361,12 +361,12 @@ const PortalSKPD = () => {
     const params = new URLSearchParams(location.search);
     const statusParam = params.get('status');
     if (statusParam) {
-      console.log('URL status parameter detected:', statusParam); // Log URL param
+      // console.log('URL status parameter detected:', statusParam); // Log URL param
       setSelectedStatus(statusParam);
       setCurrentPage(1); // Reset page when status changes from URL
     } else {
       // If no status param in URL, ensure filter is 'Semua Status'
-      console.log('No URL status parameter, setting selectedStatus to Semua Status');
+      // console.log('No URL status parameter, setting selectedStatus to Semua Status');
       setSelectedStatus('Semua Status');
       setCurrentPage(1);
     }
@@ -374,7 +374,7 @@ const PortalSKPD = () => {
 
   // Effect untuk mengambil data setiap kali filter atau pagination berubah
   useEffect(() => {
-    console.log('useEffect for fetchTagihan triggered. Dependencies changed.');
+    // console.log('useEffect for fetchTagihan triggered. Dependencies changed.');
     fetchTagihan();
   }, [user, sessionLoading, searchQuery, selectedStatus, currentPage, itemsPerPage]);
 
@@ -545,7 +545,7 @@ const PortalSKPD = () => {
       toast.success('Tagihan berhasil dihapus!');
       fetchTagihan();
     } catch (error: any) {
-error('Error deleting tagihan:', error.message);
+      console.error('Error deleting tagihan:', error.message);
       toast.error('Gagal menghapus tagihan: ' + error.message);
     } finally {
       setIsDeleteDialogOpen(false);
@@ -560,8 +560,8 @@ error('Error deleting tagihan:', error.message);
 
   const totalPages = itemsPerPage === -1 ? 1 : Math.ceil(totalItems / itemsPerPage);
 
-  console.log('--- Rendering PortalSKPD component ---');
-  console.log('tagihanList state at render:', tagihanList.map(t => ({ id: t.id_tagihan, status: t.status_tagihan, spm: t.nomor_spm })));
+  // console.log('--- Rendering PortalSKPD component ---');
+  // console.log('tagihanList state at render:', tagihanList.map(t => ({ id: t.id_tagihan, status: t.status_tagihan, spm: t.nomor_spm })));
 
   return (
     <div className="p-6 bg-white rounded-lg shadow-sm border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
@@ -632,7 +632,7 @@ error('Error deleting tagihan:', error.message);
                   <TableHead className="w-[50px]">No.</TableHead><TableHead>Nomor SPM</TableHead><TableHead>Jenis SPM</TableHead><TableHead>Jenis Tagihan</TableHead><TableHead>Sumber Dana</TableHead><TableHead className="min-w-[280px]">Uraian</TableHead><TableHead>Jumlah Kotor</TableHead><TableHead>Status</TableHead><TableHead className="text-center">Aksi</TableHead>
                 </TableRow></TableHeader><TableBody>
                 {tagihanList.map((tagihan, index) => {
-                  console.log(`Rendering tagihan ${tagihan.nomor_spm} with status: ${tagihan.status_tagihan}`); // Log each rendered item's status
+                  // console.log(`Rendering tagihan ${tagihan.nomor_spm} with status: ${tagihan.status_tagihan}`); // Log each rendered item's status
                   return (
                     <TableRow key={tagihan.id_tagihan}>
                       <TableCell>{(currentPage - 1) * itemsPerPage + index + 1}</TableCell><TableCell className="font-medium">
