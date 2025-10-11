@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { ReceiptTextIcon, HourglassIcon, FileCheckIcon, SendIcon, RotateCcwIcon } from 'lucide-react'; // Import icons
-import { format, parseISO } from 'date-fns'; // Import format and parseISO for date handling
+import { format, parseISO, formatDistanceToNow } from 'date-fns'; // Import format, parseISO, and formatDistanceToNow
 import { id as localeId } from 'date-fns/locale'; // Import locale for Indonesian date formatting
 
 interface TagihanCounts {
@@ -231,29 +231,29 @@ const DashboardSKPD = () => {
             <ol className="relative border-l border-gray-200 dark:border-gray-700 ml-4">
               {timelineActivities.map((activity, index) => {
                 const latestDate = getLatestActivityDate(activity);
-                const formattedDate = latestDate ? format(latestDate, 'dd MMMM yyyy HH:mm', { locale: localeId }) : '-';
+                const relativeTime = latestDate ? formatDistanceToNow(latestDate, { addSuffix: true, locale: localeId }) : '-';
                 
-                let statusText = '';
+                let message = '';
                 let statusColor = 'text-gray-500'; // Default color
                 switch (activity.status_tagihan) {
                   case 'Menunggu Registrasi':
-                    statusText = 'Tagihan menunggu registrasi';
+                    message = `Anda baru saja menginput tagihan ${activity.nomor_spm}.`;
                     statusColor = 'text-yellow-600 dark:text-yellow-400';
                     break;
                   case 'Menunggu Verifikasi':
-                    statusText = 'Tagihan menunggu verifikasi';
+                    message = `Tagihan ${activity.nomor_spm} Anda telah diregistrasi.`;
                     statusColor = 'text-purple-600 dark:text-purple-400';
                     break;
                   case 'Diteruskan':
-                    statusText = 'Tagihan diteruskan';
+                    message = `Tagihan ${activity.nomor_spm} Anda telah Diteruskan.`;
                     statusColor = 'text-green-600 dark:text-green-400';
                     break;
                   case 'Dikembalikan':
-                    statusText = 'Tagihan dikembalikan';
+                    message = `Tagihan ${activity.nomor_spm} Anda telah Dikembalikan.`;
                     statusColor = 'text-red-600 dark:text-red-400';
                     break;
                   default:
-                    statusText = 'Status tidak diketahui';
+                    message = `Aktivitas tidak diketahui untuk tagihan ${activity.nomor_spm}.`;
                     break;
                 }
 
@@ -264,10 +264,10 @@ const DashboardSKPD = () => {
                       {activity.nomor_spm}
                     </h4>
                     <time className="block mb-2 text-xs font-normal leading-none text-gray-400 dark:text-gray-500">
-                      Aktivitas terakhir pada {formattedDate}
+                      {relativeTime}
                     </time>
                     <p className={`text-sm font-normal ${statusColor}`}>
-                      {statusText}
+                      {message}
                     </p>
                   </li>
                 );
