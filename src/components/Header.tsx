@@ -11,6 +11,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
   DropdownMenuSeparator,
+  DropdownMenuLabel, // Import DropdownMenuLabel for titles
 } from '@/components/ui/dropdown-menu';
 import { formatDistanceToNow, parseISO } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
@@ -261,22 +262,48 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
         </DropdownMenu>
 
         {user && (
-          <div className="flex items-center space-x-2">
-            <Avatar>
-              <AvatarImage src={profile?.avatar_url || undefined} alt={profile?.nama_lengkap || user.email || "User"} />
-              <AvatarFallback className="bg-blue-500 text-white">
-                {getInitials(profile?.nama_lengkap || user.email)}
-              </AvatarFallback>
-            </Avatar>
-            <div className="hidden md:block text-sm text-gray-700 dark:text-gray-200">
-              <p className="font-medium">{profile?.nama_lengkap || user.email}</p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">{profile?.peran || 'Pengguna'}</p>
-            </div>
-          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                <Avatar>
+                  <AvatarImage src={profile?.avatar_url || undefined} alt={profile?.nama_lengkap || user.email || "User"} />
+                  <AvatarFallback className="bg-blue-500 text-white">
+                    {getInitials(profile?.nama_lengkap || user.email)}
+                  </AvatarFallback>
+                </Avatar>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-56" align="end" forceMount>
+              <DropdownMenuLabel className="font-normal">
+                <div className="flex flex-col space-y-1">
+                  <p className="text-sm font-medium leading-none">{profile?.nama_lengkap || 'Pengguna'}</p>
+                  <p className="text-xs leading-none text-muted-foreground">
+                    {user.email}
+                  </p>
+                </div>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem className="flex flex-col items-start space-y-1" disabled>
+                <p className="text-xs text-muted-foreground">Nama Lengkap</p>
+                <p className="text-sm font-medium">{profile?.nama_lengkap || '-'}</p>
+              </DropdownMenuItem>
+              <DropdownMenuItem className="flex flex-col items-start space-y-1" disabled>
+                <p className="text-xs text-muted-foreground">Asal SKPD</p>
+                <p className="text-sm font-medium">{profile?.asal_skpd || '-'}</p>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={handleLogout} className="cursor-pointer">
+                <LogOutIcon className="mr-2 h-4 w-4" />
+                <span>Log out</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         )}
-        <Button variant="ghost" size="icon" onClick={handleLogout} className="text-gray-600 hover:text-red-500 dark:text-gray-300 dark:hover:text-red-400">
-          <LogOutIcon className="h-5 w-5" />
-        </Button>
+        {!user && (
+          <Button variant="ghost" size="icon" onClick={handleLogout} className="text-gray-600 hover:text-red-500 dark:text-gray-300 dark:hover:text-red-400">
+            <LogOutIcon className="h-5 w-5" />
+          </Button>
+        )}
       </div>
 
       <TagihanDetailDialog
