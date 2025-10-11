@@ -201,7 +201,7 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
   };
 
   return (
-    <header className="flex items-center justify-between h-16 px-4 bg-white border-b border-gray-200 shadow-sm dark:bg-gray-800 dark:border-gray-700">
+    <header className="flex items-center justify-between h-16 px-6 bg-white border-b border-gray-200 shadow-sm dark:bg-gray-800 dark:border-gray-700">
       <div className="flex items-center">
         <Button variant="ghost" size="icon" onClick={toggleSidebar} className="mr-2">
           <MenuIcon className="h-5 w-5 text-gray-600 dark:text-gray-300" />
@@ -271,7 +271,7 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
                     {getInitials(profile?.nama_lengkap || user.email)}
                   </AvatarFallback>
                 </Avatar>
-              </Button>
+            </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-56" align="end" forceMount>
               <DropdownMenuLabel className="font-normal">
