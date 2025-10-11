@@ -4,6 +4,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { ReceiptTextIcon, HourglassIcon, FileCheckIcon, SendIcon, RotateCcwIcon } from 'lucide-react'; // Import icons
+import { format, parseISO } from 'date-fns'; // Import format and parseISO for date handling
+import { id as localeId } from 'date-fns/locale'; // Import locale for Indonesian date formatting
 
 interface TagihanCounts {
   total: number;
@@ -13,9 +15,20 @@ interface TagihanCounts {
   dikembalikan: number;
 }
 
+interface TimelineActivity {
+  id_tagihan: string;
+  nomor_spm: string;
+  status_tagihan: string;
+  waktu_input: string;
+  waktu_registrasi?: string;
+  waktu_verifikasi?: string;
+  waktu_koreksi?: string;
+}
+
 const DashboardSKPD = () => {
   const { user, profile, loading: sessionLoading } = useSession();
   const [counts, setCounts] = useState<TagihanCounts | null>(null);
+  const [timelineActivities, setTimelineActivities] = useState<TimelineActivity[]>([]); // New state for timeline
   const [dataLoading, setDataLoading] = useState(true);
 
   useEffect(() => {
@@ -85,10 +98,56 @@ const DashboardSKPD = () => {
       }
     };
 
+    // --- NEW FUNCTION: Fetch Timeline Activities ---
+    const fetchTimelineActivities = async () => {
+      if (!user || sessionLoading) return;
+
+      try {
+        const { data, error } = await supabase
+          .from('database_tagihan')
+          .select('id_tagihan, nomor_spm, status_tagihan, waktu_input, waktu_registrasi, waktu_verifikasi, waktu_koreksi')
+          .eq('id_pengguna_input', user.id)
+          .order('waktu_koreksi', { ascending: false, nullsFirst: false }) // Prioritize waktu_koreksi
+          .order('waktu_verifikasi', { ascending: false, nullsFirst: false }) // Then waktu_verifikasi
+          .order('waktu_registrasi', { ascending: false, nullsFirst: false }) // Then waktu_registrasi
+          .order('waktu_input', { ascending: false, nullsFirst: false }) // Finally waktu_input
+          .limit(5);
+
+        if (error) throw error;
+
+        // Sort manually by the latest available date if Supabase's multiple order doesn't yield desired COALESCE behavior
+        const sortedData = (data || []).sort((a, b) => {
+          const dateA = parseISO(a.waktu_koreksi || a.waktu_verifikasi || a.waktu_registrasi || a.waktu_input);
+          const dateB = parseISO(b.waktu_koreksi || b.waktu_verifikasi || b.waktu_registrasi || b.waktu_input);
+          return dateB.getTime() - dateA.getTime(); // Descending order
+        });
+
+        setTimelineActivities(sortedData as TimelineActivity[]);
+      } catch (error: any) {
+        console.error('Error fetching timeline activities:', error.message);
+        toast.error('Gagal memuat linimasa aktivitas: ' + error.message);
+        setTimelineActivities([]);
+      }
+    };
+    // --- END NEW FUNCTION ---
+
     if (!sessionLoading && user) {
       fetchTagihanCounts();
+      fetchTimelineActivities(); // Call the new function
     }
   }, [user, sessionLoading]);
+
+  const getLatestActivityDate = (activity: TimelineActivity) => {
+    const dates = [
+      activity.waktu_koreksi,
+      activity.waktu_verifikasi,
+      activity.waktu_registrasi,
+      activity.waktu_input,
+    ].filter(Boolean).map(dateStr => parseISO(dateStr!)); // Filter out undefined/null and parse
+
+    if (dates.length === 0) return null;
+    return dates.reduce((latest, current) => (current > latest ? current : latest));
+  };
 
   if (sessionLoading || dataLoading) {
     return (
@@ -108,7 +167,7 @@ const DashboardSKPD = () => {
         Saat ini Anda masuk sebagai {profile?.peran || 'Pengguna'} pada {profile?.asal_skpd || 'Tidak Diketahui'}.
       </p>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mb-6">
         <Card className="shadow-sm rounded-lg">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Tagihan</CardTitle>
@@ -159,6 +218,64 @@ const DashboardSKPD = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* New Card for Timeline Activities */}
+      <Card className="shadow-sm rounded-lg">
+        <CardHeader>
+          <CardTitle className="text-xl font-semibold text-gray-800 dark:text-white">Linimasa Aktivitas Terbaru</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {timelineActivities.length === 0 ? (
+            <p className="text-center text-gray-600 dark:text-gray-400">Tidak ada aktivitas tagihan terbaru.</p>
+          ) : (
+            <ol className="relative border-l border-gray-200 dark:border-gray-700 ml-4">
+              {timelineActivities.map((activity, index) => {
+                const latestDate = getLatestActivityDate(activity);
+                const formattedDate = latestDate ? format(latestDate, 'dd MMMM yyyy HH:mm', { locale: localeId }) : '-';
+                
+                let statusText = '';
+                let statusColor = 'text-gray-500'; // Default color
+                switch (activity.status_tagihan) {
+                  case 'Menunggu Registrasi':
+                    statusText = 'Tagihan menunggu registrasi';
+                    statusColor = 'text-yellow-600 dark:text-yellow-400';
+                    break;
+                  case 'Menunggu Verifikasi':
+                    statusText = 'Tagihan menunggu verifikasi';
+                    statusColor = 'text-purple-600 dark:text-purple-400';
+                    break;
+                  case 'Diteruskan':
+                    statusText = 'Tagihan diteruskan';
+                    statusColor = 'text-green-600 dark:text-green-400';
+                    break;
+                  case 'Dikembalikan':
+                    statusText = 'Tagihan dikembalikan';
+                    statusColor = 'text-red-600 dark:text-red-400';
+                    break;
+                  default:
+                    statusText = 'Status tidak diketahui';
+                    break;
+                }
+
+                return (
+                  <li key={activity.id_tagihan} className="mb-6 ml-6">
+                    <span className="absolute flex items-center justify-center w-3 h-3 bg-blue-200 rounded-full -left-1.5 ring-8 ring-white dark:ring-gray-900 dark:bg-blue-900"></span>
+                    <h4 className="flex items-center mb-1 text-sm font-semibold text-gray-900 dark:text-white">
+                      {activity.nomor_spm}
+                    </h4>
+                    <time className="block mb-2 text-xs font-normal leading-none text-gray-400 dark:text-gray-500">
+                      Aktivitas terakhir pada {formattedDate}
+                    </time>
+                    <p className={`text-sm font-normal ${statusColor}`}>
+                      {statusText}
+                    </p>
+                  </li>
+                );
+              })}
+            </ol>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 };
