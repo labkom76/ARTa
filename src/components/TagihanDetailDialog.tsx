@@ -17,6 +17,12 @@ import {
 } from '@/components/ui/table';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale'; // Import locale for Indonesian date formatting
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"; // Import Tooltip components
 
 interface VerificationItem {
   item: string;
@@ -96,7 +102,16 @@ const TagihanDetailDialog: React.FC<TagihanDetailDialogProps> = ({ isOpen, onClo
           <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
             <div>
               <Label className="text-muted-foreground">Nomor SPM</Label>
-              <p className="font-medium">{tagihan.nomor_spm}</p>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger className="max-w-[250px] whitespace-nowrap overflow-hidden text-ellipsis block font-medium">
+                    {tagihan.nomor_spm}
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{tagihan.nomor_spm}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </div>
             <div>
               <Label className="text-muted-foreground">Nama SKPD</Label>
