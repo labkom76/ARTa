@@ -107,10 +107,7 @@ const DashboardSKPD = () => {
           .from('database_tagihan')
           .select('id_tagihan, nomor_spm, status_tagihan, waktu_input, waktu_registrasi, waktu_verifikasi, waktu_koreksi')
           .eq('id_pengguna_input', user.id)
-          .order('waktu_koreksi', { ascending: false, nullsFirst: false }) // Prioritize waktu_koreksi
-          .order('waktu_verifikasi', { ascending: false, nullsFirst: false }) // Then waktu_verifikasi
-          .order('waktu_registrasi', { ascending: false, nullsFirst: false }) // Then waktu_registrasi
-          .order('waktu_input', { ascending: false, nullsFirst: false }) // Finally waktu_input
+          .order('waktu_input', { ascending: false }) // <-- PERUBAHAN UTAMA DI SINI
           .limit(5);
 
         if (error) throw error;
