@@ -33,6 +33,7 @@ import { toast } from 'sonner';
 import useDebounce from '@/hooks/use-debounce';
 import RegistrasiConfirmationDialog from '@/components/RegistrasiConfirmationDialog';
 import TagihanDetailDialog from '@/components/TagihanDetailDialog'; // Import the detail dialog
+import StatusBadge from '@/components/StatusBadge'; // Import StatusBadge
 
 interface VerificationItem {
   item: string;
@@ -272,7 +273,8 @@ const PortalRegistrasi = () => {
   const confirmRegistrasi = async (tagihanId: string, nomorRegistrasi: string) => {
     setIsConfirming(true);
     try {
-      const { error } = await supabase
+      // Update tagihan status
+      const { error: updateError } = await supabase
         .from('database_tagihan')
         .update({
           status_tagihan: 'Menunggu Verifikasi',
@@ -282,14 +284,39 @@ const PortalRegistrasi = () => {
         })
         .eq('id_tagihan', tagihanId);
 
-      if (error) throw error;
+      if (updateError) throw updateError;
+
+      // Fetch the updated tagihan to get id_pengguna_input
+      const { data: updatedTagihan, error: fetchTagihanError } = await supabase
+        .from('database_tagihan')
+        .select('nomor_spm, id_pengguna_input')
+        .eq('id_tagihan', tagihanId)
+        .single();
+
+      if (fetchTagihanError) throw fetchTagihanError;
+      if (!updatedTagihan) throw new Error('Tagihan tidak ditemukan setelah update.');
+
+      // Insert notification for the SKPD user
+      const { error: notificationError } = await supabase
+        .from('notifications')
+        .insert({
+          user_id: updatedTagihan.id_pengguna_input,
+          message: `Tagihan SPM ${updatedTagihan.nomor_spm} Anda telah diregistrasi.`,
+          is_read: false,
+          tagihan_id: tagihanId, // Include tagihan_id
+        });
+
+      if (notificationError) {
+        console.error('Error inserting notification:', notificationError.message);
+        // Don't throw error here, as tagihan update is more critical
+      }
 
       toast.success('Tagihan berhasil diregistrasi!');
       setIsRegistrasiModalOpen(false);
       fetchQueueTagihan(); // Refresh the queue list
       fetchHistoryTagihan(); // Refresh the history list
     } catch (error: any) {
-      console.error('Error confirming registration:', error.message);
+      console.error('Error confirming registrasi:', error.message);
       toast.error('Gagal mengkonfirmasi registrasi: ' + error.message);
     } finally {
       setIsConfirming(false);
@@ -386,28 +413,12 @@ const PortalRegistrasi = () => {
         ) : (
           <>
             <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Waktu Input</TableHead>
-                    <TableHead>Nama SKPD</TableHead>
-                    <TableHead>Nomor SPM</TableHead>
-                    <TableHead>Jenis SPM</TableHead>
-                    <TableHead>Uraian</TableHead>
-                    <TableHead>Jumlah Kotor</TableHead>
-                    <TableHead className="text-center">Aksi</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {queueTagihanList.map((tagihan) => (
+              <Table><TableHeader><TableRow>
+                    <TableHead className="w-[50px]">No.</TableHead><TableHead>Waktu Input</TableHead><TableHead>Nama SKPD</TableHead><TableHead>Nomor SPM</TableHead><TableHead>Jenis SPM</TableHead><TableHead>Uraian</TableHead><TableHead>Jumlah Kotor</TableHead><TableHead className="text-center">Aksi</TableHead>
+                  </TableRow></TableHeader><TableBody>
+                  {queueTagihanList.map((tagihan, index) => (
                     <TableRow key={tagihan.id_tagihan}>
-                      <TableCell>{format(parseISO(tagihan.waktu_input), 'dd MMMM yyyy HH:mm', { locale: localeId })}</TableCell>
-                      <TableCell className="font-medium">{tagihan.nama_skpd}</TableCell>
-                      <TableCell>{tagihan.nomor_spm}</TableCell>
-                      <TableCell>{tagihan.jenis_spm}</TableCell>
-                      <TableCell>{tagihan.uraian}</TableCell>
-                      <TableCell>Rp{tagihan.jumlah_kotor.toLocaleString('id-ID')}</TableCell>
-                      <TableCell className="text-center">
+                      <TableCell>{(queueCurrentPage - 1) * queueItemsPerPage + index + 1}</TableCell><TableCell>{format(parseISO(tagihan.waktu_input), 'dd MMMM yyyy HH:mm', { locale: localeId })}</TableCell><TableCell className="font-medium">{tagihan.nama_skpd}</TableCell><TableCell>{tagihan.nomor_spm}</TableCell><TableCell>{tagihan.jenis_spm}</TableCell><TableCell>{tagihan.uraian}</TableCell><TableCell>Rp{tagihan.jumlah_kotor.toLocaleString('id-ID')}</TableCell><TableCell className="text-center">
                         <Button
                           variant="ghost"
                           size="icon"
@@ -420,8 +431,7 @@ const PortalRegistrasi = () => {
                       </TableCell>
                     </TableRow>
                   ))}
-                </TableBody>
-              </Table>
+                </TableBody></Table>
             </div>
             <Pagination className="mt-4">
               <PaginationContent>
@@ -487,26 +497,12 @@ const PortalRegistrasi = () => {
         ) : (
           <>
             <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Waktu Registrasi</TableHead>
-                    <TableHead>Nomor Registrasi</TableHead>
-                    <TableHead>Nomor SPM</TableHead>
-                    <TableHead>Nama SKPD</TableHead>
-                    <TableHead>Jumlah Kotor</TableHead>
-                    <TableHead className="text-center">Aksi</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {historyTagihanList.map((tagihan) => (
+              <Table><TableHeader><TableRow>
+                    <TableHead className="w-[50px]">No.</TableHead><TableHead>Waktu Registrasi</TableHead><TableHead>Nomor Registrasi</TableHead><TableHead>Nomor SPM</TableHead><TableHead>Nama SKPD</TableHead><TableHead>Jumlah Kotor</TableHead><TableHead className="text-center">Aksi</TableHead>
+                  </TableRow></TableHeader><TableBody>
+                  {historyTagihanList.map((tagihan, index) => (
                     <TableRow key={tagihan.id_tagihan}>
-                      <TableCell>{format(parseISO(tagihan.waktu_registrasi!), 'dd MMMM yyyy HH:mm', { locale: localeId })}</TableCell>
-                      <TableCell className="font-medium">{tagihan.nomor_registrasi}</TableCell>
-                      <TableCell>{tagihan.nomor_spm}</TableCell>
-                      <TableCell>{tagihan.nama_skpd}</TableCell>
-                      <TableCell>Rp{tagihan.jumlah_kotor.toLocaleString('id-ID')}</TableCell>
-                      <TableCell className="text-center">
+                      <TableCell>{(historyCurrentPage - 1) * historyItemsPerPage + index + 1}</TableCell><TableCell>{format(parseISO(tagihan.waktu_registrasi!), 'dd MMMM yyyy HH:mm', { locale: localeId })}</TableCell><TableCell className="font-medium">{tagihan.nomor_registrasi}</TableCell><TableCell>{tagihan.nomor_spm}</TableCell><TableCell>{tagihan.nama_skpd}</TableCell><TableCell>Rp{tagihan.jumlah_kotor.toLocaleString('id-ID')}</TableCell><TableCell className="text-center">
                         <Button
                           variant="outline"
                           size="icon"
@@ -518,8 +514,7 @@ const PortalRegistrasi = () => {
                       </TableCell>
                     </TableRow>
                   ))}
-                </TableBody>
-              </Table>
+                </TableBody></Table>
             </div>
             <Pagination className="mt-4">
               <PaginationContent>

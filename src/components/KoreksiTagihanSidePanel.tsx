@@ -219,6 +219,23 @@ const KoreksiTagihanSidePanel: React.FC<KoreksiTagihanSidePanelProps> = ({ isOpe
         throw error;
       }
 
+      // --- START NEW NOTIFICATION LOGIC ---
+      const notificationMessage = `Perhatian! Tagihan SPM ${tagihan.nomor_spm} DIKEMBALIKAN oleh Staf Koreksi.`;
+      const { error: notificationError } = await supabase
+        .from('notifications')
+        .insert({
+          user_id: tagihan.id_pengguna_input, // ID pengguna SKPD
+          message: notificationMessage,
+          is_read: false,
+          tagihan_id: tagihan.id_tagihan, // Include tagihan_id
+        });
+
+      if (notificationError) {
+        console.error('Error inserting notification:', notificationError.message);
+        // Don't throw error here, as tagihan update is more critical
+      }
+      // --- END NEW NOTIFICATION LOGIC ---
+
       toast.success(`Tagihan ${tagihan.nomor_spm} berhasil dikoreksi dan dikembalikan.`);
       onCorrectionSuccess();
       onClose();

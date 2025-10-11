@@ -36,6 +36,7 @@ import {
 } from '@/components/ui/pagination';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'; // Import Card components
+import StatusBadge from '@/components/StatusBadge'; // Import StatusBadge
 
 interface VerificationItem {
   item: string;
@@ -268,6 +269,7 @@ const RiwayatVerifikasi = () => {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-[50px]">No.</TableHead> {/* New TableHead for "No." */}
                   <TableHead>Waktu Verifikasi</TableHead>
                   <TableHead>Nomor Verifikasi</TableHead>
                   <TableHead>Nama SKPD</TableHead>
@@ -281,13 +283,14 @@ const RiwayatVerifikasi = () => {
               <TableBody>
                 {tagihanList.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                    <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
                       Tidak ada data riwayat verifikasi.
                     </TableCell>
                   </TableRow>
                 ) : (
-                  tagihanList.map((tagihan) => (
+                  tagihanList.map((tagihan, index) => (
                     <TableRow key={tagihan.id_tagihan}>
+                      <TableCell>{(currentPage - 1) * itemsPerPage + index + 1}</TableCell> {/* New TableCell for numbering */}
                       <TableCell>
                         {tagihan.waktu_verifikasi ? format(parseISO(tagihan.waktu_verifikasi), 'dd MMMM yyyy HH:mm', { locale: localeId }) : '-'}
                       </TableCell>
@@ -295,7 +298,7 @@ const RiwayatVerifikasi = () => {
                       <TableCell>{tagihan.nama_skpd}</TableCell>
                       <TableCell>{tagihan.nomor_spm}</TableCell>
                       <TableCell>Rp{tagihan.jumlah_kotor.toLocaleString('id-ID')}</TableCell>
-                      <TableCell>{tagihan.status_tagihan}</TableCell>
+                      <TableCell><StatusBadge status={tagihan.status_tagihan} /></TableCell>
                       <TableCell>{tagihan.nama_verifikator || '-'}</TableCell>
                       <TableCell className="text-center">
                         <div className="flex justify-center space-x-2">

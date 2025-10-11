@@ -172,16 +172,9 @@ const AdminJadwalPenganggaran = () => {
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Kode Jadwal</TableHead>
-                  <TableHead>Deskripsi Jadwal</TableHead>
-                  <TableHead className="text-center">Status</TableHead> {/* New TableHead */}
-                  <TableHead className="text-center">Aksi</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+            <Table><TableHeader><TableRow>
+                  <TableHead>Kode Jadwal</TableHead><TableHead>Deskripsi Jadwal</TableHead><TableHead className="text-center">Status</TableHead><TableHead className="text-center">Aksi</TableHead>
+                </TableRow></TableHeader><TableBody>
                 {loadingData ? (
                   <TableRow>
                     <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
@@ -197,9 +190,7 @@ const AdminJadwalPenganggaran = () => {
                 ) : (
                   scheduleList.map((schedule) => (
                     <TableRow key={schedule.id}>
-                      <TableCell className="font-medium">{schedule.kode_jadwal}</TableCell>
-                      <TableCell>{schedule.deskripsi_jadwal}</TableCell>
-                      <TableCell className="text-center">
+                      <TableCell className="font-medium">{schedule.kode_jadwal}</TableCell><TableCell>{schedule.deskripsi_jadwal}</TableCell><TableCell className="text-center">
                         {schedule.is_active ? (
                           <Button variant="success" size="sm" disabled className="bg-green-500 text-white hover:bg-green-600">
                             <CheckCircleIcon className="h-4 w-4 mr-2" /> Aktif
@@ -209,8 +200,7 @@ const AdminJadwalPenganggaran = () => {
                             Aktifkan
                           </Button>
                         )}
-                      </TableCell>
-                      <TableCell className="text-center">
+                      </TableCell><TableCell className="text-center">
                         <div className="flex justify-center space-x-2">
                           <Button variant="outline" size="icon" title="Edit Jadwal" onClick={() => handleEditClick(schedule)}>
                             <EditIcon className="h-4 w-4" />
@@ -223,8 +213,7 @@ const AdminJadwalPenganggaran = () => {
                     </TableRow>
                   ))
                 )}
-              </TableBody>
-            </Table>
+              </TableBody></Table>
           </div>
         </CardContent>
       </Card>

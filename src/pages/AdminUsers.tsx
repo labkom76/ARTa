@@ -267,17 +267,9 @@ const AdminUsers = () => {
           </div>
 
           <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nama Lengkap</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Asal SKPD</TableHead>
-                  <TableHead>Peran</TableHead>
-                  <TableHead className="text-center">Aksi</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+            <Table><TableHeader><TableRow>
+                  <TableHead>Nama Lengkap</TableHead><TableHead>Email</TableHead><TableHead>Asal SKPD</TableHead><TableHead>Peran</TableHead><TableHead className="text-center">Aksi</TableHead>
+                </TableRow></TableHeader><TableBody>
                 {loadingUsers ? (
                   <TableRow>
                     <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
@@ -293,11 +285,7 @@ const AdminUsers = () => {
                 ) : (
                   users.map((userProfile) => (
                     <TableRow key={userProfile.id}>
-                      <TableCell className="font-medium">{userProfile.nama_lengkap || '-'}</TableCell>
-                      <TableCell>{userProfile.email}</TableCell>
-                      <TableCell>{userProfile.asal_skpd || '-'}</TableCell>
-                      <TableCell>{userProfile.peran || '-'}</TableCell>
-                      <TableCell className="text-center">
+                      <TableCell className="font-medium">{userProfile.nama_lengkap || '-'}</TableCell><TableCell>{userProfile.email}</TableCell><TableCell>{userProfile.asal_skpd || '-'}</TableCell><TableCell>{userProfile.peran || '-'}</TableCell><TableCell className="text-center">
                         <div className="flex justify-center space-x-2">
                           <TooltipProvider>
                             <Tooltip>
@@ -344,8 +332,7 @@ const AdminUsers = () => {
                     </TableRow>
                   ))
                 )}
-              </TableBody>
-            </Table>
+              </TableBody></Table>
           </div>
 
           {/* Pagination Controls */}

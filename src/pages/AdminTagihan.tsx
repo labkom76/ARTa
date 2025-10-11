@@ -26,11 +26,13 @@ import {
   PaginationLink,
   PaginationNext,
   PaginationPrevious,
+
 } from '@/components/ui/pagination';
 import { Label } from '@/components/ui/label';
 import TagihanDetailDialog from '@/components/TagihanDetailDialog';
 import EditTagihanDialog from '@/components/EditTagihanDialog'; // Import EditTagihanDialog
 import DeleteConfirmationDialog from '@/components/DeleteConfirmationDialog'; // Import DeleteConfirmationDialog
+import StatusBadge from '@/components/StatusBadge'; // Import StatusBadge
 
 interface VerificationItem {
   item: string;
@@ -346,41 +348,25 @@ const AdminTagihan = () => {
           </div>
 
           <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Waktu Input</TableHead>
-                  <TableHead>Nomor SPM</TableHead>
-                  <TableHead>Nama SKPD</TableHead>
-                  <TableHead>Jumlah Kotor</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Diperiksa oleh</TableHead>
-                  <TableHead className="text-center">Aksi</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+            <Table><TableHeader><TableRow>
+                  <TableHead>Waktu Input</TableHead><TableHead>Nomor SPM</TableHead><TableHead>Nama SKPD</TableHead><TableHead>Jumlah Kotor</TableHead><TableHead className="min-w-[280px]">Uraian</TableHead><TableHead>Status</TableHead><TableHead>Diperiksa oleh</TableHead><TableHead className="text-center">Aksi</TableHead>
+                </TableRow></TableHeader><TableBody>
                 {loadingData ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                    <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
                       Memuat data tagihan...
                     </TableCell>
                   </TableRow>
                 ) : tagihanList.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                    <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
                       Tidak ada data tagihan.
                     </TableCell>
                   </TableRow>
                 ) : (
                   tagihanList.map((tagihan) => (
                     <TableRow key={tagihan.id_tagihan}>
-                      <TableCell>{formatDate(tagihan.waktu_input)}</TableCell>
-                      <TableCell className="font-medium">{tagihan.nomor_spm}</TableCell>
-                      <TableCell>{tagihan.nama_skpd}</TableCell>
-                      <TableCell>Rp{tagihan.jumlah_kotor.toLocaleString('id-ID')}</TableCell>
-                      <TableCell>{tagihan.status_tagihan}</TableCell>
-                      <TableCell>{tagihan.nama_verifikator || tagihan.nama_registrator || tagihan.id_korektor ? (tagihan.nama_verifikator || tagihan.nama_registrator || 'Staf Koreksi') : '-'}</TableCell>
-                      <TableCell className="text-center">
+                      <TableCell>{formatDate(tagihan.waktu_input)}</TableCell><TableCell className="font-medium">{tagihan.nomor_spm}</TableCell><TableCell>{tagihan.nama_skpd}</TableCell><TableCell>Rp{tagihan.jumlah_kotor.toLocaleString('id-ID')}</TableCell><TableCell className="min-w-[280px]">{tagihan.uraian}</TableCell><TableCell><StatusBadge status={tagihan.status_tagihan} /></TableCell><TableCell>{tagihan.nama_verifikator || tagihan.nama_registrator || tagihan.id_korektor ? (tagihan.nama_verifikator || tagihan.nama_registrator || 'Staf Koreksi') : '-'}</TableCell><TableCell className="text-center">
                         <div className="flex justify-center space-x-2">
                           <Button variant="outline" size="icon" title="Lihat Detail" onClick={() => handleDetailClick(tagihan)}>
                             <EyeIcon className="h-4 w-4" />
@@ -396,8 +382,7 @@ const AdminTagihan = () => {
                     </TableRow>
                   ))
                 )}
-              </TableBody>
-            </Table>
+              </TableBody></Table>
           </div>
 
           {/* Pagination Controls */}

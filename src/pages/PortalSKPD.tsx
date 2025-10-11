@@ -45,6 +45,13 @@ import DeleteConfirmationDialog from '@/components/DeleteConfirmationDialog';
 import TagihanDetailDialog from '@/components/TagihanDetailDialog'; // Import the new detail dialog
 import { format } from 'date-fns'; // Import format from date-fns
 import { generateNomorSpm, getJenisTagihanCode } from '@/utils/spmGenerator'; // Import utility functions
+import StatusBadge from '@/components/StatusBadge'; // Import StatusBadge
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"; // Import Tooltip components
+import { useLocation } from 'react-router-dom'; // Import useLocation
 
 // Zod schema for form validation
 const formSchema = z.object({
@@ -147,6 +154,7 @@ const PortalSKPD = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [totalItems, setTotalItems] = useState(0);
+  const [selectedStatus, setSelectedStatus] = useState<string>('Semua Status'); // New state for status filter
 
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [tagihanToDelete, setTagihanToDelete] = useState<{ id: string; nomorSpm: string } | null>(null);
@@ -162,6 +170,8 @@ const PortalSKPD = () => {
   const [kodeSkpd, setKodeSkpd] = useState<string | null>(null); // New state for kode_skpd
   const [generatedNomorSpm, setGeneratedNomorSpm] = useState<string | null>(null); // State for generated Nomor SPM
   const [isSubmitting, setIsSubmitting] = useState(false); // Deklarasi state isSubmitting yang hilang
+
+  const location = useLocation(); // Initialize useLocation
 
   const form = useForm<TagihanFormValues>({
     resolver: zodResolver(formSchema),
@@ -216,8 +226,8 @@ const PortalSKPD = () => {
 
   // Fetch Kode SKPD for the logged-in user's SKPD
   useEffect(() => {
-    const fetchKodeSkpd = async () => {
-      if (profile?.asal_skpd) {
+    if (profile?.asal_skpd) {
+      const fetchKodeSkpd = async () => {
         const { data, error } = await supabase
           .from('master_skpd')
           .select('kode_skpd')
@@ -230,11 +240,11 @@ const PortalSKPD = () => {
         } else if (data) {
           setKodeSkpd(data.kode_skpd);
         }
-      } else {
-        setKodeSkpd(null);
-      }
-    };
-    fetchKodeSkpd();
+      };
+      fetchKodeSkpd();
+    } else {
+      setKodeSkpd(null);
+    }
   }, [profile?.asal_skpd]);
 
   // Fetch Schedule Options - MODIFIED TO FILTER BY is_active
@@ -287,6 +297,15 @@ const PortalSKPD = () => {
     if (!user || sessionLoading) return;
 
     setLoading(true);
+    // console.log('--- fetchTagihan START ---');
+    // console.log('Current selectedStatus state:', selectedStatus); // Log selectedStatus state
+    // console.log('Fetching tagihan with filters:', {
+    //   userId: user.id,
+    //   searchQuery,
+    //   selectedStatus,
+    //   currentPage,
+    //   itemsPerPage
+    // });
     try {
       let query = supabase
         .from('database_tagihan')
@@ -297,6 +316,14 @@ const PortalSKPD = () => {
         query = query.ilike('nomor_spm', `%${searchQuery}%`);
       }
 
+      // Apply status filter if not 'Semua Status'
+      if (selectedStatus !== 'Semua Status') {
+        // console.log('Applying status filter:', selectedStatus); // Log when filter is applied
+        query = query.eq('status_tagihan', selectedStatus);
+      } else {
+        // console.log('No status filter applied (selectedStatus is Semua Status)');
+      }
+
       query = query.order('waktu_input', { ascending: false });
 
       if (itemsPerPage !== -1) {
@@ -305,21 +332,51 @@ const PortalSKPD = () => {
 
       const { data, error, count } = await query;
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase query error:', error); // Log full error object
+        throw error;
+      }
 
+      // console.log('Supabase query result:', { data, count }); // Log data and count
+      // NEW LOG HERE: Inspect data array content
+      // data.forEach((item: any, idx: number) => {
+      //   console.log(`Supabase data item ${idx}: status = ${item.status_tagihan}, nomor_spm = ${item.nomor_spm}`);
+      // });
+      // END NEW LOG
       setTagihanList(data as Tagihan[]);
       setTotalItems(count || 0);
+      // console.log('tagihanList after setTagihanList:', data); // Log the data that was just set
     } catch (error: any) {
       console.error('Error fetching tagihan:', error.message);
       toast.error('Gagal memuat daftar tagihan: ' + error.message);
     } finally {
       setLoading(false);
+      // console.log('--- fetchTagihan END ---');
     }
   };
 
+  // Effect untuk membaca query parameter status dari URL saat komponen pertama kali dimuat
+  // Ini hanya mengatur state filter, tidak memanggil fetchTagihan secara langsung.
   useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const statusParam = params.get('status');
+    if (statusParam) {
+      // console.log('URL status parameter detected:', statusParam); // Log URL param
+      setSelectedStatus(statusParam);
+      setCurrentPage(1); // Reset page when status changes from URL
+    } else {
+      // If no status param in URL, ensure filter is 'Semua Status'
+      // console.log('No URL status parameter, setting selectedStatus to Semua Status');
+      setSelectedStatus('Semua Status');
+      setCurrentPage(1);
+    }
+  }, [location.search]); // Dependency array kosong agar hanya berjalan satu kali saat mount
+
+  // Effect untuk mengambil data setiap kali filter atau pagination berubah
+  useEffect(() => {
+    // console.log('useEffect for fetchTagihan triggered. Dependencies changed.');
     fetchTagihan();
-  }, [user, sessionLoading, searchQuery, currentPage, itemsPerPage]);
+  }, [user, sessionLoading, searchQuery, selectedStatus, currentPage, itemsPerPage]);
 
   useEffect(() => {
     if (isModalOpen) { // Only reset when modal opens
@@ -488,7 +545,7 @@ const PortalSKPD = () => {
       toast.success('Tagihan berhasil dihapus!');
       fetchTagihan();
     } catch (error: any) {
-error('Error deleting tagihan:', error.message);
+      console.error('Error deleting tagihan:', error.message);
       toast.error('Gagal menghapus tagihan: ' + error.message);
     } finally {
       setIsDeleteDialogOpen(false);
@@ -503,6 +560,9 @@ error('Error deleting tagihan:', error.message);
 
   const totalPages = itemsPerPage === -1 ? 1 : Math.ceil(totalItems / itemsPerPage);
 
+  // console.log('--- Rendering PortalSKPD component ---');
+  // console.log('tagihanList state at render:', tagihanList.map(t => ({ id: t.id_tagihan, status: t.status_tagihan, spm: t.nomor_spm })));
+
   return (
     <div className="p-6 bg-white rounded-lg shadow-sm border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
       <div className="flex justify-between items-center mb-6">
@@ -512,8 +572,8 @@ error('Error deleting tagihan:', error.message);
         </Button>
       </div>
 
-      <div className="mb-4 flex items-center space-x-2">
-        <div className="relative flex-1">
+      <div className="mb-4 flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-2"> {/* Added flex-col for mobile stacking */}
+        <div className="relative flex-1 w-full sm:w-auto"> {/* Added w-full for mobile */}
           <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400" />
           <Input
             type="text"
@@ -523,10 +583,22 @@ error('Error deleting tagihan:', error.message);
               setSearchQuery(e.target.value);
               setCurrentPage(1);
             }}
-            className="pl-9"
+            className="pl-9 w-full" // Added w-full for mobile
           />
         </div>
-        <div className="flex items-center space-x-2">
+        <Select onValueChange={(value) => { setSelectedStatus(value); setCurrentPage(1); }} value={selectedStatus}>
+          <SelectTrigger className="w-full sm:w-[200px]"> {/* Added w-full for mobile */}
+            <SelectValue placeholder="Filter berdasarkan Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="Semua Status">Semua Status</SelectItem>
+            <SelectItem value="Menunggu Registrasi">Menunggu Registrasi</SelectItem>
+            <SelectItem value="Menunggu Verifikasi">Menunggu Verifikasi</SelectItem>
+            <SelectItem value="Diteruskan">Diteruskan</SelectItem>
+            <SelectItem value="Dikembalikan">Dikembalikan</SelectItem>
+          </SelectContent>
+        </Select>
+        <div className="flex items-center space-x-2 w-full sm:w-auto justify-end"> {/* Added w-full and justify-end for mobile */}
           <Label htmlFor="items-per-page" className="whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">Per halaman:</Label>
           <Select
             value={itemsPerPage.toString()}
@@ -556,61 +628,54 @@ error('Error deleting tagihan:', error.message);
       ) : (
         <>
           <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nomor SPM</TableHead>
-                  <TableHead>Jenis SPM</TableHead>
-                  <TableHead>Jenis Tagihan</TableHead>
-                  <TableHead>Sumber Dana</TableHead>{/* New Table Head */}
-                  <TableHead>Uraian</TableHead>
-                  <TableHead>Jumlah Kotor</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-center">Aksi</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {tagihanList.map((tagihan) => (
-                  <TableRow key={tagihan.id_tagihan}>
-                    <TableCell className="font-medium">{tagihan.nomor_spm}</TableCell>
-                    <TableCell>{tagihan.jenis_spm}</TableCell>
-                    <TableCell>{tagihan.jenis_tagihan}</TableCell>
-                    <TableCell>{tagihan.sumber_dana || '-'}</TableCell>{/* New Table Cell */}
-                    <TableCell>{tagihan.uraian}</TableCell>
-                    <TableCell>Rp{tagihan.jumlah_kotor.toLocaleString('id-ID')}</TableCell>
-                    <TableCell>{tagihan.status_tagihan}</TableCell>
-                    <TableCell className="text-center">
-                      {tagihan.status_tagihan === 'Menunggu Registrasi' ? (
-                        <div className="flex justify-center space-x-2">
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            onClick={() => handleEdit(tagihan)}
-                            title="Edit Tagihan"
-                            disabled={!isAccountVerified}
-                          >
-                            <EditIcon className="h-4 w-4" />
+            <Table key={`${selectedStatus}-${currentPage}`}><TableHeader><TableRow>
+                  <TableHead className="w-[50px]">No.</TableHead><TableHead>Nomor SPM</TableHead><TableHead>Jenis SPM</TableHead><TableHead>Jenis Tagihan</TableHead><TableHead>Sumber Dana</TableHead><TableHead className="min-w-[280px]">Uraian</TableHead><TableHead>Jumlah Kotor</TableHead><TableHead>Status</TableHead><TableHead className="text-center">Aksi</TableHead>
+                </TableRow></TableHeader><TableBody>
+                {tagihanList.map((tagihan, index) => {
+                  // console.log(`Rendering tagihan ${tagihan.nomor_spm} with status: ${tagihan.status_tagihan}`); // Log each rendered item's status
+                  return (
+                    <TableRow key={tagihan.id_tagihan}>
+                      <TableCell>{(currentPage - 1) * itemsPerPage + index + 1}</TableCell><TableCell className="font-medium">
+                        <Tooltip>
+                          <TooltipTrigger className="max-w-[250px] whitespace-nowrap overflow-hidden text-ellipsis block">
+                            {tagihan.nomor_spm}
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>{tagihan.nomor_spm}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TableCell><TableCell>{tagihan.jenis_spm}</TableCell><TableCell>{tagihan.jenis_tagihan}</TableCell><TableCell>{tagihan.sumber_dana || '-'}</TableCell><TableCell className="min-w-[280px]">{tagihan.uraian}</TableCell><TableCell>Rp{tagihan.jumlah_kotor.toLocaleString('id-ID')}</TableCell><TableCell><StatusBadge status={tagihan.status_tagihan} /></TableCell><TableCell className="text-center">
+                        {tagihan.status_tagihan === 'Menunggu Registrasi' ? (
+                          <div className="flex justify-center space-x-2">
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              onClick={() => handleEdit(tagihan)}
+                              title="Edit Tagihan"
+                              disabled={!isAccountVerified}
+                            >
+                              <EditIcon className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="destructive"
+                              size="icon"
+                              onClick={() => handleDeleteClick(tagihan.id_tagihan, tagihan.nomor_spm)}
+                              title="Hapus Tagihan"
+                              disabled={!isAccountVerified}
+                            >
+                              <Trash2Icon className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <Button variant="outline" size="sm" onClick={() => handleDetailClick(tagihan)}>
+                            Detail
                           </Button>
-                          <Button
-                            variant="destructive"
-                            size="icon"
-                            onClick={() => handleDeleteClick(tagihan.id_tagihan, tagihan.nomor_spm)}
-                            title="Hapus Tagihan"
-                            disabled={!isAccountVerified}
-                          >
-                            <Trash2Icon className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      ) : (
-                        <Button variant="outline" size="sm" onClick={() => handleDetailClick(tagihan)}>
-                          Detail
-                        </Button>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody></Table>
           </div>
           <Pagination className="mt-4">
             <PaginationContent>
