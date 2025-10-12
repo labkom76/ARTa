@@ -87,11 +87,8 @@ const PrintVerifikasi = () => {
 
   useEffect(() => {
     if (!loading && !error && tagihan) {
-      // Give a small delay for content to render before printing
       const timer = setTimeout(() => {
         window.print();
-        // Optionally close the window after printing, or leave it open
-        // window.close(); 
       }, 1000); 
       return () => clearTimeout(timer);
     }
@@ -140,7 +137,7 @@ const PrintVerifikasi = () => {
               padding: 0 !important;
             }
             .container {
-              padding: 20px !important; /* Mengurangi padding untuk memberi lebih banyak ruang vertikal */
+              padding: 20px !important;
               background-color: white !important;
             }
           }
@@ -161,17 +158,17 @@ const PrintVerifikasi = () => {
           h1 {
             text-align: center;
             font-size: 20px;
-            margin-bottom: 20px; /* Mengurangi margin-bottom */
+            margin-bottom: 20px;
             font-weight: bold;
           }
 
           .info-section {
-            margin-bottom: 15px; /* Mengurangi margin-bottom */
+            margin-bottom: 15px;
           }
 
           .info-row {
             display: flex;
-            margin-bottom: 5px; /* Mengurangi margin-bottom */
+            margin-bottom: 5px;
             font-size: 13px;
           }
 
@@ -196,7 +193,7 @@ const PrintVerifikasi = () => {
           table {
             width: 100%;
             border-collapse: collapse;
-            margin: 20px 0; /* Mengurangi margin */
+            margin: 20px 0;
             font-size: 12px;
           }
 
@@ -205,7 +202,7 @@ const PrintVerifikasi = () => {
           }
 
           th, td {
-            padding: 8px; /* Mengurangi padding */
+            padding: 8px;
             text-align: center;
           }
 
@@ -235,50 +232,63 @@ const PrintVerifikasi = () => {
             padding-left: 10px;
           }
 
-          .signature-section {
-            margin-top: 50px;
+          .signature-wrapper {
+            margin-top: 30px;
             display: flex;
-            justify-content: space-around;
-            width: 100%;
-            align-items: flex-start; /* Align blocks at the top */
+            gap: 20px;
+            padding-top: 20px;
           }
 
-          .paraf-section { /* Specific style for the left signature block */
+          .signature-section {
             flex: 1;
-            max-width: 250px;
-            text-align: left; /* Align children to the left */
+            display: flex;
+            justify-content: right;
+            align-items: flex-start;
+            margin-right: 83px;
           }
 
-          .verifikator-block { /* Specific style for the right signature block */
-            flex: 1;
-            max-width: 250px;
-            text-align: right; /* Align text children to the right */
+          .paraf-section {
+            text-align: center;
+          }
+
+          .paraf-title {
+            font-size: 13px;
+            margin-bottom: 10px;
+            text-align: center;
+          }
+
+          .paraf-line {
+            width: 200px;
+            border-bottom: 1px solid #000;
+            margin: 80px auto 0 auto;
+          }
+
+          .verifikator-block {
+            text-align: center;
           }
 
           .signature-title {
             font-size: 13px;
-            margin-bottom: 30px;
+            margin-bottom: 41px;
           }
 
           .signature-name {
             font-size: 13px;
             font-weight: bold;
             padding-top: 20px;
-            border-bottom: 1px solid #000;
-            display: inline-block; /* Ensure border only covers text */
-            min-width: 150px; /* Ensure enough space for signature */
+          }
+
+          .qr-code-container {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
           }
 
           .qr-code {
             width: 100px;
             height: 100px;
             background-color: #e0e0e0;
-            margin-top: 10px;
-            margin-bottom: 10px;
-            display: block; /* Make it a block element */
-            margin-left: auto; /* Center horizontally within its parent */
-            margin-right: auto; /* Center horizontally within its parent */
-            display: flex; /* Keep flex for content centering */
+            display: flex;
             align-items: center;
             justify-content: center;
             font-size: 10px;
@@ -287,21 +297,6 @@ const PrintVerifikasi = () => {
 
           .checkmark {
             font-size: 16px;
-          }
-
-          .paraf-title {
-            font-size: 13px;
-            font-weight: bold;
-            margin-bottom: 5px;
-          }
-
-          .paraf-line {
-            border-bottom: 1px solid #000;
-            width: 100px; /* Adjust width as needed */
-            margin-bottom: 10px;
-            display: block; /* Ensure it takes full width for left alignment */
-            margin-left: 0; /* Ensure it's left-aligned */
-            margin-right: auto; /* Push to the left */
           }
         `}
       </style>
@@ -384,10 +379,10 @@ const PrintVerifikasi = () => {
                   <td>{index + 1}</td>
                   <td className="text-left">{item}</td>
                   <td>
-                    {isMet ? <CheckIcon className="h-4 w-4 mx-auto text-green-600" /> : ''}
+                    {isMet ? <CheckIcon className="h-4 w-4 mx-auto text-black-600" /> : ''}
                   </td>
                   <td>
-                    {isMet === false ? <XIcon className="h-4 w-4 mx-auto text-red-600" /> : ''}
+                    {isMet === false ? <XIcon className="h-4 w-4 mx-auto text-black-600" /> : ''}
                   </td>
                   <td className="text-left">{keterangan}</td>
                 </tr>
@@ -396,22 +391,30 @@ const PrintVerifikasi = () => {
           </tbody>
         </table>
 
-        <div className="signature-section">
+        <div className="signature-wrapper">
           {/* Blok PARAF - Hanya tampil jika status_tagihan adalah 'Diteruskan' */}
           {tagihan.status_tagihan === 'Diteruskan' && (
-            <div className="paraf-section">
-              <div className="paraf-title">PARAF TELAH MELALUI VERIFIKASI</div>
-              <div className="paraf-line"></div>
+            <div className="signature-section">
+              <div className="paraf-section">
+                <div className="paraf-title">PARAF TELAH MELALUI VERIFIKASI</div>
+                <div className="paraf-line"></div>
+              </div>
             </div>
           )}
+          
           {/* Blok VERIFIKATOR */}
-          <div className="verifikator-block">
-            <div className="signature-title">VERIFIKATOR</div>
-            <div className="signature-name">
-              {tagihan.nama_verifikator || '____________________'}
+          <div className="signature-section">
+            <div className="verifikator-block">
+              <div className="signature-title">VERIFIKATOR</div>
+              <div className="signature-name">
+                {tagihan.nama_verifikator || '____________________'}
+              </div>
             </div>
-            <div className="qr-code">[QR Code]</div>
           </div>
+        </div>
+        
+        <div className="qr-code-container">
+          <div className="qr-code">[QR Code]</div>
         </div>
       </div>
     </>
