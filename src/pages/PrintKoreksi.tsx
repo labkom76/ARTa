@@ -194,7 +194,7 @@ const PrintKoreksi = () => {
           }
 
           .print-table th {
-            background-color: #f0f0f0;
+            background-color: #f0f0f0; /* Added background color for all th */
             font-weight: bold;
           }
 
@@ -319,20 +319,16 @@ const PrintKoreksi = () => {
               </th>
             </tr>
             <tr>
-              <td></td>
-              <td>
-                <span className="checkmark">✓</span>
-              </td>
+              <th>Ya</th>
+              <th>Tidak</th>
             </tr>
           </thead>
           <tbody>
             <tr>
               <td>1</td>
               <td className="text-left">Tidak dapat diterbitkan SP2D</td>
-              <td></td>
-              <td>
-                <span className="checkmark">✓</span>
-              </td>
+              <td><span className="checkmark">✓</span></td> {/* Checkmark in 'Ya' column */}
+              <td></td> {/* Empty for 'Tidak' column */}
               <td className="text-left">{tagihan.catatan_koreksi || '-'}</td>
             </tr>
           </tbody>
