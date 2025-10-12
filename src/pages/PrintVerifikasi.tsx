@@ -249,7 +249,7 @@ const PrintVerifikasi = () => {
           .signature-name {
             font-size: 13px;
             font-weight: bold;
-            margin-right: 70px;
+            margin-right: 80px;
             padding-top: 20px;
           }
 
