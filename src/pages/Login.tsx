@@ -30,6 +30,8 @@ const Login = () => {
   // New states for branding
   const [appName, setAppName] = useState('ARTa - BKAD');
   const [appLogoUrl, setAppLogoUrl] = useState<string | null>(null);
+  const [appSubtitle1, setAppSubtitle1] = useState('(Aplikasi Registrasi Tagihan)'); // New state for subtitle 1
+  const [appSubtitle2, setAppSubtitle2] = useState('Pemerintah Daerah Kabupaten Gorontalo'); // New state for subtitle 2
 
   const fetchLoginSettings = useCallback(async () => {
     setLoadingSettings(true);
@@ -58,6 +60,8 @@ const Login = () => {
       // Fetch branding settings
       setAppName(settingsMap.get('app_name') || 'ARTa - BKAD');
       setAppLogoUrl(settingsMap.get('app_logo_url') || null);
+      setAppSubtitle1(settingsMap.get('app_subtitle_1') || '(Aplikasi Registrasi Tagihan)'); // Set subtitle 1
+      setAppSubtitle2(settingsMap.get('app_subtitle_2') || 'Pemerintah Daerah Kabupaten Gorontalo'); // Set subtitle 2
 
       const isRandomLayout = fetchedSettings.login_layout_random === 'true';
       const isSliderActive = fetchedSettings.login_background_slider === 'true';
@@ -145,6 +149,8 @@ const Login = () => {
       setCurrentImageIndex(0);
       setAppName('ARTa - BKAD'); // Reset app name on error
       setAppLogoUrl(null); // Reset app logo on error
+      setAppSubtitle1('(Aplikasi Registrasi Tagihan)'); // Reset subtitle 1 on error
+      setAppSubtitle2('Pemerintah Daerah Kabupaten Gorontalo'); // Reset subtitle 2 on error
     } finally {
       setLoadingSettings(false);
     }
@@ -264,8 +270,8 @@ const Login = () => {
 
       <div className={formContainerClasses}>
         {/* Subtitles (inside form) */}
-        <p className="text-lg text-gray-600 dark:text-gray-400 mb-1 text-center">(Aplikasi Registrasi Tagihan)</p>
-        <p className="text-md text-gray-600 dark:text-gray-400 mb-6 text-center">Pemerintah Daerah Kabupaten Gorontalo</p>
+        <p className="text-lg text-gray-600 dark:text-gray-400 mb-1 text-center">{appSubtitle1}</p>
+        <p className="text-md text-gray-600 dark:text-gray-400 mb-6 text-center">{appSubtitle2}</p>
 
         {loginSettings.login_show_email_password === 'true' && (
           <Auth
