@@ -257,13 +257,12 @@ const PrintVerifikasi = () => {
             width: 100px; /* Sedikit mengurangi ukuran QR code */
             height: 100px; /* Sedikit mengurangi ukuran QR code */
             background-color: #e0e0e0;
-            margin: 10px 0; /* Mengurangi margin */
+            margin: 10px auto; /* Mengubah margin-left menjadi auto untuk menengahkan */
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 10px; /* Mengurangi ukuran font */
             color: #666;
-            margin-left: 50px;
           }
 
           .checkmark {
@@ -360,8 +359,8 @@ const PrintVerifikasi = () => {
                 </tr>
               );
             })}
-          </tbody>
-        </table>
+          </tbody >
+        </table >
 
         <div className="signature-section">
           <div className="signature-title">VERIFIKATOR</div>
@@ -370,7 +369,7 @@ const PrintVerifikasi = () => {
           </div>
           <div className="qr-code">[QR Code]</div>
         </div>
-      </div>
+      </div >
     </>
   );
 };
