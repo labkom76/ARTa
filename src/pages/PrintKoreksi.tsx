@@ -327,8 +327,8 @@ const PrintKoreksi = () => {
             <tr>
               <td>1</td>
               <td className="text-left">Tidak dapat diterbitkan SP2D</td>
-              <td><span className="checkmark">✓</span></td> {/* Checkmark in 'Ya' column */}
-              <td></td> {/* Empty for 'Tidak' column */}
+              <td></td> {/* Empty for 'Ya' column */}
+              <td><span className="checkmark">✓</span></td> {/* Checkmark in 'Tidak' column */}
               <td className="text-left">{tagihan.catatan_koreksi || '-'}</td>
             </tr>
           </tbody>
