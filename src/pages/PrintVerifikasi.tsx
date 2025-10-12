@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { format, parseISO } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
 import { toast } from 'sonner';
-import { CheckIcon, XIcon } from 'lucide-react'; // Import CheckIcon and XIcon
+import { CheckIcon, XIcon } from 'lucide-react';
 
 interface VerificationItem {
   item: string;
@@ -31,7 +31,7 @@ interface Tagihan {
   detail_verifikasi?: VerificationItem[];
   nomor_verifikasi?: string;
   nama_verifikator?: string;
-  sumber_dana?: string; // Add sumber_dana
+  sumber_dana?: string;
 }
 
 const checklistItems = [
@@ -87,11 +87,8 @@ const PrintVerifikasi = () => {
 
   useEffect(() => {
     if (!loading && !error && tagihan) {
-      // Give a small delay for content to render before printing
       const timer = setTimeout(() => {
         window.print();
-        // Optionally close the window after printing, or leave it open
-        // window.close(); 
       }, 1000); 
       return () => clearTimeout(timer);
     }
@@ -140,7 +137,7 @@ const PrintVerifikasi = () => {
               padding: 0 !important;
             }
             .container {
-              padding: 20px !important; /* Mengurangi padding untuk memberi lebih banyak ruang vertikal */
+              padding: 20px !important;
               background-color: white !important;
             }
           }
@@ -161,17 +158,17 @@ const PrintVerifikasi = () => {
           h1 {
             text-align: center;
             font-size: 20px;
-            margin-bottom: 20px; /* Mengurangi margin-bottom */
+            margin-bottom: 20px;
             font-weight: bold;
           }
 
           .info-section {
-            margin-bottom: 15px; /* Mengurangi margin-bottom */
+            margin-bottom: 15px;
           }
 
           .info-row {
             display: flex;
-            margin-bottom: 5px; /* Mengurangi margin-bottom */
+            margin-bottom: 5px;
             font-size: 13px;
           }
 
@@ -196,7 +193,7 @@ const PrintVerifikasi = () => {
           table {
             width: 100%;
             border-collapse: collapse;
-            margin: 20px 0; /* Mengurangi margin */
+            margin: 20px 0;
             font-size: 12px;
           }
 
@@ -205,7 +202,7 @@ const PrintVerifikasi = () => {
           }
 
           th, td {
-            padding: 8px; /* Mengurangi padding */
+            padding: 8px;
             text-align: center;
           }
 
@@ -236,32 +233,62 @@ const PrintVerifikasi = () => {
           }
 
           .signature-section {
-            margin-top: 30px; /* Mengurangi margin-top */
-            text-align: right;
+            margin-top: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+          }
+
+          .paraf-section {
+            flex: 1;
+            text-align: center;
+            padding-top: 3px;
+            margin-right: 107px;
+          }
+
+          .paraf-title {
+            font-size: 13px;
+            margin-bottom: 10px;
+            text-align: center;
+          }
+
+          .paraf-line {
+            width: 180px;
+            border-bottom: 1px solid #000;
+            margin: 90px auto 0 auto;
+          }
+
+          .verifikator-section {
+            flex: 1;
+            text-align: center;
           }
 
           .signature-title {
             font-size: 13px;
-            margin-bottom: 30px; /* Mengurangi margin-bottom secara signifikan */
-            margin-right: 60px;
+            margin-bottom: 30px;
           }
 
           .signature-name {
             font-size: 13px;
             font-weight: bold;
-            margin-right: 80px;
             padding-top: 20px;
+            margin-top: 54px;
+;          }
+
+          .qr-code-container {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
           }
 
           .qr-code {
-            width: 100px; /* Sedikit mengurangi ukuran QR code */
-            height: 100px; /* Sedikit mengurangi ukuran QR code */
+            width: 100px;
+            height: 100px;
             background-color: #e0e0e0;
-            margin: 10px auto; /* Mengubah margin-left menjadi auto untuk menengahkan */
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 10px; /* Mengurangi ukuran font */
+            font-size: 10px;
             color: #666;
           }
 
@@ -285,7 +312,6 @@ const PrintVerifikasi = () => {
             <span className="info-separator">:</span>
             <span className="info-value">{tagihan.jenis_tagihan || '-'}</span>
           </div>
-          {/* New: Sumber Dana */}
           <div className="info-row">
             <span className="info-label">Sumber Dana</span>
             <span className="info-separator">:</span>
@@ -359,17 +385,27 @@ const PrintVerifikasi = () => {
                 </tr>
               );
             })}
-          </tbody >
-        </table >
+          </tbody>
+        </table>
 
         <div className="signature-section">
-          <div className="signature-title">VERIFIKATOR</div>
-          <div className="signature-name">
-            {tagihan.nama_verifikator || '____________________'}
+          <div className="paraf-section">
+            <div className="paraf-title">PARAF TELAH MELALUI VERIFIKASI</div>
+            <div className="paraf-line"></div>
           </div>
+          
+          <div className="verifikator-section">
+            <div className="signature-title">VERIFIKATOR</div>
+            <div className="signature-name">
+              {tagihan.nama_verifikator || '____________________'}
+            </div>
+          </div>
+        </div>
+        
+        <div className="qr-code-container">
           <div className="qr-code">[QR Code]</div>
         </div>
-      </div >
+      </div>
     </>
   );
 };
