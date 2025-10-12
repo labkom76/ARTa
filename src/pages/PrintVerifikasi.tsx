@@ -87,8 +87,11 @@ const PrintVerifikasi = () => {
 
   useEffect(() => {
     if (!loading && !error && tagihan) {
+      // Give a small delay for content to render before printing
       const timer = setTimeout(() => {
         window.print();
+        // Optionally close the window after printing, or leave it open
+        // window.close(); 
       }, 1000); 
       return () => clearTimeout(timer);
     }
@@ -137,7 +140,7 @@ const PrintVerifikasi = () => {
               padding: 0 !important;
             }
             .container {
-              padding: 20px !important;
+              padding: 20px !important; /* Mengurangi padding untuk memberi lebih banyak ruang vertikal */
               background-color: white !important;
             }
           }
@@ -158,17 +161,17 @@ const PrintVerifikasi = () => {
           h1 {
             text-align: center;
             font-size: 20px;
-            margin-bottom: 20px;
+            margin-bottom: 20px; /* Mengurangi margin-bottom */
             font-weight: bold;
           }
 
           .info-section {
-            margin-bottom: 15px;
+            margin-bottom: 15px; /* Mengurangi margin-bottom */
           }
 
           .info-row {
             display: flex;
-            margin-bottom: 5px;
+            margin-bottom: 5px; /* Mengurangi margin-bottom */
             font-size: 13px;
           }
 
@@ -193,7 +196,7 @@ const PrintVerifikasi = () => {
           table {
             width: 100%;
             border-collapse: collapse;
-            margin: 20px 0;
+            margin: 20px 0; /* Mengurangi margin */
             font-size: 12px;
           }
 
@@ -202,7 +205,7 @@ const PrintVerifikasi = () => {
           }
 
           th, td {
-            padding: 8px;
+            padding: 8px; /* Mengurangi padding */
             text-align: center;
           }
 
@@ -233,34 +236,23 @@ const PrintVerifikasi = () => {
           }
 
           .signature-section {
-            margin-top: 30px;
+            margin-top: 50px;
             display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
+            justify-content: space-around;
+            width: 100%;
+            align-items: flex-start; /* Align blocks at the top */
           }
 
-          .paraf-section {
+          .paraf-section { /* Specific style for the left signature block */
             flex: 1;
-            text-align: center;
-            padding-top: 3px;
-            margin-right: 107px;
+            max-width: 250px;
+            text-align: left; /* Align children to the left */
           }
 
-          .paraf-title {
-            font-size: 13px;
-            margin-bottom: 10px;
-            text-align: center;
-          }
-
-          .paraf-line {
-            width: 180px;
-            border-bottom: 1px solid #000;
-            margin: 90px auto 0 auto;
-          }
-
-          .verifikator-section {
+          .verifikator-block { /* Specific style for the right signature block */
             flex: 1;
-            text-align: center;
+            max-width: 250px;
+            text-align: right; /* Align text children to the right */
           }
 
           .signature-title {
@@ -272,20 +264,21 @@ const PrintVerifikasi = () => {
             font-size: 13px;
             font-weight: bold;
             padding-top: 20px;
-            margin-top: 54px;
-;          }
-
-          .qr-code-container {
-            display: flex;
-            justify-content: center;
-            margin-top: 20px;
+            border-bottom: 1px solid #000;
+            display: inline-block; /* Ensure border only covers text */
+            min-width: 150px; /* Ensure enough space for signature */
           }
 
           .qr-code {
             width: 100px;
             height: 100px;
             background-color: #e0e0e0;
-            display: flex;
+            margin-top: 10px;
+            margin-bottom: 10px;
+            display: block; /* Make it a block element */
+            margin-left: auto; /* Center horizontally within its parent */
+            margin-right: auto; /* Center horizontally within its parent */
+            display: flex; /* Keep flex for content centering */
             align-items: center;
             justify-content: center;
             font-size: 10px;
@@ -294,6 +287,21 @@ const PrintVerifikasi = () => {
 
           .checkmark {
             font-size: 16px;
+          }
+
+          .paraf-title {
+            font-size: 13px;
+            font-weight: bold;
+            margin-bottom: 5px;
+          }
+
+          .paraf-line {
+            border-bottom: 1px solid #000;
+            width: 100px; /* Adjust width as needed */
+            margin-bottom: 10px;
+            display: block; /* Ensure it takes full width for left alignment */
+            margin-left: 0; /* Ensure it's left-aligned */
+            margin-right: auto; /* Push to the left */
           }
         `}
       </style>
@@ -389,21 +397,21 @@ const PrintVerifikasi = () => {
         </table>
 
         <div className="signature-section">
-          <div className="paraf-section">
-            <div className="paraf-title">PARAF TELAH MELALUI VERIFIKASI</div>
-            <div className="paraf-line"></div>
-          </div>
-          
-          <div className="verifikator-section">
+          {/* Blok PARAF - Hanya tampil jika status_tagihan adalah 'Diteruskan' */}
+          {tagihan.status_tagihan === 'Diteruskan' && (
+            <div className="paraf-section">
+              <div className="paraf-title">PARAF TELAH MELALUI VERIFIKASI</div>
+              <div className="paraf-line"></div>
+            </div>
+          )}
+          {/* Blok VERIFIKATOR */}
+          <div className="verifikator-block">
             <div className="signature-title">VERIFIKATOR</div>
             <div className="signature-name">
               {tagihan.nama_verifikator || '____________________'}
             </div>
+            <div className="qr-code">[QR Code]</div>
           </div>
-        </div>
-        
-        <div className="qr-code-container">
-          <div className="qr-code">[QR Code]</div>
         </div>
       </div>
     </>
