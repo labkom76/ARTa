@@ -1,0 +1,7 @@
+.wrapper {
+  background-color: #ffffff !important;
+}
+
+.wrapper * {
+  color: #000000 !important;
+}
