@@ -22,6 +22,14 @@ interface SessionContextType {
 
 const SessionContext = createContext<SessionContextType | undefined>(undefined);
 
+// Daftar rute publik yang tidak memerlukan autentikasi
+const publicRoutes = [
+  '/login',
+  '/verifikasi-dokumen/', // Gunakan awalan untuk rute dinamis
+  '/print-verifikasi',
+  '/print-koreksi',
+];
+
 export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
@@ -267,18 +275,17 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
       return;
     }
 
-    const isLoginPage = location.pathname === '/login';
-    const currentPath = location.pathname;
+    const isCurrentRoutePublic = publicRoutes.some(route => location.pathname.startsWith(route));
     
     console.log('🧭 Pemeriksaan navigasi:', { 
       hasSession: !!session, 
-      isLoginPage, 
+      isCurrentRoutePublic, 
       role,
-      currentPath 
+      currentPath: location.pathname 
     });
 
-    // Arahkan ke login jika tidak ada sesi dan bukan di halaman login
-    if (!session && !isLoginPage) {
+    // Arahkan ke login jika tidak ada sesi dan BUKAN di halaman publik
+    if (!session && !isCurrentRoutePublic) {
       console.log('➡️ Mengarahkan ke login');
       hasNavigated.current = true;
       navigate('/login', { replace: true });
@@ -287,7 +294,7 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
     }
 
     // Arahkan dari halaman login jika sudah login
-    if (session && isLoginPage) {
+    if (session && location.pathname === '/login') {
       if (!role) {
         console.warn('⚠️ Sesi ada tetapi peran null, menunggu...');
         return;
@@ -325,7 +332,7 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
 
     // 🆕 Jika sudah di jalur yang benar, tandai sebagai sudah dinavigasi
     // Ini mencegah loop pemeriksaan tak terbatas
-    if (session && role && !isLoginPage) {
+    if (session && role && !isCurrentRoutePublic) { // Perubahan di sini: cek isCurrentRoutePublic
       const validPaths = [
         '/dashboard-skpd',
         '/portal-skpd',
@@ -341,11 +348,11 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
         '/admin/dashboard',
         '/admin/tagihan',
         '/admin/custom-login',
-        '/lengkapi-profil', // MODIFIKASI: Tambahkan halaman lengkapi profil ke jalur yang valid
+        '/lengkapi-profil',
         '/'
       ];
 
-      if (validPaths.includes(currentPath)) {
+      if (validPaths.includes(location.pathname)) {
         console.log('✅ Sudah di jalur yang valid, menandai sebagai sudah dinavigasi');
         hasNavigated.current = true;
       }
