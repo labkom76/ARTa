@@ -13,6 +13,14 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { MadeWithDyad } from '@/components/made-with-dyad'; // Import MadeWithDyad
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 interface VerificationItem {
   item: string;
