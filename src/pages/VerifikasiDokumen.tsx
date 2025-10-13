@@ -62,15 +62,18 @@ const VerifikasiDokumen = () => {
     const fetchTagihanData = async () => {
       setLoading(true);
       try {
-        // Mengubah query untuk menggunakan fungsi RPC 'get_public_bill_details'
-        const { data, error: fetchError } = await supabase
-          .rpc('get_public_bill_details', { id_input: tagihanId })
-          .single();
+        // Mengubah query untuk menggunakan Edge Function 'get-public-bill-details'
+        const { data, error: invokeError } = await supabase.functions.invoke('get-public-bill-details', {
+          body: { id_input: tagihanId },
+        });
 
-        if (fetchError) throw fetchError;
+        if (invokeError) throw invokeError;
         if (!data) throw new Error('Data tagihan tidak ditemukan.');
 
-        setTagihan(data as Tagihan);
+        // Edge Function mengembalikan data dalam bentuk JSON, jadi kita perlu menguraikannya
+        const parsedData = JSON.parse(data as string);
+        
+        setTagihan(parsedData as Tagihan);
       } catch (err: any) {
         console.error('Error fetching tagihan for public verification:', err.message);
         setError('Gagal memuat data tagihan: ' + err.message);
