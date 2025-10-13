@@ -5,6 +5,7 @@ import { format, parseISO } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { CheckIcon, XIcon } from 'lucide-react';
+import QRCode from "react-qr-code"; // Import QRCode
 
 interface VerificationItem {
   item: string;
@@ -120,6 +121,9 @@ const PrintVerifikasi = () => {
   if (!tagihan) {
     return <div className="p-8 text-center text-gray-700">Data tagihan tidak tersedia.</div>;
   }
+
+  // Buat URL verifikasi
+  const verificationUrl = `${window.location.origin}/verifikasi-dokumen/${tagihan.id_tagihan}`;
 
   return (
     <>
@@ -414,7 +418,9 @@ const PrintVerifikasi = () => {
         </div>
         
         <div className="qr-code-container">
-          <div className="qr-code">[QR Code]</div>
+          <div className="qr-code">
+            <QRCode value={verificationUrl} size={100} />
+          </div>
         </div>
       </div>
     </>
