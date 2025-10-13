@@ -112,3 +112,15 @@
     @apply bg-background text-foreground;
   }
 }
+
+@media print {
+  /* Blok ini HANYA aktif saat browser dalam mode cetak.
+    'Important' digunakan untuk memaksa penimpaan gaya dari mode gelap.
+  */
+  body, body * {
+    color: #000000 !important;
+    background-color: #ffffff !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}
