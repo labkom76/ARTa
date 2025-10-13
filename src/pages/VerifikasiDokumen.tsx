@@ -64,7 +64,7 @@ const VerifikasiDokumen = () => {
       try {
         // Mengubah query untuk menggunakan Edge Function 'get-public-bill-details'
         const { data, error: invokeError } = await supabase.functions.invoke('get-public-bill-details', {
-          body: { id_input: tagihanId },
+          body: JSON.stringify({ id_input: tagihanId }), // <-- Perubahan di sini
         });
 
         if (invokeError) throw invokeError;
