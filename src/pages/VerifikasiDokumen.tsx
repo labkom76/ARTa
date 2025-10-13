@@ -62,10 +62,9 @@ const VerifikasiDokumen = () => {
     const fetchTagihanData = async () => {
       setLoading(true);
       try {
+        // Mengubah query untuk menggunakan fungsi RPC 'get_public_bill_details'
         const { data, error: fetchError } = await supabase
-          .from('database_tagihan')
-          .select('*')
-          .eq('id_tagihan', tagihanId)
+          .rpc('get_public_bill_details', { id_input: tagihanId })
           .single();
 
         if (fetchError) throw fetchError;
