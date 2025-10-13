@@ -69,7 +69,6 @@ const VerifikasiDokumen = () => {
         if (invokeError) throw invokeError;
         if (!data) throw new Error('Data tagihan tidak ditemukan.');
         
-        // Hapus parsing JSON yang berlebihan
         setTagihan(data as Tagihan);
       } catch (err: any) {
         console.error('Error fetching tagihan for public verification:', err.message);
@@ -136,7 +135,7 @@ const VerifikasiDokumen = () => {
   }
 
   const showVerifikatorSection = tagihan.status_tagihan === 'Diteruskan' || tagihan.status_tagihan === 'Dikembalikan';
-  const isDikembalikan = tagihan.status_tagihan === 'Dikembalikan';
+  const isCorrected = !!tagihan.id_korektor; // Check if it was corrected
 
   return (
     <div className="min-h-screen flex flex-col items-center bg-gray-100 dark:bg-gray-950 p-4 sm:p-6">
@@ -218,42 +217,73 @@ const VerifikasiDokumen = () => {
             </div>
           </div>
 
-          {/* Bagian 2 - Hasil Pemeriksaan Verifikator / Korektor */}
+          {/* Bagian 2 - Hasil Pemeriksaan Verifikator */}
           {showVerifikatorSection && (
             <div className="grid gap-2 mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
               <h3 className="text-lg font-semibold text-gray-800 dark:text-white">
-                Hasil Pemeriksaan {isDikembalikan ? 'Korektor' : 'Verifikator'}
+                Hasil Pemeriksaan Verifikator
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-sm mb-4">
                 <div>
                   <Label className="text-muted-foreground">Diperiksa oleh</Label>
-                  <p className="font-medium">{isDikembalikan ? (tagihan.nama_verifikator || '-') : (tagihan.nama_verifikator || '-')}</p>
+                  <p className="font-medium">{tagihan.nama_verifikator || '-'}</p>
                 </div>
                 <div>
                   <Label className="text-muted-foreground">Waktu Pemeriksaan</Label>
-                  <p className="font-medium">{formatDate(isDikembalikan ? tagihan.waktu_koreksi : tagihan.waktu_verifikasi)}</p>
+                  <p className="font-medium">{formatDate(isCorrected ? tagihan.waktu_koreksi : tagihan.waktu_verifikasi)}</p>
                 </div>
                 <div>
-                  <Label className="text-muted-foreground">Nomor {isDikembalikan ? 'Koreksi' : 'Verifikasi'}</Label>
-                  <p className="font-medium">{isDikembalikan ? (tagihan.nomor_koreksi || '-') : (tagihan.nomor_verifikasi || '-')}</p>
+                  <Label className="text-muted-foreground">Nomor Verifikasi</Label>
+                  <p className="font-medium">{isCorrected ? (tagihan.nomor_koreksi || '-') : (tagihan.nomor_verifikasi || '-')}</p>
                 </div>
                 <div>
                   <Label className="text-muted-foreground">Status Akhir</Label>
                   <p className="font-medium">{tagihan.status_tagihan}</p>
                 </div>
-                {isDikembalikan && tagihan.catatan_koreksi && (
-                  <div className="col-span-1 sm:col-span-2">
-                    <Label className="text-muted-foreground">Catatan Korektor</Label>
-                    <p className="font-medium">{tagihan.catatan_koreksi}</p>
-                  </div>
-                )}
-                {!isDikembalikan && tagihan.catatan_verifikator && (
-                  <div className="col-span-1 sm:col-span-2">
-                    <Label className="text-muted-foreground">Catatan Verifikator</Label>
-                    <p className="font-medium">{tagihan.catatan_verifikator}</p>
-                  </div>
-                )}
               </div>
+
+              <h4 className="text-md font-medium mb-2">Checklist Verifikasi</h4>
+              {isCorrected ? (
+                // Simplified table for corrected items
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Uraian</TableHead>
+                      <TableHead className="w-[150px] text-center">Memenuhi Syarat</TableHead>
+                      <TableHead>Keterangan</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    <TableRow>
+                      <TableCell>Tidak dapat diterbitkan SP2D</TableCell>
+                      <TableCell className="text-center">Tidak</TableCell>
+                      <TableCell>{tagihan.catatan_koreksi || '-'}</TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              ) : (
+                // Existing detailed table for standard verification
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Uraian</TableHead>
+                      <TableHead className="w-[150px] text-center">Memenuhi Syarat</TableHead>
+                      <TableHead>Keterangan</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {tagihan.detail_verifikasi?.map((detail, index) => (
+                      <TableRow key={index}>
+                        <TableCell>{detail.item}</TableCell>
+                        <TableCell className="text-center">
+                          {detail.memenuhi_syarat ? 'Ya' : 'Tidak'}
+                        </TableCell>
+                        <TableCell>{detail.keterangan || '-'}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
             </div>
           )}
         </CardContent>
