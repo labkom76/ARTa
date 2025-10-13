@@ -6,6 +6,7 @@ import { id as localeId } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { CheckIcon, XIcon } from 'lucide-react';
 import QRCode from "react-qr-code"; // Import QRCode
+import styles from './PrintLayout.module.css'; // Import CSS Module
 
 interface VerificationItem {
   item: string;
@@ -305,7 +306,7 @@ const PrintVerifikasi = () => {
         `}
       </style>
 
-      <div className="container">
+      <div className={styles.wrapper}>
         <h1>LEMBAR VERIFIKASI SKPKD</h1>
 
         <div className="info-section">

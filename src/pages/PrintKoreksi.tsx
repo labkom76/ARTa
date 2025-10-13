@@ -6,6 +6,7 @@ import { id as localeId } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { QrCodeIcon, XIcon } from 'lucide-react'; // Menggunakan QrCodeIcon dan XIcon
 import QRCode from "react-qr-code"; // Import QRCode
+import styles from './PrintLayout.module.css'; // Import CSS Module
 
 interface Tagihan {
   id_tagihan: string;
@@ -259,7 +260,7 @@ const PrintKoreksi = () => {
         `}
       </style>
 
-      <div className="print-container">
+      <div className={styles.wrapper}>
         <h1 className="print-title">LEMBAR VERIFIKASI SP2D</h1>
 
         <div className="info-section">
