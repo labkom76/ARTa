@@ -36,6 +36,14 @@ import {
 } from '@/components/ui/table';
 import { supabase } from '@/integrations/supabase/client'; // Import supabase client
 import Papa from 'papaparse'; // Import Papa Parse
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '@/components/ui/pagination'; // Import Pagination components
 
 // Data Interfaces
 interface ChartDataItem {
@@ -79,6 +87,10 @@ const AdminLaporan = () => {
   const [tableData, setTableData] = useState<TagihanDetail[]>([]); // Separate state for table data
   const [loadingReport, setLoadingReport] = useState(false); // New loading state for report generation
 
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+
   useEffect(() => {
     if (!sessionLoading) {
       setLoadingPage(false);
@@ -94,6 +106,7 @@ const AdminLaporan = () => {
       setGroupByOption('sumber_dana'); // Reset to default when not in analysis mode
       setSelectedSkpdForAnalysis('Semua SKPD'); // Reset SKPD selection
     }
+    setCurrentPage(1); // Reset page on report type change
   }, [reportType]);
 
   // Fetch SKPD options for analysis dropdown
@@ -133,6 +146,7 @@ const AdminLaporan = () => {
     setGeneratedReportType(null); // Clear previous report type
     setChartData([]); // Clear previous chart data
     setTableData([]); // Clear previous table data
+    setCurrentPage(1); // Reset to first page on new report generation
 
     try {
       const startDateISO = dateRange?.from ? dateRange.from.toISOString() : undefined;
@@ -228,6 +242,12 @@ const AdminLaporan = () => {
   const formatCurrency = (amount: number) => {
     return `Rp${amount.toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
   };
+
+  // Pagination logic
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentTableData = tableData.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = itemsPerPage === -1 ? 1 : Math.ceil(tableData.length / itemsPerPage);
 
   if (loadingPage) {
     return (
@@ -410,40 +430,44 @@ const AdminLaporan = () => {
           <CardTitle className="text-xl font-semibold">Tabel Rangkuman</CardTitle>
         </CardHeader>
         <CardContent>
+          {/* "Baris per halaman" dropdown */}
+          <div className="mb-4 flex justify-end items-center space-x-2">
+            <Label htmlFor="items-per-page" className="whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">Baris per halaman:</Label>
+            <Select
+              value={itemsPerPage.toString()}
+              onValueChange={(value) => {
+                setItemsPerPage(Number(value));
+                setCurrentPage(1); // Reset to first page when items per page changes
+              }}
+            >
+              <SelectTrigger className="w-[100px]">
+                <SelectValue placeholder="10" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="10">10</SelectItem>
+                <SelectItem value="20">20</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+                <SelectItem value="100">100</SelectItem>
+                <SelectItem value="-1">Semua</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
           {loadingReport ? (
             <div className="h-60 bg-gray-100 dark:bg-gray-700 flex items-center justify-center rounded-md border border-dashed border-gray-300 dark:border-gray-600 text-muted-foreground">
               Memuat tabel...
             </div>
-          ) : generatedReportType === 'sumber_dana' && tableData.length > 0 ? (
+          ) : (generatedReportType === 'sumber_dana' || generatedReportType === 'jenis_tagihan') && tableData.length > 0 ? (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Sumber Dana</TableHead>
+                    <TableHead>{generatedReportType === 'sumber_dana' ? 'Sumber Dana' : 'Jenis Tagihan'}</TableHead>
                     <TableHead className="text-right">Total Nilai</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {tableData.map((item: ChartDataItem, index) => (
-                    <TableRow key={index}>
-                      <TableCell>{item.name}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(item.value)}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          ) : generatedReportType === 'jenis_tagihan' && tableData.length > 0 ? (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Jenis Tagihan</TableHead>
-                    <TableHead className="text-right">Total Nilai</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {tableData.map((item: ChartDataItem, index) => (
+                  {currentTableData.map((item: ChartDataItem, index) => (
                     <TableRow key={index}>
                       <TableCell>{item.name}</TableCell>
                       <TableCell className="text-right">{formatCurrency(item.value)}</TableCell>
@@ -469,7 +493,7 @@ const AdminLaporan = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {tableData.map((item: TagihanDetail) => (
+                  {currentTableData.map((item: TagihanDetail) => (
                     <TableRow key={item.id_tagihan}>
                       <TableCell>{item.nama_skpd}</TableCell>
                       <TableCell>{item.nomor_spm}</TableCell>
@@ -490,12 +514,47 @@ const AdminLaporan = () => {
               Tabel Rangkuman Akan Muncul Di Sini
             </div>
           )}
+          {/* Pagination Controls */}
+          {tableData.length > 0 && (
+            <div className="mt-6 flex flex-col sm:flex-row items-center justify-between space-y-2 sm:space-y-0">
+              <div className="text-sm text-muted-foreground">
+                Halaman {tableData.length === 0 ? 0 : currentPage} dari {totalPages} ({tableData.length} total item)
+              </div>
+              <Pagination>
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                      disabled={currentPage === 1 || itemsPerPage === -1}
+                    />
+                  </PaginationItem>
+                  {[...Array(totalPages)].map((_, index) => (
+                    <PaginationItem key={index}>
+                      <PaginationLink
+                        isActive={currentPage === index + 1}
+                        onClick={() => setCurrentPage(index + 1)}
+                        disabled={itemsPerPage === -1}
+                      >
+                        {index + 1}
+                      </PaginationLink>
+                    </PaginationItem>
+                  ))}
+                  <PaginationItem>
+                    <PaginationNext
+                      onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                      disabled={currentPage === totalPages || itemsPerPage === -1}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            </div>
+          )}
         </CardContent>
       </Card>
 
       {/* Tombol Download Laporan */}
       <div className="flex justify-end">
-        <Button onClick={handleDownloadCSV} variant="outline" className="flex items-center gap-2" disabled={!generatedReportType || loadingReport}>
+        <Button onClick={handleDownloadCSV} variant="outline" className="flex items-center gap-2" disabled={!generatedReportType || loadingReport || tableData.length === 0}>
           <FileDownIcon className="h-4 w-4" /> Download Laporan (CSV)
         </Button>
       </div>
