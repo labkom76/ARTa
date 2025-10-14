@@ -55,6 +55,12 @@ interface TagihanDetail {
   waktu_input: string;
 }
 
+interface SkpdData {
+  id: string;
+  nama_skpd: string;
+  kode_skpd: string;
+}
+
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#A28DFF', '#FF6666', '#66CCFF'];
 
 const AdminLaporan = () => {
@@ -63,6 +69,10 @@ const AdminLaporan = () => {
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [reportType, setReportType] = useState<string>('');
   const [selectedStatus, setSelectedStatus] = useState<string>('Semua'); // New state for status filter
+  const [groupByOption, setGroupByOption] = useState<string>('sumber_dana'); // New state for group by
+  const [selectedSkpdForAnalysis, setSelectedSkpdForAnalysis] = useState<string>('Semua SKPD'); // New state for selected SKPD in analysis
+  const [skpdOptionsForAnalysis, setSkpdOptionsForAnalysis] = useState<string[]>([]); // New state for SKPD options
+
   const [generatedReportType, setGeneratedReportType] = useState<string | null>(null);
   const [reportData, setReportData] = useState<any[]>([]);
   const [loadingReport, setLoadingReport] = useState(false); // New loading state for report generation
@@ -73,12 +83,43 @@ const AdminLaporan = () => {
     }
   }, [sessionLoading]);
 
-  // Reset selectedStatus when reportType changes to 'detail_skpd' or is cleared
+  // Reset selectedStatus and groupByOption when reportType changes
   useEffect(() => {
     if (reportType === 'detail_skpd' || reportType === '') {
       setSelectedStatus('Semua');
     }
+    if (reportType !== 'analisis_skpd') {
+      setGroupByOption('sumber_dana'); // Reset to default when not in analysis mode
+      setSelectedSkpdForAnalysis('Semua SKPD'); // Reset SKPD selection
+    }
   }, [reportType]);
+
+  // Fetch SKPD options for analysis dropdown
+  useEffect(() => {
+    const fetchSkpdOptions = async () => {
+      if (reportType === 'analisis_skpd') {
+        try {
+          const { data, error } = await supabase
+            .from('master_skpd')
+            .select('nama_skpd')
+            .order('nama_skpd', { ascending: true });
+
+          if (error) throw error;
+
+          const uniqueSkpd = Array.from(new Set(data.map(item => item.nama_skpd)))
+            .filter((skpd): skpd is string => skpd !== null && skpd.trim() !== '');
+
+          setSkpdOptionsForAnalysis(['Semua SKPD', ...uniqueSkpd]);
+        } catch (error: any) {
+          console.error('Error fetching SKPD options for analysis:', error.message);
+          toast.error('Gagal memuat daftar SKPD untuk analisis: ' + error.message);
+          setSkpdOptionsForAnalysis(['Semua SKPD']);
+        }
+      }
+    };
+    fetchSkpdOptions();
+  }, [reportType]);
+
 
   const handleGenerateReport = async () => {
     if (!reportType) {
@@ -100,6 +141,9 @@ const AdminLaporan = () => {
           startDate: startDateISO,
           endDate: endDateISO,
           status: (reportType === 'sumber_dana' || reportType === 'jenis_tagihan') && selectedStatus !== 'Semua' ? selectedStatus : undefined,
+          // New parameters for analysis report (not yet used in Edge Function)
+          groupBy: reportType === 'analisis_skpd' ? groupByOption : undefined,
+          skpd: reportType === 'analisis_skpd' && selectedSkpdForAnalysis !== 'Semua SKPD' ? selectedSkpdForAnalysis : undefined,
         }),
       });
 
@@ -135,7 +179,7 @@ const AdminLaporan = () => {
         'Total Nilai': item.value,
       }));
       fileName = `laporan_per_${generatedReportType}.csv`;
-    } else if (generatedReportType === 'detail_skpd') {
+    } else if (generatedReportType === 'detail_skpd') { // This will be 'analisis_skpd' later
       csvData = reportData.map((item: TagihanDetail) => ({
         'ID Tagihan': item.id_tagihan,
         'Nama SKPD': item.nama_skpd,
@@ -215,7 +259,7 @@ const AdminLaporan = () => {
               <SelectContent>
                 <SelectItem value="sumber_dana">Laporan per Sumber Dana</SelectItem>
                 <SelectItem value="jenis_tagihan">Laporan per Jenis Tagihan</SelectItem>
-                <SelectItem value="detail_skpd">Laporan Detail per SKPD</SelectItem>
+                <SelectItem value="analisis_skpd">Laporan Analisis SKPD</SelectItem> {/* Changed label and value */}
               </SelectContent>
             </Select>
           </div>
@@ -233,6 +277,37 @@ const AdminLaporan = () => {
                 </SelectContent>
               </Select>
             </div>
+          )}
+          {reportType === 'analisis_skpd' && (
+            <>
+              <div className="grid gap-2">
+                <Label htmlFor="group-by-option">Kelompokkan Berdasarkan</Label>
+                <Select onValueChange={setGroupByOption} value={groupByOption}>
+                  <SelectTrigger id="group-by-option" className="w-full">
+                    <SelectValue placeholder="Pilih Opsi Pengelompokan" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="sumber_dana">Sumber Dana</SelectItem>
+                    <SelectItem value="jenis_tagihan">Jenis Tagihan</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="skpd-for-analysis">Pilih SKPD</Label>
+                <Select onValueChange={setSelectedSkpdForAnalysis} value={selectedSkpdForAnalysis}>
+                  <SelectTrigger id="skpd-for-analysis" className="w-full">
+                    <SelectValue placeholder="Pilih SKPD" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {skpdOptionsForAnalysis.map((skpd) => (
+                      <SelectItem key={skpd} value={skpd}>
+                        {skpd}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </>
           )}
           <Button onClick={handleGenerateReport} className="w-full md:col-span-1 lg:col-span-1 flex items-center gap-2" disabled={loadingReport}>
             {loadingReport ? 'Membuat Laporan...' : <><BarChartIcon className="h-4 w-4" /> Tampilkan Laporan</>}
