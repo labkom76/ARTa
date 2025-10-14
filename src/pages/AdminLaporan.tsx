@@ -34,8 +34,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { supabase } from '@/integrations/supabase/client'; // Import supabase client
 
-// Dummy Data Interfaces
+// Data Interfaces
 interface ChartDataItem {
   name: string;
   value: number;
@@ -62,6 +63,7 @@ const AdminLaporan = () => {
   const [reportType, setReportType] = useState<string>('');
   const [generatedReportType, setGeneratedReportType] = useState<string | null>(null);
   const [reportData, setReportData] = useState<any[]>([]);
+  const [loadingReport, setLoadingReport] = useState(false); // New loading state for report generation
 
   useEffect(() => {
     if (!sessionLoading) {
@@ -69,80 +71,42 @@ const AdminLaporan = () => {
     }
   }, [sessionLoading]);
 
-  // Mock Data
-  const mockSumberDanaData: ChartDataItem[] = [
-    { name: 'Pendapatan Asli Daerah', value: 40000000 },
-    { name: 'Dana Bagi Hasil', value: 30000000 },
-    { name: 'DAU - BG', value: 20000000 },
-    { name: 'DAK - Fisik', value: 10000000 },
-  ];
-
-  const mockJenisTagihanData: ChartDataItem[] = [
-    { name: 'Uang Persediaan (UP)', value: 50000000 },
-    { name: 'Ganti Uang Persediaan (GU)', value: 35000000 },
-    { name: 'Langsung (LS)', value: 25000000 },
-    { name: 'Tambah Uang Persediaan (TU)', value: 15000000 },
-  ];
-
-  const mockDetailSkpdData: TagihanDetail[] = [
-    {
-      id_tagihan: '1',
-      nama_skpd: 'Dinas Pendidikan',
-      nomor_spm: 'SPM/001/DP/2024',
-      jenis_spm: 'Belanja Pegawai',
-      jenis_tagihan: 'Uang Persediaan (UP)',
-      uraian: 'Pembayaran gaji pegawai bulan Januari',
-      jumlah_kotor: 15000000,
-      status_tagihan: 'Diteruskan',
-      waktu_input: '2024-01-10T08:00:00Z',
-    },
-    {
-      id_tagihan: '2',
-      nama_skpd: 'Dinas Kesehatan',
-      nomor_spm: 'SPM/002/DK/2024',
-      jenis_spm: 'Belanja Barang dan Jasa',
-      jenis_tagihan: 'Langsung (LS)',
-      uraian: 'Pembelian alat kesehatan',
-      jumlah_kotor: 25000000,
-      status_tagihan: 'Menunggu Verifikasi',
-      waktu_input: '2024-01-15T10:30:00Z',
-    },
-    {
-      id_tagihan: '3',
-      nama_skpd: 'Dinas Pekerjaan Umum',
-      nomor_spm: 'SPM/003/DPU/2024',
-      jenis_spm: 'Belanja Modal',
-      jenis_tagihan: 'Langsung (LS)',
-      uraian: 'Pembangunan jalan',
-      jumlah_kotor: 50000000,
-      status_tagihan: 'Dikembalikan',
-      waktu_input: '2024-01-20T14:00:00Z',
-    },
-  ];
-
-  const handleGenerateReport = () => {
+  const handleGenerateReport = async () => {
     if (!reportType) {
       toast.error('Pilih jenis laporan terlebih dahulu.');
       return;
     }
 
-    setGeneratedReportType(reportType);
+    setLoadingReport(true);
+    setGeneratedReportType(null); // Clear previous report type
+    setReportData([]); // Clear previous data
 
-    switch (reportType) {
-      case 'sumber_dana':
-        setReportData(mockSumberDanaData);
-        break;
-      case 'jenis_tagihan':
-        setReportData(mockJenisTagihanData);
-        break;
-      case 'detail_skpd':
-        setReportData(mockDetailSkpdData);
-        break;
-      default:
-        setReportData([]);
-        break;
+    try {
+      const startDateISO = dateRange?.from ? dateRange.from.toISOString() : undefined;
+      const endDateISO = dateRange?.to ? dateRange.to.toISOString() : undefined;
+
+      const { data, error } = await supabase.functions.invoke('generate-report', {
+        body: JSON.stringify({
+          reportType,
+          startDate: startDateISO,
+          endDate: endDateISO,
+        }),
+      });
+
+      if (error) throw error;
+      if (data && data.error) throw new Error(data.error);
+
+      setReportData(data || []);
+      setGeneratedReportType(reportType); // Set generated report type only on success
+      toast.success('Laporan berhasil dibuat!');
+    } catch (error: any) {
+      console.error('Error generating report:', error.message);
+      toast.error('Gagal membuat laporan: ' + error.message);
+      setReportData([]);
+      setGeneratedReportType(null);
+    } finally {
+      setLoadingReport(false);
     }
-    toast.success('Laporan berhasil dibuat dengan data statis!');
   };
 
   const handleDownloadReport = () => {
@@ -206,8 +170,8 @@ const AdminLaporan = () => {
               </SelectContent>
             </Select>
           </div>
-          <Button onClick={handleGenerateReport} className="w-full md:col-span-1 lg:col-span-1 flex items-center gap-2">
-            <BarChartIcon className="h-4 w-4" /> Tampilkan Laporan
+          <Button onClick={handleGenerateReport} className="w-full md:col-span-1 lg:col-span-1 flex items-center gap-2" disabled={loadingReport}>
+            {loadingReport ? 'Membuat Laporan...' : <><BarChartIcon className="h-4 w-4" /> Tampilkan Laporan</>}
           </Button>
         </CardContent>
       </Card>
@@ -218,7 +182,11 @@ const AdminLaporan = () => {
           <CardTitle className="text-xl font-semibold">Visualisasi Laporan</CardTitle>
         </CardHeader>
         <CardContent>
-          {generatedReportType === 'sumber_dana' && reportData.length > 0 ? (
+          {loadingReport ? (
+            <div className="h-80 bg-gray-100 dark:bg-gray-700 flex items-center justify-center rounded-md border border-dashed border-gray-300 dark:border-gray-600 text-muted-foreground">
+              Memuat grafik...
+            </div>
+          ) : generatedReportType === 'sumber_dana' && reportData.length > 0 ? (
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
                 <Pie
@@ -263,7 +231,11 @@ const AdminLaporan = () => {
           <CardTitle className="text-xl font-semibold">Tabel Rangkuman</CardTitle>
         </CardHeader>
         <CardContent>
-          {generatedReportType === 'sumber_dana' && reportData.length > 0 ? (
+          {loadingReport ? (
+            <div className="h-60 bg-gray-100 dark:bg-gray-700 flex items-center justify-center rounded-md border border-dashed border-gray-300 dark:border-gray-600 text-muted-foreground">
+              Memuat tabel...
+            </div>
+          ) : generatedReportType === 'sumber_dana' && reportData.length > 0 ? (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
@@ -342,7 +314,7 @@ const AdminLaporan = () => {
 
       {/* Tombol Download Laporan */}
       <div className="flex justify-end">
-        <Button onClick={handleDownloadReport} variant="outline" className="flex items-center gap-2" disabled={!generatedReportType}>
+        <Button onClick={handleDownloadReport} variant="outline" className="flex items-center gap-2" disabled={!generatedReportType || loadingReport}>
           <FileDownIcon className="h-4 w-4" /> Download Laporan (CSV)
         </Button>
       </div>
