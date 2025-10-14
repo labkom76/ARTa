@@ -62,6 +62,7 @@ const AdminLaporan = () => {
   const [loadingPage, setLoadingPage] = useState(true);
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [reportType, setReportType] = useState<string>('');
+  const [selectedStatus, setSelectedStatus] = useState<string>('Semua'); // New state for status filter
   const [generatedReportType, setGeneratedReportType] = useState<string | null>(null);
   const [reportData, setReportData] = useState<any[]>([]);
   const [loadingReport, setLoadingReport] = useState(false); // New loading state for report generation
@@ -71,6 +72,13 @@ const AdminLaporan = () => {
       setLoadingPage(false);
     }
   }, [sessionLoading]);
+
+  // Reset selectedStatus when reportType changes to 'detail_skpd' or is cleared
+  useEffect(() => {
+    if (reportType === 'detail_skpd' || reportType === '') {
+      setSelectedStatus('Semua');
+    }
+  }, [reportType]);
 
   const handleGenerateReport = async () => {
     if (!reportType) {
@@ -91,6 +99,7 @@ const AdminLaporan = () => {
           reportType,
           startDate: startDateISO,
           endDate: endDateISO,
+          status: (reportType === 'sumber_dana' || reportType === 'jenis_tagihan') && selectedStatus !== 'Semua' ? selectedStatus : undefined,
         }),
       });
 
@@ -188,7 +197,7 @@ const AdminLaporan = () => {
         <CardHeader>
           <CardTitle className="text-xl font-semibold">Filter Laporan</CardTitle>
         </CardHeader>
-        <CardContent className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 items-end">
+        <CardContent className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 items-end"> {/* Adjusted grid columns */}
           <div className="grid gap-2">
             <Label htmlFor="date-range">Rentang Tanggal</Label>
             <DateRangePickerWithPresets
@@ -210,6 +219,21 @@ const AdminLaporan = () => {
               </SelectContent>
             </Select>
           </div>
+          {(reportType === 'sumber_dana' || reportType === 'jenis_tagihan') && (
+            <div className="grid gap-2">
+              <Label htmlFor="status-filter">Status</Label>
+              <Select onValueChange={setSelectedStatus} value={selectedStatus}>
+                <SelectTrigger id="status-filter" className="w-full">
+                  <SelectValue placeholder="Pilih Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Semua">Semua</SelectItem>
+                  <SelectItem value="Diteruskan">Diteruskan</SelectItem>
+                  <SelectItem value="Dikembalikan">Dikembalikan</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           <Button onClick={handleGenerateReport} className="w-full md:col-span-1 lg:col-span-1 flex items-center gap-2" disabled={loadingReport}>
             {loadingReport ? 'Membuat Laporan...' : <><BarChartIcon className="h-4 w-4" /> Tampilkan Laporan</>}
           </Button>

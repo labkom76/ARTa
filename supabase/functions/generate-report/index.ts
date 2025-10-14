@@ -12,7 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const { reportType, startDate, endDate } = await req.json();
+    const { reportType, startDate, endDate, status } = await req.json(); // Receive new 'status' parameter
 
     if (!reportType) {
       return new Response(JSON.stringify({ error: 'reportType is required.' }), {
@@ -39,6 +39,7 @@ serve(async (req) => {
 
         if (startDate) query = query.gte('waktu_input', startDate);
         if (endDate) query = query.lte('waktu_input', endDate);
+        if (status && status !== 'Semua') query = query.eq('status_tagihan', status); // Apply status filter
 
         ({ data, error } = await query);
 
@@ -60,6 +61,7 @@ serve(async (req) => {
 
         if (startDate) query = query.gte('waktu_input', startDate);
         if (endDate) query = query.lte('waktu_input', endDate);
+        if (status && status !== 'Semua') query = query.eq('status_tagihan', status); // Apply status filter
 
         ({ data, error } = await query);
 
@@ -81,6 +83,7 @@ serve(async (req) => {
 
         if (startDate) query = query.gte('waktu_input', startDate);
         if (endDate) query = query.lte('waktu_input', endDate);
+        // Status filter is NOT applied for 'detail_skpd' as per instructions
 
         query = query.order('nama_skpd', { ascending: true });
 
