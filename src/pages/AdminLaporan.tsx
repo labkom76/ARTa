@@ -13,13 +13,55 @@ import {
 import { DateRange } from 'react-day-picker';
 import { DateRangePickerWithPresets } from '@/components/DateRangePickerWithPresets';
 import { toast } from 'sonner';
-import { FileDownIcon, BarChartIcon } from 'lucide-react';
+import { FileDownIcon, BarChartIcon, PieChartIcon } from 'lucide-react'; // Import PieChartIcon
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  PieChart, // Import PieChart
+  Pie,      // Import Pie
+  Cell,     // Import Cell for PieChart colors
+} from 'recharts';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+
+// Dummy Data Interfaces
+interface ChartDataItem {
+  name: string;
+  value: number;
+}
+
+interface TagihanDetail {
+  id_tagihan: string;
+  nama_skpd: string;
+  nomor_spm: string;
+  jenis_spm: string;
+  jenis_tagihan: string;
+  uraian: string;
+  jumlah_kotor: number;
+  status_tagihan: string;
+  waktu_input: string;
+}
+
+const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#A28DFF', '#FF6666', '#66CCFF'];
 
 const AdminLaporan = () => {
   const { profile, loading: sessionLoading } = useSession();
   const [loadingPage, setLoadingPage] = useState(true);
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [reportType, setReportType] = useState<string>('');
+  const [generatedReportType, setGeneratedReportType] = useState<string | null>(null);
+  const [reportData, setReportData] = useState<any[]>([]);
 
   useEffect(() => {
     if (!sessionLoading) {
@@ -27,16 +69,90 @@ const AdminLaporan = () => {
     }
   }, [sessionLoading]);
 
+  // Mock Data
+  const mockSumberDanaData: ChartDataItem[] = [
+    { name: 'Pendapatan Asli Daerah', value: 40000000 },
+    { name: 'Dana Bagi Hasil', value: 30000000 },
+    { name: 'DAU - BG', value: 20000000 },
+    { name: 'DAK - Fisik', value: 10000000 },
+  ];
+
+  const mockJenisTagihanData: ChartDataItem[] = [
+    { name: 'Uang Persediaan (UP)', value: 50000000 },
+    { name: 'Ganti Uang Persediaan (GU)', value: 35000000 },
+    { name: 'Langsung (LS)', value: 25000000 },
+    { name: 'Tambah Uang Persediaan (TU)', value: 15000000 },
+  ];
+
+  const mockDetailSkpdData: TagihanDetail[] = [
+    {
+      id_tagihan: '1',
+      nama_skpd: 'Dinas Pendidikan',
+      nomor_spm: 'SPM/001/DP/2024',
+      jenis_spm: 'Belanja Pegawai',
+      jenis_tagihan: 'Uang Persediaan (UP)',
+      uraian: 'Pembayaran gaji pegawai bulan Januari',
+      jumlah_kotor: 15000000,
+      status_tagihan: 'Diteruskan',
+      waktu_input: '2024-01-10T08:00:00Z',
+    },
+    {
+      id_tagihan: '2',
+      nama_skpd: 'Dinas Kesehatan',
+      nomor_spm: 'SPM/002/DK/2024',
+      jenis_spm: 'Belanja Barang dan Jasa',
+      jenis_tagihan: 'Langsung (LS)',
+      uraian: 'Pembelian alat kesehatan',
+      jumlah_kotor: 25000000,
+      status_tagihan: 'Menunggu Verifikasi',
+      waktu_input: '2024-01-15T10:30:00Z',
+    },
+    {
+      id_tagihan: '3',
+      nama_skpd: 'Dinas Pekerjaan Umum',
+      nomor_spm: 'SPM/003/DPU/2024',
+      jenis_spm: 'Belanja Modal',
+      jenis_tagihan: 'Langsung (LS)',
+      uraian: 'Pembangunan jalan',
+      jumlah_kotor: 50000000,
+      status_tagihan: 'Dikembalikan',
+      waktu_input: '2024-01-20T14:00:00Z',
+    },
+  ];
+
   const handleGenerateReport = () => {
-    // Placeholder for report generation logic
-    toast.info('Fungsi generate laporan belum diimplementasikan.');
-    console.log('Generate Report clicked with:', { dateRange, reportType });
+    if (!reportType) {
+      toast.error('Pilih jenis laporan terlebih dahulu.');
+      return;
+    }
+
+    setGeneratedReportType(reportType);
+
+    switch (reportType) {
+      case 'sumber_dana':
+        setReportData(mockSumberDanaData);
+        break;
+      case 'jenis_tagihan':
+        setReportData(mockJenisTagihanData);
+        break;
+      case 'detail_skpd':
+        setReportData(mockDetailSkpdData);
+        break;
+      default:
+        setReportData([]);
+        break;
+    }
+    toast.success('Laporan berhasil dibuat dengan data statis!');
   };
 
   const handleDownloadReport = () => {
     // Placeholder for report download logic
     toast.info('Fungsi download laporan belum diimplementasikan.');
     console.log('Download Report clicked with:', { dateRange, reportType });
+  };
+
+  const formatCurrency = (amount: number) => {
+    return `Rp${amount.toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
   };
 
   if (loadingPage) {
@@ -96,33 +212,137 @@ const AdminLaporan = () => {
         </CardContent>
       </Card>
 
-      {/* Area Placeholder untuk Chart */}
+      {/* Area Visualisasi Laporan */}
       <Card className="shadow-sm rounded-lg">
         <CardHeader>
           <CardTitle className="text-xl font-semibold">Visualisasi Laporan</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="h-80 bg-gray-100 dark:bg-gray-700 flex items-center justify-center rounded-md border border-dashed border-gray-300 dark:border-gray-600 text-muted-foreground">
-            Area Chart / Grafik Akan Muncul Di Sini
-          </div>
+          {generatedReportType === 'sumber_dana' && reportData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={reportData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  outerRadius={100}
+                  fill="#8884d8"
+                  dataKey="value"
+                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                >
+                  {reportData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip formatter={(value: number) => formatCurrency(value)} />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          ) : generatedReportType === 'jenis_tagihan' && reportData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={reportData}>
+                <XAxis dataKey="name" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
+                <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} formatter={(value: number) => formatCurrency(value)} />
+                <Tooltip cursor={{ fill: 'transparent' }} formatter={(value: number) => formatCurrency(value)} />
+                <Legend />
+                <Bar dataKey="value" fill="#8884d8" radius={[4, 4, 0, 0]} name="Total Nilai" />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-80 bg-gray-100 dark:bg-gray-700 flex items-center justify-center rounded-md border border-dashed border-gray-300 dark:border-gray-600 text-muted-foreground">
+              Area Chart / Grafik Akan Muncul Di Sini
+            </div>
+          )}
         </CardContent>
       </Card>
 
-      {/* Area Placeholder untuk Tabel Rangkuman */}
+      {/* Area Tabel Rangkuman */}
       <Card className="shadow-sm rounded-lg">
         <CardHeader>
           <CardTitle className="text-xl font-semibold">Tabel Rangkuman</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="h-60 bg-gray-100 dark:bg-gray-700 flex items-center justify-center rounded-md border border-dashed border-gray-300 dark:border-gray-600 text-muted-foreground">
-            Tabel Rangkuman Akan Muncul Di Sini
-          </div>
+          {generatedReportType === 'sumber_dana' && reportData.length > 0 ? (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Sumber Dana</TableHead>
+                    <TableHead className="text-right">Total Nilai</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {reportData.map((item: ChartDataItem, index) => (
+                    <TableRow key={index}>
+                      <TableCell>{item.name}</TableCell>
+                      <TableCell className="text-right">{formatCurrency(item.value)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          ) : generatedReportType === 'jenis_tagihan' && reportData.length > 0 ? (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Jenis Tagihan</TableHead>
+                    <TableHead className="text-right">Total Nilai</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {reportData.map((item: ChartDataItem, index) => (
+                    <TableRow key={index}>
+                      <TableCell>{item.name}</TableCell>
+                      <TableCell className="text-right">{formatCurrency(item.value)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          ) : generatedReportType === 'detail_skpd' && reportData.length > 0 ? (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Nama SKPD</TableHead>
+                    <TableHead>Nomor SPM</TableHead>
+                    <TableHead>Jenis SPM</TableHead>
+                    <TableHead>Jenis Tagihan</TableHead>
+                    <TableHead>Uraian</TableHead>
+                    <TableHead className="text-right">Jumlah Kotor</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Waktu Input</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {reportData.map((item: TagihanDetail, index) => (
+                    <TableRow key={item.id_tagihan}>
+                      <TableCell>{item.nama_skpd}</TableCell>
+                      <TableCell>{item.nomor_spm}</TableCell>
+                      <TableCell>{item.jenis_spm}</TableCell>
+                      <TableCell>{item.jenis_tagihan}</TableCell>
+                      <TableCell>{item.uraian}</TableCell>
+                      <TableCell className="text-right">{formatCurrency(item.jumlah_kotor)}</TableCell>
+                      <TableCell>{item.status_tagihan}</TableCell>
+                      <TableCell>{new Date(item.waktu_input).toLocaleDateString('id-ID')}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          ) : (
+            <div className="h-60 bg-gray-100 dark:bg-gray-700 flex items-center justify-center rounded-md border border-dashed border-gray-300 dark:border-gray-600 text-muted-foreground">
+              Tabel Rangkuman Akan Muncul Di Sini
+            </div>
+          )}
         </CardContent>
       </Card>
 
       {/* Tombol Download Laporan */}
       <div className="flex justify-end">
-        <Button onClick={handleDownloadReport} variant="outline" className="flex items-center gap-2">
+        <Button onClick={handleDownloadReport} variant="outline" className="flex items-center gap-2" disabled={!generatedReportType}>
           <FileDownIcon className="h-4 w-4" /> Download Laporan (CSV)
         </Button>
       </div>
