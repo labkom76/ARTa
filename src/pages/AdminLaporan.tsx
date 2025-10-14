@@ -273,13 +273,26 @@ const AdminLaporan = () => {
             </ResponsiveContainer>
           ) : generatedReportType === 'jenis_tagihan' && reportData.length > 0 ? (
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={reportData}>
-                <XAxis dataKey="name" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
-                <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} formatter={(value: number) => formatCurrency(value)} />
-                <Tooltip cursor={{ fill: 'transparent' }} formatter={(value: number) => formatCurrency(value)} />
+              <PieChart>
+                <Pie
+                  data={reportData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  outerRadius={80}
+                  innerRadius={60} // Kunci untuk Donut Chart
+                  fill="#8884d8"
+                  dataKey="value"
+                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  paddingAngle={5}
+                >
+                  {reportData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip formatter={(value: number) => formatCurrency(value)} />
                 <Legend />
-                <Bar dataKey="value" fill="#8884d8" radius={[4, 4, 0, 0]} name="Total Nilai" />
-              </BarChart>
+              </PieChart>
             </ResponsiveContainer>
           ) : (
             <div className="h-80 bg-gray-100 dark:bg-gray-700 flex items-center justify-center rounded-md border border-dashed border-gray-300 dark:border-gray-600 text-muted-foreground">
