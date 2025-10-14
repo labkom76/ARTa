@@ -29,6 +29,7 @@ import AdminKodeSKPD from "./pages/AdminKodeSKPD";
 import AdminJadwalPenganggaran from "./pages/AdminJadwalPenganggaran";
 import AdminKodeWilayah from "./pages/AdminKodeWilayah";
 import VerifikasiDokumen from "./pages/VerifikasiDokumen"; // Import the new VerifikasiDokumen page
+import AdminLaporan from "./pages/AdminLaporan"; // Import the new AdminLaporan page
 import { SessionContextProvider } from "./contexts/SessionContext";
 
 const queryClient = new QueryClient();
@@ -66,6 +67,7 @@ const App = () => (
                 <Route path="/admin/kode-skpd" element={<AdminKodeSKPD />} />
                 <Route path="/admin/jadwal-penganggaran" element={<AdminJadwalPenganggaran />} />
                 <Route path="/admin/kode-wilayah" element={<AdminKodeWilayah />} />
+                <Route path="/admin/laporan" element={<AdminLaporan />} /> {/* New AdminLaporan route */}
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               </Route>
               <Route path="*" element={<NotFound />} />
