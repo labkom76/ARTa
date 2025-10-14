@@ -35,6 +35,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { supabase } from '@/integrations/supabase/client'; // Import supabase client
+import Papa from 'papaparse'; // Import Papa Parse
 
 // Data Interfaces
 interface ChartDataItem {
@@ -109,10 +110,49 @@ const AdminLaporan = () => {
     }
   };
 
-  const handleDownloadReport = () => {
-    // Placeholder for report download logic
-    toast.info('Fungsi download laporan belum diimplementasikan.');
-    console.log('Download Report clicked with:', { dateRange, reportType });
+  const handleDownloadCSV = () => {
+    if (!reportData || reportData.length === 0) {
+      toast.error('Tidak ada data untuk diunduh.');
+      return;
+    }
+
+    let csvData: any[] = [];
+    let fileName = 'laporan_data.csv';
+
+    // Customize CSV headers and data based on report type
+    if (generatedReportType === 'sumber_dana' || generatedReportType === 'jenis_tagihan') {
+      csvData = reportData.map((item: ChartDataItem) => ({
+        [generatedReportType === 'sumber_dana' ? 'Sumber Dana' : 'Jenis Tagihan']: item.name,
+        'Total Nilai': item.value,
+      }));
+      fileName = `laporan_per_${generatedReportType}.csv`;
+    } else if (generatedReportType === 'detail_skpd') {
+      csvData = reportData.map((item: TagihanDetail) => ({
+        'ID Tagihan': item.id_tagihan,
+        'Nama SKPD': item.nama_skpd,
+        'Nomor SPM': item.nomor_spm,
+        'Jenis SPM': item.jenis_spm,
+        'Jenis Tagihan': item.jenis_tagihan,
+        'Uraian': item.uraian,
+        'Jumlah Kotor': item.jumlah_kotor,
+        'Status Tagihan': item.status_tagihan,
+        'Waktu Input': new Date(item.waktu_input).toLocaleString('id-ID'),
+      }));
+      fileName = 'laporan_detail_skpd.csv';
+    } else {
+      toast.error('Jenis laporan tidak dikenal untuk diunduh.');
+      return;
+    }
+
+    const csv = Papa.unparse(csvData);
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.setAttribute('download', fileName);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success('Laporan berhasil diunduh!');
   };
 
   const formatCurrency = (amount: number) => {
@@ -314,7 +354,7 @@ const AdminLaporan = () => {
 
       {/* Tombol Download Laporan */}
       <div className="flex justify-end">
-        <Button onClick={handleDownloadReport} variant="outline" className="flex items-center gap-2" disabled={!generatedReportType || loadingReport}>
+        <Button onClick={handleDownloadCSV} variant="outline" className="flex items-center gap-2" disabled={!generatedReportType || loadingReport}>
           <FileDownIcon className="h-4 w-4" /> Download Laporan (CSV)
         </Button>
       </div>
