@@ -12,7 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const { reportType, startDate, endDate, status } = await req.json(); // Receive new 'status' parameter
+    const { reportType, startDate, endDate, status, groupBy, skpd } = await req.json(); // Receive new 'groupBy' and 'skpd' parameters
 
     if (!reportType) {
       return new Response(JSON.stringify({ error: 'reportType is required.' }), {
@@ -27,68 +27,73 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    let query;
-    let data;
-    let error;
+    let resultData: any; // This will hold the final data to be returned
 
     switch (reportType) {
       case 'sumber_dana':
-        query = supabaseAdmin
-          .from('database_tagihan')
-          .select('sumber_dana, jumlah_kotor');
-
-        if (startDate) query = query.gte('waktu_input', startDate);
-        if (endDate) query = query.lte('waktu_input', endDate);
-        if (status && status !== 'Semua') query = query.eq('status_tagihan', status); // Apply status filter
-
-        ({ data, error } = await query);
-
-        if (error) throw error;
-
-        const sumberDanaMap = new Map<string, number>();
-        data.forEach((item: any) => {
-          const sd = item.sumber_dana || 'Tidak Diketahui';
-          sumberDanaMap.set(sd, (sumberDanaMap.get(sd) || 0) + (item.jumlah_kotor || 0));
-        });
-
-        data = Array.from(sumberDanaMap.entries()).map(([name, value]) => ({ name, value }));
-        break;
-
       case 'jenis_tagihan':
-        query = supabaseAdmin
+        let aggregateQuery = supabaseAdmin
           .from('database_tagihan')
-          .select('jenis_tagihan, jumlah_kotor');
+          .select(`${reportType}, jumlah_kotor`);
 
-        if (startDate) query = query.gte('waktu_input', startDate);
-        if (endDate) query = query.lte('waktu_input', endDate);
-        if (status && status !== 'Semua') query = query.eq('status_tagihan', status); // Apply status filter
+        if (startDate) aggregateQuery = aggregateQuery.gte('waktu_input', startDate);
+        if (endDate) aggregateQuery = aggregateQuery.lte('waktu_input', endDate);
+        if (status && status !== 'Semua') aggregateQuery = aggregateQuery.eq('status_tagihan', status);
 
-        ({ data, error } = await query);
+        const { data: aggregateData, error: aggregateError } = await aggregateQuery;
+        if (aggregateError) throw aggregateError;
 
-        if (error) throw error;
-
-        const jenisTagihanMap = new Map<string, number>();
-        data.forEach((item: any) => {
-          const jt = item.jenis_tagihan || 'Tidak Diketahui';
-          jenisTagihanMap.set(jt, (jenisTagihanMap.get(jt) || 0) + (item.jumlah_kotor || 0));
+        const aggregateMap = new Map<string, number>();
+        aggregateData.forEach((item: any) => {
+          const key = item[reportType] || 'Tidak Diketahui';
+          aggregateMap.set(key, (aggregateMap.get(key) || 0) + (item.jumlah_kotor || 0));
         });
 
-        data = Array.from(jenisTagihanMap.entries()).map(([name, value]) => ({ name, value }));
+        resultData = Array.from(aggregateMap.entries()).map(([name, value]) => ({ name, value }));
         break;
 
-      case 'detail_skpd':
-        query = supabaseAdmin
+      case 'analisis_skpd': // NEW CASE FOR ANALISIS SKPD
+        if (!groupBy) {
+          return new Response(JSON.stringify({ error: 'groupBy option is required for analisis_skpd report.' }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 400,
+          });
+        }
+
+        // Query for chart data (aggregated)
+        let chartQuery = supabaseAdmin
           .from('database_tagihan')
-          .select('id_tagihan, nama_skpd, nomor_spm, jenis_spm, jenis_tagihan, uraian, jumlah_kotor, status_tagihan, waktu_input');
+          .select(`${groupBy}, jumlah_kotor`);
 
-        if (startDate) query = query.gte('waktu_input', startDate);
-        if (endDate) query = query.lte('waktu_input', endDate);
-        // Status filter is NOT applied for 'detail_skpd' as per instructions
+        if (startDate) chartQuery = chartQuery.gte('waktu_input', startDate);
+        if (endDate) chartQuery = chartQuery.lte('waktu_input', endDate);
+        if (skpd && skpd !== 'Semua SKPD') chartQuery = chartQuery.eq('nama_skpd', skpd);
 
-        query = query.order('nama_skpd', { ascending: true });
+        const { data: chartRawData, error: chartError } = await chartQuery;
+        if (chartError) throw chartError;
 
-        ({ data, error } = await query);
-        if (error) throw error;
+        const chartMap = new Map<string, number>();
+        chartRawData.forEach((item: any) => {
+          const key = item[groupBy] || 'Tidak Diketahui';
+          chartMap.set(key, (chartMap.get(key) || 0) + (item.jumlah_kotor || 0));
+        });
+        const chartData = Array.from(chartMap.entries()).map(([name, value]) => ({ name, value }));
+
+        // Query for table data (detailed)
+        let tableQuery = supabaseAdmin
+          .from('database_tagihan')
+          .select('id_tagihan, nama_skpd, nomor_spm, jenis_spm, jenis_tagihan, uraian, jumlah_kotor, status_tagihan, waktu_input, sumber_dana'); // Include sumber_dana
+
+        if (startDate) tableQuery = tableQuery.gte('waktu_input', startDate);
+        if (endDate) tableQuery = tableQuery.lte('waktu_input', endDate);
+        if (skpd && skpd !== 'Semua SKPD') tableQuery = tableQuery.eq('nama_skpd', skpd);
+
+        tableQuery = tableQuery.order('waktu_input', { ascending: false });
+
+        const { data: tableData, error: tableError } = await tableQuery;
+        if (tableError) throw tableError;
+
+        resultData = { chartData, tableData };
         break;
 
       default:
@@ -98,7 +103,7 @@ serve(async (req) => {
         });
     }
 
-    return new Response(JSON.stringify(data), {
+    return new Response(JSON.stringify(resultData), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     });

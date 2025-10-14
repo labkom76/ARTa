@@ -53,6 +53,7 @@ interface TagihanDetail {
   jumlah_kotor: number;
   status_tagihan: string;
   waktu_input: string;
+  sumber_dana?: string; // Added for detail table
 }
 
 interface SkpdData {
@@ -74,7 +75,8 @@ const AdminLaporan = () => {
   const [skpdOptionsForAnalysis, setSkpdOptionsForAnalysis] = useState<string[]>([]); // New state for SKPD options
 
   const [generatedReportType, setGeneratedReportType] = useState<string | null>(null);
-  const [reportData, setReportData] = useState<any[]>([]);
+  const [chartData, setChartData] = useState<ChartDataItem[]>([]); // Separate state for chart data
+  const [tableData, setTableData] = useState<TagihanDetail[]>([]); // Separate state for table data
   const [loadingReport, setLoadingReport] = useState(false); // New loading state for report generation
 
   useEffect(() => {
@@ -129,34 +131,48 @@ const AdminLaporan = () => {
 
     setLoadingReport(true);
     setGeneratedReportType(null); // Clear previous report type
-    setReportData([]); // Clear previous data
+    setChartData([]); // Clear previous chart data
+    setTableData([]); // Clear previous table data
 
     try {
       const startDateISO = dateRange?.from ? dateRange.from.toISOString() : undefined;
       const endDateISO = dateRange?.to ? dateRange.to.toISOString() : undefined;
 
+      const payload: any = {
+        reportType,
+        startDate: startDateISO,
+        endDate: endDateISO,
+      };
+
+      if (reportType === 'sumber_dana' || reportType === 'jenis_tagihan') {
+        payload.status = selectedStatus !== 'Semua' ? selectedStatus : undefined;
+      } else if (reportType === 'analisis_skpd') {
+        payload.groupBy = groupByOption;
+        payload.skpd = selectedSkpdForAnalysis !== 'Semua SKPD' ? selectedSkpdForAnalysis : undefined;
+      }
+
       const { data, error } = await supabase.functions.invoke('generate-report', {
-        body: JSON.stringify({
-          reportType,
-          startDate: startDateISO,
-          endDate: endDateISO,
-          status: (reportType === 'sumber_dana' || reportType === 'jenis_tagihan') && selectedStatus !== 'Semua' ? selectedStatus : undefined,
-          // New parameters for analysis report (not yet used in Edge Function)
-          groupBy: reportType === 'analisis_skpd' ? groupByOption : undefined,
-          skpd: reportType === 'analisis_skpd' && selectedSkpdForAnalysis !== 'Semua SKPD' ? selectedSkpdForAnalysis : undefined,
-        }),
+        body: JSON.stringify(payload),
       });
 
       if (error) throw error;
       if (data && data.error) throw new Error(data.error);
 
-      setReportData(data || []);
+      if (reportType === 'analisis_skpd') {
+        setChartData(data.chartData || []);
+        setTableData(data.tableData || []);
+      } else {
+        setChartData(data || []); // For 'sumber_dana' and 'jenis_tagihan'
+        setTableData(data || []); // For 'detail_skpd' and also for aggregated reports if needed in table
+      }
+      
       setGeneratedReportType(reportType); // Set generated report type only on success
       toast.success('Laporan berhasil dibuat!');
     } catch (error: any) {
       console.error('Error generating report:', error.message);
       toast.error('Gagal membuat laporan: ' + error.message);
-      setReportData([]);
+      setChartData([]);
+      setTableData([]);
       setGeneratedReportType(null);
     } finally {
       setLoadingReport(false);
@@ -164,7 +180,7 @@ const AdminLaporan = () => {
   };
 
   const handleDownloadCSV = () => {
-    if (!reportData || reportData.length === 0) {
+    if (!tableData || tableData.length === 0) { // Use tableData for CSV
       toast.error('Tidak ada data untuk diunduh.');
       return;
     }
@@ -174,24 +190,25 @@ const AdminLaporan = () => {
 
     // Customize CSV headers and data based on report type
     if (generatedReportType === 'sumber_dana' || generatedReportType === 'jenis_tagihan') {
-      csvData = reportData.map((item: ChartDataItem) => ({
+      csvData = tableData.map((item: ChartDataItem) => ({
         [generatedReportType === 'sumber_dana' ? 'Sumber Dana' : 'Jenis Tagihan']: item.name,
         'Total Nilai': item.value,
       }));
       fileName = `laporan_per_${generatedReportType}.csv`;
-    } else if (generatedReportType === 'detail_skpd') { // This will be 'analisis_skpd' later
-      csvData = reportData.map((item: TagihanDetail) => ({
+    } else if (generatedReportType === 'detail_skpd' || generatedReportType === 'analisis_skpd') { // Use tableData for detail/analysis
+      csvData = tableData.map((item: TagihanDetail) => ({
         'ID Tagihan': item.id_tagihan,
         'Nama SKPD': item.nama_skpd,
         'Nomor SPM': item.nomor_spm,
         'Jenis SPM': item.jenis_spm,
         'Jenis Tagihan': item.jenis_tagihan,
+        'Sumber Dana': item.sumber_dana || '-',
         'Uraian': item.uraian,
         'Jumlah Kotor': item.jumlah_kotor,
         'Status Tagihan': item.status_tagihan,
         'Waktu Input': new Date(item.waktu_input).toLocaleString('id-ID'),
       }));
-      fileName = 'laporan_detail_skpd.csv';
+      fileName = `laporan_${generatedReportType}.csv`;
     } else {
       toast.error('Jenis laporan tidak dikenal untuk diunduh.');
       return;
@@ -325,11 +342,11 @@ const AdminLaporan = () => {
             <div className="h-80 bg-gray-100 dark:bg-gray-700 flex items-center justify-center rounded-md border border-dashed border-gray-300 dark:border-gray-600 text-muted-foreground">
               Memuat grafik...
             </div>
-          ) : generatedReportType === 'sumber_dana' && reportData.length > 0 ? (
+          ) : generatedReportType === 'sumber_dana' && chartData.length > 0 ? (
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
                 <Pie
-                  data={reportData}
+                  data={chartData}
                   cx="50%"
                   cy="50%"
                   labelLine={false}
@@ -338,7 +355,7 @@ const AdminLaporan = () => {
                   dataKey="value"
                   label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
                 >
-                  {reportData.map((entry, index) => (
+                  {chartData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
@@ -346,11 +363,11 @@ const AdminLaporan = () => {
                 <Legend />
               </PieChart>
             </ResponsiveContainer>
-          ) : generatedReportType === 'jenis_tagihan' && reportData.length > 0 ? (
+          ) : generatedReportType === 'jenis_tagihan' && chartData.length > 0 ? (
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
                 <Pie
-                  data={reportData}
+                  data={chartData}
                   cx="50%"
                   cy="50%"
                   labelLine={false}
@@ -361,13 +378,23 @@ const AdminLaporan = () => {
                   label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
                   paddingAngle={5}
                 >
-                  {reportData.map((entry, index) => (
+                  {chartData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
                 <Tooltip formatter={(value: number) => formatCurrency(value)} />
                 <Legend />
               </PieChart>
+            </ResponsiveContainer>
+          ) : generatedReportType === 'analisis_skpd' && chartData.length > 0 ? ( // NEW: Bar Chart for analisis_skpd
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={chartData}>
+                <XAxis dataKey="name" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
+                <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
+                <Tooltip cursor={{ fill: 'transparent' }} formatter={(value: number) => formatCurrency(value)} />
+                <Legend />
+                <Bar dataKey="value" fill="#8884d8" radius={[4, 4, 0, 0]} name="Total Nilai" />
+              </BarChart>
             </ResponsiveContainer>
           ) : (
             <div className="h-80 bg-gray-100 dark:bg-gray-700 flex items-center justify-center rounded-md border border-dashed border-gray-300 dark:border-gray-600 text-muted-foreground">
@@ -387,7 +414,7 @@ const AdminLaporan = () => {
             <div className="h-60 bg-gray-100 dark:bg-gray-700 flex items-center justify-center rounded-md border border-dashed border-gray-300 dark:border-gray-600 text-muted-foreground">
               Memuat tabel...
             </div>
-          ) : generatedReportType === 'sumber_dana' && reportData.length > 0 ? (
+          ) : generatedReportType === 'sumber_dana' && tableData.length > 0 ? (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
@@ -397,7 +424,7 @@ const AdminLaporan = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {reportData.map((item: ChartDataItem, index) => (
+                  {tableData.map((item: ChartDataItem, index) => (
                     <TableRow key={index}>
                       <TableCell>{item.name}</TableCell>
                       <TableCell className="text-right">{formatCurrency(item.value)}</TableCell>
@@ -406,7 +433,7 @@ const AdminLaporan = () => {
                 </TableBody>
               </Table>
             </div>
-          ) : generatedReportType === 'jenis_tagihan' && reportData.length > 0 ? (
+          ) : generatedReportType === 'jenis_tagihan' && tableData.length > 0 ? (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
@@ -416,7 +443,7 @@ const AdminLaporan = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {reportData.map((item: ChartDataItem, index) => (
+                  {tableData.map((item: ChartDataItem, index) => (
                     <TableRow key={index}>
                       <TableCell>{item.name}</TableCell>
                       <TableCell className="text-right">{formatCurrency(item.value)}</TableCell>
@@ -425,7 +452,7 @@ const AdminLaporan = () => {
                 </TableBody>
               </Table>
             </div>
-          ) : generatedReportType === 'detail_skpd' && reportData.length > 0 ? (
+          ) : generatedReportType === 'analisis_skpd' && tableData.length > 0 ? ( // NEW: Detail Table for analisis_skpd
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
@@ -434,6 +461,7 @@ const AdminLaporan = () => {
                     <TableHead>Nomor SPM</TableHead>
                     <TableHead>Jenis SPM</TableHead>
                     <TableHead>Jenis Tagihan</TableHead>
+                    <TableHead>Sumber Dana</TableHead>
                     <TableHead>Uraian</TableHead>
                     <TableHead className="text-right">Jumlah Kotor</TableHead>
                     <TableHead>Status</TableHead>
@@ -441,12 +469,13 @@ const AdminLaporan = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {reportData.map((item: TagihanDetail, index) => (
+                  {tableData.map((item: TagihanDetail) => (
                     <TableRow key={item.id_tagihan}>
                       <TableCell>{item.nama_skpd}</TableCell>
                       <TableCell>{item.nomor_spm}</TableCell>
                       <TableCell>{item.jenis_spm}</TableCell>
                       <TableCell>{item.jenis_tagihan}</TableCell>
+                      <TableCell>{item.sumber_dana || '-'}</TableCell>
                       <TableCell>{item.uraian}</TableCell>
                       <TableCell className="text-right">{formatCurrency(item.jumlah_kotor)}</TableCell>
                       <TableCell>{item.status_tagihan}</TableCell>
