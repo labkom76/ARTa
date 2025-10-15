@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { ChromeIcon } from 'lucide-react';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { cn } from '@/lib/utils'; // Import cn utility for class merging
+import ReactMarkdown from 'react-markdown'; // Import ReactMarkdown
 
 const Login = () => {
   const [loginSettings, setLoginSettings] = useState({
@@ -270,8 +271,12 @@ const Login = () => {
 
       <div className={formContainerClasses}>
         {/* Subtitles (inside form) */}
-        <p className="text-lg text-gray-600 dark:text-gray-400 mb-1 text-center">{appSubtitle1}</p>
-        <p className="text-md text-gray-600 dark:text-gray-400 mb-6 text-center">{appSubtitle2}</p>
+        <div className="text-lg text-gray-600 dark:text-gray-400 mb-1 text-center">
+          <ReactMarkdown>{appSubtitle1}</ReactMarkdown>
+        </div>
+        <div className="text-md text-gray-600 dark:text-gray-400 mb-6 text-center">
+          <ReactMarkdown>{appSubtitle2}</ReactMarkdown>
+        </div>
 
         {loginSettings.login_show_email_password === 'true' && (
           <Auth
