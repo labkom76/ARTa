@@ -9,6 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
+import { Textarea } from '@/components/ui/textarea'; // Import Textarea
 
 // Utility function to sanitize file names
 const sanitizeFileName = (name: string): string => {
@@ -301,24 +302,28 @@ const AdminCustomLogin = () => {
               {/* New: Subtitle Baris 1 */}
               <div className="grid gap-2">
                 <Label htmlFor="app-subtitle-1">Subtitle Baris 1</Label>
-                <Input
+                <Textarea // Changed to Textarea
                   id="app-subtitle-1"
                   value={appSubtitle1}
                   onChange={(e) => setAppSubtitle1(e.target.value)}
                   onBlur={() => updateSetting('app_subtitle_1', appSubtitle1)}
                   placeholder="Masukkan subtitle baris 1"
+                  rows={2} // Added rows prop
                 />
+                <p className="text-xs text-muted-foreground">Gunakan `**teks**` untuk menebalkan huruf.</p> {/* Helper text */}
               </div>
               {/* New: Subtitle Baris 2 */}
               <div className="grid gap-2">
                 <Label htmlFor="app-subtitle-2">Subtitle Baris 2</Label>
-                <Input
+                <Textarea // Changed to Textarea
                   id="app-subtitle-2"
                   value={appSubtitle2}
                   onChange={(e) => setAppSubtitle2(e.target.value)}
                   onBlur={() => updateSetting('app_subtitle_2', appSubtitle2)}
                   placeholder="Masukkan subtitle baris 2"
+                  rows={2} // Added rows prop
                 />
+                <p className="text-xs text-muted-foreground">Gunakan `**teks**` untuk menebalkan huruf.</p> {/* Helper text */}
               </div>
               <div className="grid gap-2">
                 <Label>Logo Aplikasi</Label>
