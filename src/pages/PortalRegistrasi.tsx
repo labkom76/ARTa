@@ -182,7 +182,7 @@ const PortalRegistrasi = () => {
       let query = supabase
         .from('database_tagihan')
         .select('*', { count: 'exact' })
-        .eq('status_tagihan', 'Menunggu Verifikasi')
+        .eq('nama_registrator', profile?.nama_lengkap) // Filter by the current logged-in staff's name
         .gte('waktu_registrasi', twentyFourHoursAgo);
 
       query = query.order('waktu_registrasi', { ascending: false });
@@ -413,12 +413,30 @@ const PortalRegistrasi = () => {
         ) : (
           <>
             <div className="overflow-x-auto">
-              <Table><TableHeader><TableRow>
-                    <TableHead className="w-[50px]">No.</TableHead><TableHead>Waktu Input</TableHead><TableHead>Nama SKPD</TableHead><TableHead>Nomor SPM</TableHead><TableHead>Jenis SPM</TableHead><TableHead>Uraian</TableHead><TableHead>Jumlah Kotor</TableHead><TableHead className="text-center">Aksi</TableHead>
-                  </TableRow></TableHeader><TableBody>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[50px]">No.</TableHead>
+                    <TableHead>Waktu Input</TableHead>
+                    <TableHead>Nama SKPD</TableHead>
+                    <TableHead>Nomor SPM</TableHead>
+                    <TableHead>Jenis SPM</TableHead>
+                    <TableHead>Uraian</TableHead>
+                    <TableHead>Jumlah Kotor</TableHead>
+                    <TableHead className="text-center">Aksi</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {queueTagihanList.map((tagihan, index) => (
                     <TableRow key={tagihan.id_tagihan}>
-                      <TableCell>{(queueCurrentPage - 1) * queueItemsPerPage + index + 1}</TableCell><TableCell>{format(parseISO(tagihan.waktu_input), 'dd MMMM yyyy HH:mm', { locale: localeId })}</TableCell><TableCell className="font-medium">{tagihan.nama_skpd}</TableCell><TableCell>{tagihan.nomor_spm}</TableCell><TableCell>{tagihan.jenis_spm}</TableCell><TableCell>{tagihan.uraian}</TableCell><TableCell>Rp{tagihan.jumlah_kotor.toLocaleString('id-ID')}</TableCell><TableCell className="text-center">
+                      <TableCell>{(queueCurrentPage - 1) * queueItemsPerPage + index + 1}</TableCell>
+                      <TableCell>{format(parseISO(tagihan.waktu_input), 'dd MMMM yyyy HH:mm', { locale: localeId })}</TableCell>
+                      <TableCell className="font-medium">{tagihan.nama_skpd}</TableCell>
+                      <TableCell>{tagihan.nomor_spm}</TableCell>
+                      <TableCell>{tagihan.jenis_spm}</TableCell>
+                      <TableCell>{tagihan.uraian}</TableCell>
+                      <TableCell>Rp{tagihan.jumlah_kotor.toLocaleString('id-ID')}</TableCell>
+                      <TableCell className="text-center">
                         <Button
                           variant="ghost"
                           size="icon"
@@ -431,7 +449,8 @@ const PortalRegistrasi = () => {
                       </TableCell>
                     </TableRow>
                   ))}
-                </TableBody></Table>
+                </TableBody>
+              </Table>
             </div>
             <Pagination className="mt-4">
               <PaginationContent>
@@ -497,12 +516,28 @@ const PortalRegistrasi = () => {
         ) : (
           <>
             <div className="overflow-x-auto">
-              <Table><TableHeader><TableRow>
-                    <TableHead className="w-[50px]">No.</TableHead><TableHead>Waktu Registrasi</TableHead><TableHead>Nomor Registrasi</TableHead><TableHead>Nomor SPM</TableHead><TableHead>Nama SKPD</TableHead><TableHead>Jumlah Kotor</TableHead><TableHead className="text-center">Aksi</TableHead>
-                  </TableRow></TableHeader><TableBody>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[50px]">No.</TableHead>
+                    <TableHead>Waktu Registrasi</TableHead>
+                    <TableHead>Nomor Registrasi</TableHead>
+                    <TableHead>Nomor SPM</TableHead>
+                    <TableHead>Nama SKPD</TableHead>
+                    <TableHead>Jumlah Kotor</TableHead>
+                    <TableHead className="text-center">Aksi</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {historyTagihanList.map((tagihan, index) => (
                     <TableRow key={tagihan.id_tagihan}>
-                      <TableCell>{(historyCurrentPage - 1) * historyItemsPerPage + index + 1}</TableCell><TableCell>{format(parseISO(tagihan.waktu_registrasi!), 'dd MMMM yyyy HH:mm', { locale: localeId })}</TableCell><TableCell className="font-medium">{tagihan.nomor_registrasi}</TableCell><TableCell>{tagihan.nomor_spm}</TableCell><TableCell>{tagihan.nama_skpd}</TableCell><TableCell>Rp{tagihan.jumlah_kotor.toLocaleString('id-ID')}</TableCell><TableCell className="text-center">
+                      <TableCell>{(historyCurrentPage - 1) * historyItemsPerPage + index + 1}</TableCell>
+                      <TableCell>{format(parseISO(tagihan.waktu_registrasi!), 'dd MMMM yyyy HH:mm', { locale: localeId })}</TableCell>
+                      <TableCell className="font-medium">{tagihan.nomor_registrasi}</TableCell>
+                      <TableCell>{tagihan.nomor_spm}</TableCell>
+                      <TableCell>{tagihan.nama_skpd}</TableCell>
+                      <TableCell>Rp{tagihan.jumlah_kotor.toLocaleString('id-ID')}</TableCell>
+                      <TableCell className="text-center">
                         <Button
                           variant="outline"
                           size="icon"
@@ -514,7 +549,8 @@ const PortalRegistrasi = () => {
                       </TableCell>
                     </TableRow>
                   ))}
-                </TableBody></Table>
+                </TableBody>
+              </Table>
             </div>
             <Pagination className="mt-4">
               <PaginationContent>
