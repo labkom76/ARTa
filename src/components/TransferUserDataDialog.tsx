@@ -27,14 +27,16 @@ interface SkpdUser {
 interface TransferUserDataDialogProps {
   isOpen: boolean;
   onClose: () => void;
+  onTransferSuccess?: () => void; // Optional prop to trigger parent refresh
 }
 
-const TransferUserDataDialog: React.FC<TransferUserDataDialogProps> = ({ isOpen, onClose }) => {
+const TransferUserDataDialog: React.FC<TransferUserDataDialogProps> = ({ isOpen, onClose, onTransferSuccess }) => {
   const [skpdUsers, setSkpdUsers] = useState<SkpdUser[]>([]);
   const [selectedFromUser, setSelectedFromUser] = useState<string | null>(null);
   const [selectedToUser, setSelectedToUser] = useState<string | null>(null);
   const [loadingUsers, setLoadingUsers] = useState(false);
-  const [currentStep, setCurrentStep] = useState<'selection' | 'confirmation'>('selection'); // New state for steps
+  const [isTransferring, setIsTransferring] = useState(false); // New state for transfer loading
+  const [currentStep, setCurrentStep] = useState<'selection' | 'confirmation'>('selection');
 
   useEffect(() => {
     const fetchSkpdUsers = async () => {
@@ -79,6 +81,39 @@ const TransferUserDataDialog: React.FC<TransferUserDataDialogProps> = ({ isOpen,
 
   const getFromUserName = () => skpdUsers.find(user => user.id === selectedFromUser)?.nama_lengkap || 'Pengguna Sumber';
   const getToUserName = () => skpdUsers.find(user => user.id === selectedToUser)?.nama_lengkap || 'Pengguna Tujuan';
+
+  const handleConfirmTransfer = async () => {
+    if (!selectedFromUser || !selectedToUser) {
+      toast.error('Pengguna sumber atau tujuan tidak valid.');
+      return;
+    }
+
+    setIsTransferring(true);
+    try {
+      const { data, error: invokeError } = await supabase.functions.invoke('transfer-user-data', {
+        body: JSON.stringify({ sourceUserId: selectedFromUser, targetUserId: selectedToUser }),
+      });
+
+      if (invokeError) {
+        throw invokeError;
+      }
+
+      if (data && data.error) {
+        throw new Error(data.error);
+      }
+
+      toast.success('Data berhasil ditransfer!');
+      onClose(); // Close the modal on success
+      if (onTransferSuccess) {
+        onTransferSuccess(); // Trigger parent refresh if callback is provided
+      }
+    } catch (error: any) {
+      console.error('Error transferring data:', error.message);
+      toast.error('Gagal mentransfer data: ' + error.message);
+    } finally {
+      setIsTransferring(false);
+    }
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -160,8 +195,10 @@ const TransferUserDataDialog: React.FC<TransferUserDataDialogProps> = ({ isOpen,
             </>
           ) : (
             <>
-              <Button variant="outline" onClick={() => setCurrentStep('selection')}>Batal</Button>
-              <Button disabled>Konfirmasi Transfer</Button> {/* Disabled for now */}
+              <Button variant="outline" onClick={() => setCurrentStep('selection')} disabled={isTransferring}>Batal</Button>
+              <Button onClick={handleConfirmTransfer} disabled={isTransferring}>
+                {isTransferring ? 'Mentransfer...' : 'Konfirmasi Transfer'}
+              </Button>
             </>
           )}
         </DialogFooter>

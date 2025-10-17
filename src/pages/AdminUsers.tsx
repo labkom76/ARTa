@@ -398,6 +398,7 @@ const AdminUsers = () => {
       <TransferUserDataDialog
         isOpen={isTransferModalOpen}
         onClose={() => setIsTransferModalOpen(false)}
+        onTransferSuccess={fetchUsers} // Pass fetchUsers to refresh the list
       />
     </div>
   );
