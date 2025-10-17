@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { Loader2 } from 'lucide-react'; // Import Loader2 icon
 
 interface SkpdUser {
   id: string;
@@ -35,7 +36,7 @@ const TransferUserDataDialog: React.FC<TransferUserDataDialogProps> = ({ isOpen,
   const [selectedFromUser, setSelectedFromUser] = useState<string | null>(null);
   const [selectedToUser, setSelectedToUser] = useState<string | null>(null);
   const [loadingUsers, setLoadingUsers] = useState(false);
-  const [isTransferring, setIsTransferring] = useState(false); // New state for transfer loading
+  const [isTransferring, setIsTransferring] = useState(false); // State for transfer loading
   const [currentStep, setCurrentStep] = useState<'selection' | 'confirmation'>('selection');
 
   useEffect(() => {
@@ -88,7 +89,7 @@ const TransferUserDataDialog: React.FC<TransferUserDataDialogProps> = ({ isOpen,
       return;
     }
 
-    setIsTransferring(true);
+    setIsTransferring(true); // Set loading state to true
     try {
       const { data, error: invokeError } = await supabase.functions.invoke('transfer-user-data', {
         body: JSON.stringify({ sourceUserId: selectedFromUser, targetUserId: selectedToUser }),
@@ -111,7 +112,7 @@ const TransferUserDataDialog: React.FC<TransferUserDataDialogProps> = ({ isOpen,
       console.error('Error transferring data:', error.message);
       toast.error('Gagal mentransfer data: ' + error.message);
     } finally {
-      setIsTransferring(false);
+      setIsTransferring(false); // Reset loading state to false
     }
   };
 
@@ -197,6 +198,7 @@ const TransferUserDataDialog: React.FC<TransferUserDataDialogProps> = ({ isOpen,
             <>
               <Button variant="outline" onClick={() => setCurrentStep('selection')} disabled={isTransferring}>Batal</Button>
               <Button onClick={handleConfirmTransfer} disabled={isTransferring}>
+                {isTransferring && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {isTransferring ? 'Mentransfer...' : 'Konfirmasi Transfer'}
               </Button>
             </>
