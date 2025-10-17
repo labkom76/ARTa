@@ -10,7 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { PlusCircleIcon, EditIcon, Trash2Icon, SearchIcon, KeyRoundIcon } from 'lucide-react'; // Import KeyRoundIcon
+import { PlusCircleIcon, EditIcon, Trash2Icon, SearchIcon, KeyRoundIcon, ArrowRightLeftIcon } from 'lucide-react'; // Import KeyRoundIcon and ArrowRightLeftIcon
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
 import AddUserDialog from '@/components/AddUserDialog';
@@ -39,6 +39,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"; // Import Tooltip components
+import TransferUserDataDialog from '@/components/TransferUserDataDialog'; // Import the new dialog
 
 interface UserProfile {
   id: string;
@@ -65,6 +66,9 @@ const AdminUsers = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [totalItems, setTotalItems] = useState(0);
+
+  // State for Transfer Data Modal
+  const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
 
   useEffect(() => {
     if (!sessionLoading) {
@@ -219,9 +223,14 @@ const AdminUsers = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold text-gray-800 dark:text-white">Manajemen Pengguna</h1>
-        <Button onClick={() => { setEditingUser(null); setIsAddUserModalOpen(true); }} className="flex items-center gap-2">
-          <PlusCircleIcon className="h-4 w-4" /> Tambah Pengguna Baru
-        </Button>
+        <div className="flex space-x-2"> {/* Container for multiple buttons */}
+          <Button onClick={() => setIsTransferModalOpen(true)} className="flex items-center gap-2" variant="outline">
+            <ArrowRightLeftIcon className="h-4 w-4" /> Transfer Data Pengguna
+          </Button>
+          <Button onClick={() => { setEditingUser(null); setIsAddUserModalOpen(true); }} className="flex items-center gap-2">
+            <PlusCircleIcon className="h-4 w-4" /> Tambah Pengguna Baru
+          </Button>
+        </div>
       </div>
 
       <Card className="shadow-sm rounded-lg">
@@ -384,6 +393,11 @@ const AdminUsers = () => {
         onConfirm={confirmDelete}
         title="Konfirmasi Penghapusan"
         message={`Apakah Anda yakin ingin menghapus pengguna ${userToDelete?.namaLengkap || ''}? Tindakan ini tidak dapat diurungkan.`}
+      />
+
+      <TransferUserDataDialog
+        isOpen={isTransferModalOpen}
+        onClose={() => setIsTransferModalOpen(false)}
       />
     </div>
   );
