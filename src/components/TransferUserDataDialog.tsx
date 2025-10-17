@@ -34,6 +34,7 @@ const TransferUserDataDialog: React.FC<TransferUserDataDialogProps> = ({ isOpen,
   const [selectedFromUser, setSelectedFromUser] = useState<string | null>(null);
   const [selectedToUser, setSelectedToUser] = useState<string | null>(null);
   const [loadingUsers, setLoadingUsers] = useState(false);
+  const [currentStep, setCurrentStep] = useState<'selection' | 'confirmation'>('selection'); // New state for steps
 
   useEffect(() => {
     const fetchSkpdUsers = async () => {
@@ -61,13 +62,23 @@ const TransferUserDataDialog: React.FC<TransferUserDataDialogProps> = ({ isOpen,
 
     if (isOpen) {
       fetchSkpdUsers();
-      // Reset selections when dialog opens
+      // Reset selections and step when dialog opens
       setSelectedFromUser(null);
       setSelectedToUser(null);
+      setCurrentStep('selection');
     }
   }, [isOpen]);
 
   const isContinueButtonDisabled = !selectedFromUser || !selectedToUser || selectedFromUser === selectedToUser;
+
+  const handleContinue = () => {
+    if (!isContinueButtonDisabled) {
+      setCurrentStep('confirmation');
+    }
+  };
+
+  const getFromUserName = () => skpdUsers.find(user => user.id === selectedFromUser)?.nama_lengkap || 'Pengguna Sumber';
+  const getToUserName = () => skpdUsers.find(user => user.id === selectedToUser)?.nama_lengkap || 'Pengguna Tujuan';
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -75,60 +86,84 @@ const TransferUserDataDialog: React.FC<TransferUserDataDialogProps> = ({ isOpen,
         <DialogHeader>
           <DialogTitle>Transfer Data Antar Pengguna</DialogTitle>
           <DialogDescription>
-            Pilih pengguna sumber dan pengguna tujuan untuk mentransfer data.
+            {currentStep === 'selection'
+              ? 'Pilih pengguna sumber dan pengguna tujuan untuk mentransfer data.'
+              : 'Periksa detail transfer di bawah ini.'}
           </DialogDescription>
         </DialogHeader>
-        <div className="grid gap-4 py-4">
-          <div className="grid gap-2">
-            <Label htmlFor="from-user">Dari Pengguna (Sumber)</Label>
-            <Select
-              onValueChange={(value) => setSelectedFromUser(value)}
-              value={selectedFromUser || ''}
-              disabled={loadingUsers}
-            >
-              <SelectTrigger id="from-user">
-                <SelectValue placeholder="Pilih pengguna sumber" />
-              </SelectTrigger>
-              <SelectContent>
-                {skpdUsers.map((user) => (
-                  <SelectItem
-                    key={user.id}
-                    value={user.id}
-                    disabled={user.id === selectedToUser} // Disable if already selected as 'To' user
-                  >
-                    {user.nama_lengkap}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+
+        {currentStep === 'selection' ? (
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="from-user">Dari Pengguna (Sumber)</Label>
+              <Select
+                onValueChange={(value) => setSelectedFromUser(value)}
+                value={selectedFromUser || ''}
+                disabled={loadingUsers}
+              >
+                <SelectTrigger id="from-user">
+                  <SelectValue placeholder="Pilih pengguna sumber" />
+                </SelectTrigger>
+                <SelectContent>
+                  {skpdUsers.map((user) => (
+                    <SelectItem
+                      key={user.id}
+                      value={user.id}
+                      disabled={user.id === selectedToUser}
+                    >
+                      {user.nama_lengkap}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="to-user">Kepada Pengguna (Tujuan)</Label>
+              <Select
+                onValueChange={(value) => setSelectedToUser(value)}
+                value={selectedToUser || ''}
+                disabled={loadingUsers}
+              >
+                <SelectTrigger id="to-user">
+                  <SelectValue placeholder="Pilih pengguna tujuan" />
+                </SelectTrigger>
+                <SelectContent>
+                  {skpdUsers.map((user) => (
+                    <SelectItem
+                      key={user.id}
+                      value={user.id}
+                      disabled={user.id === selectedFromUser}
+                    >
+                      {user.nama_lengkap}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
-          <div className="grid gap-2">
-            <Label htmlFor="to-user">Kepada Pengguna (Tujuan)</Label>
-            <Select
-              onValueChange={(value) => setSelectedToUser(value)}
-              value={selectedToUser || ''}
-              disabled={loadingUsers}
-            >
-              <SelectTrigger id="to-user">
-                <SelectValue placeholder="Pilih pengguna tujuan" />
-              </SelectTrigger>
-              <SelectContent>
-                {skpdUsers.map((user) => (
-                  <SelectItem
-                    key={user.id}
-                    value={user.id}
-                    disabled={user.id === selectedFromUser} // Disable if already selected as 'From' user
-                  >
-                    {user.nama_lengkap}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+        ) : (
+          <div className="grid gap-4 py-4">
+            <p className="text-sm text-gray-700 dark:text-gray-300">
+              Anda akan memindahkan semua data tagihan dari{' '}
+              <span className="font-semibold text-blue-600 dark:text-blue-400">{getFromUserName()}</span> ke{' '}
+              <span className="font-semibold text-blue-600 dark:text-blue-400">{getToUserName()}</span>.
+              Aksi ini tidak dapat dibatalkan. Apakah Anda yakin?
+            </p>
           </div>
-        </div>
+        )}
+
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>Batal</Button>
-          <Button disabled={isContinueButtonDisabled}>Lanjutkan</Button> {/* Disabled based on selection */}
+          {currentStep === 'selection' ? (
+            <>
+              <Button variant="outline" onClick={onClose}>Batal</Button>
+              <Button onClick={handleContinue} disabled={isContinueButtonDisabled}>Lanjutkan</Button>
+            </>
+          ) : (
+            <>
+              <Button variant="outline" onClick={() => setCurrentStep('selection')}>Batal</Button>
+              <Button disabled>Konfirmasi Transfer</Button> {/* Disabled for now */}
+            </>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
