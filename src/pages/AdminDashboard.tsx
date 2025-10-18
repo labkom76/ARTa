@@ -16,7 +16,7 @@ import {
 } from 'recharts';
 import {
   LayoutDashboardIcon,
-  UsersIcon,
+  UsersIcon, // Digunakan untuk pengguna baru
   FileTextIcon,
   CheckCircleIcon,
   HourglassIcon,
@@ -39,7 +39,7 @@ import { cn } from '@/lib/utils';
 
 interface KPIData {
   totalSKPD: number;
-  processedTagihanCount: number;
+  newUsersPendingActivation: number; // Mengganti processedTagihanCount
   totalAmountProcessed: number;
   queuedTagihan: number;
 }
@@ -57,7 +57,7 @@ const AdminDashboard = () => {
   const [loadingData, setLoadingData] = useState(true);
   const [chartView, setChartView] = useState<'donut' | 'bar'>('donut');
 
-  // State for filters
+  // State for filters (processedStatusFilter no longer needed for KPI, but kept for consistency if other parts use it)
   const [processedStatusFilter, setProcessedStatusFilter] = useState<'Diteruskan' | 'Dikembalikan'>('Diteruskan');
   const [totalAmountTimeFilter, setTotalAmountTimeFilter] = useState<'Hari Ini' | 'Minggu Ini' | 'Bulan Ini' | 'Tahun Ini'>('Bulan Ini');
   const [selectedTimeRangeForChart, setSelectedTimeRangeForChart] = useState<'Hari Ini' | 'Minggu Ini' | 'Bulan Ini' | 'Tahun Ini'>('Bulan Ini');
@@ -106,14 +106,13 @@ const AdminDashboard = () => {
         .eq('peran', 'SKPD');
       if (skpdError) throw skpdError;
 
-      // 2. Tagihan Diproses (Bulan Ini) - Filtered by processedStatusFilter
-      const { count: processedTagihanCount, error: processedCountError } = await supabase
-        .from('database_tagihan')
+      // 2. Pengguna Baru Menunggu Aktivasi (peran SKPD dan asal_skpd IS NULL)
+      const { count: newUsersCount, error: newUsersError } = await supabase
+        .from('profiles')
         .select('*', { count: 'exact', head: true })
-        .eq('status_tagihan', processedStatusFilter)
-        .gte('waktu_verifikasi', thisMonthStart)
-        .lte('waktu_verifikasi', thisMonthEnd);
-      if (processedCountError) throw processedCountError;
+        .eq('peran', 'SKPD')
+        .is('asal_skpd', null); // Filter for users with SKPD role but no assigned SKPD
+      if (newUsersError) throw newUsersError;
 
       // 3. Nilai Total Tagihan - Filtered by totalAmountTimeFilter (status always 'Diteruskan')
       let timeFilterStart: string;
@@ -161,7 +160,7 @@ const AdminDashboard = () => {
 
       setKpiData({
         totalSKPD: totalSKPDCount || 0,
-        processedTagihanCount: processedTagihanCount || 0,
+        newUsersPendingActivation: newUsersCount || 0, // Menggunakan data pengguna baru
         totalAmountProcessed: totalAmountProcessed,
         queuedTagihan: queuedTagihanCount || 0,
       });
@@ -169,7 +168,7 @@ const AdminDashboard = () => {
       console.error('Error fetching KPI data:', error.message);
       toast.error('Gagal memuat data KPI: ' + error.message);
     }
-  }, [profile, processedStatusFilter, totalAmountTimeFilter]);
+  }, [profile, totalAmountTimeFilter]); // processedStatusFilter removed from dependencies as it's no longer used here
 
   // Function to fetch chart data using Edge Function
   const fetchChartData = useCallback(async () => {
@@ -251,26 +250,15 @@ const AdminDashboard = () => {
           </CardContent>
         </Card>
 
-        {/* Tagihan Diproses (Bulan Ini) Card with filter */}
+        {/* Pengguna Baru Menunggu Aktivasi Card */}
         <Card className="shadow-sm rounded-lg flex flex-col h-full">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Tagihan Diproses (Bulan Ini)</CardTitle>
-            <div className="flex items-center gap-2">
-              <Select onValueChange={(value: 'Diteruskan' | 'Dikembalikan') => setProcessedStatusFilter(value)} value={processedStatusFilter}>
-                <SelectTrigger className="w-auto h-auto p-0 border-none shadow-none text-xs font-medium text-muted-foreground">
-                  <SelectValue placeholder="Filter Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Diteruskan">Diteruskan</SelectItem>
-                  <SelectItem value="Dikembalikan">Dikembalikan</SelectItem>
-                </SelectContent>
-              </Select>
-              <CheckCircleIcon className="h-4 w-4 text-green-500" />
-            </div>
+            <CardTitle className="text-sm font-medium">Pengguna Baru Menunggu Aktivasi</CardTitle>
+            <HourglassIcon className="h-4 w-4 text-yellow-500" /> {/* Menggunakan HourglassIcon */}
           </CardHeader>
           <CardContent className="flex-grow flex flex-col justify-end">
-            <div className="text-2xl font-bold">{kpiData?.processedTagihanCount}</div>
-            <p className="text-xs text-muted-foreground">Tagihan {processedStatusFilter.toLowerCase()} bulan ini</p>
+            <div className="text-2xl font-bold">{kpiData?.newUsersPendingActivation}</div>
+            <p className="text-xs text-muted-foreground">Jumlah pengguna baru yang menunggu penetapan SKPD</p>
           </CardContent>
         </Card>
 
