@@ -253,12 +253,12 @@ const AdminDashboard = () => {
         {/* Pengguna Baru Menunggu Aktivasi Card */}
         <Card className="shadow-sm rounded-lg flex flex-col h-full">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Pengguna Baru Menunggu Aktivasi</CardTitle>
-            <HourglassIcon className="h-4 w-4 text-yellow-500" /> {/* Menggunakan HourglassIcon */}
+            <CardTitle className="text-sm font-medium">Menunggu Aktivasi</CardTitle> {/* Changed Title */}
+            <HourglassIcon className="h-4 w-4 text-yellow-500" />
           </CardHeader>
           <CardContent className="flex-grow flex flex-col justify-end">
             <div className="text-2xl font-bold">{kpiData?.newUsersPendingActivation}</div>
-            <p className="text-xs text-muted-foreground">Jumlah pengguna baru yang menunggu penetapan SKPD</p>
+            <p className="text-xs text-muted-foreground">Perlu penetapan SKPD</p> {/* Changed Description */}
           </CardContent>
         </Card>
 
