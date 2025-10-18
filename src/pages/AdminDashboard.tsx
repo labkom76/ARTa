@@ -2,8 +2,28 @@ import React, { useEffect, useState } from 'react';
 import { useSession } from '@/contexts/SessionContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
-import { LayoutDashboardIcon, UsersIcon, FileTextIcon, CheckCircleIcon, HourglassIcon, DollarSignIcon } from 'lucide-react';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  PieChart, // Added
+  Pie,      // Added
+  Cell,     // Added
+  Legend,   // Added
+} from 'recharts';
+import {
+  LayoutDashboardIcon,
+  UsersIcon,
+  FileTextIcon,
+  CheckCircleIcon,
+  HourglassIcon,
+  DollarSignIcon,
+  PieChartIcon, // Added
+  BarChart3Icon, // Using this for bar chart toggle
+} from 'lucide-react';
 import { toast } from 'sonner';
 import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfYear, endOfYear, startOfDay, endOfDay } from 'date-fns';
 import {
@@ -13,6 +33,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Button } from '@/components/ui/button'; // Added
+import { useTheme } from 'next-themes'; // Added
+import { cn } from '@/lib/utils'; // Added for conditional classNames
 
 interface KPIData {
   totalSKPD: number;
@@ -24,7 +47,7 @@ interface KPIData {
 interface BarChartDataItem {
   name: string;
   value: number;
-  color: string;
+  color: string; // Keep color for direct assignment if needed, but will be overridden by theme-aware logic
 }
 
 const AdminDashboard = () => {
@@ -33,10 +56,33 @@ const AdminDashboard = () => {
   const [kpiData, setKpiData] = useState<KPIData | null>(null);
   const [barChartData, setBarChartData] = useState<BarChartDataItem[]>([]);
   const [loadingData, setLoadingData] = useState(true);
+  const [chartView, setChartView] = useState<'donut' | 'bar'>('donut'); // New state for chart view
 
   // State for filters
   const [processedStatusFilter, setProcessedStatusFilter] = useState<'Diteruskan' | 'Dikembalikan'>('Diteruskan');
   const [totalAmountTimeFilter, setTotalAmountTimeFilter] = useState<'Hari Ini' | 'Minggu Ini' | 'Bulan Ini' | 'Tahun Ini'>('Bulan Ini');
+
+  const { theme } = useTheme(); // Get current theme
+
+  // Define theme-aware color palettes
+  const statusColorMap = {
+    'Diteruskan': 0, // Green
+    'Menunggu Registrasi': 1, // Yellow
+    'Menunggu Verifikasi': 2, // Purple
+    'Dikembalikan': 3, // Red
+  };
+
+  const lightThemeChartColors = ['#4CAF50', '#FFC107', '#9C27B0', '#F44336']; // Green, Yellow, Purple, Red
+  const darkThemeChartColors = ['#66BB6A', '#FFEB3B', '#BA68C8', '#EF5350']; // Lighter shades for dark background
+
+  const currentChartColors = theme === 'dark' ? darkThemeChartColors : lightThemeChartColors;
+
+  // Text colors for chart elements
+  const axisAndLabelColor = theme === 'dark' ? '#A0A0A0' : '#888888'; // Lighter grey for dark, darker for light
+  const tooltipBgColor = theme === 'dark' ? '#333333' : '#FFFFFF';
+  const tooltipTextColor = theme === 'dark' ? '#FFFFFF' : '#000000';
+  const legendTextColor = theme === 'dark' ? '#E0E0E0' : '#333333';
+
 
   useEffect(() => {
     if (!sessionLoading) {
@@ -143,10 +189,10 @@ const AdminDashboard = () => {
       });
 
       const dynamicBarChartData: BarChartDataItem[] = [
-        { name: 'Menunggu Registrasi', value: statusCounts['Menunggu Registrasi'], color: '#FFC107' }, // Yellow
-        { name: 'Menunggu Verifikasi', value: statusCounts['Menunggu Verifikasi'], color: '#9C27B0' }, // Purple
-        { name: 'Diteruskan', value: statusCounts['Diteruskan'], color: '#4CAF50' }, // Green
-        { name: 'Dikembalikan', value: statusCounts['Dikembalikan'], color: '#F44336' }, // Red
+        { name: 'Menunggu Registrasi', value: statusCounts['Menunggu Registrasi'], color: currentChartColors[statusColorMap['Menunggu Registrasi']] },
+        { name: 'Menunggu Verifikasi', value: statusCounts['Menunggu Verifikasi'], color: currentChartColors[statusColorMap['Menunggu Verifikasi']] },
+        { name: 'Diteruskan', value: statusCounts['Diteruskan'], color: currentChartColors[statusColorMap['Diteruskan']] },
+        { name: 'Dikembalikan', value: statusCounts['Dikembalikan'], color: currentChartColors[statusColorMap['Dikembalikan']] },
       ];
       setBarChartData(dynamicBarChartData);
 
@@ -162,7 +208,7 @@ const AdminDashboard = () => {
     if (!sessionLoading && profile?.peran === 'Administrator') {
       fetchDashboardData();
     }
-  }, [sessionLoading, profile, processedStatusFilter, totalAmountTimeFilter]); // Add filters to dependencies
+  }, [sessionLoading, profile, processedStatusFilter, totalAmountTimeFilter, theme]); // Add theme to dependencies to re-fetch/re-render with new colors
 
   if (loadingPage || loadingData) {
     return (
@@ -266,20 +312,71 @@ const AdminDashboard = () => {
 
       {/* Grafik Batang (Bar Chart) */}
       <Card className="shadow-sm rounded-lg">
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="flex items-center gap-2 text-lg font-semibold">
             <LayoutDashboardIcon className="h-5 w-5 text-gray-600 dark:text-gray-300" />
             Status Alur Kerja Langsung
           </CardTitle>
+          <div className="flex items-center space-x-2">
+            <Button
+              variant={chartView === 'bar' ? 'secondary' : 'ghost'}
+              size="icon"
+              onClick={() => setChartView('bar')}
+              title="Tampilkan Bar Chart"
+            >
+              <BarChart3Icon className="h-4 w-4" />
+            </Button>
+            <Button
+              variant={chartView === 'donut' ? 'secondary' : 'ghost'}
+              size="icon"
+              onClick={() => setChartView('donut')}
+              title="Tampilkan Donut Chart"
+            >
+              <PieChartIcon className="h-4 w-4" />
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={barChartData}>
-              <XAxis dataKey="name" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
-              <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
-              <Tooltip cursor={{ fill: 'transparent' }} />
-              <Bar dataKey="value" fill={(entry) => entry.color} radius={[4, 4, 0, 0]} />
-            </BarChart>
+            {chartView === 'bar' ? (
+              <BarChart data={barChartData}>
+                <XAxis dataKey="name" stroke={axisAndLabelColor} fontSize={12} tickLine={false} axisLine={false} />
+                <YAxis stroke={axisAndLabelColor} fontSize={12} tickLine={false} axisLine={false} />
+                <Tooltip
+                  cursor={{ fill: 'transparent' }}
+                  contentStyle={{ backgroundColor: tooltipBgColor, borderColor: axisAndLabelColor }}
+                  itemStyle={{ color: tooltipTextColor }}
+                  labelStyle={{ color: tooltipTextColor }}
+                />
+                <Legend wrapperStyle={{ color: legendTextColor }} />
+                <Bar dataKey="value" fill={(entry) => entry.color} radius={[4, 4, 0, 0]} />
+              </BarChart>
+            ) : (
+              <PieChart>
+                <Pie
+                  data={barChartData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  outerRadius={80}
+                  innerRadius={60} // For donut effect
+                  dataKey="value"
+                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  paddingAngle={5}
+                >
+                  {barChartData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={currentChartColors[statusColorMap[entry.name as keyof typeof statusColorMap]]} />
+                  ))}
+                </Pie>
+                <Tooltip
+                  formatter={(value: number, name: string) => [`${value.toLocaleString('id-ID')}`, name]}
+                  contentStyle={{ backgroundColor: tooltipBgColor, borderColor: axisAndLabelColor }}
+                  itemStyle={{ color: tooltipTextColor }}
+                  labelStyle={{ color: tooltipTextColor }}
+                />
+                <Legend wrapperStyle={{ color: legendTextColor }} />
+              </PieChart>
+            )}
           </ResponsiveContainer>
         </CardContent>
       </Card>
