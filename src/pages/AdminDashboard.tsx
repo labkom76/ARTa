@@ -47,7 +47,7 @@ interface KPIData {
 interface BarChartDataItem {
   name: string;
   value: number;
-  color: string; // Keep color for direct assignment if needed, but will be overridden by theme-aware logic
+  // Removed 'color' property as it will be determined directly in the Bar component
 }
 
 const AdminDashboard = () => {
@@ -61,6 +61,7 @@ const AdminDashboard = () => {
   // State for filters
   const [processedStatusFilter, setProcessedStatusFilter] = useState<'Diteruskan' | 'Dikembalikan'>('Diteruskan');
   const [totalAmountTimeFilter, setTotalAmountTimeFilter] = useState<'Hari Ini' | 'Minggu Ini' | 'Bulan Ini' | 'Tahun Ini'>('Bulan Ini');
+  const [selectedTimeRangeForChart, setSelectedTimeRangeForChart] = useState<'Hari Ini' | 'Minggu Ini' | 'Bulan Ini' | 'Tahun Ini'>('Bulan Ini'); // New state for chart time range
 
   const { theme } = useTheme(); // Get current theme
 
@@ -72,8 +73,9 @@ const AdminDashboard = () => {
     'Dikembalikan': 3, // Red
   };
 
-  const lightThemeChartColors = ['#4CAF50', '#FFC107', '#9C27B0', '#F44336']; // Green, Yellow, Purple, Red
-  const darkThemeChartColors = ['#66BB6A', '#FFEB3B', '#BA68C8', '#EF5350']; // Lighter shades for dark background
+  // New, more distinct color palettes
+  const lightThemeChartColors = ['#22C55E', '#FACC15', '#A855F7', '#EF4444']; // Emerald, Yellow, Purple, Red
+  const darkThemeChartColors = ['#4ADE80', '#FDE047', '#C084FC', '#F87171']; // Lighter Emerald, Yellow, Purple, Red
 
   const currentChartColors = theme === 'dark' ? darkThemeChartColors : lightThemeChartColors;
 
@@ -189,10 +191,10 @@ const AdminDashboard = () => {
       });
 
       const dynamicBarChartData: BarChartDataItem[] = [
-        { name: 'Menunggu Registrasi', value: statusCounts['Menunggu Registrasi'], color: currentChartColors[statusColorMap['Menunggu Registrasi']] },
-        { name: 'Menunggu Verifikasi', value: statusCounts['Menunggu Verifikasi'], color: currentChartColors[statusColorMap['Menunggu Verifikasi']] },
-        { name: 'Diteruskan', value: statusCounts['Diteruskan'], color: currentChartColors[statusColorMap['Diteruskan']] },
-        { name: 'Dikembalikan', value: statusCounts['Dikembalikan'], color: currentChartColors[statusColorMap['Dikembalikan']] },
+        { name: 'Menunggu Registrasi', value: statusCounts['Menunggu Registrasi'] },
+        { name: 'Menunggu Verifikasi', value: statusCounts['Menunggu Verifikasi'] },
+        { name: 'Diteruskan', value: statusCounts['Diteruskan'] },
+        { name: 'Dikembalikan', value: statusCounts['Dikembalikan'] },
       ];
       setBarChartData(dynamicBarChartData);
 
@@ -318,6 +320,18 @@ const AdminDashboard = () => {
             Status Alur Kerja Langsung
           </CardTitle>
           <div className="flex items-center space-x-2">
+            {/* New Dropdown for Time Range */}
+            <Select onValueChange={(value: 'Hari Ini' | 'Minggu Ini' | 'Bulan Ini' | 'Tahun Ini') => setSelectedTimeRangeForChart(value)} value={selectedTimeRangeForChart}>
+              <SelectTrigger className="w-[120px] h-auto p-2 text-xs font-medium">
+                <SelectValue placeholder="Rentang Waktu" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Hari Ini">Hari Ini</SelectItem>
+                <SelectItem value="Minggu Ini">Minggu Ini</SelectItem>
+                <SelectItem value="Bulan Ini">Bulan Ini</SelectItem>
+                <SelectItem value="Tahun Ini">Tahun Ini</SelectItem>
+              </SelectContent>
+            </Select>
             <Button
               variant={chartView === 'bar' ? 'secondary' : 'ghost'}
               size="icon"
@@ -349,7 +363,11 @@ const AdminDashboard = () => {
                   labelStyle={{ color: tooltipTextColor }}
                 />
                 <Legend wrapperStyle={{ color: legendTextColor }} />
-                <Bar dataKey="value" fill={(entry) => entry.color} radius={[4, 4, 0, 0]} />
+                <Bar
+                  dataKey="value"
+                  fill={({ name }) => currentChartColors[statusColorMap[name as keyof typeof statusColorMap]]}
+                  radius={[4, 4, 0, 0]}
+                />
               </BarChart>
             ) : (
               <PieChart>
