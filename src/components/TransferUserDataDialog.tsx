@@ -10,7 +10,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import {
-  Select,
+  Select, // Keep Select import if it's used elsewhere in the project, but it won't be used in this component anymore
   SelectContent,
   SelectItem,
   SelectTrigger,
@@ -18,7 +18,8 @@ import {
 } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Loader2 } from 'lucide-react'; // Import Loader2 icon
+import { Loader2 } from 'lucide-react';
+import { Combobox } from '@/components/ui/combobox'; // Import the new Combobox
 
 interface SkpdUser {
   id: string;
@@ -28,7 +29,7 @@ interface SkpdUser {
 interface TransferUserDataDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onTransferSuccess?: () => void; // Optional prop to trigger parent refresh
+  onTransferSuccess?: () => void;
 }
 
 const TransferUserDataDialog: React.FC<TransferUserDataDialogProps> = ({ isOpen, onClose, onTransferSuccess }) => {
@@ -36,7 +37,7 @@ const TransferUserDataDialog: React.FC<TransferUserDataDialogProps> = ({ isOpen,
   const [selectedFromUser, setSelectedFromUser] = useState<string | null>(null);
   const [selectedToUser, setSelectedToUser] = useState<string | null>(null);
   const [loadingUsers, setLoadingUsers] = useState(false);
-  const [isTransferring, setIsTransferring] = useState(false); // State for transfer loading
+  const [isTransferring, setIsTransferring] = useState(false);
   const [currentStep, setCurrentStep] = useState<'selection' | 'confirmation'>('selection');
 
   useEffect(() => {
@@ -65,7 +66,6 @@ const TransferUserDataDialog: React.FC<TransferUserDataDialogProps> = ({ isOpen,
 
     if (isOpen) {
       fetchSkpdUsers();
-      // Reset selections and step when dialog opens
       setSelectedFromUser(null);
       setSelectedToUser(null);
       setCurrentStep('selection');
@@ -89,7 +89,7 @@ const TransferUserDataDialog: React.FC<TransferUserDataDialogProps> = ({ isOpen,
       return;
     }
 
-    setIsTransferring(true); // Set loading state to true
+    setIsTransferring(true);
     try {
       const { data, error: invokeError } = await supabase.functions.invoke('transfer-user-data', {
         body: JSON.stringify({ sourceUserId: selectedFromUser, targetUserId: selectedToUser }),
@@ -104,17 +104,23 @@ const TransferUserDataDialog: React.FC<TransferUserDataDialogProps> = ({ isOpen,
       }
 
       toast.success('Data berhasil ditransfer!');
-      onClose(); // Close the modal on success
+      onClose();
       if (onTransferSuccess) {
-        onTransferSuccess(); // Trigger parent refresh if callback is provided
+        onTransferSuccess();
       }
     } catch (error: any) {
       console.error('Error transferring data:', error.message);
       toast.error('Gagal mentransfer data: ' + error.message);
     } finally {
-      setIsTransferring(false); // Reset loading state to false
+      setIsTransferring(false);
     }
   };
+
+  // Map skpdUsers to the format required by Combobox
+  const skpdUserOptions = skpdUsers.map(user => ({
+    value: user.id,
+    label: user.nama_lengkap,
+  }));
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -132,49 +138,23 @@ const TransferUserDataDialog: React.FC<TransferUserDataDialogProps> = ({ isOpen,
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
               <Label htmlFor="from-user">Dari Pengguna (Sumber)</Label>
-              <Select
-                onValueChange={(value) => setSelectedFromUser(value)}
-                value={selectedFromUser || ''}
+              <Combobox
+                options={skpdUserOptions.filter(option => option.value !== selectedToUser)}
+                value={selectedFromUser}
+                onValueChange={setSelectedFromUser}
+                placeholder="Pilih pengguna sumber"
                 disabled={loadingUsers}
-              >
-                <SelectTrigger id="from-user">
-                  <SelectValue placeholder="Pilih pengguna sumber" />
-                </SelectTrigger>
-                <SelectContent>
-                  {skpdUsers.map((user) => (
-                    <SelectItem
-                      key={user.id}
-                      value={user.id}
-                      disabled={user.id === selectedToUser}
-                    >
-                      {user.nama_lengkap}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="to-user">Kepada Pengguna (Tujuan)</Label>
-              <Select
-                onValueChange={(value) => setSelectedToUser(value)}
-                value={selectedToUser || ''}
+              <Combobox
+                options={skpdUserOptions.filter(option => option.value !== selectedFromUser)}
+                value={selectedToUser}
+                onValueChange={setSelectedToUser}
+                placeholder="Pilih pengguna tujuan"
                 disabled={loadingUsers}
-              >
-                <SelectTrigger id="to-user">
-                  <SelectValue placeholder="Pilih pengguna tujuan" />
-                </SelectTrigger>
-                <SelectContent>
-                  {skpdUsers.map((user) => (
-                    <SelectItem
-                      key={user.id}
-                      value={user.id}
-                      disabled={user.id === selectedFromUser}
-                    >
-                      {user.nama_lengkap}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              />
             </div>
           </div>
         ) : (
