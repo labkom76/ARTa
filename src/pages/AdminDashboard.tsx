@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useSession } from '@/contexts/SessionContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,10 +9,10 @@ import {
   YAxis,
   Tooltip,
   ResponsiveContainer,
-  PieChart, // Added
-  Pie,      // Added
-  Cell,     // Added
-  Legend,   // Added
+  PieChart,
+  Pie,
+  Cell,
+  Legend,
 } from 'recharts';
 import {
   LayoutDashboardIcon,
@@ -21,8 +21,8 @@ import {
   CheckCircleIcon,
   HourglassIcon,
   DollarSignIcon,
-  PieChartIcon, // Added
-  BarChart3Icon, // Using this for bar chart toggle
+  PieChartIcon,
+  BarChart3Icon,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfYear, endOfYear, startOfDay, endOfDay } from 'date-fns';
@@ -33,9 +33,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Button } from '@/components/ui/button'; // Added
-import { useTheme } from 'next-themes'; // Added
-import { cn } from '@/lib/utils'; // Added for conditional classNames
+import { Button } from '@/components/ui/button';
+import { useTheme } from 'next-themes';
+import { cn } from '@/lib/utils';
 
 interface KPIData {
   totalSKPD: number;
@@ -47,7 +47,6 @@ interface KPIData {
 interface BarChartDataItem {
   name: string;
   value: number;
-  // Removed 'color' property as it will be determined directly in the Bar component
 }
 
 const AdminDashboard = () => {
@@ -56,16 +55,15 @@ const AdminDashboard = () => {
   const [kpiData, setKpiData] = useState<KPIData | null>(null);
   const [barChartData, setBarChartData] = useState<BarChartDataItem[]>([]);
   const [loadingData, setLoadingData] = useState(true);
-  const [chartView, setChartView] = useState<'donut' | 'bar'>('donut'); // New state for chart view
+  const [chartView, setChartView] = useState<'donut' | 'bar'>('donut');
 
   // State for filters
   const [processedStatusFilter, setProcessedStatusFilter] = useState<'Diteruskan' | 'Dikembalikan'>('Diteruskan');
   const [totalAmountTimeFilter, setTotalAmountTimeFilter] = useState<'Hari Ini' | 'Minggu Ini' | 'Bulan Ini' | 'Tahun Ini'>('Bulan Ini');
-  const [selectedTimeRangeForChart, setSelectedTimeRangeForChart] = useState<'Hari Ini' | 'Minggu Ini' | 'Bulan Ini' | 'Tahun Ini'>('Bulan Ini'); // New state for chart time range
+  const [selectedTimeRangeForChart, setSelectedTimeRangeForChart] = useState<'Hari Ini' | 'Minggu Ini' | 'Bulan Ini' | 'Tahun Ini'>('Bulan Ini');
 
-  const { theme } = useTheme(); // Get current theme
+  const { theme } = useTheme();
 
-  // Define theme-aware color palettes
   const statusColorMap = {
     'Diteruskan': 0, // Green
     'Menunggu Registrasi': 1, // Yellow
@@ -73,14 +71,12 @@ const AdminDashboard = () => {
     'Dikembalikan': 3, // Red
   };
 
-  // New, more distinct color palettes
-  const lightThemeChartColors = ['#22C55E', '#FACC15', '#A855F7', '#EF4444']; // Emerald, Yellow, Purple, Red
-  const darkThemeChartColors = ['#4ADE80', '#FDE047', '#C084FC', '#F87171']; // Lighter Emerald, Yellow, Purple, Red
+  const lightThemeChartColors = ['#22C55E', '#FACC15', '#A855F7', '#EF4444'];
+  const darkThemeChartColors = ['#4ADE80', '#FDE047', '#C084FC', '#F87171'];
 
   const currentChartColors = theme === 'dark' ? darkThemeChartColors : lightThemeChartColors;
 
-  // Text colors for chart elements
-  const axisAndLabelColor = theme === 'dark' ? '#A0A0A0' : '#888888'; // Lighter grey for dark, darker for light
+  const axisAndLabelColor = theme === 'dark' ? '#A0A0A0' : '#888888';
   const tooltipBgColor = theme === 'dark' ? '#333333' : '#FFFFFF';
   const tooltipTextColor = theme === 'dark' ? '#FFFFFF' : '#000000';
   const legendTextColor = theme === 'dark' ? '#E0E0E0' : '#333333';
@@ -92,13 +88,12 @@ const AdminDashboard = () => {
     }
   }, [sessionLoading]);
 
-  const fetchDashboardData = async () => {
+  // Function to fetch KPI data
+  const fetchKpiData = useCallback(async () => {
     if (!profile || profile.peran !== 'Administrator') {
-      setLoadingData(false);
       return;
     }
 
-    setLoadingData(true);
     try {
       const now = new Date();
       const thisMonthStart = startOfMonth(now).toISOString();
@@ -170,47 +165,52 @@ const AdminDashboard = () => {
         totalAmountProcessed: totalAmountProcessed,
         queuedTagihan: queuedTagihanCount || 0,
       });
+    } catch (error: any) {
+      console.error('Error fetching KPI data:', error.message);
+      toast.error('Gagal memuat data KPI: ' + error.message);
+    }
+  }, [profile, processedStatusFilter, totalAmountTimeFilter]);
 
-      // Fetch data for Bar Chart
-      const { data: tagihanStatusData, error: statusError } = await supabase
-        .from('database_tagihan')
-        .select('status_tagihan');
-      if (statusError) throw statusError;
+  // Function to fetch chart data using Edge Function
+  const fetchChartData = useCallback(async () => {
+    if (!profile || profile.peran !== 'Administrator') {
+      return;
+    }
 
-      const statusCounts: { [key: string]: number } = {
-        'Menunggu Registrasi': 0,
-        'Menunggu Verifikasi': 0,
-        'Diteruskan': 0,
-        'Dikembalikan': 0,
-      };
-
-      tagihanStatusData.forEach(tagihan => {
-        if (statusCounts.hasOwnProperty(tagihan.status_tagihan)) {
-          statusCounts[tagihan.status_tagihan]++;
-        }
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-report', {
+        body: JSON.stringify({
+          reportType: 'status_workflow',
+          timeRange: selectedTimeRangeForChart,
+        }),
       });
 
-      const dynamicBarChartData: BarChartDataItem[] = [
-        { name: 'Menunggu Registrasi', value: statusCounts['Menunggu Registrasi'] },
-        { name: 'Menunggu Verifikasi', value: statusCounts['Menunggu Verifikasi'] },
-        { name: 'Diteruskan', value: statusCounts['Diteruskan'] },
-        { name: 'Dikembalikan', value: statusCounts['Dikembalikan'] },
-      ];
-      setBarChartData(dynamicBarChartData);
+      if (error) throw error;
+      if (data && data.error) throw new Error(data.error);
 
+      setBarChartData(data || []);
     } catch (error: any) {
-      console.error('Error fetching dashboard data:', error.message);
-      toast.error('Gagal memuat data dashboard: ' + error.message);
-    } finally {
-      setLoadingData(false);
+      console.error('Error fetching chart data:', error.message);
+      toast.error('Gagal memuat data chart: ' + error.message);
+      setBarChartData([]);
     }
-  };
+  }, [profile, selectedTimeRangeForChart]);
+
 
   useEffect(() => {
+    const loadAllData = async () => {
+      setLoadingData(true);
+      await Promise.all([
+        fetchKpiData(),
+        fetchChartData(),
+      ]);
+      setLoadingData(false);
+    };
+
     if (!sessionLoading && profile?.peran === 'Administrator') {
-      fetchDashboardData();
+      loadAllData();
     }
-  }, [sessionLoading, profile, processedStatusFilter, totalAmountTimeFilter, theme]); // Add theme to dependencies to re-fetch/re-render with new colors
+  }, [sessionLoading, profile, processedStatusFilter, totalAmountTimeFilter, selectedTimeRangeForChart, fetchKpiData, fetchChartData, theme]);
 
   if (loadingPage || loadingData) {
     return (

@@ -1,5 +1,15 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
+import {
+  startOfDay,
+  endOfDay,
+  startOfWeek,
+  endOfWeek,
+  startOfMonth,
+  endOfMonth,
+  startOfYear,
+  endOfYear,
+} from 'https://esm.sh/date-fns@2.30.0'; // Import date-fns functions
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -12,7 +22,7 @@ serve(async (req) => {
   }
 
   try {
-    const { reportType, startDate, endDate, status, groupBy, skpd } = await req.json(); // Receive new 'groupBy' and 'skpd' parameters
+    const { reportType, startDate, endDate, status, groupBy, skpd, timeRange } = await req.json(); // Receive new 'timeRange' parameter
 
     if (!reportType) {
       return new Response(JSON.stringify({ error: 'reportType is required.' }), {
@@ -94,6 +104,63 @@ serve(async (req) => {
         if (tableError) throw tableError;
 
         resultData = { chartData, tableData };
+        break;
+
+      case 'status_workflow': // NEW CASE for Status Alur Kerja Langsung chart
+        const now = new Date();
+        let filterStartDate: Date;
+        let filterEndDate: Date;
+
+        switch (timeRange) {
+          case 'Hari Ini':
+            filterStartDate = startOfDay(now);
+            filterEndDate = endOfDay(now);
+            break;
+          case 'Minggu Ini':
+            filterStartDate = startOfWeek(now, { weekStartsOn: 1 }); // Monday as start of week
+            filterEndDate = endOfWeek(now, { weekStartsOn: 1 });
+            break;
+          case 'Bulan Ini':
+            filterStartDate = startOfMonth(now);
+            filterEndDate = endOfMonth(now);
+            break;
+          case 'Tahun Ini':
+            filterStartDate = startOfYear(now);
+            filterEndDate = endOfYear(now);
+            break;
+          default: // Default to Bulan Ini if not specified
+            filterStartDate = startOfMonth(now);
+            filterEndDate = endOfMonth(now);
+            break;
+        }
+
+        const { data: tagihanStatusData, error: statusError } = await supabaseAdmin
+          .from('database_tagihan')
+          .select('status_tagihan')
+          .gte('waktu_input', filterStartDate.toISOString())
+          .lte('waktu_input', filterEndDate.toISOString());
+
+        if (statusError) throw statusError;
+
+        const statusCounts: { [key: string]: number } = {
+          'Menunggu Registrasi': 0,
+          'Menunggu Verifikasi': 0,
+          'Diteruskan': 0,
+          'Dikembalikan': 0,
+        };
+
+        tagihanStatusData.forEach(tagihan => {
+          if (statusCounts.hasOwnProperty(tagihan.status_tagihan)) {
+            statusCounts[tagihan.status_tagihan]++;
+          }
+        });
+
+        resultData = [
+          { name: 'Menunggu Registrasi', value: statusCounts['Menunggu Registrasi'] },
+          { name: 'Menunggu Verifikasi', value: statusCounts['Menunggu Verifikasi'] },
+          { name: 'Diteruskan', value: statusCounts['Diteruskan'] },
+          { name: 'Dikembalikan', value: statusCounts['Dikembalikan'] },
+        ];
         break;
 
       default:
