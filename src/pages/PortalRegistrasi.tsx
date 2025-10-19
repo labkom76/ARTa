@@ -1,7 +1,15 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useSession } from '@/contexts/SessionContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import {
   Table,
@@ -34,6 +42,7 @@ import useDebounce from '@/hooks/use-debounce';
 import RegistrasiConfirmationDialog from '@/components/RegistrasiConfirmationDialog';
 import TagihanDetailDialog from '@/components/TagihanDetailDialog'; // Import the detail dialog
 import StatusBadge from '@/components/StatusBadge'; // Import StatusBadge
+import { Label } from '@/components/ui/label'; // Import Label for "Per halaman"
 
 interface VerificationItem {
   item: string;
@@ -452,33 +461,26 @@ const PortalRegistrasi = () => {
                 </TableBody>
               </Table>
             </div>
-            <Pagination className="mt-4">
-              <PaginationContent>
-                <PaginationItem>
-                  <PaginationPrevious
-                    onClick={() => setQueueCurrentPage((prev) => Math.max(1, prev - 1))}
-                    disabled={queueCurrentPage === 1 || queueItemsPerPage === -1}
-                  />
-                </PaginationItem>
-                {[...Array(queueTotalPages)].map((_, index) => (
-                  <PaginationItem key={index}>
-                    <PaginationLink
-                      isActive={queueCurrentPage === index + 1}
-                      onClick={() => setQueueCurrentPage(index + 1)}
-                      disabled={queueItemsPerPage === -1}
-                    >
-                      {index + 1}
-                    </PaginationLink>
-                  </PaginationItem>
-                ))}
-                <PaginationItem>
-                  <PaginationNext
-                    onClick={() => setQueueCurrentPage((prev) => Math.min(queueTotalPages, prev + 1))}
-                    disabled={queueCurrentPage === queueTotalPages || queueItemsPerPage === -1}
-                  />
-                </PaginationItem>
-              </PaginationContent>
-            </Pagination>
+            {/* Custom Pagination for Queue Table */}
+            <div className="mt-4 flex items-center justify-end space-x-4">
+              <div className="text-sm text-muted-foreground">
+                Halaman {queueTotalItems === 0 ? 0 : queueCurrentPage} dari {queueTotalPages} ({queueTotalItems} total item)
+              </div>
+              <Button
+                variant="outline"
+                onClick={() => setQueueCurrentPage((prev) => Math.max(1, prev - 1))}
+                disabled={queueCurrentPage === 1 || queueItemsPerPage === -1}
+              >
+                Sebelumnya
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setQueueCurrentPage((prev) => Math.min(queueTotalPages, prev + 1))}
+                disabled={queueCurrentPage === queueTotalPages || queueItemsPerPage === -1}
+              >
+                Berikutnya
+              </Button>
+            </div>
           </>
         )}
       </div>
