@@ -142,6 +142,7 @@ const PortalSKPD = () => {
   const [editingTagihan, setEditingTagihan] = useState<Tagihan | null>(null);
   const [tagihanList, setTagihanList] = useState<Tagihan[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingPagination, setLoadingPagination] = useState(false); // New state for pagination loading
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -285,19 +286,21 @@ const PortalSKPD = () => {
     updateNomorSpm();
   }, [jenisTagihanWatch, kodeJadwalWatch, kodeSkpd, kodeWilayah, nomorUrutTagihanWatch, generateNomorSpmCallback]);
 
-  const fetchTagihan = async () => {
+  // Ref to track previous values for determining pagination-only changes
+  const prevSearchQuery = useRef(searchQuery);
+  const prevSelectedStatus = useRef(selectedStatus);
+  const prevItemsPerPage = useRef(itemsPerPage);
+  const prevCurrentPage = useRef(currentPage);
+
+  const fetchTagihan = async (isPaginationOnlyChange = false) => {
     if (!user || sessionLoading) return;
 
-    setLoading(true);
-    // console.log('--- fetchTagihan START ---');
-    // console.log('Current selectedStatus state:', selectedStatus); // Log selectedStatus state
-    // console.log('Fetching tagihan with filters:', {
-    //   userId: user.id,
-    //   searchQuery,
-    //   selectedStatus,
-    //   currentPage,
-    //   itemsPerPage
-    // });
+    if (!isPaginationOnlyChange) {
+      setLoading(true); // Show full loading spinner for search/filter changes
+    } else {
+      setLoadingPagination(true); // Only disable pagination buttons for page changes
+    }
+
     try {
       let query = supabase
         .from('database_tagihan')
@@ -310,10 +313,7 @@ const PortalSKPD = () => {
 
       // Apply status filter if not 'Semua Status'
       if (selectedStatus !== 'Semua Status') {
-        // console.log('Applying status filter:', selectedStatus); // Log when filter is applied
         query = query.eq('status_tagihan', selectedStatus);
-      } else {
-        // console.log('No status filter applied (selectedStatus is Semua Status)');
       }
 
       query = query.order('waktu_input', { ascending: false });
@@ -329,46 +329,55 @@ const PortalSKPD = () => {
         throw error;
       }
 
-      // console.log('Supabase query result:', { data, count }); // Log data and count
-      // NEW LOG HERE: Inspect data array content
-      // data.forEach((item: any, idx: number) => {
-      //   console.log(`Supabase data item ${idx}: status = ${item.status_tagihan}, nomor_spm = ${item.nomor_spm}`);
-      // });
-      // END NEW LOG
       setTagihanList(data as Tagihan[]);
       setTotalItems(count || 0);
-      // console.log('tagihanList after setTagihanList:', data); // Log the data that was just set
     } catch (error: any) {
       console.error('Error fetching tagihan:', error.message);
       toast.error('Gagal memuat daftar tagihan: ' + error.message);
     } finally {
-      setLoading(false);
-      // console.log('--- fetchTagihan END ---');
+      if (!isPaginationOnlyChange) {
+        setLoading(false);
+      } else {
+        setLoadingPagination(false);
+      }
     }
   };
 
   // Effect untuk membaca query parameter status dari URL saat komponen pertama kali dimuat
-  // Ini hanya mengatur state filter, tidak memanggil fetchTagihan secara langsung.
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const statusParam = params.get('status');
     if (statusParam) {
-      // console.log('URL status parameter detected:', statusParam); // Log URL param
       setSelectedStatus(statusParam);
       setCurrentPage(1); // Reset page when status changes from URL
     } else {
-      // If no status param in URL, ensure filter is 'Semua Status'
-      // console.log('No URL status parameter, setting selectedStatus to Semua Status');
       setSelectedStatus('Semua Status');
       setCurrentPage(1);
     }
-  }, [location.search]); // Dependency array kosong agar hanya berjalan satu kali saat mount
+  }, [location.search]);
 
-  // Effect untuk mengambil data setiap kali filter atau pagination berubah
+  // Main useEffect to trigger data fetching
   useEffect(() => {
-    // console.log('useEffect for fetchTagihan triggered. Dependencies changed.');
-    fetchTagihan();
-  }, [user, sessionLoading, searchQuery, selectedStatus, currentPage, itemsPerPage]);
+    let isPaginationOnlyChange = false;
+    // Check if only currentPage changed, while other filters/search/itemsPerPage remained the same
+    if (
+      prevCurrentPage.current !== currentPage &&
+      prevSearchQuery.current === searchQuery &&
+      prevSelectedStatus.current === selectedStatus &&
+      prevItemsPerPage.current === itemsPerPage
+    ) {
+      isPaginationOnlyChange = true;
+    }
+
+    fetchTagihan(isPaginationOnlyChange);
+
+    // Update refs for the next render cycle
+    prevSearchQuery.current = searchQuery;
+    prevSelectedStatus.current = selectedStatus;
+    prevItemsPerPage.current = itemsPerPage;
+    prevCurrentPage.current = currentPage;
+
+  }, [user, sessionLoading, searchQuery, selectedStatus, currentPage, itemsPerPage]); // Dependencies for this effect
 
   useEffect(() => {
     if (isModalOpen) { // Only reset when modal opens
@@ -552,9 +561,6 @@ const PortalSKPD = () => {
 
   const totalPages = itemsPerPage === -1 ? 1 : Math.ceil(totalItems / itemsPerPage);
 
-  // console.log('--- Rendering PortalSKPD component ---');
-  // console.log('tagihanList state at render:', tagihanList.map(t => ({ id: t.id_tagihan, status: t.status_tagihan, spm: t.nomor_spm })));
-
   return (
     <div className="p-6 bg-white rounded-lg shadow-sm border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
       <div className="flex justify-between items-center mb-6">
@@ -613,7 +619,7 @@ const PortalSKPD = () => {
         </div>
       </div>
 
-      {loading ? (
+      {loading && !loadingPagination ? ( // Show full loading only if not pagination-only
         <p className="text-center text-gray-600 dark:text-gray-400">Memuat tagihan...</p>
       ) : tagihanList.length === 0 ? (
         <p className="text-center text-gray-600 dark:text-gray-400">Tidak ada tagihan ditemukan.</p>
@@ -624,7 +630,6 @@ const PortalSKPD = () => {
                   <TableHead className="w-[50px]">No.</TableHead><TableHead>Nomor SPM</TableHead><TableHead>Jenis SPM</TableHead><TableHead>Jenis Tagihan</TableHead><TableHead>Sumber Dana</TableHead><TableHead className="min-w-[280px]">Uraian</TableHead><TableHead>Jumlah Kotor</TableHead><TableHead>Status</TableHead><TableHead className="text-center">Aksi</TableHead>
                 </TableRow></TableHeader><TableBody>
                 {tagihanList.map((tagihan, index) => {
-                  // console.log(`Rendering tagihan ${tagihan.nomor_spm} with status: ${tagihan.status_tagihan}`); // Log each rendered item's status
                   return (
                     <TableRow key={tagihan.id_tagihan}>
                       <TableCell>{(currentPage - 1) * itemsPerPage + index + 1}</TableCell><TableCell className="font-medium">
@@ -676,14 +681,14 @@ const PortalSKPD = () => {
             <Button
               variant="outline"
               onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-              disabled={currentPage === 1 || itemsPerPage === -1}
+              disabled={currentPage === 1 || itemsPerPage === -1 || loadingPagination}
             >
               Sebelumnya
             </Button>
             <Button
               variant="outline"
               onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-              disabled={currentPage === totalPages || itemsPerPage === -1}
+              disabled={currentPage === totalPages || itemsPerPage === -1 || loadingPagination}
             >
               Berikutnya
             </Button>
