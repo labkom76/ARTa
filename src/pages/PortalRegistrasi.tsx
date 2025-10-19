@@ -96,6 +96,7 @@ const PortalRegistrasi = () => {
   // State for History Table Pagination
   const [historyTagihanList, setHistoryTagihanList] = useState<Tagihan[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(true);
+  const [loadingHistoryPagination, setLoadingHistoryPagination] = useState(false); // New state for history pagination loading
   const [historyCurrentPage, setHistoryCurrentPage] = useState(1);
   const [historyItemsPerPage, setHistoryItemsPerPage] = useState(10);
   const [historyTotalItems, setHistoryTotalItems] = useState(0);
@@ -109,6 +110,10 @@ const PortalRegistrasi = () => {
   const prevSelectedSkpd = useRef(selectedSkpd);
   const prevQueueItemsPerPage = useRef(queueItemsPerPage);
   const prevQueueCurrentPage = useRef(queueCurrentPage);
+
+  const prevHistoryCurrentPage = useRef(historyCurrentPage);
+  const prevHistoryItemsPerPage = useRef(historyItemsPerPage);
+
 
   // Effect untuk memfokuskan kembali input pencarian setelah data dimuat
   useEffect(() => {
@@ -194,13 +199,18 @@ const PortalRegistrasi = () => {
   };
 
   // Fetch History Tagihan (last 24 hours, status 'Menunggu Verifikasi')
-  const fetchHistoryTagihan = async () => {
+  const fetchHistoryTagihan = async (isPaginationOnlyChange = false) => {
     if (!user || sessionLoading || profile?.peran !== 'Staf Registrasi') {
       setLoadingHistory(false);
       return;
     }
 
-    setLoadingHistory(true);
+    if (!isPaginationOnlyChange) {
+      setLoadingHistory(true);
+    } else {
+      setLoadingHistoryPagination(true);
+    }
+
     try {
       const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
@@ -229,7 +239,11 @@ const PortalRegistrasi = () => {
       console.error('Error fetching history tagihan:', error.message);
       toast.error('Gagal memuat riwayat tagihan: ' + error.message);
     } finally {
-      setLoadingHistory(false);
+      if (!isPaginationOnlyChange) {
+        setLoadingHistory(false);
+      } else {
+        setLoadingHistoryPagination(false);
+      }
     }
   };
 
@@ -257,7 +271,18 @@ const PortalRegistrasi = () => {
   }, [user, sessionLoading, debouncedSearchQuery, selectedSkpd, queueCurrentPage, queueItemsPerPage, profile]);
 
   useEffect(() => {
-    fetchHistoryTagihan(); // Fetch history data
+    let isPaginationOnlyChange = false;
+    if (
+      prevHistoryCurrentPage.current !== historyCurrentPage &&
+      prevHistoryItemsPerPage.current === historyItemsPerPage
+    ) {
+      isPaginationOnlyChange = true;
+    }
+
+    fetchHistoryTagihan(isPaginationOnlyChange);
+
+    prevHistoryCurrentPage.current = historyCurrentPage;
+    prevHistoryItemsPerPage.current = historyItemsPerPage;
   }, [user, sessionLoading, profile, historyCurrentPage, historyItemsPerPage]);
 
   const generateNomorRegistrasi = async (): Promise<string> => {
@@ -546,7 +571,7 @@ const PortalRegistrasi = () => {
           </Select>
         </div>
 
-        {loadingHistory ? (
+        {loadingHistory && !loadingHistoryPagination ? (
           <p className="text-center text-gray-600 dark:text-gray-400">Memuat riwayat registrasi...</p>
         ) : historyTagihanList.length === 0 ? (
           <p className="text-center text-gray-600 dark:text-gray-400">Tidak ada riwayat registrasi dalam 24 jam terakhir.</p>
@@ -589,33 +614,26 @@ const PortalRegistrasi = () => {
                 </TableBody>
               </Table>
             </div>
-            <Pagination className="mt-4">
-              <PaginationContent>
-                <PaginationItem>
-                  <PaginationPrevious
-                    onClick={() => setHistoryCurrentPage((prev) => Math.max(1, prev - 1))}
-                    disabled={historyCurrentPage === 1 || historyItemsPerPage === -1}
-                  />
-                </PaginationItem>
-                {[...Array(historyTotalPages)].map((_, index) => (
-                  <PaginationItem key={index}>
-                    <PaginationLink
-                      isActive={historyCurrentPage === index + 1}
-                      onClick={() => setHistoryCurrentPage(index + 1)}
-                      disabled={historyItemsPerPage === -1}
-                    >
-                      {index + 1}
-                    </PaginationLink>
-                  </PaginationItem>
-                ))}
-                <PaginationItem>
-                  <PaginationNext
-                    onClick={() => setHistoryCurrentPage((prev) => Math.min(historyTotalPages, prev + 1))}
-                    disabled={historyCurrentPage === historyTotalPages || historyItemsPerPage === -1}
-                  />
-                </PaginationItem>
-              </PaginationContent>
-            </Pagination>
+            {/* Custom Pagination for History Table */}
+            <div className="mt-4 flex items-center justify-end space-x-4">
+              <div className="text-sm text-muted-foreground">
+                Halaman {historyTotalItems === 0 ? 0 : historyCurrentPage} dari {historyTotalPages} ({historyTotalItems} total item)
+              </div>
+              <Button
+                variant="outline"
+                onClick={() => setHistoryCurrentPage((prev) => Math.max(1, prev - 1))}
+                disabled={historyCurrentPage === 1 || historyItemsPerPage === -1 || loadingHistoryPagination}
+              >
+                Sebelumnya
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setHistoryCurrentPage((prev) => Math.min(historyTotalPages, prev + 1))}
+                disabled={historyCurrentPage === historyTotalPages || historyItemsPerPage === -1 || loadingHistoryPagination}
+              >
+                Berikutnya
+              </Button>
+            </div>
           </>
         )}
       </div>
