@@ -75,6 +75,7 @@ const PortalRegistrasi = () => {
   const { user, profile, loading: sessionLoading } = useSession();
   const [queueTagihanList, setQueueTagihanList] = useState<Tagihan[]>([]);
   const [loadingQueue, setLoadingQueue] = useState(true);
+  const [loadingQueuePagination, setLoadingQueuePagination] = useState(false); // New state for queue pagination loading
   const [searchQuery, setSearchQuery] = useState('');
   const debouncedSearchQuery = useDebounce(searchQuery, 700);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -102,6 +103,12 @@ const PortalRegistrasi = () => {
   // State for Detail Dialog
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [selectedTagihanForDetail, setSelectedTagihanForDetail] = useState<Tagihan | null>(null);
+
+  // Refs to track previous values for determining pagination-only changes
+  const prevQueueSearchQuery = useRef(searchQuery);
+  const prevSelectedSkpd = useRef(selectedSkpd);
+  const prevQueueItemsPerPage = useRef(queueItemsPerPage);
+  const prevQueueCurrentPage = useRef(queueCurrentPage);
 
   // Effect untuk memfokuskan kembali input pencarian setelah data dimuat
   useEffect(() => {
@@ -134,13 +141,18 @@ const PortalRegistrasi = () => {
   }, []);
 
   // Fetch Tagihan with 'Menunggu Registrasi' status and apply search/SKPD filters
-  const fetchQueueTagihan = async () => {
+  const fetchQueueTagihan = async (isPaginationOnlyChange = false) => {
     if (!user || sessionLoading || profile?.peran !== 'Staf Registrasi') {
       setLoadingQueue(false);
       return;
     }
 
-    setLoadingQueue(true);
+    if (!isPaginationOnlyChange) {
+      setLoadingQueue(true); // Show full loading spinner for search/filter changes
+    } else {
+      setLoadingQueuePagination(true); // Only disable pagination buttons for page changes
+    }
+
     try {
       let query = supabase
         .from('database_tagihan')
@@ -173,7 +185,11 @@ const PortalRegistrasi = () => {
       console.error('Error fetching queue tagihan:', error.message);
       toast.error('Gagal memuat antrian tagihan: ' + error.message);
     } finally {
-      setLoadingQueue(false);
+      if (!isPaginationOnlyChange) {
+        setLoadingQueue(false);
+      } else {
+        setLoadingQueuePagination(false);
+      }
     }
   };
 
@@ -217,9 +233,28 @@ const PortalRegistrasi = () => {
     }
   };
 
+  // Main useEffect to trigger queue data fetching
   useEffect(() => {
-    fetchQueueTagihan();
-  }, [user, sessionLoading, profile, debouncedSearchQuery, selectedSkpd, queueCurrentPage, queueItemsPerPage]);
+    let isPaginationOnlyChange = false;
+    // Check if only queueCurrentPage changed, while other filters/search/itemsPerPage remained the same
+    if (
+      prevQueueCurrentPage.current !== queueCurrentPage &&
+      prevQueueSearchQuery.current === searchQuery &&
+      prevSelectedSkpd.current === selectedSkpd &&
+      prevQueueItemsPerPage.current === queueItemsPerPage
+    ) {
+      isPaginationOnlyChange = true;
+    }
+
+    fetchQueueTagihan(isPaginationOnlyChange);
+
+    // Update refs for the next render cycle
+    prevQueueSearchQuery.current = searchQuery;
+    prevSelectedSkpd.current = selectedSkpd;
+    prevQueueItemsPerPage.current = queueItemsPerPage;
+    prevQueueCurrentPage.current = queueCurrentPage;
+
+  }, [user, sessionLoading, debouncedSearchQuery, selectedSkpd, queueCurrentPage, queueItemsPerPage, profile]);
 
   useEffect(() => {
     fetchHistoryTagihan(); // Fetch history data
@@ -415,7 +450,7 @@ const PortalRegistrasi = () => {
           </div>
         </div>
 
-        {loadingQueue ? (
+        {loadingQueue && !loadingQueuePagination ? (
           <p className="text-center text-gray-600 dark:text-gray-400">Memuat antrian...</p>
         ) : queueTagihanList.length === 0 ? (
           <p className="text-center text-gray-600 dark:text-gray-400">Tidak ada tagihan ditemukan dengan status 'Menunggu Registrasi' atau sesuai pencarian/filter Anda.</p>
@@ -469,14 +504,14 @@ const PortalRegistrasi = () => {
               <Button
                 variant="outline"
                 onClick={() => setQueueCurrentPage((prev) => Math.max(1, prev - 1))}
-                disabled={queueCurrentPage === 1 || queueItemsPerPage === -1}
+                disabled={queueCurrentPage === 1 || queueItemsPerPage === -1 || loadingQueuePagination}
               >
                 Sebelumnya
               </Button>
               <Button
                 variant="outline"
                 onClick={() => setQueueCurrentPage((prev) => Math.min(queueTotalPages, prev + 1))}
-                disabled={queueCurrentPage === queueTotalPages || queueItemsPerPage === -1}
+                disabled={queueCurrentPage === queueTotalPages || queueItemsPerPage === -1 || loadingQueuePagination}
               >
                 Berikutnya
               </Button>
