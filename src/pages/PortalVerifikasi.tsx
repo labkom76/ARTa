@@ -90,6 +90,7 @@ const PortalVerifikasi = () => {
 
   const [historyTagihanList, setHistoryTagihanList] = useState<Tagihan[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(true);
+  const [loadingHistoryPagination, setLoadingHistoryPagination] = useState(false); // New state for history pagination loading
   const [historySearchQuery, setHistorySearchQuery] = useState(''); // New state for history search
   const debouncedHistorySearchQuery = useDebounce(historySearchQuery, 500); // Debounced history search
   const [historySkpdOptions, setHistorySkpdOptions] = useState<string[]>([]); // New state for history SKPD options
@@ -254,13 +255,18 @@ const PortalVerifikasi = () => {
     }
   };
 
-  const fetchHistoryTagihan = async () => {
+  const fetchHistoryTagihan = async (isPaginationOnlyChange = false) => {
     if (sessionLoading || !user || !profile?.peran) {
       setLoadingHistory(false);
       return;
     }
 
-    setLoadingHistory(true);
+    if (!isPaginationOnlyChange) {
+      setLoadingHistory(true);
+    } else {
+      setLoadingHistoryPagination(true);
+    }
+
     try {
       const todayStart = startOfDay(new Date()).toISOString();
       const todayEnd = endOfDay(new Date()).toISOString();
@@ -323,7 +329,11 @@ const PortalVerifikasi = () => {
       console.error('Error fetching history tagihan:', error.message);
       toast.error('Gagal memuat riwayat verifikasi: ' + error.message);
     } finally {
-      setLoadingHistory(false);
+      if (!isPaginationOnlyChange) {
+        setLoadingHistory(false);
+      } else {
+        setLoadingHistoryPagination(false);
+      }
     }
   };
 
@@ -354,7 +364,22 @@ const PortalVerifikasi = () => {
   }, [user, sessionLoading, profile, debouncedQueueSearchQuery, selectedQueueSkpd, queueCurrentPage, queueItemsPerPage]);
 
   useEffect(() => {
-    fetchHistoryTagihan();
+    let isPaginationOnlyChange = false;
+    if (
+      prevHistoryCurrentPageRef.current !== historyCurrentPage &&
+      prevHistorySearchQueryRef.current === debouncedHistorySearchQuery &&
+      prevSelectedHistorySkpdRef.current === selectedHistorySkpd &&
+      prevHistoryItemsPerPageRef.current === historyItemsPerPage
+    ) {
+      isPaginationOnlyChange = true;
+    }
+
+    fetchHistoryTagihan(isPaginationOnlyChange);
+
+    prevHistorySearchQueryRef.current = debouncedHistorySearchQuery;
+    prevSelectedHistorySkpdRef.current = selectedHistorySkpd;
+    prevHistoryItemsPerPageRef.current = historyItemsPerPage;
+    prevHistoryCurrentPageRef.current = historyCurrentPage;
   }, [user, sessionLoading, profile, debouncedHistorySearchQuery, selectedHistorySkpd, historyCurrentPage, historyItemsPerPage]);
 
   useEffect(() => {
@@ -759,7 +784,7 @@ const PortalVerifikasi = () => {
             </div>
           </div>
 
-          {loadingHistory ? (
+          {loadingHistory && !loadingHistoryPagination ? (
             <p className="text-center text-gray-600 dark:text-gray-400">Memuat riwayat verifikasi...</p>
           ) : historyTagihanList.length === 0 ? (
             <p className="text-center text-gray-600 dark:text-gray-400">Tidak ada riwayat verifikasi hari ini.</p>
@@ -791,37 +816,24 @@ const PortalVerifikasi = () => {
                     ))}
                   </TableBody></Table>
               </div>
-              <div className="mt-6 flex flex-col sm:flex-row items-center justify-between space-y-2 sm:space-y-0">
+              <div className="mt-6 flex items-center justify-end space-x-4">
                 <div className="text-sm text-muted-foreground">
                   Halaman {historyTotalItems === 0 ? 0 : historyCurrentPage} dari {historyTotalPages} ({historyTotalItems} total item)
                 </div>
-                <Pagination>
-                  <PaginationContent>
-                    <PaginationItem>
-                      <PaginationPrevious
-                        onClick={() => setHistoryCurrentPage((prev) => Math.max(1, prev - 1))}
-                        disabled={historyCurrentPage === 1 || historyItemsPerPage === -1}
-                      />
-                    </PaginationItem>
-                    {[...Array(historyTotalPages)].map((_, index) => (
-                      <PaginationItem key={index}>
-                        <PaginationLink
-                          isActive={historyCurrentPage === index + 1}
-                          onClick={() => setHistoryCurrentPage(index + 1)}
-                          disabled={historyItemsPerPage === -1}
-                        >
-                          {index + 1}
-                        </PaginationLink>
-                      </PaginationItem>
-                    ))}
-                    <PaginationItem>
-                      <PaginationNext
-                        onClick={() => setHistoryCurrentPage((prev) => Math.min(historyTotalPages, prev + 1))}
-                        disabled={historyCurrentPage === historyTotalPages || historyItemsPerPage === -1}
-                      />
-                    </PaginationItem>
-                  </PaginationContent>
-                </Pagination>
+                <Button
+                  variant="outline"
+                  onClick={() => setHistoryCurrentPage((prev) => Math.max(1, prev - 1))}
+                  disabled={historyCurrentPage === 1 || historyItemsPerPage === -1 || loadingHistoryPagination}
+                >
+                  Sebelumnya
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setHistoryCurrentPage((prev) => Math.min(historyTotalPages, prev + 1))}
+                  disabled={historyCurrentPage === historyTotalPages || historyItemsPerPage === -1 || loadingHistoryPagination}
+                >
+                  Berikutnya
+                </Button>
               </div>
             </>
           )}
