@@ -77,6 +77,7 @@ const PortalVerifikasi = () => {
   const { user, profile, loading: sessionLoading } = useSession();
   const [queueTagihanList, setQueueTagihanList] = useState<Tagihan[]>([]);
   const [loadingQueue, setLoadingQueue] = useState(true);
+  const [loadingQueuePagination, setLoadingQueuePagination] = useState(false); // New state for queue pagination loading
   const [queueSearchQuery, setQueueSearchQuery] = useState('');
   const debouncedQueueSearchQuery = useDebounce(queueSearchQuery, 500);
   const [queueSkpdOptions, setQueueSkpdOptions] = useState<string[]>([]);
@@ -109,6 +110,17 @@ const PortalVerifikasi = () => {
   // New states for Koreksi Side Panel
   const [isKoreksiSidePanelOpen, setIsKoreksiSidePanelOpen] = useState(false);
   const [selectedTagihanForKoreksi, setSelectedTagihanForKoreksi] = useState<Tagihan | null>(null);
+
+  // Refs to track previous values for determining pagination-only changes
+  const prevQueueSearchQueryRef = useRef(queueSearchQuery);
+  const prevSelectedQueueSkpdRef = useRef(selectedQueueSkpd);
+  const prevQueueItemsPerPageRef = useRef(queueItemsPerPage);
+  const prevQueueCurrentPageRef = useRef(queueCurrentPage);
+
+  const prevHistorySearchQueryRef = useRef(historySearchQuery);
+  const prevSelectedHistorySkpdRef = useRef(selectedHistorySkpd);
+  const prevHistoryItemsPerPageRef = useRef(historyItemsPerPage);
+  const prevHistoryCurrentPageRef = useRef(historyCurrentPage);
 
   // Fetch unique SKPD names for the queue filter dropdown
   useEffect(() => {
@@ -182,13 +194,18 @@ const PortalVerifikasi = () => {
     fetchHistorySkpdOptions();
   }, [profile?.peran, user]); // Add profile.peran and user to dependencies
 
-  const fetchQueueTagihan = async () => {
+  const fetchQueueTagihan = async (isPaginationOnlyChange = false) => {
     if (sessionLoading || (profile?.peran !== 'Staf Verifikator' && profile?.peran !== 'Staf Koreksi')) {
       setLoadingQueue(false);
       return;
     }
 
-    setLoadingQueue(true);
+    if (!isPaginationOnlyChange) {
+      setLoadingQueue(true); // Show full loading spinner for search/filter changes
+    } else {
+      setLoadingQueuePagination(true); // Only disable pagination buttons for page changes
+    }
+
     try {
       const now = new Date();
       const lockTimeoutThreshold = new Date(now.getTime() - LOCK_TIMEOUT_MINUTES * 60 * 1000).toISOString();
@@ -229,7 +246,11 @@ const PortalVerifikasi = () => {
       console.error('Error fetching queue tagihan:', error.message);
       toast.error('Gagal memuat antrian verifikasi: ' + error.message);
     } finally {
-      setLoadingQueue(false);
+      if (!isPaginationOnlyChange) {
+        setLoadingQueue(false);
+      } else {
+        setLoadingQueuePagination(false);
+      }
     }
   };
 
@@ -313,7 +334,23 @@ const PortalVerifikasi = () => {
   };
 
   useEffect(() => {
-    fetchQueueTagihan();
+    let isPaginationOnlyChange = false;
+    if (
+      prevQueueCurrentPageRef.current !== queueCurrentPage &&
+      prevQueueSearchQueryRef.current === debouncedQueueSearchQuery &&
+      prevSelectedQueueSkpdRef.current === selectedQueueSkpd &&
+      prevQueueItemsPerPageRef.current === queueItemsPerPage
+    ) {
+      isPaginationOnlyChange = true;
+    }
+
+    fetchQueueTagihan(isPaginationOnlyChange);
+
+    prevQueueSearchQueryRef.current = debouncedQueueSearchQuery;
+    prevSelectedQueueSkpdRef.current = selectedQueueSkpd;
+    prevQueueItemsPerPageRef.current = queueItemsPerPage;
+    prevQueueCurrentPageRef.current = queueCurrentPage;
+
   }, [user, sessionLoading, profile, debouncedQueueSearchQuery, selectedQueueSkpd, queueCurrentPage, queueItemsPerPage]);
 
   useEffect(() => {
@@ -600,7 +637,7 @@ const PortalVerifikasi = () => {
             </div>
           </div>
 
-          {loadingQueue ? (
+          {loadingQueue && !loadingQueuePagination ? (
             <p className="text-center text-gray-600 dark:text-gray-400">Memuat antrian...</p>
           ) : queueTagihanList.length === 0 ? (
             <p className="text-center text-gray-600 dark:text-gray-400">Tidak ada tagihan di antrian verifikasi.</p>
@@ -640,37 +677,25 @@ const PortalVerifikasi = () => {
                     })}
                   </TableBody></Table>
               </div>
-              <div className="mt-6 flex flex-col sm:flex-row items-center justify-between space-y-2 sm:space-y-0">
+              {/* Pagination Controls */}
+              <div className="mt-6 flex items-center justify-end space-x-4">
                 <div className="text-sm text-muted-foreground">
                   Halaman {queueTotalItems === 0 ? 0 : queueCurrentPage} dari {queueTotalPages} ({queueTotalItems} total item)
                 </div>
-                <Pagination>
-                  <PaginationContent>
-                    <PaginationItem>
-                      <PaginationPrevious
-                        onClick={() => setQueueCurrentPage((prev) => Math.max(1, prev - 1))}
-                        disabled={queueCurrentPage === 1 || queueItemsPerPage === -1}
-                      />
-                    </PaginationItem>
-                    {[...Array(queueTotalPages)].map((_, index) => (
-                      <PaginationItem key={index}>
-                        <PaginationLink
-                          isActive={queueCurrentPage === index + 1}
-                          onClick={() => setQueueCurrentPage(index + 1)}
-                          disabled={queueItemsPerPage === -1}
-                        >
-                          {index + 1}
-                        </PaginationLink>
-                      </PaginationItem>
-                    ))}
-                    <PaginationItem>
-                      <PaginationNext
-                        onClick={() => setQueueCurrentPage((prev) => Math.min(queueTotalPages, prev + 1))}
-                        disabled={queueCurrentPage === queueTotalPages || queueItemsPerPage === -1}
-                      />
-                    </PaginationItem>
-                  </PaginationContent>
-                </Pagination>
+                <Button
+                  variant="outline"
+                  onClick={() => setQueueCurrentPage((prev) => Math.max(1, prev - 1))}
+                  disabled={queueCurrentPage === 1 || queueItemsPerPage === -1 || loadingQueuePagination}
+                >
+                  Sebelumnya
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setQueueCurrentPage((prev) => Math.min(queueTotalPages, prev + 1))}
+                  disabled={queueCurrentPage === queueTotalPages || queueItemsPerPage === -1 || loadingQueuePagination}
+                >
+                  Berikutnya
+                </Button>
               </div>
             </>
           )}
