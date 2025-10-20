@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useSession } from '@/contexts/SessionContext';
 import { supabase } from '@/integrations/supabase/client';
 import {
@@ -67,6 +67,7 @@ const RekapDikembalikan = () => {
   const { user, profile, loading: sessionLoading } = useSession();
   const [tagihanList, setTagihanList] = useState<Tagihan[]>([]);
   const [loadingData, setLoadingData] = useState(true);
+  const [loadingPagination, setLoadingPagination] = useState(false); // New state for pagination loading
   const [searchQuery, setSearchQuery] = useState('');
   const debouncedSearchQuery = useDebounce(searchQuery, 500);
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
@@ -80,14 +81,25 @@ const RekapDikembalikan = () => {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [selectedTagihanForDetail, setSelectedTagihanForDetail] = useState<Tagihan | null>(null);
 
+  // Refs to track previous values for determining pagination-only changes
+  const prevSearchQuery = useRef(searchQuery);
+  const prevDateRange = useRef(dateRange);
+  const prevItemsPerPage = useRef(itemsPerPage);
+  const prevCurrentPage = useRef(currentPage);
+
   useEffect(() => {
-    const fetchRekapDikembalikan = async () => {
+    const fetchRekapDikembalikan = async (isPaginationOnlyChange = false) => {
       if (!user || sessionLoading || profile?.peran !== 'Staf Koreksi') {
         setLoadingData(false);
         return;
       }
 
-      setLoadingData(true);
+      if (!isPaginationOnlyChange) {
+        setLoadingData(true); // Show full loading spinner for search/filter changes
+      } else {
+        setLoadingPagination(true); // Only disable pagination buttons for page changes
+      }
+
       try {
         let query = supabase
           .from('database_tagihan')
@@ -124,11 +136,33 @@ const RekapDikembalikan = () => {
         console.error('Error fetching rekap dikembalikan:', error.message);
         toast.error('Gagal memuat rekap tagihan dikembalikan: ' + error.message);
       } finally {
-        setLoadingData(false);
+        if (!isPaginationOnlyChange) {
+          setLoadingData(false);
+        } else {
+          setLoadingPagination(false);
+        }
       }
     };
 
-    fetchRekapDikembalikan();
+    let isPaginationOnlyChange = false;
+    // Check if only currentPage changed, while other filters/search/itemsPerPage remained the same
+    if (
+      prevCurrentPage.current !== currentPage &&
+      prevSearchQuery.current === searchQuery &&
+      prevDateRange.current === dateRange &&
+      prevItemsPerPage.current === itemsPerPage
+    ) {
+      isPaginationOnlyChange = true;
+    }
+
+    fetchRekapDikembalikan(isPaginationOnlyChange);
+
+    // Update refs for the next render cycle
+    prevSearchQuery.current = searchQuery;
+    prevDateRange.current = dateRange;
+    prevItemsPerPage.current = itemsPerPage;
+    prevCurrentPage.current = currentPage;
+
   }, [user, profile, sessionLoading, debouncedSearchQuery, dateRange, currentPage, itemsPerPage]);
 
   const handleDetailClick = (tagihan: Tagihan) => {
@@ -235,7 +269,13 @@ const RekapDikembalikan = () => {
             <Table><TableHeader><TableRow>
                   <TableHead>Waktu Koreksi</TableHead><TableHead>Nomor Koreksi</TableHead><TableHead>Nomor SPM</TableHead><TableHead>Nama SKPD</TableHead><TableHead>Keterangan</TableHead><TableHead className="text-center">Aksi</TableHead>
                 </TableRow></TableHeader><TableBody>
-                {tagihanList.length === 0 ? (
+                {loadingData && !loadingPagination ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                      Memuat data tagihan dikembalikan...
+                    </TableCell>
+                  </TableRow>
+                ) : tagihanList.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
                       Tidak ada data tagihan dikembalikan.
@@ -263,37 +303,24 @@ const RekapDikembalikan = () => {
           </div>
 
           {/* Pagination Controls */}
-          <div className="mt-6 flex flex-col sm:flex-row items-center justify-between space-y-2 sm:space-y-0">
+          <div className="mt-6 flex items-center justify-end space-x-4">
             <div className="text-sm text-muted-foreground">
               Halaman {totalItems === 0 ? 0 : currentPage} dari {totalPages} ({totalItems} total item)
             </div>
-            <Pagination>
-              <PaginationContent>
-                <PaginationItem>
-                  <PaginationPrevious
-                    onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-                    disabled={currentPage === 1 || itemsPerPage === -1}
-                  />
-                </PaginationItem>
-                {[...Array(totalPages)].map((_, index) => (
-                  <PaginationItem key={index}>
-                    <PaginationLink
-                      isActive={currentPage === index + 1}
-                      onClick={() => setCurrentPage(index + 1)}
-                      disabled={itemsPerPage === -1}
-                    >
-                      {index + 1}
-                    </PaginationLink>
-                  </PaginationItem>
-                ))}
-                <PaginationItem>
-                  <PaginationNext
-                    onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-                    disabled={currentPage === totalPages || itemsPerPage === -1}
-                  />
-                </PaginationItem>
-              </PaginationContent>
-            </Pagination>
+            <Button
+              variant="outline"
+              onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+              disabled={currentPage === 1 || itemsPerPage === -1 || loadingPagination}
+            >
+              Sebelumnya
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+              disabled={currentPage === totalPages || itemsPerPage === -1 || loadingPagination}
+            >
+              Berikutnya
+            </Button>
           </div>
         </CardContent>
       </Card>
