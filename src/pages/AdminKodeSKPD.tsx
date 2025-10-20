@@ -91,7 +91,8 @@ const AdminKodeSKPD = () => {
         );
       }
 
-      query = query.order('nama_skpd', { ascending: true });
+      // MODIFIKASI: Urutkan berdasarkan kode_skpd secara ascending
+      query = query.order('kode_skpd', { ascending: true });
 
       if (itemsPerPage !== -1) {
         const from = (currentPage - 1) * itemsPerPage;
@@ -182,7 +183,7 @@ const AdminKodeSKPD = () => {
       const { data, error } = await supabase
         .from('master_skpd')
         .select('nama_skpd, kode_skpd')
-        .order('nama_skpd', { ascending: true });
+        .order('kode_skpd', { ascending: true }); // Ensure download is also sorted by kode_skpd
 
       if (error) throw error;
 
@@ -211,13 +212,10 @@ const AdminKodeSKPD = () => {
     }
   };
 
-  // --- NEW FUNCTION: handleUploadButtonClick ---
   const handleUploadButtonClick = () => {
     fileInputRef.current?.click();
   };
-  // --- END NEW FUNCTION ---
 
-  // --- NEW FUNCTION: handleFileUpload ---
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (!event.target.files || event.target.files.length === 0) {
       toast.error('Pilih file CSV untuk diunggah.');
@@ -240,7 +238,6 @@ const AdminKodeSKPD = () => {
 
         const parsedData = results.data as { nama_skpd?: string; kode_skpd?: string }[];
 
-        // Validate data
         if (!parsedData || parsedData.length === 0) {
           toast.error('File CSV kosong atau tidak memiliki data yang valid.');
           setIsUploading(false);
@@ -266,13 +263,12 @@ const AdminKodeSKPD = () => {
           if (data && data.error) throw new Error(data.error);
 
           toast.success('Data SKPD berhasil diimpor/diperbarui!');
-          fetchSkpdData(); // Refresh table data
+          fetchSkpdData();
         } catch (error: any) {
           console.error('Error importing SKPD data:', error.message);
           toast.error('Gagal mengimpor data SKPD: ' + error.message);
         } finally {
           setIsUploading(false);
-          // Clear the file input value to allow re-uploading the same file
           if (fileInputRef.current) {
             fileInputRef.current.value = '';
           }
@@ -288,7 +284,6 @@ const AdminKodeSKPD = () => {
       }
     });
   };
-  // --- END NEW FUNCTION ---
 
   const totalPages = itemsPerPage === -1 ? 1 : Math.ceil(totalItems / itemsPerPage);
 
@@ -315,7 +310,6 @@ const AdminKodeSKPD = () => {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold text-gray-800 dark:text-white">Manajemen Kode SKPD</h1>
         <div className="flex space-x-2">
-          {/* Hidden file input */}
           <input
             type="file"
             ref={fileInputRef}
