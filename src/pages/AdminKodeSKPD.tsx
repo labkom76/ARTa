@@ -10,12 +10,21 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { PlusCircleIcon, EditIcon, Trash2Icon } from 'lucide-react';
+import { PlusCircleIcon, EditIcon, Trash2Icon, SearchIcon } from 'lucide-react'; // Import SearchIcon
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import AddSkpdDialog from '@/components/AddSkpdDialog';
 import EditSkpdDialog from '@/components/EditSkpdDialog'; // Import the new dialog component
 import DeleteConfirmationDialog from '@/components/DeleteConfirmationDialog'; // Import the delete confirmation dialog
+import { Input } from '@/components/ui/input'; // Import Input
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'; // Import Select components
+import { Label } from '@/components/ui/label'; // Import Label
 
 interface SkpdData {
   id: string;
@@ -35,6 +44,11 @@ const AdminKodeSKPD = () => {
 
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false); // State for delete dialog
   const [skpdToDelete, setSkpdToDelete] = useState<{ id: string; namaSkpd: string } | null>(null); // State for SKPD to delete
+
+  // New states for search and pagination controls
+  const [searchQuery, setSearchQuery] = useState('');
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [currentPage, setCurrentPage] = useState(1); // Added currentPage state
 
   useEffect(() => {
     if (!sessionLoading) {
@@ -144,6 +158,43 @@ const AdminKodeSKPD = () => {
           <CardTitle className="text-xl font-semibold">Daftar Kode SKPD</CardTitle>
         </CardHeader>
         <CardContent>
+          {/* New: Search Input and Items Per Page Dropdown */}
+          <div className="mb-4 flex flex-col sm:flex-row items-center justify-between space-y-2 sm:space-y-0 sm:space-x-2">
+            <div className="relative flex-1 w-full sm:w-auto">
+              <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400" />
+              <Input
+                type="text"
+                placeholder="Cari berdasarkan Nama atau Kode SKPD..."
+                className="pl-9 w-full"
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setCurrentPage(1); // Reset page on search
+                }}
+              />
+            </div>
+            <div className="flex items-center space-x-2">
+              <Label htmlFor="items-per-page" className="whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">Baris per halaman:</Label>
+              <Select
+                value={itemsPerPage.toString()}
+                onValueChange={(value) => {
+                  setItemsPerPage(Number(value));
+                  setCurrentPage(1); // Reset page on items per page change
+                }}
+              >
+                <SelectTrigger className="w-[100px]">
+                  <SelectValue placeholder="10" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="10">10</SelectItem>
+                  <SelectItem value="20">20</SelectItem>
+                  <SelectItem value="50">50</SelectItem>
+                  <SelectItem value="100">100</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
           <div className="overflow-x-auto">
             <Table><TableHeader><TableRow>
                   <TableHead>Nama SKPD</TableHead><TableHead>Kode SKPD</TableHead><TableHead className="text-center">Aksi</TableHead>
