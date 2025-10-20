@@ -246,7 +246,7 @@ const AdminLaporan = () => {
   // Pagination logic
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentTableData = tableData.slice(indexOfFirstItem, indexOfLastItem);
+  const currentTableData = itemsPerPage === -1 ? tableData : tableData.slice(indexOfFirstItem, indexOfLastItem);
   const totalPages = itemsPerPage === -1 ? 1 : Math.ceil(tableData.length / itemsPerPage);
 
   if (loadingPage) {
@@ -516,37 +516,24 @@ const AdminLaporan = () => {
           )}
           {/* Pagination Controls */}
           {tableData.length > 0 && (
-            <div className="mt-6 flex flex-col sm:flex-row items-center justify-between space-y-2 sm:space-y-0">
+            <div className="mt-6 flex flex-col sm:flex-row items-center justify-end space-y-2 sm:space-y-0 space-x-4">
               <div className="text-sm text-muted-foreground">
                 Halaman {tableData.length === 0 ? 0 : currentPage} dari {totalPages} ({tableData.length} total item)
               </div>
-              <Pagination>
-                <PaginationContent>
-                  <PaginationItem>
-                    <PaginationPrevious
-                      onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-                      disabled={currentPage === 1 || itemsPerPage === -1}
-                    />
-                  </PaginationItem>
-                  {[...Array(totalPages)].map((_, index) => (
-                    <PaginationItem key={index}>
-                      <PaginationLink
-                        isActive={currentPage === index + 1}
-                        onClick={() => setCurrentPage(index + 1)}
-                        disabled={itemsPerPage === -1}
-                      >
-                        {index + 1}
-                      </PaginationLink>
-                    </PaginationItem>
-                  ))}
-                  <PaginationItem>
-                    <PaginationNext
-                      onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-                      disabled={currentPage === totalPages || itemsPerPage === -1}
-                    />
-                  </PaginationItem>
-                </PaginationContent>
-              </Pagination>
+              <Button
+                variant="outline"
+                onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                disabled={currentPage === 1 || itemsPerPage === -1}
+              >
+                Sebelumnya
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                disabled={currentPage === totalPages || itemsPerPage === -1}
+              >
+                Berikutnya
+              </Button>
             </div>
           )}
         </CardContent>
