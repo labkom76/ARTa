@@ -10,7 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { PlusCircleIcon, EditIcon, Trash2Icon, SearchIcon, UploadIcon, FileDownIcon } from 'lucide-react'; // Import UploadIcon and FileDownIcon
+import { PlusCircleIcon, EditIcon, Trash2Icon, SearchIcon, UploadIcon, FileDownIcon } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import AddSkpdDialog from '@/components/AddSkpdDialog';
@@ -26,6 +26,7 @@ import {
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import useDebounce from '@/hooks/use-debounce';
+import Papa from 'papaparse'; // Import Papa Parse
 
 interface SkpdData {
   id: string;
@@ -172,6 +173,47 @@ const AdminKodeSKPD = () => {
     }
   };
 
+  // --- NEW FUNCTION: handleDownloadSkpdCSV ---
+  const handleDownloadSkpdCSV = async () => {
+    try {
+      // Fetch all SKPD data without pagination or filters
+      const { data, error } = await supabase
+        .from('master_skpd')
+        .select('nama_skpd, kode_skpd')
+        .order('nama_skpd', { ascending: true });
+
+      if (error) throw error;
+
+      if (!data || data.length === 0) {
+        toast.info('Tidak ada data SKPD untuk diunduh.');
+        return;
+      }
+
+      // Convert data to CSV format using Papa Parse
+      const csv = Papa.unparse(data, {
+        header: true, // Include headers in the CSV
+        columns: ['nama_skpd', 'kode_skpd'], // Specify column order and names
+      });
+
+      // Create a Blob from the CSV string
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+
+      // Create a download link and trigger the download
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.setAttribute('download', 'daftar_kode_skpd.csv');
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      toast.success('Daftar Kode SKPD berhasil diunduh!');
+    } catch (error: any) {
+      console.error('Error downloading SKPD CSV:', error.message);
+      toast.error('Gagal mengunduh daftar Kode SKPD: ' + error.message);
+    }
+  };
+  // --- END NEW FUNCTION ---
+
   const totalPages = itemsPerPage === -1 ? 1 : Math.ceil(totalItems / itemsPerPage);
 
   if (loadingPage) {
@@ -196,11 +238,11 @@ const AdminKodeSKPD = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold text-gray-800 dark:text-white">Manajemen Kode SKPD</h1>
-        <div className="flex space-x-2"> {/* Container for multiple buttons */}
+        <div className="flex space-x-2">
           <Button variant="outline" className="flex items-center gap-2">
             <UploadIcon className="h-4 w-4" /> Upload CSV
           </Button>
-          <Button variant="outline" className="flex items-center gap-2">
+          <Button variant="outline" className="flex items-center gap-2" onClick={handleDownloadSkpdCSV}> {/* Attach onClick handler */}
             <FileDownIcon className="h-4 w-4" /> Download CSV
           </Button>
           <Button onClick={() => setIsAddSkpdModalOpen(true)} className="flex items-center gap-2">
