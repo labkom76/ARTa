@@ -58,6 +58,10 @@ const AdminKodeSKPD = () => {
   const prevItemsPerPage = useRef(itemsPerPage);
   const prevCurrentPage = useRef(currentPage);
 
+  // New states and ref for CSV upload
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   useEffect(() => {
     if (!sessionLoading) {
       setLoadingPage(false);
@@ -173,10 +177,8 @@ const AdminKodeSKPD = () => {
     }
   };
 
-  // --- NEW FUNCTION: handleDownloadSkpdCSV ---
   const handleDownloadSkpdCSV = async () => {
     try {
-      // Fetch all SKPD data without pagination or filters
       const { data, error } = await supabase
         .from('master_skpd')
         .select('nama_skpd, kode_skpd')
@@ -189,16 +191,12 @@ const AdminKodeSKPD = () => {
         return;
       }
 
-      // Convert data to CSV format using Papa Parse
       const csv = Papa.unparse(data, {
-        header: true, // Include headers in the CSV
-        columns: ['nama_skpd', 'kode_skpd'], // Specify column order and names
+        header: true,
+        columns: ['nama_skpd', 'kode_skpd'],
       });
 
-      // Create a Blob from the CSV string
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-
-      // Create a download link and trigger the download
       const link = document.createElement('a');
       link.href = URL.createObjectURL(blob);
       link.setAttribute('download', 'daftar_kode_skpd.csv');
@@ -211,6 +209,84 @@ const AdminKodeSKPD = () => {
       console.error('Error downloading SKPD CSV:', error.message);
       toast.error('Gagal mengunduh daftar Kode SKPD: ' + error.message);
     }
+  };
+
+  // --- NEW FUNCTION: handleUploadButtonClick ---
+  const handleUploadButtonClick = () => {
+    fileInputRef.current?.click();
+  };
+  // --- END NEW FUNCTION ---
+
+  // --- NEW FUNCTION: handleFileUpload ---
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!event.target.files || event.target.files.length === 0) {
+      toast.error('Pilih file CSV untuk diunggah.');
+      return;
+    }
+
+    const file = event.target.files[0];
+    setIsUploading(true);
+
+    Papa.parse(file, {
+      header: true,
+      skipEmptyLines: true,
+      complete: async (results) => {
+        if (results.errors.length > 0) {
+          console.error('CSV parsing errors:', results.errors);
+          toast.error('Gagal mengurai file CSV. Periksa format file.');
+          setIsUploading(false);
+          return;
+        }
+
+        const parsedData = results.data as { nama_skpd?: string; kode_skpd?: string }[];
+
+        // Validate data
+        if (!parsedData || parsedData.length === 0) {
+          toast.error('File CSV kosong atau tidak memiliki data yang valid.');
+          setIsUploading(false);
+          return;
+        }
+
+        const validSkpdData = parsedData.filter(row => row.nama_skpd && row.kode_skpd);
+        if (validSkpdData.length !== parsedData.length) {
+          toast.warning('Beberapa baris di file CSV diabaikan karena data tidak lengkap (nama_skpd atau kode_skpd kosong).');
+        }
+        if (validSkpdData.length === 0) {
+          toast.error('Tidak ada data SKPD yang valid ditemukan di file CSV.');
+          setIsUploading(false);
+          return;
+        }
+
+        try {
+          const { data, error: invokeError } = await supabase.functions.invoke('bulk-upsert-skpd', {
+            body: JSON.stringify({ skpdData: validSkpdData }),
+          });
+
+          if (invokeError) throw invokeError;
+          if (data && data.error) throw new Error(data.error);
+
+          toast.success('Data SKPD berhasil diimpor/diperbarui!');
+          fetchSkpdData(); // Refresh table data
+        } catch (error: any) {
+          console.error('Error importing SKPD data:', error.message);
+          toast.error('Gagal mengimpor data SKPD: ' + error.message);
+        } finally {
+          setIsUploading(false);
+          // Clear the file input value to allow re-uploading the same file
+          if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+          }
+        }
+      },
+      error: (error: any) => {
+        console.error('Papa Parse error:', error);
+        toast.error('Terjadi kesalahan saat membaca file CSV.');
+        setIsUploading(false);
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
+      }
+    });
   };
   // --- END NEW FUNCTION ---
 
@@ -239,10 +315,19 @@ const AdminKodeSKPD = () => {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold text-gray-800 dark:text-white">Manajemen Kode SKPD</h1>
         <div className="flex space-x-2">
-          <Button variant="outline" className="flex items-center gap-2">
-            <UploadIcon className="h-4 w-4" /> Upload CSV
+          {/* Hidden file input */}
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileUpload}
+            accept=".csv"
+            className="hidden"
+            disabled={isUploading}
+          />
+          <Button variant="outline" className="flex items-center gap-2" onClick={handleUploadButtonClick} disabled={isUploading}>
+            {isUploading ? 'Mengunggah...' : <><UploadIcon className="h-4 w-4" /> Upload CSV</>}
           </Button>
-          <Button variant="outline" className="flex items-center gap-2" onClick={handleDownloadSkpdCSV}> {/* Attach onClick handler */}
+          <Button variant="outline" className="flex items-center gap-2" onClick={handleDownloadSkpdCSV}>
             <FileDownIcon className="h-4 w-4" /> Download CSV
           </Button>
           <Button onClick={() => setIsAddSkpdModalOpen(true)} className="flex items-center gap-2">
