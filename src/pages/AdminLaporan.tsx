@@ -35,7 +35,8 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { supabase } from '@/integrations/supabase/client'; // Import supabase client
-import Papa from 'papaparse'; // Import Papa Parse
+import * as XLSX from 'xlsx'; // Import XLSX library
+// import Papa from 'papaparse'; // Removed Papa Parse
 import {
   Pagination,
   PaginationContent,
@@ -197,49 +198,62 @@ const AdminLaporan = () => {
     }
   };
 
-  const handleDownloadCSV = () => {
-    if (!tableData || tableData.length === 0) { // Use tableData for CSV
+  const handleDownloadCSV = () => { // Renamed to handleDownloadXLSX internally
+    if (!tableData || tableData.length === 0) {
       toast.error('Tidak ada data untuk diunduh.');
       return;
     }
 
-    let csvData: any[] = [];
-    let fileName = 'laporan_data.csv';
+    let headers: string[] = [];
+    let data: (string | number)[][] = [];
+    let fileName = 'laporan_data.xlsx'; // Default to XLSX
 
-    // Customize CSV headers and data based on report type
+    // Customize headers and data based on report type
     if (generatedReportType === 'sumber_dana' || generatedReportType === 'jenis_tagihan') {
-      csvData = tableData.map((item: ChartDataItem) => ({
-        [generatedReportType === 'sumber_dana' ? 'Sumber Dana' : 'Jenis Tagihan']: item.name,
-        'Total Nilai': item.value,
-      }));
-      fileName = `laporan_per_${generatedReportType}.csv`;
-    } else if (generatedReportType === 'detail_skpd' || generatedReportType === 'analisis_skpd') { // Use tableData for detail/analysis
-      csvData = tableData.map((item: TagihanDetail) => ({
-        'ID Tagihan': item.id_tagihan,
-        'Nama SKPD': item.nama_skpd,
-        'Nomor SPM': item.nomor_spm,
-        'Jenis SPM': item.jenis_spm,
-        'Jenis Tagihan': item.jenis_tagihan,
-        'Sumber Dana': item.sumber_dana || '-',
-        'Uraian': item.uraian,
-        'Jumlah Kotor': item.jumlah_kotor,
-        'Status Tagihan': item.status_tagihan,
-        'Waktu Input': new Date(item.waktu_input).toLocaleString('id-ID'),
-      }));
-      fileName = `laporan_${generatedReportType}.csv`;
+      headers = [generatedReportType === 'sumber_dana' ? 'Sumber Dana' : 'Jenis Tagihan', 'Total Nilai'];
+      data = tableData.map((item: ChartDataItem) => [item.name, item.value]);
+      fileName = `laporan_per_${generatedReportType}.xlsx`;
+    } else if (generatedReportType === 'analisis_skpd') {
+      headers = [
+        'ID Tagihan',
+        'Nama SKPD',
+        'Nomor SPM',
+        'Jenis SPM',
+        'Jenis Tagihan',
+        'Sumber Dana',
+        'Uraian',
+        'Jumlah Kotor',
+        'Status Tagihan',
+        'Waktu Input',
+      ];
+      data = tableData.map((item: TagihanDetail) => [
+        item.id_tagihan,
+        item.nama_skpd,
+        item.nomor_spm,
+        item.jenis_spm,
+        item.jenis_tagihan,
+        item.sumber_dana || '-',
+        item.uraian,
+        item.jumlah_kotor,
+        item.status_tagihan,
+        new Date(item.waktu_input).toLocaleString('id-ID'),
+      ]);
+      fileName = `laporan_${generatedReportType}.xlsx`;
     } else {
       toast.error('Jenis laporan tidak dikenal untuk diunduh.');
       return;
     }
 
-    const csv = Papa.unparse(csvData);
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.setAttribute('download', fileName);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    // Create a worksheet
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...data]);
+    
+    // Create a new workbook
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Laporan"); // Add the worksheet to the workbook
+
+    // Write the file
+    XLSX.writeFile(wb, fileName);
+
     toast.success('Laporan berhasil diunduh!');
   };
 
@@ -560,7 +574,7 @@ const AdminLaporan = () => {
       {/* Tombol Download Laporan */}
       <div className="flex justify-end">
         <Button onClick={handleDownloadCSV} variant="outline" className="flex items-center gap-2" disabled={!generatedReportType || loadingReport || tableData.length === 0}>
-          <FileDownIcon className="h-4 w-4" /> Download Laporan (CSV)
+          <FileDownIcon className="h-4 w-4" /> Download Laporan (XLSX)
         </Button>
       </div>
     </div>
