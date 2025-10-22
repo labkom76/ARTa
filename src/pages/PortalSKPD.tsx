@@ -840,6 +840,9 @@ const PortalSKPD = () => {
                 maxLength={250} // Added maxLength attribute
                 disabled={!isAccountVerified}
               />
+              <p className="col-span-4 text-right text-xs text-muted-foreground">
+                Maksimal 250 karakter
+              </p>
               {form.formState.errors.uraian && (
                 <p className="col-span-4 text-right text-red-500 text-sm">
                   {form.formState.errors.uraian.message}
