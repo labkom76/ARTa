@@ -11,6 +11,12 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"; // Import Tooltip components
 
 interface Tagihan {
   id_tagihan: string;
@@ -71,7 +77,16 @@ const RegistrasiConfirmationDialog: React.FC<RegistrasiConfirmationDialogProps> 
           </div>
           <div className="grid grid-cols-3 items-center gap-4">
             <Label className="text-right">Nomor SPM:</Label>
-            <p className="col-span-2">{tagihan.nomor_spm}</p>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger className="col-span-2 max-w-[250px] whitespace-nowrap overflow-hidden text-ellipsis block font-medium">
+                  {tagihan.nomor_spm}
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{tagihan.nomor_spm}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
           <div className="grid grid-cols-3 items-center gap-4">
             <Label className="text-right">Nama SKPD:</Label>
