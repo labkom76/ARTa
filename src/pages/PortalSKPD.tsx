@@ -183,6 +183,7 @@ const PortalSKPD = () => {
   const jenisTagihanWatch = form.watch('jenis_tagihan');
   const kodeJadwalWatch = form.watch('kode_jadwal');
   const nomorUrutTagihanWatch = form.watch('nomor_urut_tagihan');
+  const uraianWatch = form.watch('uraian'); // Watch uraian for character count
 
   useEffect(() => {
     if (!sessionLoading && profile) {
@@ -840,9 +841,10 @@ const PortalSKPD = () => {
                 maxLength={250} // Added maxLength attribute
                 disabled={!isAccountVerified}
               />
-              <p className="col-span-4 text-right text-xs text-muted-foreground">
-                Maksimal 250 karakter
-              </p>
+              {/* Indikator Hitungan Karakter Dinamis */}
+              <div className="col-start-2 col-span-3 text-right text-xs text-muted-foreground">
+                {uraianWatch?.length || 0} / 250 karakter
+              </div>
               {form.formState.errors.uraian && (
                 <p className="col-span-4 text-right text-red-500 text-sm">
                   {form.formState.errors.uraian.message}
