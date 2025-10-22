@@ -22,7 +22,7 @@ serve(async (req) => {
   }
 
   try {
-    const { reportType, startDate, endDate, status, groupBy, skpd, timeRange } = await req.json(); // Receive new 'timeRange' parameter
+    const { reportType, startDate, endDate, status, groupBy, skpd, timeRange, statusFilter } = await req.json(); // Receive new 'timeRange' and 'statusFilter' parameter
 
     if (!reportType) {
       return new Response(JSON.stringify({ error: 'reportType is required.' }), {
@@ -34,7 +34,7 @@ serve(async (req) => {
     // Create a Supabase client with the service_role_key to bypass RLS
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '' // Perbaikan di sini: Menambahkan _KEY
     );
 
     let resultData: any; // This will hold the final data to be returned
@@ -78,6 +78,13 @@ serve(async (req) => {
         if (startDate) chartQuery = chartQuery.gte('waktu_input', startDate);
         if (endDate) chartQuery = chartQuery.lte('waktu_input', endDate);
         if (skpd && skpd !== 'Semua SKPD') chartQuery = chartQuery.eq('nama_skpd', skpd);
+        // NEW: Apply statusFilter for analisis_skpd
+        if (statusFilter && statusFilter !== 'Semua (Selesai)') {
+          chartQuery = chartQuery.eq('status_tagihan', statusFilter);
+        } else if (statusFilter === 'Semua (Selesai)') {
+          chartQuery = chartQuery.in('status_tagihan', ['Diteruskan', 'Dikembalikan']);
+        }
+
 
         const { data: chartRawData, error: chartError } = await chartQuery;
         if (chartError) throw chartError;
@@ -97,6 +104,12 @@ serve(async (req) => {
         if (startDate) tableQuery = tableQuery.gte('waktu_input', startDate);
         if (endDate) tableQuery = tableQuery.lte('waktu_input', endDate);
         if (skpd && skpd !== 'Semua SKPD') tableQuery = tableQuery.eq('nama_skpd', skpd);
+        // NEW: Apply statusFilter for analisis_skpd table data
+        if (statusFilter && statusFilter !== 'Semua (Selesai)') {
+          tableQuery = tableQuery.eq('status_tagihan', statusFilter);
+        } else if (statusFilter === 'Semua (Selesai)') {
+          tableQuery = tableQuery.in('status_tagihan', ['Diteruskan', 'Dikembalikan']);
+        }
 
         tableQuery = tableQuery.order('waktu_input', { ascending: false });
 
@@ -130,7 +143,7 @@ serve(async (req) => {
             break;
           default: // Default to Bulan Ini if not specified
             filterStartDate = startOfMonth(now);
-            filterEndDate = endOfMonth(now);
+            filterEndDate = endOfYear(now); // Default to year if no specific range
             break;
         }
 
