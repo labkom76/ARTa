@@ -81,6 +81,7 @@ const AdminLaporan = () => {
   const [groupByOption, setGroupByOption] = useState<string>('sumber_dana'); // New state for group by
   const [selectedSkpdForAnalysis, setSelectedSkpdForAnalysis] = useState<string>('Semua SKPD'); // New state for selected SKPD in analysis
   const [skpdOptionsForAnalysis, setSkpdOptionsForAnalysis] = useState<string[]>([]); // New state for SKPD options
+  const [selectedStatusFilter, setSelectedStatusFilter] = useState<string>('Semua (Selesai)'); // NEW: State for conditional status filter
 
   const [generatedReportType, setGeneratedReportType] = useState<string | null>(null);
   const [chartData, setChartData] = useState<ChartDataItem[]>([]); // Separate state for chart data
@@ -105,6 +106,7 @@ const AdminLaporan = () => {
     if (reportType !== 'analisis_skpd') {
       setGroupByOption('sumber_dana'); // Reset to default when not in analysis mode
       setSelectedSkpdForAnalysis('Semua SKPD'); // Reset SKPD selection
+      setSelectedStatusFilter('Semua (Selesai)'); // NEW: Reset conditional status filter
     }
     setCurrentPage(1); // Reset page on report type change
   }, [reportType]);
@@ -163,6 +165,8 @@ const AdminLaporan = () => {
       } else if (reportType === 'analisis_skpd') {
         payload.groupBy = groupByOption;
         payload.skpd = selectedSkpdForAnalysis !== 'Semua SKPD' ? selectedSkpdForAnalysis : undefined;
+        // NEW: Add selectedStatusFilter to payload
+        payload.statusFilter = selectedStatusFilter; // MODIFIED: Always send the value
       }
 
       const { data, error } = await supabase.functions.invoke('generate-report', {
@@ -341,6 +345,20 @@ const AdminLaporan = () => {
                         {skpd}
                       </SelectItem>
                     ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {/* NEW: Status Tagihan Dropdown */}
+              <div className="grid gap-2">
+                <Label htmlFor="status-tagihan-filter">Status Tagihan</Label>
+                <Select onValueChange={setSelectedStatusFilter} value={selectedStatusFilter}>
+                  <SelectTrigger id="status-tagihan-filter" className="w-full">
+                    <SelectValue placeholder="Pilih Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Semua (Selesai)">Semua (Selesai)</SelectItem>
+                    <SelectItem value="Diteruskan">Diteruskan</SelectItem>
+                    <SelectItem value="Dikembalikan">Dikembalikan</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
