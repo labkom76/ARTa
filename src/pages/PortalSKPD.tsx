@@ -47,7 +47,7 @@ import { useLocation } from 'react-router-dom'; // Import useLocation
 
 // Zod schema for form validation
 const formSchema = z.object({
-  uraian: z.string().min(1, { message: 'Uraian wajib diisi.' }),
+  uraian: z.string().min(1, { message: 'Uraian wajib diisi.' }).max(250, { message: 'Uraian tidak boleh lebih dari 250 karakter.' }),
   jumlah_kotor: z.preprocess(
     (val) => Number(val),
     z.number().min(0, { message: 'Jumlah Kotor harus angka positif.' })
@@ -837,6 +837,7 @@ const PortalSKPD = () => {
                 {...form.register('uraian')}
                 className="col-span-3"
                 rows={3}
+                maxLength={250} // Added maxLength attribute
                 disabled={!isAccountVerified}
               />
               {form.formState.errors.uraian && (
