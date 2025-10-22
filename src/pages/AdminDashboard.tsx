@@ -1,9 +1,29 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useSession } from '@/contexts/SessionContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
-import { LayoutDashboardIcon, UsersIcon, FileTextIcon, CheckCircleIcon, HourglassIcon, DollarSignIcon } from 'lucide-react';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  Legend,
+} from 'recharts';
+import {
+  LayoutDashboardIcon,
+  UsersIcon, // Digunakan untuk pengguna baru
+  FileTextIcon,
+  CheckCircleIcon,
+  HourglassIcon,
+  DollarSignIcon,
+  PieChartIcon,
+  BarChart3Icon,
+} from 'lucide-react';
 import { toast } from 'sonner';
 import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfYear, endOfYear, startOfDay, endOfDay } from 'date-fns';
 import {
@@ -13,10 +33,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
+import { useTheme } from 'next-themes';
+import { cn } from '@/lib/utils';
 
 interface KPIData {
   totalSKPD: number;
-  processedTagihanCount: number;
+  newUsersPendingActivation: number; // Mengganti processedTagihanCount
   totalAmountProcessed: number;
   queuedTagihan: number;
 }
@@ -24,7 +47,6 @@ interface KPIData {
 interface BarChartDataItem {
   name: string;
   value: number;
-  color: string;
 }
 
 const AdminDashboard = () => {
@@ -33,10 +55,32 @@ const AdminDashboard = () => {
   const [kpiData, setKpiData] = useState<KPIData | null>(null);
   const [barChartData, setBarChartData] = useState<BarChartDataItem[]>([]);
   const [loadingData, setLoadingData] = useState(true);
+  const [chartView, setChartView] = useState<'donut' | 'bar'>('donut');
 
-  // State for filters
+  // State for filters (processedStatusFilter no longer needed for KPI, but kept for consistency if other parts use it)
   const [processedStatusFilter, setProcessedStatusFilter] = useState<'Diteruskan' | 'Dikembalikan'>('Diteruskan');
   const [totalAmountTimeFilter, setTotalAmountTimeFilter] = useState<'Hari Ini' | 'Minggu Ini' | 'Bulan Ini' | 'Tahun Ini'>('Bulan Ini');
+  const [selectedTimeRangeForChart, setSelectedTimeRangeForChart] = useState<'Hari Ini' | 'Minggu Ini' | 'Bulan Ini' | 'Tahun Ini'>('Bulan Ini');
+
+  const { theme } = useTheme();
+
+  const statusColorMap = {
+    'Diteruskan': 0, // Green
+    'Menunggu Registrasi': 1, // Yellow
+    'Menunggu Verifikasi': 2, // Purple
+    'Dikembalikan': 3, // Red
+  };
+
+  const lightThemeChartColors = ['#22C55E', '#FACC15', '#A855F7', '#EF4444'];
+  const darkThemeChartColors = ['#4ADE80', '#FDE047', '#C084FC', '#F87171'];
+
+  const currentChartColors = theme === 'dark' ? darkThemeChartColors : lightThemeChartColors;
+
+  const axisAndLabelColor = theme === 'dark' ? '#A0A0A0' : '#888888';
+  const tooltipBgColor = theme === 'dark' ? '#333333' : '#FFFFFF';
+  const tooltipTextColor = theme === 'dark' ? '#FFFFFF' : '#000000';
+  const legendTextColor = theme === 'dark' ? '#E0E0E0' : '#333333';
+
 
   useEffect(() => {
     if (!sessionLoading) {
@@ -44,13 +88,12 @@ const AdminDashboard = () => {
     }
   }, [sessionLoading]);
 
-  const fetchDashboardData = async () => {
+  // Function to fetch KPI data
+  const fetchKpiData = useCallback(async () => {
     if (!profile || profile.peran !== 'Administrator') {
-      setLoadingData(false);
       return;
     }
 
-    setLoadingData(true);
     try {
       const now = new Date();
       const thisMonthStart = startOfMonth(now).toISOString();
@@ -63,14 +106,13 @@ const AdminDashboard = () => {
         .eq('peran', 'SKPD');
       if (skpdError) throw skpdError;
 
-      // 2. Tagihan Diproses (Bulan Ini) - Filtered by processedStatusFilter
-      const { count: processedTagihanCount, error: processedCountError } = await supabase
-        .from('database_tagihan')
+      // 2. Pengguna Baru Menunggu Aktivasi (peran SKPD dan asal_skpd IS NULL)
+      const { count: newUsersCount, error: newUsersError } = await supabase
+        .from('profiles')
         .select('*', { count: 'exact', head: true })
-        .eq('status_tagihan', processedStatusFilter)
-        .gte('waktu_verifikasi', thisMonthStart)
-        .lte('waktu_verifikasi', thisMonthEnd);
-      if (processedCountError) throw processedCountError;
+        .eq('peran', 'SKPD')
+        .is('asal_skpd', null); // Filter for users with SKPD role but no assigned SKPD
+      if (newUsersError) throw newUsersError;
 
       // 3. Nilai Total Tagihan - Filtered by totalAmountTimeFilter (status always 'Diteruskan')
       let timeFilterStart: string;
@@ -118,51 +160,56 @@ const AdminDashboard = () => {
 
       setKpiData({
         totalSKPD: totalSKPDCount || 0,
-        processedTagihanCount: processedTagihanCount || 0,
+        newUsersPendingActivation: newUsersCount || 0, // Menggunakan data pengguna baru
         totalAmountProcessed: totalAmountProcessed,
         queuedTagihan: queuedTagihanCount || 0,
       });
+    } catch (error: any) {
+      console.error('Error fetching KPI data:', error.message);
+      toast.error('Gagal memuat data KPI: ' + error.message);
+    }
+  }, [profile, totalAmountTimeFilter]); // processedStatusFilter removed from dependencies as it's no longer used here
 
-      // Fetch data for Bar Chart
-      const { data: tagihanStatusData, error: statusError } = await supabase
-        .from('database_tagihan')
-        .select('status_tagihan');
-      if (statusError) throw statusError;
+  // Function to fetch chart data using Edge Function
+  const fetchChartData = useCallback(async () => {
+    if (!profile || profile.peran !== 'Administrator') {
+      return;
+    }
 
-      const statusCounts: { [key: string]: number } = {
-        'Menunggu Registrasi': 0,
-        'Menunggu Verifikasi': 0,
-        'Diteruskan': 0,
-        'Dikembalikan': 0,
-      };
-
-      tagihanStatusData.forEach(tagihan => {
-        if (statusCounts.hasOwnProperty(tagihan.status_tagihan)) {
-          statusCounts[tagihan.status_tagihan]++;
-        }
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-report', {
+        body: JSON.stringify({
+          reportType: 'status_workflow',
+          timeRange: selectedTimeRangeForChart,
+        }),
       });
 
-      const dynamicBarChartData: BarChartDataItem[] = [
-        { name: 'Menunggu Registrasi', value: statusCounts['Menunggu Registrasi'], color: '#FFC107' }, // Yellow
-        { name: 'Menunggu Verifikasi', value: statusCounts['Menunggu Verifikasi'], color: '#9C27B0' }, // Purple
-        { name: 'Diteruskan', value: statusCounts['Diteruskan'], color: '#4CAF50' }, // Green
-        { name: 'Dikembalikan', value: statusCounts['Dikembalikan'], color: '#F44336' }, // Red
-      ];
-      setBarChartData(dynamicBarChartData);
+      if (error) throw error;
+      if (data && data.error) throw new Error(data.error);
 
+      setBarChartData(data || []);
     } catch (error: any) {
-      console.error('Error fetching dashboard data:', error.message);
-      toast.error('Gagal memuat data dashboard: ' + error.message);
-    } finally {
-      setLoadingData(false);
+      console.error('Error fetching chart data:', error.message);
+      toast.error('Gagal memuat data chart: ' + error.message);
+      setBarChartData([]);
     }
-  };
+  }, [profile, selectedTimeRangeForChart]);
+
 
   useEffect(() => {
+    const loadAllData = async () => {
+      setLoadingData(true);
+      await Promise.all([
+        fetchKpiData(),
+        fetchChartData(),
+      ]);
+      setLoadingData(false);
+    };
+
     if (!sessionLoading && profile?.peran === 'Administrator') {
-      fetchDashboardData();
+      loadAllData();
     }
-  }, [sessionLoading, profile, processedStatusFilter, totalAmountTimeFilter]); // Add filters to dependencies
+  }, [sessionLoading, profile, processedStatusFilter, totalAmountTimeFilter, selectedTimeRangeForChart, fetchKpiData, fetchChartData, theme]);
 
   if (loadingPage || loadingData) {
     return (
@@ -203,26 +250,15 @@ const AdminDashboard = () => {
           </CardContent>
         </Card>
 
-        {/* Tagihan Diproses (Bulan Ini) Card with filter */}
+        {/* Pengguna Baru Menunggu Aktivasi Card */}
         <Card className="shadow-sm rounded-lg flex flex-col h-full">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Tagihan Diproses (Bulan Ini)</CardTitle>
-            <div className="flex items-center gap-2">
-              <Select onValueChange={(value: 'Diteruskan' | 'Dikembalikan') => setProcessedStatusFilter(value)} value={processedStatusFilter}>
-                <SelectTrigger className="w-auto h-auto p-0 border-none shadow-none text-xs font-medium text-muted-foreground">
-                  <SelectValue placeholder="Filter Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Diteruskan">Diteruskan</SelectItem>
-                  <SelectItem value="Dikembalikan">Dikembalikan</SelectItem>
-                </SelectContent>
-              </Select>
-              <CheckCircleIcon className="h-4 w-4 text-green-500" />
-            </div>
+            <CardTitle className="text-sm font-medium">Menunggu Aktivasi</CardTitle> {/* Changed Title */}
+            <HourglassIcon className="h-4 w-4 text-yellow-500" />
           </CardHeader>
           <CardContent className="flex-grow flex flex-col justify-end">
-            <div className="text-2xl font-bold">{kpiData?.processedTagihanCount}</div>
-            <p className="text-xs text-muted-foreground">Tagihan {processedStatusFilter.toLowerCase()} bulan ini</p>
+            <div className="text-2xl font-bold">{kpiData?.newUsersPendingActivation}</div>
+            <p className="text-xs text-muted-foreground">Perlu penetapan SKPD</p> {/* Changed Description */}
           </CardContent>
         </Card>
 
@@ -266,20 +302,87 @@ const AdminDashboard = () => {
 
       {/* Grafik Batang (Bar Chart) */}
       <Card className="shadow-sm rounded-lg">
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="flex items-center gap-2 text-lg font-semibold">
             <LayoutDashboardIcon className="h-5 w-5 text-gray-600 dark:text-gray-300" />
             Status Alur Kerja Langsung
           </CardTitle>
+          <div className="flex items-center space-x-2">
+            {/* New Dropdown for Time Range */}
+            <Select onValueChange={(value: 'Hari Ini' | 'Minggu Ini' | 'Bulan Ini' | 'Tahun Ini') => setSelectedTimeRangeForChart(value)} value={selectedTimeRangeForChart}>
+              <SelectTrigger className="w-[120px] h-auto p-2 text-xs font-medium">
+                <SelectValue placeholder="Rentang Waktu" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Hari Ini">Hari Ini</SelectItem>
+                <SelectItem value="Minggu Ini">Minggu Ini</SelectItem>
+                <SelectItem value="Bulan Ini">Bulan Ini</SelectItem>
+                <SelectItem value="Tahun Ini">Tahun Ini</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button
+              variant={chartView === 'bar' ? 'secondary' : 'ghost'}
+              size="icon"
+              onClick={() => setChartView('bar')}
+              title="Tampilkan Bar Chart"
+            >
+              <BarChart3Icon className="h-4 w-4" />
+            </Button>
+            <Button
+              variant={chartView === 'donut' ? 'secondary' : 'ghost'}
+              size="icon"
+              onClick={() => setChartView('donut')}
+              title="Tampilkan Donut Chart"
+            >
+              <PieChartIcon className="h-4 w-4" />
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={barChartData}>
-              <XAxis dataKey="name" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
-              <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
-              <Tooltip cursor={{ fill: 'transparent' }} />
-              <Bar dataKey="value" fill={(entry) => entry.color} radius={[4, 4, 0, 0]} />
-            </BarChart>
+            {chartView === 'bar' ? (
+              <BarChart data={barChartData}>
+                <XAxis dataKey="name" stroke={axisAndLabelColor} fontSize={12} tickLine={false} axisLine={false} />
+                <YAxis stroke={axisAndLabelColor} fontSize={12} tickLine={false} axisLine={false} />
+                <Tooltip
+                  cursor={{ fill: 'transparent' }}
+                  contentStyle={{ backgroundColor: tooltipBgColor, borderColor: axisAndLabelColor }}
+                  itemStyle={{ color: tooltipTextColor }}
+                  labelStyle={{ color: tooltipTextColor }}
+                />
+                <Legend wrapperStyle={{ color: legendTextColor }} />
+                <Bar
+                  dataKey="value"
+                  fill={({ name }) => currentChartColors[statusColorMap[name as keyof typeof statusColorMap]]}
+                  radius={[4, 4, 0, 0]}
+                />
+              </BarChart>
+            ) : (
+              <PieChart>
+                <Pie
+                  data={barChartData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  outerRadius={80}
+                  innerRadius={60} // For donut effect
+                  dataKey="value"
+                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  paddingAngle={5}
+                >
+                  {barChartData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={currentChartColors[statusColorMap[entry.name as keyof typeof statusColorMap]]} />
+                  ))}
+                </Pie>
+                <Tooltip
+                  formatter={(value: number, name: string) => [`${value.toLocaleString('id-ID')}`, name]}
+                  contentStyle={{ backgroundColor: tooltipBgColor, borderColor: axisAndLabelColor }}
+                  itemStyle={{ color: tooltipTextColor }}
+                  labelStyle={{ color: tooltipTextColor }}
+                />
+                <Legend wrapperStyle={{ color: legendTextColor }} />
+              </PieChart>
+            )}
           </ResponsiveContainer>
         </CardContent>
       </Card>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useSession } from '@/contexts/SessionContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -10,7 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { PlusCircleIcon, EditIcon, Trash2Icon, SearchIcon, KeyRoundIcon } from 'lucide-react'; // Import KeyRoundIcon
+import { PlusCircleIcon, EditIcon, Trash2Icon, SearchIcon, KeyRoundIcon, ArrowRightLeftIcon } from 'lucide-react'; // Import KeyRoundIcon and ArrowRightLeftIcon
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
 import AddUserDialog from '@/components/AddUserDialog';
@@ -39,6 +39,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"; // Import Tooltip components
+import TransferUserDataDialog from '@/components/TransferUserDataDialog'; // Import the new dialog
 
 interface UserProfile {
   id: string;
@@ -53,6 +54,7 @@ const AdminUsers = () => {
   const [loadingPage, setLoadingPage] = useState(true);
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(true);
+  const [loadingPagination, setLoadingPagination] = useState(false); // New state for pagination loading
   const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
 
@@ -66,19 +68,32 @@ const AdminUsers = () => {
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [totalItems, setTotalItems] = useState(0);
 
+  // State for Transfer Data Modal
+  const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
+
+  // Refs to track previous values for determining pagination-only changes
+  const prevSearchQuery = useRef(searchQuery);
+  const prevItemsPerPage = useRef(itemsPerPage);
+  const prevCurrentPage = useRef(currentPage);
+
   useEffect(() => {
     if (!sessionLoading) {
       setLoadingPage(false);
     }
   }, [sessionLoading]);
 
-  const fetchUsers = async () => {
+  const fetchUsers = async (isPaginationOnlyChange = false) => {
     if (sessionLoading || profile?.peran !== 'Administrator') {
       setLoadingUsers(false);
       return;
     }
 
-    setLoadingUsers(true);
+    if (!isPaginationOnlyChange) {
+      setLoadingUsers(true); // Show full loading spinner for search/filter changes
+    } else {
+      setLoadingPagination(true); // Only disable pagination buttons for page changes
+    }
+
     try {
       let query = supabase
         .from('user_profiles_with_email')
@@ -117,12 +132,32 @@ const AdminUsers = () => {
       console.error('Error fetching users:', error.message);
       toast.error('Gagal memuat daftar pengguna: ' + error.message);
     } finally {
-      setLoadingUsers(false);
+      if (!isPaginationOnlyChange) {
+        setLoadingUsers(false);
+      } else {
+        setLoadingPagination(false);
+      }
     }
   };
 
   useEffect(() => {
-    fetchUsers();
+    let isPaginationOnlyChange = false;
+    // Check if only currentPage changed, while other filters/search/itemsPerPage remained the same
+    if (
+      prevCurrentPage.current !== currentPage &&
+      prevSearchQuery.current === searchQuery &&
+      prevItemsPerPage.current === itemsPerPage
+    ) {
+      isPaginationOnlyChange = true;
+    }
+
+    fetchUsers(isPaginationOnlyChange);
+
+    // Update refs for the next render cycle
+    prevSearchQuery.current = searchQuery;
+    prevItemsPerPage.current = itemsPerPage;
+    prevCurrentPage.current = currentPage;
+
   }, [sessionLoading, profile, debouncedSearchQuery, currentPage, itemsPerPage]);
 
   const handleUserAddedOrUpdated = () => {
@@ -219,9 +254,14 @@ const AdminUsers = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold text-gray-800 dark:text-white">Manajemen Pengguna</h1>
-        <Button onClick={() => { setEditingUser(null); setIsAddUserModalOpen(true); }} className="flex items-center gap-2">
-          <PlusCircleIcon className="h-4 w-4" /> Tambah Pengguna Baru
-        </Button>
+        <div className="flex space-x-2"> {/* Container for multiple buttons */}
+          <Button onClick={() => setIsTransferModalOpen(true)} className="flex items-center gap-2" variant="outline">
+            <ArrowRightLeftIcon className="h-4 w-4" /> Transfer Data Pengguna
+          </Button>
+          <Button onClick={() => { setEditingUser(null); setIsAddUserModalOpen(true); }} className="flex items-center gap-2">
+            <PlusCircleIcon className="h-4 w-4" /> Tambah Pengguna Baru
+          </Button>
+        </div>
       </div>
 
       <Card className="shadow-sm rounded-lg">
@@ -270,7 +310,7 @@ const AdminUsers = () => {
             <Table><TableHeader><TableRow>
                   <TableHead>Nama Lengkap</TableHead><TableHead>Email</TableHead><TableHead>Asal SKPD</TableHead><TableHead>Peran</TableHead><TableHead className="text-center">Aksi</TableHead>
                 </TableRow></TableHeader><TableBody>
-                {loadingUsers ? (
+                {loadingUsers && !loadingPagination ? (
                   <TableRow>
                     <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
                       Memuat pengguna...
@@ -336,37 +376,24 @@ const AdminUsers = () => {
           </div>
 
           {/* Pagination Controls */}
-          <div className="mt-6 flex flex-col sm:flex-row items-center justify-between space-y-2 sm:space-y-0">
+          <div className="mt-6 flex items-center justify-end space-x-4">
             <div className="text-sm text-muted-foreground">
               Halaman {totalItems === 0 ? 0 : currentPage} dari {totalPages} ({totalItems} total item)
             </div>
-            <Pagination>
-              <PaginationContent>
-                <PaginationItem>
-                  <PaginationPrevious
-                    onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-                    disabled={currentPage === 1 || itemsPerPage === -1}
-                  />
-                </PaginationItem>
-                {[...Array(totalPages)].map((_, index) => (
-                  <PaginationItem key={index}>
-                    <PaginationLink
-                      isActive={currentPage === index + 1}
-                      onClick={() => setCurrentPage(index + 1)}
-                      disabled={itemsPerPage === -1}
-                    >
-                      {index + 1}
-                    </PaginationLink>
-                  </PaginationItem>
-                ))}
-                <PaginationItem>
-                  <PaginationNext
-                    onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-                    disabled={currentPage === totalPages || itemsPerPage === -1}
-                  />
-                </PaginationItem>
-              </PaginationContent>
-            </Pagination>
+            <Button
+              variant="outline"
+              onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+              disabled={currentPage === 1 || itemsPerPage === -1 || loadingPagination}
+            >
+              Sebelumnya
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+              disabled={currentPage === totalPages || itemsPerPage === -1 || loadingPagination}
+            >
+              Berikutnya
+            </Button>
           </div>
         </CardContent>
       </Card>
@@ -384,6 +411,12 @@ const AdminUsers = () => {
         onConfirm={confirmDelete}
         title="Konfirmasi Penghapusan"
         message={`Apakah Anda yakin ingin menghapus pengguna ${userToDelete?.namaLengkap || ''}? Tindakan ini tidak dapat diurungkan.`}
+      />
+
+      <TransferUserDataDialog
+        isOpen={isTransferModalOpen}
+        onClose={() => setIsTransferModalOpen(false)}
+        onTransferSuccess={fetchUsers} // Pass fetchUsers to refresh the list
       />
     </div>
   );

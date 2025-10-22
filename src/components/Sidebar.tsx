@@ -125,6 +125,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onLinkClick }) => {
           { to: '/admin/jadwal-penganggaran', icon: HistoryIcon, label: 'Jadwal Penganggaran' },
         ]
       },
+      { to: '/admin/laporan', icon: HistoryIcon, label: 'Laporan' }, // New "Laporan" menu item
     );
   } else {
     navItems.push(

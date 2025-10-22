@@ -1,7 +1,15 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useSession } from '@/contexts/SessionContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import {
   Table,
@@ -34,6 +42,7 @@ import useDebounce from '@/hooks/use-debounce';
 import RegistrasiConfirmationDialog from '@/components/RegistrasiConfirmationDialog';
 import TagihanDetailDialog from '@/components/TagihanDetailDialog'; // Import the detail dialog
 import StatusBadge from '@/components/StatusBadge'; // Import StatusBadge
+import { Label } from '@/components/ui/label'; // Import Label for "Per halaman"
 
 interface VerificationItem {
   item: string;
@@ -66,6 +75,7 @@ const PortalRegistrasi = () => {
   const { user, profile, loading: sessionLoading } = useSession();
   const [queueTagihanList, setQueueTagihanList] = useState<Tagihan[]>([]);
   const [loadingQueue, setLoadingQueue] = useState(true);
+  const [loadingQueuePagination, setLoadingQueuePagination] = useState(false); // New state for queue pagination loading
   const [searchQuery, setSearchQuery] = useState('');
   const debouncedSearchQuery = useDebounce(searchQuery, 700);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -86,6 +96,7 @@ const PortalRegistrasi = () => {
   // State for History Table Pagination
   const [historyTagihanList, setHistoryTagihanList] = useState<Tagihan[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(true);
+  const [loadingHistoryPagination, setLoadingHistoryPagination] = useState(false); // New state for history pagination loading
   const [historyCurrentPage, setHistoryCurrentPage] = useState(1);
   const [historyItemsPerPage, setHistoryItemsPerPage] = useState(10);
   const [historyTotalItems, setHistoryTotalItems] = useState(0);
@@ -93,6 +104,16 @@ const PortalRegistrasi = () => {
   // State for Detail Dialog
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [selectedTagihanForDetail, setSelectedTagihanForDetail] = useState<Tagihan | null>(null);
+
+  // Refs to track previous values for determining pagination-only changes
+  const prevQueueSearchQuery = useRef(searchQuery);
+  const prevSelectedSkpd = useRef(selectedSkpd);
+  const prevQueueItemsPerPage = useRef(queueItemsPerPage);
+  const prevQueueCurrentPage = useRef(queueCurrentPage);
+
+  const prevHistoryCurrentPage = useRef(historyCurrentPage);
+  const prevHistoryItemsPerPage = useRef(historyItemsPerPage);
+
 
   // Effect untuk memfokuskan kembali input pencarian setelah data dimuat
   useEffect(() => {
@@ -125,13 +146,18 @@ const PortalRegistrasi = () => {
   }, []);
 
   // Fetch Tagihan with 'Menunggu Registrasi' status and apply search/SKPD filters
-  const fetchQueueTagihan = async () => {
+  const fetchQueueTagihan = async (isPaginationOnlyChange = false) => {
     if (!user || sessionLoading || profile?.peran !== 'Staf Registrasi') {
       setLoadingQueue(false);
       return;
     }
 
-    setLoadingQueue(true);
+    if (!isPaginationOnlyChange) {
+      setLoadingQueue(true); // Show full loading spinner for search/filter changes
+    } else {
+      setLoadingQueuePagination(true); // Only disable pagination buttons for page changes
+    }
+
     try {
       let query = supabase
         .from('database_tagihan')
@@ -164,25 +190,34 @@ const PortalRegistrasi = () => {
       console.error('Error fetching queue tagihan:', error.message);
       toast.error('Gagal memuat antrian tagihan: ' + error.message);
     } finally {
-      setLoadingQueue(false);
+      if (!isPaginationOnlyChange) {
+        setLoadingQueue(false);
+      } else {
+        setLoadingQueuePagination(false);
+      }
     }
   };
 
   // Fetch History Tagihan (last 24 hours, status 'Menunggu Verifikasi')
-  const fetchHistoryTagihan = async () => {
+  const fetchHistoryTagihan = async (isPaginationOnlyChange = false) => {
     if (!user || sessionLoading || profile?.peran !== 'Staf Registrasi') {
       setLoadingHistory(false);
       return;
     }
 
-    setLoadingHistory(true);
+    if (!isPaginationOnlyChange) {
+      setLoadingHistory(true);
+    } else {
+      setLoadingHistoryPagination(true);
+    }
+
     try {
       const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
       let query = supabase
         .from('database_tagihan')
         .select('*', { count: 'exact' })
-        .eq('status_tagihan', 'Menunggu Verifikasi')
+        .eq('nama_registrator', profile?.nama_lengkap) // Filter by the current logged-in staff's name
         .gte('waktu_registrasi', twentyFourHoursAgo);
 
       query = query.order('waktu_registrasi', { ascending: false });
@@ -204,16 +239,50 @@ const PortalRegistrasi = () => {
       console.error('Error fetching history tagihan:', error.message);
       toast.error('Gagal memuat riwayat tagihan: ' + error.message);
     } finally {
-      setLoadingHistory(false);
+      if (!isPaginationOnlyChange) {
+        setLoadingHistory(false);
+      } else {
+        setLoadingHistoryPagination(false);
+      }
     }
   };
 
+  // Main useEffect to trigger queue data fetching
   useEffect(() => {
-    fetchQueueTagihan();
-  }, [user, sessionLoading, profile, debouncedSearchQuery, selectedSkpd, queueCurrentPage, queueItemsPerPage]);
+    let isPaginationOnlyChange = false;
+    // Check if only queueCurrentPage changed, while other filters/search/itemsPerPage remained the same
+    if (
+      prevQueueCurrentPage.current !== queueCurrentPage &&
+      prevQueueSearchQuery.current === searchQuery &&
+      prevSelectedSkpd.current === selectedSkpd &&
+      prevQueueItemsPerPage.current === queueItemsPerPage
+    ) {
+      isPaginationOnlyChange = true;
+    }
+
+    fetchQueueTagihan(isPaginationOnlyChange);
+
+    // Update refs for the next render cycle
+    prevQueueSearchQuery.current = searchQuery;
+    prevSelectedSkpd.current = selectedSkpd;
+    prevQueueItemsPerPage.current = queueItemsPerPage;
+    prevQueueCurrentPage.current = queueCurrentPage;
+
+  }, [user, sessionLoading, debouncedSearchQuery, selectedSkpd, queueCurrentPage, queueItemsPerPage, profile]);
 
   useEffect(() => {
-    fetchHistoryTagihan(); // Fetch history data
+    let isPaginationOnlyChange = false;
+    if (
+      prevHistoryCurrentPage.current !== historyCurrentPage &&
+      prevHistoryItemsPerPage.current === historyItemsPerPage
+    ) {
+      isPaginationOnlyChange = true;
+    }
+
+    fetchHistoryTagihan(isPaginationOnlyChange);
+
+    prevHistoryCurrentPage.current = historyCurrentPage;
+    prevHistoryItemsPerPage.current = historyItemsPerPage;
   }, [user, sessionLoading, profile, historyCurrentPage, historyItemsPerPage]);
 
   const generateNomorRegistrasi = async (): Promise<string> => {
@@ -406,19 +475,37 @@ const PortalRegistrasi = () => {
           </div>
         </div>
 
-        {loadingQueue ? (
+        {loadingQueue && !loadingQueuePagination ? (
           <p className="text-center text-gray-600 dark:text-gray-400">Memuat antrian...</p>
         ) : queueTagihanList.length === 0 ? (
           <p className="text-center text-gray-600 dark:text-gray-400">Tidak ada tagihan ditemukan dengan status 'Menunggu Registrasi' atau sesuai pencarian/filter Anda.</p>
         ) : (
           <>
             <div className="overflow-x-auto">
-              <Table><TableHeader><TableRow>
-                    <TableHead className="w-[50px]">No.</TableHead><TableHead>Waktu Input</TableHead><TableHead>Nama SKPD</TableHead><TableHead>Nomor SPM</TableHead><TableHead>Jenis SPM</TableHead><TableHead>Uraian</TableHead><TableHead>Jumlah Kotor</TableHead><TableHead className="text-center">Aksi</TableHead>
-                  </TableRow></TableHeader><TableBody>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[50px]">No.</TableHead>
+                    <TableHead>Waktu Input</TableHead>
+                    <TableHead>Nama SKPD</TableHead>
+                    <TableHead>Nomor SPM</TableHead>
+                    <TableHead>Jenis SPM</TableHead>
+                    <TableHead>Uraian</TableHead>
+                    <TableHead>Jumlah Kotor</TableHead>
+                    <TableHead className="text-center">Aksi</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {queueTagihanList.map((tagihan, index) => (
                     <TableRow key={tagihan.id_tagihan}>
-                      <TableCell>{(queueCurrentPage - 1) * queueItemsPerPage + index + 1}</TableCell><TableCell>{format(parseISO(tagihan.waktu_input), 'dd MMMM yyyy HH:mm', { locale: localeId })}</TableCell><TableCell className="font-medium">{tagihan.nama_skpd}</TableCell><TableCell>{tagihan.nomor_spm}</TableCell><TableCell>{tagihan.jenis_spm}</TableCell><TableCell>{tagihan.uraian}</TableCell><TableCell>Rp{tagihan.jumlah_kotor.toLocaleString('id-ID')}</TableCell><TableCell className="text-center">
+                      <TableCell>{(queueCurrentPage - 1) * queueItemsPerPage + index + 1}</TableCell>
+                      <TableCell>{format(parseISO(tagihan.waktu_input), 'dd MMMM yyyy HH:mm', { locale: localeId })}</TableCell>
+                      <TableCell className="font-medium">{tagihan.nama_skpd}</TableCell>
+                      <TableCell>{tagihan.nomor_spm}</TableCell>
+                      <TableCell>{tagihan.jenis_spm}</TableCell>
+                      <TableCell>{tagihan.uraian}</TableCell>
+                      <TableCell>Rp{tagihan.jumlah_kotor.toLocaleString('id-ID')}</TableCell>
+                      <TableCell className="text-center">
                         <Button
                           variant="ghost"
                           size="icon"
@@ -431,35 +518,29 @@ const PortalRegistrasi = () => {
                       </TableCell>
                     </TableRow>
                   ))}
-                </TableBody></Table>
+                </TableBody>
+              </Table>
             </div>
-            <Pagination className="mt-4">
-              <PaginationContent>
-                <PaginationItem>
-                  <PaginationPrevious
-                    onClick={() => setQueueCurrentPage((prev) => Math.max(1, prev - 1))}
-                    disabled={queueCurrentPage === 1 || queueItemsPerPage === -1}
-                  />
-                </PaginationItem>
-                {[...Array(queueTotalPages)].map((_, index) => (
-                  <PaginationItem key={index}>
-                    <PaginationLink
-                      isActive={queueCurrentPage === index + 1}
-                      onClick={() => setQueueCurrentPage(index + 1)}
-                      disabled={queueItemsPerPage === -1}
-                    >
-                      {index + 1}
-                    </PaginationLink>
-                  </PaginationItem>
-                ))}
-                <PaginationItem>
-                  <PaginationNext
-                    onClick={() => setQueueCurrentPage((prev) => Math.min(queueTotalPages, prev + 1))}
-                    disabled={queueCurrentPage === queueTotalPages || queueItemsPerPage === -1}
-                  />
-                </PaginationItem>
-              </PaginationContent>
-            </Pagination>
+            {/* Custom Pagination for Queue Table */}
+            <div className="mt-4 flex items-center justify-end space-x-4">
+              <div className="text-sm text-muted-foreground">
+                Halaman {queueTotalItems === 0 ? 0 : queueCurrentPage} dari {queueTotalPages} ({queueTotalItems} total item)
+              </div>
+              <Button
+                variant="outline"
+                onClick={() => setQueueCurrentPage((prev) => Math.max(1, prev - 1))}
+                disabled={queueCurrentPage === 1 || queueItemsPerPage === -1 || loadingQueuePagination}
+              >
+                Sebelumnya
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setQueueCurrentPage((prev) => Math.min(queueTotalPages, prev + 1))}
+                disabled={queueCurrentPage === queueTotalPages || queueItemsPerPage === -1 || loadingQueuePagination}
+              >
+                Berikutnya
+              </Button>
+            </div>
           </>
         )}
       </div>
@@ -490,19 +571,35 @@ const PortalRegistrasi = () => {
           </Select>
         </div>
 
-        {loadingHistory ? (
+        {loadingHistory && !loadingHistoryPagination ? (
           <p className="text-center text-gray-600 dark:text-gray-400">Memuat riwayat registrasi...</p>
         ) : historyTagihanList.length === 0 ? (
           <p className="text-center text-gray-600 dark:text-gray-400">Tidak ada riwayat registrasi dalam 24 jam terakhir.</p>
         ) : (
           <>
             <div className="overflow-x-auto">
-              <Table><TableHeader><TableRow>
-                    <TableHead className="w-[50px]">No.</TableHead><TableHead>Waktu Registrasi</TableHead><TableHead>Nomor Registrasi</TableHead><TableHead>Nomor SPM</TableHead><TableHead>Nama SKPD</TableHead><TableHead>Jumlah Kotor</TableHead><TableHead className="text-center">Aksi</TableHead>
-                  </TableRow></TableHeader><TableBody>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[50px]">No.</TableHead>
+                    <TableHead>Waktu Registrasi</TableHead>
+                    <TableHead>Nomor Registrasi</TableHead>
+                    <TableHead>Nomor SPM</TableHead>
+                    <TableHead>Nama SKPD</TableHead>
+                    <TableHead>Jumlah Kotor</TableHead>
+                    <TableHead className="text-center">Aksi</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {historyTagihanList.map((tagihan, index) => (
                     <TableRow key={tagihan.id_tagihan}>
-                      <TableCell>{(historyCurrentPage - 1) * historyItemsPerPage + index + 1}</TableCell><TableCell>{format(parseISO(tagihan.waktu_registrasi!), 'dd MMMM yyyy HH:mm', { locale: localeId })}</TableCell><TableCell className="font-medium">{tagihan.nomor_registrasi}</TableCell><TableCell>{tagihan.nomor_spm}</TableCell><TableCell>{tagihan.nama_skpd}</TableCell><TableCell>Rp{tagihan.jumlah_kotor.toLocaleString('id-ID')}</TableCell><TableCell className="text-center">
+                      <TableCell>{(historyCurrentPage - 1) * historyItemsPerPage + index + 1}</TableCell>
+                      <TableCell>{format(parseISO(tagihan.waktu_registrasi!), 'dd MMMM yyyy HH:mm', { locale: localeId })}</TableCell>
+                      <TableCell className="font-medium">{tagihan.nomor_registrasi}</TableCell>
+                      <TableCell>{tagihan.nomor_spm}</TableCell>
+                      <TableCell>{tagihan.nama_skpd}</TableCell>
+                      <TableCell>Rp{tagihan.jumlah_kotor.toLocaleString('id-ID')}</TableCell>
+                      <TableCell className="text-center">
                         <Button
                           variant="outline"
                           size="icon"
@@ -514,35 +611,29 @@ const PortalRegistrasi = () => {
                       </TableCell>
                     </TableRow>
                   ))}
-                </TableBody></Table>
+                </TableBody>
+              </Table>
             </div>
-            <Pagination className="mt-4">
-              <PaginationContent>
-                <PaginationItem>
-                  <PaginationPrevious
-                    onClick={() => setHistoryCurrentPage((prev) => Math.max(1, prev - 1))}
-                    disabled={historyCurrentPage === 1 || historyItemsPerPage === -1}
-                  />
-                </PaginationItem>
-                {[...Array(historyTotalPages)].map((_, index) => (
-                  <PaginationItem key={index}>
-                    <PaginationLink
-                      isActive={historyCurrentPage === index + 1}
-                      onClick={() => setHistoryCurrentPage(index + 1)}
-                      disabled={historyItemsPerPage === -1}
-                    >
-                      {index + 1}
-                    </PaginationLink>
-                  </PaginationItem>
-                ))}
-                <PaginationItem>
-                  <PaginationNext
-                    onClick={() => setHistoryCurrentPage((prev) => Math.min(historyTotalPages, prev + 1))}
-                    disabled={historyCurrentPage === historyTotalPages || historyItemsPerPage === -1}
-                  />
-                </PaginationItem>
-              </PaginationContent>
-            </Pagination>
+            {/* Custom Pagination for History Table */}
+            <div className="mt-4 flex items-center justify-end space-x-4">
+              <div className="text-sm text-muted-foreground">
+                Halaman {historyTotalItems === 0 ? 0 : historyCurrentPage} dari {historyTotalPages} ({historyTotalItems} total item)
+              </div>
+              <Button
+                variant="outline"
+                onClick={() => setHistoryCurrentPage((prev) => Math.max(1, prev - 1))}
+                disabled={historyCurrentPage === 1 || historyItemsPerPage === -1 || loadingHistoryPagination}
+              >
+                Sebelumnya
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setHistoryCurrentPage((prev) => Math.min(historyTotalPages, prev + 1))}
+                disabled={historyCurrentPage === historyTotalPages || historyItemsPerPage === -1 || loadingHistoryPagination}
+              >
+                Berikutnya
+              </Button>
+            </div>
           </>
         )}
       </div>

@@ -5,6 +5,8 @@ import { format, parseISO } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { QrCodeIcon, XIcon } from 'lucide-react'; // Menggunakan QrCodeIcon dan XIcon
+import QRCode from "react-qr-code"; // Import QRCode
+import styles from './PrintLayout.module.css'; // Import CSS Module
 
 interface Tagihan {
   id_tagihan: string;
@@ -108,6 +110,9 @@ const PrintKoreksi = () => {
     return <div className="p-8 text-center text-gray-700">Data tagihan tidak tersedia.</div>;
   }
 
+  // Buat URL verifikasi
+  const verificationUrl = `${window.location.origin}/verifikasi-dokumen/${tagihan.id_tagihan}`;
+
   return (
     <>
       <style>
@@ -194,7 +199,7 @@ const PrintKoreksi = () => {
           }
 
           .print-table th {
-            background-color: #f0f0f0;
+            background-color: #f0f0f0; /* Added background color for all th */
             font-weight: bold;
           }
 
@@ -255,7 +260,7 @@ const PrintKoreksi = () => {
         `}
       </style>
 
-      <div className="print-container">
+      <div className={styles.wrapper}>
         <h1 className="print-title">LEMBAR VERIFIKASI SP2D</h1>
 
         <div className="info-section">
@@ -319,20 +324,16 @@ const PrintKoreksi = () => {
               </th>
             </tr>
             <tr>
-              <td></td>
-              <td>
-                <span className="checkmark">✓</span>
-              </td>
+              <th>Ya</th>
+              <th>Tidak</th>
             </tr>
           </thead>
           <tbody>
             <tr>
               <td>1</td>
               <td className="text-left">Tidak dapat diterbitkan SP2D</td>
-              <td></td>
-              <td>
-                <span className="checkmark">✓</span>
-              </td>
+              <td></td> {/* Empty for 'Ya' column */}
+              <td><span className="checkmark">✓</span></td> {/* Checkmark in 'Tidak' column */}
               <td className="text-left">{tagihan.catatan_koreksi || '-'}</td>
             </tr>
           </tbody>
@@ -343,7 +344,9 @@ const PrintKoreksi = () => {
           <div className="signature-name">
             {tagihan.nama_verifikator || '____________________'}
           </div>
-          <div className="qr-code">[QR Code]</div>
+          <div className="qr-code">
+            <QRCode value={verificationUrl} size={100} />
+          </div>
         </div>
       </div>
     </>

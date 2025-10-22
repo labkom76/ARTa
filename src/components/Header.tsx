@@ -17,6 +17,7 @@ import { formatDistanceToNow, parseISO } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
 import TagihanDetailDialog from './TagihanDetailDialog'; // Import TagihanDetailDialog
 import { cn } from '@/lib/utils'; // Import cn for class merging
+import { ThemeToggle } from "@/components/ThemeToggle"; // Import ThemeToggle
 
 interface HeaderProps {
   toggleSidebar: () => void;
@@ -260,6 +261,8 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+
+        <ThemeToggle /> {/* <-- ThemeToggle ditambahkan di sini */}
 
         {user && (
           <DropdownMenu>

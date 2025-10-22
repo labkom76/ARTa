@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useSession } from '@/contexts/SessionContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -70,6 +70,7 @@ const AdminTagihan = () => {
   const [loadingPage, setLoadingPage] = useState(true);
   const [tagihanList, setTagihanList] = useState<Tagihan[]>([]);
   const [loadingData, setLoadingData] = useState(true);
+  const [loadingPagination, setLoadingPagination] = useState(false); // New state for pagination loading
   const [searchQuery, setSearchQuery] = useState('');
   const debouncedSearchQuery = useDebounce(searchQuery, 500);
   const [selectedStatus, setSelectedStatus] = useState<string>('Semua Status');
@@ -93,6 +94,14 @@ const AdminTagihan = () => {
   // Delete Dialog states
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [tagihanToDelete, setTagihanToDelete] = useState<{ id: string; nomorSpm: string } | null>(null);
+
+  // Refs to track previous values for determining pagination-only changes
+  const prevSearchQuery = useRef(searchQuery);
+  const prevSelectedStatus = useRef(selectedStatus);
+  const prevSelectedSkpd = useRef(selectedSkpd);
+  const prevDateRange = useRef(dateRange);
+  const prevItemsPerPage = useRef(itemsPerPage);
+  const prevCurrentPage = useRef(currentPage);
 
   useEffect(() => {
     if (!sessionLoading) {
@@ -122,13 +131,18 @@ const AdminTagihan = () => {
     fetchSkpdOptions();
   }, []);
 
-  const fetchTagihan = async () => {
+  const fetchTagihan = async (isPaginationOnlyChange = false) => {
     if (sessionLoading || profile?.peran !== 'Administrator') {
       setLoadingData(false);
       return;
     }
 
-    setLoadingData(true);
+    if (!isPaginationOnlyChange) {
+      setLoadingData(true); // Show full loading spinner for search/filter changes
+    } else {
+      setLoadingPagination(true); // Only disable pagination buttons for page changes
+    }
+
     try {
       let query = supabase
         .from('database_tagihan')
@@ -175,12 +189,38 @@ const AdminTagihan = () => {
       console.error('Error fetching tagihan:', error.message);
       toast.error('Gagal memuat daftar tagihan: ' + error.message);
     } finally {
-      setLoadingData(false);
+      if (!isPaginationOnlyChange) {
+        setLoadingData(false);
+      } else {
+        setLoadingPagination(false);
+      }
     }
   };
 
   useEffect(() => {
-    fetchTagihan();
+    let isPaginationOnlyChange = false;
+    // Check if only currentPage changed, while other filters/search/itemsPerPage remained the same
+    if (
+      prevCurrentPage.current !== currentPage &&
+      prevSearchQuery.current === searchQuery &&
+      prevSelectedStatus.current === selectedStatus &&
+      prevSelectedSkpd.current === selectedSkpd &&
+      prevDateRange.current === dateRange &&
+      prevItemsPerPage.current === itemsPerPage
+    ) {
+      isPaginationOnlyChange = true;
+    }
+
+    fetchTagihan(isPaginationOnlyChange);
+
+    // Update refs for the next render cycle
+    prevSearchQuery.current = searchQuery;
+    prevSelectedStatus.current = selectedStatus;
+    prevSelectedSkpd.current = selectedSkpd;
+    prevDateRange.current = dateRange;
+    prevItemsPerPage.current = itemsPerPage;
+    prevCurrentPage.current = currentPage;
+
   }, [sessionLoading, profile, debouncedSearchQuery, selectedStatus, selectedSkpd, dateRange, currentPage, itemsPerPage]); // Add pagination states to dependencies
 
   const formatDate = (dateString: string | undefined) => {
@@ -351,7 +391,7 @@ const AdminTagihan = () => {
             <Table><TableHeader><TableRow>
                   <TableHead>Waktu Input</TableHead><TableHead>Nomor SPM</TableHead><TableHead>Nama SKPD</TableHead><TableHead>Jumlah Kotor</TableHead><TableHead className="min-w-[280px]">Uraian</TableHead><TableHead>Status</TableHead><TableHead>Diperiksa oleh</TableHead><TableHead className="text-center">Aksi</TableHead>
                 </TableRow></TableHeader><TableBody>
-                {loadingData ? (
+                {loadingData && !loadingPagination ? (
                   <TableRow>
                     <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
                       Memuat data tagihan...
@@ -386,37 +426,24 @@ const AdminTagihan = () => {
           </div>
 
           {/* Pagination Controls */}
-          <div className="mt-6 flex flex-col sm:flex-row items-center justify-between space-y-2 sm:space-y-0">
+          <div className="mt-6 flex items-center justify-end space-x-4">
             <div className="text-sm text-muted-foreground">
               Halaman {totalItems === 0 ? 0 : currentPage} dari {totalPages} ({totalItems} total item)
             </div>
-            <Pagination>
-              <PaginationContent>
-                <PaginationItem>
-                  <PaginationPrevious
-                    onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-                    disabled={currentPage === 1 || itemsPerPage === -1}
-                  />
-                </PaginationItem>
-                {[...Array(totalPages)].map((_, index) => (
-                  <PaginationItem key={index}>
-                    <PaginationLink
-                      isActive={currentPage === index + 1}
-                      onClick={() => setCurrentPage(index + 1)}
-                      disabled={itemsPerPage === -1}
-                    >
-                      {index + 1}
-                    </PaginationLink>
-                  </PaginationItem>
-                ))}
-                <PaginationItem>
-                  <PaginationNext
-                    onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-                    disabled={currentPage === totalPages || itemsPerPage === -1}
-                  />
-                </PaginationItem>
-              </PaginationContent>
-            </Pagination>
+            <Button
+              variant="outline"
+              onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+              disabled={currentPage === 1 || itemsPerPage === -1 || loadingPagination}
+            >
+              Sebelumnya
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+              disabled={currentPage === totalPages || itemsPerPage === -1 || loadingPagination}
+            >
+              Berikutnya
+            </Button>
           </div>
         </CardContent>
       </Card>

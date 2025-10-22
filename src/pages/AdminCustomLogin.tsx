@@ -9,6 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
+import { Textarea } from '@/components/ui/textarea'; // Import Textarea
 
 // Utility function to sanitize file names
 const sanitizeFileName = (name: string): string => {
@@ -42,6 +43,8 @@ const AdminCustomLogin = () => {
   // New states for branding
   const [appName, setAppName] = useState('Aplikasi Tagihan');
   const [appLogoUrl, setAppLogoUrl] = useState<string | null>(null);
+  const [appSubtitle1, setAppSubtitle1] = useState('(Aplikasi Registrasi Tagihan)'); // New state for subtitle 1
+  const [appSubtitle2, setAppSubtitle2] = useState('Pemerintah Daerah Kabupaten Gorontalo'); // New state for subtitle 2
   const [loadingBranding, setLoadingBranding] = useState(true);
 
   // Generic function to update a setting in app_settings table
@@ -83,6 +86,8 @@ const AdminCustomLogin = () => {
       // Fetch branding settings
       setAppName(settingsMap.get('app_name') || 'Aplikasi Tagihan');
       setAppLogoUrl(settingsMap.get('app_logo_url') || null);
+      setAppSubtitle1(settingsMap.get('app_subtitle_1') || '(Aplikasi Registrasi Tagihan)'); // Set subtitle 1
+      setAppSubtitle2(settingsMap.get('app_subtitle_2') || 'Pemerintah Daerah Kabupaten Gorontalo'); // Set subtitle 2
 
     } catch (error: any) {
       console.error('Error fetching settings:', error.message);
@@ -293,6 +298,32 @@ const AdminCustomLogin = () => {
                   onBlur={() => updateSetting('app_name', appName)}
                   placeholder="Masukkan nama aplikasi"
                 />
+              </div>
+              {/* New: Subtitle Baris 1 */}
+              <div className="grid gap-2">
+                <Label htmlFor="app-subtitle-1">Subtitle Baris 1</Label>
+                <Textarea // Changed to Textarea
+                  id="app-subtitle-1"
+                  value={appSubtitle1}
+                  onChange={(e) => setAppSubtitle1(e.target.value)}
+                  onBlur={() => updateSetting('app_subtitle_1', appSubtitle1)}
+                  placeholder="Masukkan subtitle baris 1"
+                  rows={2} // Added rows prop
+                />
+                <p className="text-xs text-muted-foreground">Gunakan `**teks**` untuk menebalkan huruf.</p> {/* Helper text */}
+              </div>
+              {/* New: Subtitle Baris 2 */}
+              <div className="grid gap-2">
+                <Label htmlFor="app-subtitle-2">Subtitle Baris 2</Label>
+                <Textarea // Changed to Textarea
+                  id="app-subtitle-2"
+                  value={appSubtitle2}
+                  onChange={(e) => setAppSubtitle2(e.target.value)}
+                  onBlur={() => updateSetting('app_subtitle_2', appSubtitle2)}
+                  placeholder="Masukkan subtitle baris 2"
+                  rows={2} // Added rows prop
+                />
+                <p className="text-xs text-muted-foreground">Gunakan `**teks**` untuk menebalkan huruf.</p> {/* Helper text */}
               </div>
               <div className="grid gap-2">
                 <Label>Logo Aplikasi</Label>

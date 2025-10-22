@@ -68,6 +68,7 @@ const RiwayatRegistrasi = () => {
   const { profile, loading: sessionLoading } = useSession();
   const [tagihanList, setTagihanList] = useState<Tagihan[]>([]);
   const [loadingData, setLoadingData] = useState(true);
+  const [loadingPagination, setLoadingPagination] = useState(false); // New state for pagination loading
   const [searchQuery, setSearchQuery] = useState('');
   const debouncedSearchQuery = useDebounce(searchQuery, 500);
   const [selectedStatus, setSelectedStatus] = useState<string>('Semua Status');
@@ -81,14 +82,26 @@ const RiwayatRegistrasi = () => {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [selectedTagihanForDetail, setSelectedTagihanForDetail] = useState<Tagihan | null>(null);
 
+  // Refs to track previous values for determining pagination-only changes
+  const prevSearchQuery = React.useRef(searchQuery);
+  const prevSelectedStatus = React.useRef(selectedStatus);
+  const prevDateRange = React.useRef(dateRange);
+  const prevItemsPerPage = React.useRef(itemsPerPage);
+  const prevCurrentPage = React.useRef(currentPage);
+
   useEffect(() => {
-    const fetchRiwayatRegistrasi = async () => {
+    const fetchRiwayatRegistrasi = async (isPaginationOnlyChange = false) => {
       if (sessionLoading || profile?.peran !== 'Staf Registrasi') {
         setLoadingData(false);
         return;
       }
 
-      setLoadingData(true);
+      if (!isPaginationOnlyChange) {
+        setLoadingData(true); // Show full loading spinner for search/filter changes
+      } else {
+        setLoadingPagination(true); // Only disable pagination buttons for page changes
+      }
+
       try {
         let query = supabase
           .from('database_tagihan')
@@ -128,11 +141,35 @@ const RiwayatRegistrasi = () => {
         console.error('Error fetching riwayat registrasi:', error.message);
         toast.error('Gagal memuat riwayat registrasi: ' + error.message);
       } finally {
-        setLoadingData(false);
+        if (!isPaginationOnlyChange) {
+          setLoadingData(false);
+        } else {
+          setLoadingPagination(false);
+        }
       }
     };
 
-    fetchRiwayatRegistrasi();
+    let isPaginationOnlyChange = false;
+    // Check if only currentPage changed, while other filters/search/itemsPerPage remained the same
+    if (
+      prevCurrentPage.current !== currentPage &&
+      prevSearchQuery.current === searchQuery &&
+      prevSelectedStatus.current === selectedStatus &&
+      prevDateRange.current === dateRange &&
+      prevItemsPerPage.current === itemsPerPage
+    ) {
+      isPaginationOnlyChange = true;
+    }
+
+    fetchRiwayatRegistrasi(isPaginationOnlyChange);
+
+    // Update refs for the next render cycle
+    prevSearchQuery.current = searchQuery;
+    prevSelectedStatus.current = selectedStatus;
+    prevDateRange.current = dateRange;
+    prevItemsPerPage.current = itemsPerPage;
+    prevCurrentPage.current = currentPage;
+
   }, [sessionLoading, profile, debouncedSearchQuery, selectedStatus, dateRange, currentPage, itemsPerPage]);
 
   const handleDetailClick = (tagihan: Tagihan) => {
@@ -172,11 +209,14 @@ const RiwayatRegistrasi = () => {
             type="text"
             placeholder="Cari berdasarkan Nomor SPM atau Nama SKPD..."
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setCurrentPage(1);
+            }}
             className="pl-9 w-full"
           />
         </div>
-        <Select onValueChange={setSelectedStatus} value={selectedStatus}>
+        <Select onValueChange={(value) => { setSelectedStatus(value); setCurrentPage(1); }} value={selectedStatus}>
           <SelectTrigger className="w-full sm:w-[200px]">
             <SelectValue placeholder="Filter Status" />
           </SelectTrigger>
@@ -187,7 +227,7 @@ const RiwayatRegistrasi = () => {
             <SelectItem value="Dikembalikan">Dikembalikan</SelectItem>
           </SelectContent>
         </Select>
-        <DateRangePickerWithPresets date={dateRange} onDateChange={setDateRange} className="w-full sm:w-auto" />
+        <DateRangePickerWithPresets date={dateRange} onDateChange={(newDateRange) => { setDateRange(newDateRange); setCurrentPage(1); }} className="w-full sm:w-auto" />
         {/* Moved "Baris per halaman" here */}
         <div className="flex items-center space-x-2">
           <Label htmlFor="items-per-page" className="whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">Baris per halaman:</Label>
@@ -216,7 +256,13 @@ const RiwayatRegistrasi = () => {
         <Table><TableHeader><TableRow>
               <TableHead className="w-[50px]">No.</TableHead><TableHead>Waktu Registrasi</TableHead><TableHead>Nomor Registrasi</TableHead><TableHead>Nomor SPM</TableHead><TableHead>Nama SKPD</TableHead><TableHead className="min-w-[280px]">Uraian</TableHead><TableHead>Jumlah Kotor</TableHead><TableHead>Status Tagihan</TableHead><TableHead className="text-center">Aksi</TableHead>
             </TableRow></TableHeader><TableBody>
-            {tagihanList.length === 0 ? (
+            {loadingData && !loadingPagination ? (
+              <TableRow>
+                <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
+                  Memuat data riwayat registrasi...
+                </TableCell>
+              </TableRow>
+            ) : tagihanList.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={9} className="text-center text-muted-foreground">
                   Tidak ada data riwayat registrasi.
@@ -239,37 +285,24 @@ const RiwayatRegistrasi = () => {
       </div>
 
       {/* Pagination Controls */}
-      <div className="mt-6 flex flex-col sm:flex-row items-center justify-between space-y-2 sm:space-y-0">
+      <div className="mt-6 flex items-center justify-end space-x-4">
         <div className="text-sm text-muted-foreground">
           Halaman {totalItems === 0 ? 0 : currentPage} dari {totalPages} ({totalItems} total item)
         </div>
-        <Pagination>
-          <PaginationContent>
-            <PaginationItem>
-              <PaginationPrevious
-                onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-                disabled={currentPage === 1 || itemsPerPage === -1}
-              />
-            </PaginationItem>
-            {[...Array(totalPages)].map((_, index) => (
-              <PaginationItem key={index}>
-                <PaginationLink
-                  isActive={currentPage === index + 1}
-                  onClick={() => setCurrentPage(index + 1)}
-                  disabled={itemsPerPage === -1}
-                >
-                  {index + 1}
-                </PaginationLink>
-              </PaginationItem>
-            ))}
-            <PaginationItem>
-              <PaginationNext
-                onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-                disabled={currentPage === totalPages || itemsPerPage === -1}
-              />
-            </PaginationItem>
-          </PaginationContent>
-        </Pagination>
+        <Button
+          variant="outline"
+          onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+          disabled={currentPage === 1 || itemsPerPage === -1 || loadingPagination}
+        >
+          Sebelumnya
+        </Button>
+        <Button
+          variant="outline"
+          onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+          disabled={currentPage === totalPages || itemsPerPage === -1 || loadingPagination}
+        >
+          Berikutnya
+        </Button>
       </div>
 
       <TagihanDetailDialog
