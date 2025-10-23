@@ -89,7 +89,7 @@ const RiwayatRegistrasi = () => {
   const prevItemsPerPage = useRef(itemsPerPage);
   const prevCurrentPage = useRef(currentPage);
 
-  // Ref for search input
+  // 1. Buat Ref untuk Input
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -149,8 +149,6 @@ const RiwayatRegistrasi = () => {
         } else {
           setLoadingPagination(false);
         }
-        // KEMBALIKAN FOCUS SETELAH SELESAI:
-        searchInputRef.current?.focus();
       }
     };
 
@@ -209,7 +207,7 @@ const RiwayatRegistrasi = () => {
         <div className="relative flex-1 w-full sm:w-auto">
           <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400" />
           <Input
-            ref={searchInputRef} // Lampirkan Ref ke Input
+            ref={searchInputRef} // 3. Lampirkan Ref ke Input
             type="text"
             placeholder="Cari berdasarkan Nomor SPM atau Nama SKPD..."
             value={searchQuery}
