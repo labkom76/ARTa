@@ -76,6 +76,7 @@ const DashboardVerifikasi = () => {
           .from('database_tagihan')
           .select('*', { count: 'exact', head: true })
           .in('status_tagihan', ['Diteruskan', 'Dikembalikan'])
+          .eq('nama_verifikator', profile?.nama_lengkap) // Filter by current verifier
           .gte('waktu_verifikasi', todayStart)
           .lte('waktu_verifikasi', todayEnd);
         if (diverifikasiHariIniError) throw diverifikasiHariIniError;
@@ -85,6 +86,7 @@ const DashboardVerifikasi = () => {
           .from('database_tagihan')
           .select('*', { count: 'exact', head: true })
           .in('status_tagihan', ['Diteruskan', 'Dikembalikan'])
+          .eq('nama_verifikator', profile?.nama_lengkap) // Filter by current verifier
           .gte('waktu_verifikasi', thisMonthStart)
           .lte('waktu_verifikasi', thisMonthEnd);
         if (totalVerifikasiBulanIniError) throw totalVerifikasiBulanIniError;
@@ -93,6 +95,7 @@ const DashboardVerifikasi = () => {
           .from('database_tagihan')
           .select('*', { count: 'exact', head: true })
           .eq('status_tagihan', 'Dikembalikan')
+          .eq('nama_verifikator', profile?.nama_lengkap) // Filter by current verifier
           .gte('waktu_verifikasi', thisMonthStart)
           .lte('waktu_verifikasi', thisMonthEnd);
         if (dikembalikanBulanIniError) throw dikembalikanBulanIniError;
@@ -106,6 +109,7 @@ const DashboardVerifikasi = () => {
           .from('database_tagihan')
           .select('waktu_registrasi, waktu_verifikasi')
           .in('status_tagihan', ['Diteruskan', 'Dikembalikan'])
+          .eq('nama_verifikator', profile?.nama_lengkap) // Filter by current verifier
           .not('waktu_registrasi', 'is', null)
           .not('waktu_verifikasi', 'is', null);
         if (processedError) throw processedError;
