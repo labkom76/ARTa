@@ -25,9 +25,9 @@ import { id as localeId } from 'date-fns/locale';
 
 interface KPIData {
   antrianVerifikasi: number;
-  diverifikasiHariIni: number;
-  diteruskanHariIni: number; // Changed from tingkatPengembalianBulanIni
-  dikembalikanHariIni: number; // Changed from waktuVerifikasiRataRata
+  totalDiprosesBulanIni: number; // Changed from diverifikasiHariIni
+  diteruskanHariIni: number;
+  dikembalikanHariIni: number;
 }
 
 interface DailyVerificationData {
@@ -71,17 +71,17 @@ const DashboardVerifikasi = () => {
           .eq('status_tagihan', 'Menunggu Verifikasi');
         if (antrianError) throw antrianError;
 
-        // KPI 2: Diverifikasi Hari Ini (Total Diteruskan + Dikembalikan oleh verifikator ini hari ini)
-        const { count: diverifikasiHariIniCount, error: diverifikasiHariIniError } = await supabase
+        // KPI 2: Total Diproses (Bulan Ini) - MODIFIED
+        const { count: totalDiprosesBulanIniCount, error: totalDiprosesBulanIniError } = await supabase
           .from('database_tagihan')
           .select('*', { count: 'exact', head: true })
           .in('status_tagihan', ['Diteruskan', 'Dikembalikan'])
           .eq('nama_verifikator', profile?.nama_lengkap) // Filter by current verifier
-          .gte('waktu_verifikasi', todayStart)
-          .lte('waktu_verifikasi', todayEnd);
-        if (diverifikasiHariIniError) throw diverifikasiHariIniError;
+          .gte('waktu_verifikasi', thisMonthStart)
+          .lte('waktu_verifikasi', thisMonthEnd);
+        if (totalDiprosesBulanIniError) throw totalDiprosesBulanIniError;
 
-        // NEW KPI: Diteruskan Hari Ini (Query 1)
+        // NEW KPI: Diteruskan Hari Ini
         const { count: diteruskanHariIniCount, error: diteruskanHariIniError } = await supabase
           .from('database_tagihan')
           .select('*', { count: 'exact', head: true })
@@ -91,7 +91,7 @@ const DashboardVerifikasi = () => {
           .lte('waktu_verifikasi', todayEnd);
         if (diteruskanHariIniError) throw diteruskanHariIniError;
 
-        // NEW KPI: Dikembalikan Hari Ini (Query 2)
+        // NEW KPI: Dikembalikan Hari Ini
         const { count: dikembalikanHariIniCount, error: dikembalikanHariIniError } = await supabase
           .from('database_tagihan')
           .select('*', { count: 'exact', head: true })
@@ -103,7 +103,7 @@ const DashboardVerifikasi = () => {
 
         setKpiData({
           antrianVerifikasi: antrianVerifikasiCount || 0,
-          diverifikasiHariIni: diverifikasiHariIniCount || 0,
+          totalDiprosesBulanIni: totalDiprosesBulanIniCount || 0, // Updated
           diteruskanHariIni: diteruskanHariIniCount || 0,
           dikembalikanHariIni: dikembalikanHariIniCount || 0,
         });
@@ -207,12 +207,12 @@ const DashboardVerifikasi = () => {
 
         <Card className="shadow-sm rounded-lg">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Diverifikasi Hari Ini</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Diproses (Bulan Ini)</CardTitle> {/* MODIFIED Title */}
             <CheckCircleIcon className="h-4 w-4 text-green-500 dark:text-green-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{kpiData?.diverifikasiHariIni}</div>
-            <p className="text-xs text-muted-foreground">Total tagihan diverifikasi hari ini</p>
+            <div className="text-2xl font-bold">{kpiData?.totalDiprosesBulanIni}</div> {/* MODIFIED Value */}
+            <p className="text-xs text-muted-foreground">Total tagihan diproses bulan ini</p> {/* MODIFIED Description */}
           </CardContent>
         </Card>
 
