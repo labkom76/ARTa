@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useSession } from '@/contexts/SessionContext';
 import { supabase } from '@/integrations/supabase/client';
 import {
@@ -65,6 +65,11 @@ interface Tagihan {
   nama_verifikator?: string;
 }
 
+interface VerifierOption {
+  value: string;
+  label: string;
+}
+
 const RiwayatVerifikasi = () => {
   const { profile, loading: sessionLoading } = useSession();
   const [tagihanList, setTagihanList] = useState<Tagihan[]>([]);
@@ -74,6 +79,10 @@ const RiwayatVerifikasi = () => {
   const debouncedSearchQuery = useDebounce(searchQuery, 500);
   const [selectedStatus, setSelectedStatus] = useState<string>('Semua Status');
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+
+  // New states for Verifier Filter
+  const [selectedVerifierId, setSelectedVerifierId] = useState<string>('Semua Verifikator');
+  const [verifierOptions, setVerifierOptions] = useState<VerifierOption[]>([]);
 
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
@@ -89,6 +98,32 @@ const RiwayatVerifikasi = () => {
   const prevDateRange = React.useRef(dateRange);
   const prevItemsPerPage = React.useRef(itemsPerPage);
   const prevCurrentPage = React.useRef(currentPage);
+  const prevSelectedVerifierId = React.useRef(selectedVerifierId); // New ref for verifier filter
+
+  // Fetch verifier options on component mount
+  useEffect(() => {
+    const fetchVerifierOptions = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('id, nama_lengkap')
+          .eq('peran', 'Staf Verifikator')
+          .order('nama_lengkap', { ascending: true });
+
+        if (error) throw error;
+
+        const options: VerifierOption[] = [
+          { value: 'Semua Verifikator', label: 'Semua Verifikator' },
+          ...(data || []).map(p => ({ value: p.id, label: p.nama_lengkap || 'Nama Tidak Diketahui' }))
+        ];
+        setVerifierOptions(options);
+      } catch (error: any) {
+        console.error('Error fetching verifier options:', error.message);
+        toast.error('Gagal memuat daftar verifikator: ' + error.message);
+      }
+    };
+    fetchVerifierOptions();
+  }, []);
 
   useEffect(() => {
     const fetchRiwayatVerifikasi = async (isPaginationOnlyChange = false) => {
@@ -136,6 +171,11 @@ const RiwayatVerifikasi = () => {
           query = query.lte('waktu_verifikasi', endOfDay(dateRange.to).toISOString());
         }
 
+        // Apply verifier filter (NEW)
+        if (selectedVerifierId !== 'Semua Verifikator') {
+          query = query.eq('nama_verifikator', verifierOptions.find(opt => opt.value === selectedVerifierId)?.label || '');
+        }
+
         if (itemsPerPage !== -1) {
           const from = (currentPage - 1) * itemsPerPage;
           const to = from + itemsPerPage - 1;
@@ -166,7 +206,8 @@ const RiwayatVerifikasi = () => {
       prevSearchQuery.current === searchQuery &&
       prevSelectedStatus.current === selectedStatus &&
       prevDateRange.current === dateRange &&
-      prevItemsPerPage.current === itemsPerPage
+      prevItemsPerPage.current === itemsPerPage &&
+      prevSelectedVerifierId.current === selectedVerifierId // Include new ref
     ) {
       isPaginationOnlyChange = true;
     }
@@ -179,8 +220,9 @@ const RiwayatVerifikasi = () => {
     prevDateRange.current = dateRange;
     prevItemsPerPage.current = itemsPerPage;
     prevCurrentPage.current = currentPage;
+    prevSelectedVerifierId.current = selectedVerifierId; // Update new ref
 
-  }, [sessionLoading, profile, debouncedSearchQuery, selectedStatus, dateRange, currentPage, itemsPerPage]);
+  }, [sessionLoading, profile, debouncedSearchQuery, selectedStatus, dateRange, currentPage, itemsPerPage, selectedVerifierId, verifierOptions]); // Add selectedVerifierId to dependencies
 
   const handleDetailClick = (tagihan: Tagihan) => {
     setSelectedTagihanForDetail(tagihan);
@@ -259,6 +301,18 @@ const RiwayatVerifikasi = () => {
                 <SelectItem value="Semua Status">Semua Status</SelectItem>
                 <SelectItem value="Diteruskan">Diteruskan</SelectItem>
                 <SelectItem value="Dikembalikan">Dikembalikan</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select onValueChange={(value) => { setSelectedVerifierId(value); setCurrentPage(1); }} value={selectedVerifierId}>
+              <SelectTrigger className="w-full sm:w-[200px]">
+                <SelectValue placeholder="Filter Nama Verifikator" />
+              </SelectTrigger>
+              <SelectContent>
+                {verifierOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
             <DateRangePickerWithPresets
