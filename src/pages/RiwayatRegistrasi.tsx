@@ -36,6 +36,11 @@ import {
 } from '@/components/ui/pagination';
 import { Label } from '@/components/ui/label';
 import StatusBadge from '@/components/StatusBadge'; // Import StatusBadge
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"; // Import Tooltip components
 
 interface VerificationItem {
   item: string;
@@ -282,7 +287,16 @@ const RiwayatRegistrasi = () => {
                 <TableRow key={tagihan.id_tagihan}>
                   <TableCell>{(currentPage - 1) * itemsPerPage + index + 1}</TableCell><TableCell>
                     {tagihan.waktu_registrasi ? format(parseISO(tagihan.waktu_registrasi), 'dd MMMM yyyy HH:mm', { locale: localeId }) : '-'}
-                  </TableCell><TableCell className="font-medium">{tagihan.nomor_registrasi || '-'}</TableCell><TableCell>{tagihan.nomor_spm}</TableCell><TableCell>{tagihan.nama_skpd}</TableCell><TableCell className="min-w-[280px]">{tagihan.uraian}</TableCell><TableCell>Rp{tagihan.jumlah_kotor.toLocaleString('id-ID')}</TableCell><TableCell><StatusBadge status={tagihan.status_tagihan} /></TableCell><TableCell className="text-center">
+                  </TableCell><TableCell className="font-medium">{tagihan.nomor_registrasi || '-'}</TableCell><TableCell className="font-medium">
+                    <Tooltip>
+                      <TooltipTrigger className="max-w-[250px] whitespace-nowrap overflow-hidden text-ellipsis block">
+                        {tagihan.nomor_spm}
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>{tagihan.nomor_spm}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TableCell><TableCell>{tagihan.nama_skpd}</TableCell><TableCell className="min-w-[280px]">{tagihan.uraian}</TableCell><TableCell>Rp{tagihan.jumlah_kotor.toLocaleString('id-ID')}</TableCell><TableCell><StatusBadge status={tagihan.status_tagihan} /></TableCell><TableCell className="text-center">
                     <Button variant="outline" size="icon" title="Lihat Detail" onClick={() => handleDetailClick(tagihan)}>
                       <EyeIcon className="h-4 w-4" />
                     </Button>
