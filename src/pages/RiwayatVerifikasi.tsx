@@ -100,6 +100,9 @@ const RiwayatVerifikasi = () => {
   const prevCurrentPage = React.useRef(currentPage);
   const prevSelectedVerifierId = React.useRef(selectedVerifierId); // New ref for verifier filter
 
+  // Ref for search input
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
   // Fetch verifier options on component mount
   useEffect(() => {
     const fetchVerifierOptions = async () => {
@@ -228,6 +231,13 @@ const RiwayatVerifikasi = () => {
 
   }, [sessionLoading, profile, debouncedSearchQuery, selectedStatus, dateRange, currentPage, itemsPerPage, selectedVerifierId, verifierOptions]); // Add selectedVerifierId to dependencies
 
+  // Efek baru untuk mengembalikan fokus ke input pencarian setelah loading selesai
+  useEffect(() => {
+    if (!loadingData && !loadingPagination && debouncedSearchQuery && searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  }, [loadingData, loadingPagination, debouncedSearchQuery]);
+
   const handleDetailClick = (tagihan: Tagihan) => {
     setSelectedTagihanForDetail(tagihan);
     setIsDetailModalOpen(true);
@@ -287,6 +297,7 @@ const RiwayatVerifikasi = () => {
             <div className="relative flex-1 w-full sm:w-auto">
               <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400" />
               <Input
+                ref={searchInputRef} // Lampirkan Ref ke Input
                 type="text"
                 placeholder="Cari berdasarkan Nomor SPM atau Nama SKPD..."
                 value={searchQuery}
