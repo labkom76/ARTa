@@ -5,8 +5,8 @@ import { MadeWithDyad } from '@/components/made-with-dyad';
 import { Button } from '@/components/ui/button';
 import { ChromeIcon } from 'lucide-react';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { cn } from '@/lib/utils'; // Import cn utility for class merging
-import ReactMarkdown from 'react-markdown'; // Import ReactMarkdown
+import { cn } from '@/lib/utils';
+import ReactMarkdown from 'react-markdown';
 
 const Login = () => {
   const [loginSettings, setLoginSettings] = useState({
@@ -18,21 +18,20 @@ const Login = () => {
     login_background_blur: 'false',
     login_show_forgot_password: 'true',
     login_show_signup: 'true',
-    login_show_email_password: 'true', // New setting
+    login_show_email_password: 'true',
   });
   const [loadingSettings, setLoadingSettings] = useState(true);
-  const [currentBackground, setCurrentBackground] = useState<string | null>(null); // Stores the actual background URL to use
-  const [currentFormPosition, setCurrentFormPosition] = useState<string>('center'); // Stores the actual form position to use
-  const [allBackgroundImages, setAllBackgroundImages] = useState<string[]>([]); // Stores all image URLs for slider
-  const [currentImageIndex, setCurrentImageIndex] = useState(0); // Current index for slider
-  const [isSliderEnabled, setIsSliderEnabled] = useState(false); // State to control slider logic
-  const [backgroundOpacity, setBackgroundOpacity] = useState(1); // New state for opacity to control fade
+  const [currentBackground, setCurrentBackground] = useState<string | null>(null);
+  const [currentFormPosition, setCurrentFormPosition] = useState<string>('center');
+  const [allBackgroundImages, setAllBackgroundImages] = useState<string[]>([]);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [isSliderEnabled, setIsSliderEnabled] = useState(false);
+  const [backgroundOpacity, setBackgroundOpacity] = useState(1);
 
-  // New states for branding
   const [appName, setAppName] = useState('ARTa - BKAD');
   const [appLogoUrl, setAppLogoUrl] = useState<string | null>(null);
-  const [appSubtitle1, setAppSubtitle1] = useState('(Aplikasi Registrasi Tagihan)'); // New state for subtitle 1
-  const [appSubtitle2, setAppSubtitle2] = useState('Pemerintah Daerah Kabupaten Gorontalo'); // New state for subtitle 2
+  const [appSubtitle1, setAppSubtitle1] = useState('(Aplikasi Registrasi Tagihan)');
+  const [appSubtitle2, setAppSubtitle2] = useState('Pemerintah Daerah Kabupaten Gorontalo');
 
   const fetchLoginSettings = useCallback(async () => {
     setLoadingSettings(true);
@@ -53,28 +52,24 @@ const Login = () => {
         login_background_blur: settingsMap.get('login_background_blur') || 'false',
         login_show_forgot_password: settingsMap.get('login_show_forgot_password') || 'true',
         login_show_signup: settingsMap.get('login_show_signup') || 'true',
-        login_show_email_password: settingsMap.get('login_show_email_password') || 'true', // Get new setting
+        login_show_email_password: settingsMap.get('login_show_email_password') || 'true',
       };
       setLoginSettings(fetchedSettings);
-      console.log('Fetched settings:', fetchedSettings);
 
-      // Fetch branding settings
       setAppName(settingsMap.get('app_name') || 'ARTa - BKAD');
       setAppLogoUrl(settingsMap.get('app_logo_url') || null);
-      setAppSubtitle1(settingsMap.get('app_subtitle_1') || '(Aplikasi Registrasi Tagihan)'); // Set subtitle 1
-      setAppSubtitle2(settingsMap.get('app_subtitle_2') || 'Pemerintah Daerah Kabupaten Gorontalo'); // Set subtitle 2
+      setAppSubtitle1(settingsMap.get('app_subtitle_1') || '(Aplikasi Registrasi Tagihan)');
+      setAppSubtitle2(settingsMap.get('app_subtitle_2') || 'Pemerintah Daerah Kabupaten Gorontalo');
 
       const isRandomLayout = fetchedSettings.login_layout_random === 'true';
       const isSliderActive = fetchedSettings.login_background_slider === 'true';
       setIsSliderEnabled(isSliderActive);
-      console.log('isSliderActive:', isSliderActive, 'isRandomLayout:', isRandomLayout);
 
       let resolvedBackground: string | null = null;
       let resolvedFormPosition: string = fetchedSettings.login_form_position;
       let fetchedAllImages: string[] = [];
 
       if (isRandomLayout) {
-        // Random layout takes precedence for single image selection
         const positions = ['left', 'center', 'right', 'top', 'bottom'];
         resolvedFormPosition = positions[Math.floor(Math.random() * positions.length)];
 
@@ -94,10 +89,9 @@ const Login = () => {
         } else {
           resolvedBackground = null;
         }
-        setAllBackgroundImages([]); // Clear slider images if random is active
-        setCurrentImageIndex(0); // Reset index
+        setAllBackgroundImages([]);
+        setCurrentImageIndex(0);
       } else if (isSliderActive) {
-        // If slider is active, fetch all images
         const { data: images, error: imageError } = await supabase.storage.from('login-backgrounds').list('', {
           limit: 100,
           offset: 0,
@@ -112,26 +106,23 @@ const Login = () => {
           return publicUrlData.publicUrl;
         });
         setAllBackgroundImages(fetchedAllImages);
-        console.log('Fetched all background images for slider:', fetchedAllImages);
 
         if (fetchedAllImages.length > 0) {
-          resolvedBackground = fetchedAllImages[0]; // Set initial background for slider
+          resolvedBackground = fetchedAllImages[0];
         } else {
           resolvedBackground = null;
         }
-        setCurrentImageIndex(0); // Reset index
+        setCurrentImageIndex(0);
       } else {
-        // Default: use single configured background
         resolvedBackground = fetchedSettings.login_background_url;
-        setAllBackgroundImages([]); // Clear slider images
-        setCurrentImageIndex(0); // Reset index
+        setAllBackgroundImages([]);
+        setCurrentImageIndex(0);
       }
 
       setCurrentBackground(resolvedBackground);
       setCurrentFormPosition(resolvedFormPosition);
 
     } catch (error: any) {
-      console.error('Error fetching login settings:', error.message);
       setLoginSettings({
         login_background_url: '',
         login_form_position: 'center',
@@ -148,10 +139,10 @@ const Login = () => {
       setAllBackgroundImages([]);
       setIsSliderEnabled(false);
       setCurrentImageIndex(0);
-      setAppName('ARTa - BKAD'); // Reset app name on error
-      setAppLogoUrl(null); // Reset app logo on error
-      setAppSubtitle1('(Aplikasi Registrasi Tagihan)'); // Reset subtitle 1 on error
-      setAppSubtitle2('Pemerintah Daerah Kabupaten Gorontalo'); // Reset subtitle 2 on error
+      setAppName('ARTa - BKAD');
+      setAppLogoUrl(null);
+      setAppSubtitle1('(Aplikasi Registrasi Tagihan)');
+      setAppSubtitle2('Pemerintah Daerah Kabupaten Gorontalo');
     } finally {
       setLoadingSettings(false);
     }
@@ -161,41 +152,33 @@ const Login = () => {
     fetchLoginSettings();
   }, [fetchLoginSettings]);
 
-  // Effect for background image slider with fade transition
   useEffect(() => {
     let intervalId: NodeJS.Timeout;
     if (isSliderEnabled && allBackgroundImages.length > 1) {
-      console.log('Slider enabled, starting interval. Images:', allBackgroundImages.length);
       intervalId = setInterval(() => {
-        setBackgroundOpacity(0); // Start fade out
+        setBackgroundOpacity(0);
         setTimeout(() => {
           setCurrentImageIndex(prevIndex => {
             const nextIndex = (prevIndex + 1) % allBackgroundImages.length;
-            console.log('Changing image to index:', nextIndex);
             return nextIndex;
           });
-          setBackgroundOpacity(1); // Fade in new image
-        }, 1000); // Wait for fade out (1s) before changing image and fading in
-      }, 10000); // Change image every 10 seconds (total cycle: 1s fade out, 9s display, 1s fade in)
+          setBackgroundOpacity(1);
+        }, 1000);
+      }, 10000);
     } else {
-      console.log('Slider not enabled or not enough images for slider. Clearing interval.');
       clearInterval(intervalId);
-      setBackgroundOpacity(1); // Ensure opacity is 1 if slider is off
+      setBackgroundOpacity(1);
     }
     return () => clearInterval(intervalId);
   }, [isSliderEnabled, allBackgroundImages.length]);
 
-  // Effect to update currentBackground when currentImageIndex changes (for slider)
   useEffect(() => {
     if (isSliderEnabled && allBackgroundImages.length > 0) {
       setCurrentBackground(allBackgroundImages[currentImageIndex]);
-      console.log('Current background updated to:', allBackgroundImages[currentImageIndex]);
     } else if (!isSliderEnabled && loginSettings.login_background_url) {
-      // If slider is disabled, revert to the single selected background
       setCurrentBackground(loginSettings.login_background_url);
     }
   }, [currentImageIndex, isSliderEnabled, allBackgroundImages, loginSettings.login_background_url]);
-
 
   const handleGoogleLogin = async () => {
     const { error } = await supabase.auth.signInWithOAuth({
@@ -206,11 +189,10 @@ const Login = () => {
     });
 
     if (error) {
-      console.error('Error logging in with Google:', error.message);
+      // Handle error silently or with toast notification if needed
     }
   };
 
-  // Dynamic classes for the main container
   const loginContainerClasses = cn(
     "min-h-screen flex flex-col p-4 relative overflow-hidden bg-gray-50 dark:bg-gray-900",
     {
@@ -231,7 +213,7 @@ const Login = () => {
     : { opacity: backgroundOpacity, filter: loginSettings.login_background_blur === 'true' ? 'blur(8px)' : 'none' };
 
   const backgroundOverlayClasses = cn(
-    "absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ease-in-out", // Added transition for fade effect
+    "absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ease-in-out",
   );
 
   const formContainerClasses = cn(
@@ -259,18 +241,16 @@ const Login = () => {
         ></div>
       )}
 
-      {/* Branding Section - Moved outside the form container */}
-      <div className="text-center mb-8 z-10 flex items-center justify-center gap-2"> {/* gap-2 for 8px */}
+      <div className="text-center mb-8 z-10 flex items-center justify-center gap-2">
         {appLogoUrl && (
           <div className="flex-shrink-0">
-            <img src={appLogoUrl} alt="App Logo" className="h-16 w-16 object-contain" /> {/* Changed to h-16 w-16 */}
+            <img src={appLogoUrl} alt="App Logo" className="h-16 w-16 object-contain" />
           </div>
         )}
-        <h2 className="text-4xl font-bold text-gray-800 dark:text-white">{appName}</h2> {/* Removed mb-2 */}
+        <h2 className="text-4xl font-bold text-gray-800 dark:text-white">{appName}</h2>
       </div>
 
       <div className={formContainerClasses}>
-        {/* Subtitles (inside form) */}
         <div className="text-lg text-gray-600 dark:text-gray-400 mb-1 text-center">
           <ReactMarkdown>{appSubtitle1}</ReactMarkdown>
         </div>
@@ -309,7 +289,6 @@ const Login = () => {
                   password_input_placeholder: 'Masukkan password',
                   button_label: 'Login',
                   social_auth_button_text: 'Login dengan {{provider}}',
-                  // Mengubah link_text untuk sign_in agar menampilkan teks yang seharusnya muncul di formulir pendaftaran
                   link_text: loginSettings.login_show_signup === 'true' ? 'Sudah punya akun? Login' : '',
                 },
                 sign_up: {
@@ -319,7 +298,6 @@ const Login = () => {
                   password_input_placeholder: 'Buat password',
                   button_label: 'Daftar',
                   social_auth_button_text: 'Daftar dengan {{provider}}',
-                  // Mengubah link_text untuk sign_up agar menampilkan teks yang seharusnya muncul di formulir login
                   link_text: loginSettings.login_show_signup === 'true' ? 'Belum punya akun? Daftar' : '',
                 },
                 forgotten_password: {
