@@ -227,7 +227,7 @@ const Login = () => {
   if (loadingSettings) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900 p-4">
-        <p className="text-gray-600 dark:text-gray-400">Memuat pengaturan login...</p>
+        <p className="text-gray-600 dark:text-gray-400">Memuat...</p>
       </div>
     );
   }
