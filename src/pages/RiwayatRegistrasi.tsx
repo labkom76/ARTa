@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useSession } from '@/contexts/SessionContext';
 import { supabase } from '@/integrations/supabase/client';
 import {
@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { SearchIcon, EyeIcon } from 'lucide-react';
+import { SearchIcon, EyeIcon, PrinterIcon } from 'lucide-react';
 import { format, parseISO, startOfDay, endOfDay } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -68,7 +68,7 @@ const RiwayatRegistrasi = () => {
   const { profile, loading: sessionLoading } = useSession();
   const [tagihanList, setTagihanList] = useState<Tagihan[]>([]);
   const [loadingData, setLoadingData] = useState(true);
-  const [loadingPagination, setLoadingPagination] = useState(false); // New state for pagination loading
+  const [loadingPagination, setLoadingPagination] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const debouncedSearchQuery = useDebounce(searchQuery, 500);
   const [selectedStatus, setSelectedStatus] = useState<string>('Semua Status');
@@ -83,11 +83,14 @@ const RiwayatRegistrasi = () => {
   const [selectedTagihanForDetail, setSelectedTagihanForDetail] = useState<Tagihan | null>(null);
 
   // Refs to track previous values for determining pagination-only changes
-  const prevSearchQuery = React.useRef(searchQuery);
-  const prevSelectedStatus = React.useRef(selectedStatus);
-  const prevDateRange = React.useRef(dateRange);
-  const prevItemsPerPage = React.useRef(itemsPerPage);
-  const prevCurrentPage = React.useRef(currentPage);
+  const prevSearchQuery = useRef(searchQuery);
+  const prevSelectedStatus = useRef(selectedStatus);
+  const prevDateRange = useRef(dateRange);
+  const prevItemsPerPage = useRef(itemsPerPage);
+  const prevCurrentPage = useRef(currentPage);
+
+  // 1. Buat Ref untuk Input
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const fetchRiwayatRegistrasi = async (isPaginationOnlyChange = false) => {
@@ -97,9 +100,9 @@ const RiwayatRegistrasi = () => {
       }
 
       if (!isPaginationOnlyChange) {
-        setLoadingData(true); // Show full loading spinner for search/filter changes
+        setLoadingData(true);
       } else {
-        setLoadingPagination(true); // Only disable pagination buttons for page changes
+        setLoadingPagination(true);
       }
 
       try {
@@ -150,7 +153,6 @@ const RiwayatRegistrasi = () => {
     };
 
     let isPaginationOnlyChange = false;
-    // Check if only currentPage changed, while other filters/search/itemsPerPage remained the same
     if (
       prevCurrentPage.current !== currentPage &&
       prevSearchQuery.current === searchQuery &&
@@ -163,7 +165,6 @@ const RiwayatRegistrasi = () => {
 
     fetchRiwayatRegistrasi(isPaginationOnlyChange);
 
-    // Update refs for the next render cycle
     prevSearchQuery.current = searchQuery;
     prevSelectedStatus.current = selectedStatus;
     prevDateRange.current = dateRange;
@@ -171,6 +172,13 @@ const RiwayatRegistrasi = () => {
     prevCurrentPage.current = currentPage;
 
   }, [sessionLoading, profile, debouncedSearchQuery, selectedStatus, dateRange, currentPage, itemsPerPage]);
+
+  // Efek baru untuk mengembalikan fokus ke input pencarian setelah loading selesai
+  useEffect(() => {
+    if (!loadingData && !loadingPagination && debouncedSearchQuery && searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  }, [loadingData, loadingPagination, debouncedSearchQuery]);
 
   const handleDetailClick = (tagihan: Tagihan) => {
     setSelectedTagihanForDetail(tagihan);
@@ -206,6 +214,7 @@ const RiwayatRegistrasi = () => {
         <div className="relative flex-1 w-full sm:w-auto">
           <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400" />
           <Input
+            ref={searchInputRef} // Lampirkan Ref ke Input
             type="text"
             placeholder="Cari berdasarkan Nomor SPM atau Nama SKPD..."
             value={searchQuery}
