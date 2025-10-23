@@ -164,7 +164,8 @@ const PortalVerifikasi = () => {
             .in('status_tagihan', ['Diteruskan', 'Dikembalikan'])
             .gte('waktu_verifikasi', todayStart)
             .lte('waktu_verifikasi', todayEnd)
-            .is('id_korektor', null);
+            .eq('nama_verifikator', profile?.nama_lengkap) // ADDED THIS LINE
+            .is('id_korektor', null); // Filter for Staf Verifikasi
         } else if (profile.peran === 'Staf Koreksi') {
           query = query
             .eq('status_tagihan', 'Dikembalikan')
@@ -281,13 +282,14 @@ const PortalVerifikasi = () => {
           .in('status_tagihan', ['Diteruskan', 'Dikembalikan'])
           .gte('waktu_verifikasi', todayStart)
           .lte('waktu_verifikasi', todayEnd)
+          .eq('nama_verifikator', profile?.nama_lengkap) // Filter by current verifier's name
           .is('id_korektor', null); // Filter for Staf Verifikasi
         query = query.order('waktu_verifikasi', { ascending: false });
       } else if (profile.peran === 'Staf Koreksi') {
         setHistoryPanelTitle('Pengembalian Terakhir Anda');
         query = query
           .eq('status_tagihan', 'Dikembalikan')
-          .eq('id_korektor', user.id) // Filter for Staf Koreksi
+          .eq('id_korektor', user.id) // Filter by current corrector's ID
           .gte('waktu_koreksi', todayStart)
           .lte('waktu_koreksi', todayEnd);
         query = query.order('waktu_koreksi', { ascending: false });
@@ -438,7 +440,7 @@ const PortalVerifikasi = () => {
             let updatedHistoryList = [...prevList];
 
             // Apply conditional filter for 'Staf Verifikator' in realtime updates
-            const shouldBeInHistoryForVerifier = isVerifiedToday && (profile?.peran !== 'Staf Verifikator' || newTagihan.id_korektor === null);
+            const shouldBeInHistoryForVerifier = isVerifiedToday && (profile?.peran !== 'Staf Verifikator' || newTagihan.id_korektor === null) && newTagihan.nama_verifikator === profile?.nama_lengkap;
             const shouldBeInHistoryForKoreksi = newTagihan.waktu_koreksi &&
                                                 isSameDay(parseISO(newTagihan.waktu_koreksi), new Date()) &&
                                                 newTagihan.status_tagihan === 'Dikembalikan' &&
