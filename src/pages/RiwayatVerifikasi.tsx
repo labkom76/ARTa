@@ -173,7 +173,11 @@ const RiwayatVerifikasi = () => {
 
         // Apply verifier filter (NEW)
         if (selectedVerifierId !== 'Semua Verifikator') {
-          query = query.eq('nama_verifikator', verifierOptions.find(opt => opt.value === selectedVerifierId)?.label || '');
+          // Find the label (nama_lengkap) corresponding to the selected ID
+          const verifierName = verifierOptions.find(opt => opt.value === selectedVerifierId)?.label;
+          if (verifierName) {
+            query = query.eq('nama_verifikator', verifierName);
+          }
         }
 
         if (itemsPerPage !== -1) {
