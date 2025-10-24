@@ -241,16 +241,17 @@ const Login = () => {
         ></div>
       )}
 
-      <div className="text-center mb-8 z-10 flex items-center justify-center gap-2">
-        {appLogoUrl && (
-          <div className="flex-shrink-0">
-            <img src={appLogoUrl} alt="App Logo" className="h-16 w-16 object-contain" />
-          </div>
-        )}
-        <h2 className="text-4xl font-bold text-gray-800 dark:text-white">{appName}</h2>
-      </div>
-
       <div className={formContainerClasses}>
+        {/* Moved Logo and App Name inside the form container */}
+        <div className="text-center mb-4 flex items-center justify-center gap-2">
+          {appLogoUrl && (
+            <div className="flex-shrink-0">
+              <img src={appLogoUrl} alt="App Logo" className="h-16 w-16 object-contain" />
+            </div>
+          )}
+          <h2 className="text-4xl font-bold text-gray-800 dark:text-white">{appName}</h2>
+        </div>
+
         <div className="text-lg text-gray-600 dark:text-gray-400 mb-1 text-center">
           <ReactMarkdown>{appSubtitle1}</ReactMarkdown>
         </div>
