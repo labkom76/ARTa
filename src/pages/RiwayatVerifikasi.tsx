@@ -37,6 +37,11 @@ import {
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'; // Import Card components
 import StatusBadge from '@/components/StatusBadge'; // Import StatusBadge
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"; // Import Tooltip components
 
 interface VerificationItem {
   item: string;
@@ -408,7 +413,16 @@ const RiwayatVerifikasi = () => {
                       </TableCell>
                       <TableCell className="font-medium">{tagihan.nomor_verifikasi || '-'}</TableCell>
                       <TableCell>{tagihan.nama_skpd}</TableCell>
-                      <TableCell>{tagihan.nomor_spm}</TableCell>
+                      <TableCell className="font-medium">
+                        <Tooltip>
+                          <TooltipTrigger className="max-w-[250px] whitespace-nowrap overflow-hidden text-ellipsis block">
+                            {tagihan.nomor_spm}
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>{tagihan.nomor_spm}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TableCell>
                       <TableCell>Rp{tagihan.jumlah_kotor.toLocaleString('id-ID')}</TableCell>
                       <TableCell><StatusBadge status={tagihan.status_tagihan} /></TableCell>
                       <TableCell>{tagihan.nama_verifikator || '-'}</TableCell>
