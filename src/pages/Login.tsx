@@ -246,10 +246,10 @@ const Login = () => {
         <div className="text-center mb-4 flex items-center justify-center gap-2">
           {appLogoUrl && (
             <div className="flex-shrink-0">
-              <img src={appLogoUrl} alt="App Logo" className="h-16 w-16 object-contain" />
+              <img src={appLogoUrl} alt="App Logo" className="h-12 w-12 object-contain" /> {/* Adjusted size */}
             </div>
           )}
-          <h2 className="text-4xl font-bold text-gray-800 dark:text-white">{appName}</h2>
+          <h2 className="text-2xl font-bold text-gray-800 dark:text-white">{appName}</h2> {/* Adjusted size to text-2xl */}
         </div>
 
         <div className="text-lg text-gray-600 dark:text-gray-400 mb-1 text-center">
