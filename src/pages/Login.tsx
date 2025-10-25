@@ -3,10 +3,13 @@ import { ThemeSupa } from '@supabase/auth-ui-shared';
 import { supabase } from '@/integrations/supabase/client';
 import { MadeWithDyad } from '@/components/made-with-dyad';
 import { Button } from '@/components/ui/button';
-import { ChromeIcon } from 'lucide-react';
+import { ChromeIcon, Loader2 } from 'lucide-react'; // Import Loader2 for loading indicator
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import ReactMarkdown from 'react-markdown';
+import { Input } from '@/components/ui/input'; // Import Input component
+import { Label } from '@/components/ui/label'; // Import Label component
+import { toast } from 'sonner'; // Import toast for notifications
 
 const Login = () => {
   const [loginSettings, setLoginSettings] = useState({
@@ -32,6 +35,12 @@ const Login = () => {
   const [appLogoUrl, setAppLogoUrl] = useState<string | null>(null);
   const [appSubtitle1, setAppSubtitle1] = useState('(Aplikasi Registrasi Tagihan)');
   const [appSubtitle2, setAppSubtitle2] = useState('Pemerintah Daerah Kabupaten Gorontalo');
+
+  // NEW STATES FOR OTP LOGIN
+  const [showOtpFlow, setShowOtpFlow] = useState(false);
+  const [otpEmail, setOtpEmail] = useState('');
+  const [isSendingOtp, setIsSendingOtp] = useState(false);
+  const [otpSent, setOtpSent] = useState(false); // To indicate if OTP has been sent
 
   const fetchLoginSettings = useCallback(async () => {
     setLoadingSettings(true);
@@ -193,10 +202,47 @@ const Login = () => {
     }
   };
 
-  // NEW: Placeholder function for OTP login
+  // MODIFIED: handleLoginWithOtp to toggle OTP flow
   const handleLoginWithOtp = () => {
-    console.log('Login with OTP clicked!');
-    // This will be implemented in the next step
+    setShowOtpFlow(prev => !prev);
+    setOtpEmail(''); // Clear email when toggling
+    setOtpSent(false); // Reset OTP sent status
+  };
+
+  // NEW: Function to send OTP to email
+  const sendOtpToEmail = async () => {
+    if (!otpEmail) {
+      toast.error('Email wajib diisi.');
+      return;
+    }
+    // Basic email format validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(otpEmail)) {
+      toast.error('Format email tidak valid.');
+      return;
+    }
+
+    setIsSendingOtp(true);
+    try {
+      const { error } = await supabase.auth.signInWithOtp({
+        email: otpEmail,
+        options: {
+          emailRedirectTo: window.location.origin, // Optional: redirect after email link click
+        },
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      setOtpSent(true);
+      toast.success('Kode OTP telah dikirim ke email Anda. Silakan periksa kotak masuk.');
+    } catch (error: any) {
+      console.error('Error sending OTP:', error.message);
+      toast.error('Gagal mengirim kode OTP: ' + error.message);
+    } finally {
+      setIsSendingOtp(false);
+    }
   };
 
   const loginContainerClasses = cn(
@@ -265,7 +311,7 @@ const Login = () => {
           <ReactMarkdown>{appSubtitle2}</ReactMarkdown>
         </div>
 
-        {loginSettings.login_show_email_password === 'true' && (
+        {!showOtpFlow && loginSettings.login_show_email_password === 'true' && (
           <Auth
             supabaseClient={supabase}
             providers={[]}
@@ -324,28 +370,64 @@ const Login = () => {
           />
         )}
 
-        {loginSettings.login_show_email_password === 'true' && (
+        {/* OTP Login Flow */}
+        {showOtpFlow && (
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground text-center">
+              Masukkan email Anda untuk menerima kode login.
+            </p>
+            <div className="grid gap-2">
+              <Label htmlFor="otp-email">Email</Label>
+              <Input
+                id="otp-email"
+                type="email"
+                placeholder="Masukkan email Anda"
+                value={otpEmail}
+                onChange={(e) => setOtpEmail(e.target.value)}
+                disabled={isSendingOtp || otpSent}
+              />
+            </div>
+            <Button
+              className="w-full"
+              onClick={sendOtpToEmail}
+              disabled={isSendingOtp || otpSent}
+            >
+              {isSendingOtp && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {otpSent ? 'Kode OTP Terkirim!' : 'Kirim Kode OTP'}
+            </Button>
+            {otpSent && (
+              <p className="text-sm text-green-600 dark:text-green-400 text-center">
+                Kode OTP telah dikirim. Periksa email Anda.
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* Separator and Social/OTP Buttons */}
+        {!showOtpFlow && loginSettings.login_show_email_password === 'true' && (
           <div className="relative flex justify-center text-xs uppercase my-6">
             <span className="bg-white dark:bg-gray-800 px-2 text-muted-foreground">Atau lanjutkan dengan</span>
           </div>
         )}
         
-        <Button
-          variant="outline"
-          className="w-full flex items-center justify-center gap-2"
-          onClick={handleGoogleLogin}
-        >
-          <ChromeIcon className="h-5 w-5" />
-          Login with Google
-        </Button>
+        {!showOtpFlow && (
+          <Button
+            variant="outline"
+            className="w-full flex items-center justify-center gap-2"
+            onClick={handleGoogleLogin}
+          >
+            <ChromeIcon className="h-5 w-5" />
+            Login with Google
+          </Button>
+        )}
 
-        {/* NEW: Button for OTP Login */}
+        {/* Toggle button for OTP Login */}
         <Button
           variant="link"
           className="w-full mt-2 text-blue-600 dark:text-blue-400"
           onClick={handleLoginWithOtp}
         >
-          Login dengan Kode OTP
+          {showOtpFlow ? 'Kembali ke Login Biasa' : 'Login dengan Kode OTP'}
         </Button>
       </div>
       <MadeWithDyad />
