@@ -3,7 +3,7 @@ import { ThemeSupa } from '@supabase/auth-ui-shared';
 import { supabase } from '@/integrations/supabase/client';
 import { MadeWithDyad } from '@/components/made-with-dyad';
 import { Button } from '@/components/ui/button';
-import { ChromeIcon, Loader2 } from 'lucide-react'; // Import Loader2 for loading indicator
+import { ChromeIcon, Loader2, MailIcon } from 'lucide-react'; // Import MailIcon for OTP button
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import ReactMarkdown from 'react-markdown';
@@ -469,7 +469,7 @@ const Login = () => {
         )}
 
         {/* Separator and Social/OTP Buttons */}
-        {!showOtpFlow && loginSettings.login_show_email_password === 'true' && (
+        {(!showOtpFlow && loginSettings.login_show_email_password === 'true') && (
           <div className="relative flex justify-center text-xs uppercase my-6">
             <span className="bg-white dark:bg-gray-800 px-2 text-muted-foreground">Atau lanjutkan dengan</span>
           </div>
@@ -486,12 +486,13 @@ const Login = () => {
           </Button>
         )}
 
-        {/* Toggle button for OTP Login */}
+        {/* Toggle button for OTP Login - Styled to match Google button */}
         <Button
-          variant="link"
-          className="w-full mt-2 text-blue-600 dark:text-blue-400"
+          variant="outline" // Changed to outline variant
+          className="w-full mt-2 flex items-center justify-center gap-2" // Added flex, items-center, justify-center, gap-2
           onClick={handleLoginWithOtp}
         >
+          <MailIcon className="h-5 w-5" /> {/* Added MailIcon */}
           {showOtpFlow ? 'Kembali ke Login Biasa' : 'Login dengan Kode OTP'}
         </Button>
       </div>
