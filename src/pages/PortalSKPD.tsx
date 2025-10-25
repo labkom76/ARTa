@@ -32,7 +32,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { PlusCircleIcon, SearchIcon, EditIcon, Trash2Icon } from 'lucide-react';
-import { Textarea } from '@/components/ui/textarea';
+import { Textarea } => '@/components/ui/textarea';
 import DeleteConfirmationDialog from '@/components/DeleteConfirmationDialog';
 import TagihanDetailDialog from '@/components/TagihanDetailDialog'; // Import the new detail dialog
 import { format } from 'date-fns'; // Import format from date-fns
@@ -324,7 +324,7 @@ const PortalSKPD = () => {
         query = query.range((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage - 1);
       }
 
-      const { data, error } = await query;
+      const { data, error, count } = await query;
 
       if (error) {
         console.error('Supabase query error:', error); // Log full error object
@@ -332,20 +332,7 @@ const PortalSKPD = () => {
       }
 
       setTagihanList(data as Tagihan[]);
-      // The count is returned in the header, not directly in data.
-      // We need to get it from the `count` property of the response.
-      // This was already handled by `count` in the `select` options.
-      setTotalItems(data.length); // Assuming `data.length` is the count for the current page, not total.
-                                  // This needs to be `count` from the query response.
-      // Let's re-fetch with `count` properly.
-      const { count: totalCount, error: countError } = await supabase
-        .from('database_tagihan')
-        .select('*', { count: 'exact', head: true })
-        .eq('id_pengguna_input', user.id);
-
-      if (countError) throw countError;
-      setTotalItems(totalCount || 0);
-
+      setTotalItems(count || 0);
     } catch (error: any) {
       console.error('Error fetching tagihan:', error.message);
       toast.error('Gagal memuat daftar tagihan: ' + error.message);
@@ -585,12 +572,14 @@ const PortalSKPD = () => {
         </Button>
       </div>
 
-      {/* Card for Filters */}
+      {/* Card for Table (now includes filters) */}
       <Card className="shadow-sm rounded-lg">
         <CardHeader>
-          <CardTitle className="text-xl font-semibold">Filter Data</CardTitle>
+          <CardTitle className="text-xl font-semibold">Daftar Tagihan</CardTitle>
+          <p className="text-sm text-muted-foreground">Kelola dan input tagihan baru Anda di sini.</p>
         </CardHeader>
         <CardContent>
+          {/* Filter controls moved here */}
           <div className="mb-4 flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-2"> {/* Added flex-col for mobile stacking */}
             <div className="relative flex-1 w-full sm:w-auto"> {/* Added w-full for mobile */}
               <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400" />
@@ -639,16 +628,7 @@ const PortalSKPD = () => {
               </Select>
             </div>
           </div>
-        </CardContent>
-      </Card>
 
-      {/* Card for Table */}
-      <Card className="shadow-sm rounded-lg">
-        <CardHeader>
-          <CardTitle className="text-xl font-semibold">Daftar Tagihan</CardTitle>
-          <p className="text-sm text-muted-foreground">Kelola dan input tagihan baru Anda di sini.</p>
-        </CardHeader>
-        <CardContent>
           {loading && !loadingPagination ? ( // Show full loading only if not pagination-only
             <p className="text-center text-gray-600 dark:text-gray-400">Memuat tagihan...</p>
           ) : tagihanList.length === 0 ? (
