@@ -44,6 +44,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"; // Import Tooltip components
 import { useLocation, useNavigate } from 'react-router-dom'; // Import useLocation and useNavigate
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'; // Import Card components
 
 // Zod schema for form validation
 const formSchema = z.object({
@@ -323,7 +324,7 @@ const PortalSKPD = () => {
         query = query.range((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage - 1);
       }
 
-      const { data, error, count } = await query;
+      const { data, error } = await query;
 
       if (error) {
         console.error('Supabase query error:', error); // Log full error object
@@ -331,7 +332,20 @@ const PortalSKPD = () => {
       }
 
       setTagihanList(data as Tagihan[]);
-      setTotalItems(count || 0);
+      // The count is returned in the header, not directly in data.
+      // We need to get it from the `count` property of the response.
+      // This was already handled by `count` in the `select` options.
+      setTotalItems(data.length); // Assuming `data.length` is the count for the current page, not total.
+                                  // This needs to be `count` from the query response.
+      // Let's re-fetch with `count` properly.
+      const { count: totalCount, error: countError } = await supabase
+        .from('database_tagihan')
+        .select('*', { count: 'exact', head: true })
+        .eq('id_pengguna_input', user.id);
+
+      if (countError) throw countError;
+      setTotalItems(totalCount || 0);
+
     } catch (error: any) {
       console.error('Error fetching tagihan:', error.message);
       toast.error('Gagal memuat daftar tagihan: ' + error.message);
@@ -571,154 +585,169 @@ const PortalSKPD = () => {
         </Button>
       </div>
 
-      <div className="p-6 bg-white rounded-lg shadow-sm border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
-        <div className="mb-4 flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-2"> {/* Added flex-col for mobile stacking */}
-          <div className="relative flex-1 w-full sm:w-auto"> {/* Added w-full for mobile */}
-            <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400" />
-            <Input
-              type="text"
-              placeholder="Cari berdasarkan Nomor SPM..."
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                setCurrentPage(1);
-              }}
-              className="pl-9 w-full" // Added w-full for mobile
-            />
-          </div>
-          <Select onValueChange={(value) => { setSelectedStatus(value); setCurrentPage(1); }} value={selectedStatus}>
-            <SelectTrigger className="w-full sm:w-[200px]"> {/* Added w-full for mobile */}
-              <SelectValue placeholder="Filter berdasarkan Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Semua Status">Semua Status</SelectItem>
-              <SelectItem value="Menunggu Registrasi">Menunggu Registrasi</SelectItem>
-              <SelectItem value="Menunggu Verifikasi">Menunggu Verifikasi</SelectItem>
-              <SelectItem value="Diteruskan">Diteruskan</SelectItem>
-              <SelectItem value="Dikembalikan">Dikembalikan</SelectItem>
-            </SelectContent>
-          </Select>
-          <div className="flex items-center space-x-2 w-full sm:w-auto justify-end"> {/* Added w-full and justify-end for mobile */}
-            <Label htmlFor="items-per-page" className="whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">Per halaman:</Label>
-            <Select
-              value={itemsPerPage.toString()}
-              onValueChange={(value) => {
-                setItemsPerPage(Number(value));
-                setCurrentPage(1);
-              }}
-            >
-              <SelectTrigger className="w-[100px]">
-                <SelectValue placeholder="10" />
+      {/* Card for Filters */}
+      <Card className="shadow-sm rounded-lg">
+        <CardHeader>
+          <CardTitle className="text-xl font-semibold">Filter Data</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="mb-4 flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-2"> {/* Added flex-col for mobile stacking */}
+            <div className="relative flex-1 w-full sm:w-auto"> {/* Added w-full for mobile */}
+              <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400" />
+              <Input
+                type="text"
+                placeholder="Cari berdasarkan Nomor SPM..."
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="pl-9 w-full" // Added w-full for mobile
+              />
+            </div>
+            <Select onValueChange={(value) => { setSelectedStatus(value); setCurrentPage(1); }} value={selectedStatus}>
+              <SelectTrigger className="w-full sm:w-[200px]"> {/* Added w-full for mobile */}
+                <SelectValue placeholder="Filter berdasarkan Status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="10">10</SelectItem>
-                <SelectItem value="25">25</SelectItem>
-                <SelectItem value="50">50</SelectItem>
-                <SelectItem value="100">100</SelectItem>
-                <SelectItem value="-1">Semua</SelectItem>
+                <SelectItem value="Semua Status">Semua Status</SelectItem>
+                <SelectItem value="Menunggu Registrasi">Menunggu Registrasi</SelectItem>
+                <SelectItem value="Menunggu Verifikasi">Menunggu Verifikasi</SelectItem>
+                <SelectItem value="Diteruskan">Diteruskan</SelectItem>
+                <SelectItem value="Dikembalikan">Dikembalikan</SelectItem>
               </SelectContent>
             </Select>
+            <div className="flex items-center space-x-2 w-full sm:w-auto justify-end"> {/* Added w-full and justify-end for mobile */}
+              <Label htmlFor="items-per-page" className="whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">Per halaman:</Label>
+              <Select
+                value={itemsPerPage.toString()}
+                onValueChange={(value) => {
+                  setItemsPerPage(Number(value));
+                  setCurrentPage(1);
+                }}
+              >
+                <SelectTrigger className="w-[100px]">
+                  <SelectValue placeholder="10" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="10">10</SelectItem>
+                  <SelectItem value="25">25</SelectItem>
+                  <SelectItem value="50">50</SelectItem>
+                  <SelectItem value="100">100</SelectItem>
+                  <SelectItem value="-1">Semua</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
-        </div>
+        </CardContent>
+      </Card>
 
-        {loading && !loadingPagination ? ( // Show full loading only if not pagination-only
-          <p className="text-center text-gray-600 dark:text-gray-400">Memuat tagihan...</p>
-        ) : tagihanList.length === 0 ? (
-          <p className="text-center text-gray-600 dark:text-gray-400">Tidak ada tagihan ditemukan.</p>
-        ) : (
-          <>
-            <div className="overflow-x-auto">
-              <Table key={`${selectedStatus}-${currentPage}`}>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[50px]">No.</TableHead>
-                    <TableHead>Nomor SPM</TableHead>
-                    <TableHead>Jenis SPM</TableHead>
-                    <TableHead>Jenis Tagihan</TableHead>
-                    <TableHead>Sumber Dana</TableHead>
-                    <TableHead className="min-w-[280px]">Uraian</TableHead>
-                    <TableHead>Jumlah Kotor</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-center">Aksi</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {tagihanList.map((tagihan, index) => {
-                    return (
-                      <TableRow key={tagihan.id_tagihan}>
-                        <TableCell>{(currentPage - 1) * itemsPerPage + index + 1}</TableCell>
-                        <TableCell className="font-medium">
-                          <Tooltip>
-                            <TooltipTrigger className="max-w-[250px] whitespace-nowrap overflow-hidden text-ellipsis block">
-                              {tagihan.nomor_spm}
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>{tagihan.nomor_spm}</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TableCell>
-                        <TableCell>{tagihan.jenis_spm}</TableCell>
-                        <TableCell>{tagihan.jenis_tagihan}</TableCell>
-                        <TableCell>{tagihan.sumber_dana || '-'}</TableCell>
-                        <TableCell className="min-w-[280px]">{tagihan.uraian}</TableCell>
-                        <TableCell>Rp{tagihan.jumlah_kotor.toLocaleString('id-ID')}</TableCell>
-                        <TableCell><StatusBadge status={tagihan.status_tagihan} /></TableCell>
-                        <TableCell className="text-center">
-                          {tagihan.status_tagihan === 'Menunggu Registrasi' ? (
-                            <div className="flex justify-center space-x-2">
-                              <Button
-                                variant="outline"
-                                size="icon"
-                                onClick={() => handleEdit(tagihan)}
-                                title="Edit Tagihan"
-                                disabled={!isAccountVerified}
-                              >
-                                <EditIcon className="h-4 w-4" />
+      {/* Card for Table */}
+      <Card className="shadow-sm rounded-lg">
+        <CardHeader>
+          <CardTitle className="text-xl font-semibold">Daftar Tagihan</CardTitle>
+          <p className="text-sm text-muted-foreground">Kelola dan input tagihan baru Anda di sini.</p>
+        </CardHeader>
+        <CardContent>
+          {loading && !loadingPagination ? ( // Show full loading only if not pagination-only
+            <p className="text-center text-gray-600 dark:text-gray-400">Memuat tagihan...</p>
+          ) : tagihanList.length === 0 ? (
+            <p className="text-center text-gray-600 dark:text-gray-400">Tidak ada tagihan ditemukan.</p>
+          ) : (
+            <>
+              <div className="overflow-x-auto">
+                <Table key={`${selectedStatus}-${currentPage}`}>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-[50px]">No.</TableHead>
+                      <TableHead>Nomor SPM</TableHead>
+                      <TableHead>Jenis SPM</TableHead>
+                      <TableHead>Jenis Tagihan</TableHead>
+                      <TableHead>Sumber Dana</TableHead>
+                      <TableHead className="min-w-[280px]">Uraian</TableHead>
+                      <TableHead>Jumlah Kotor</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-center">Aksi</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {tagihanList.map((tagihan, index) => {
+                      return (
+                        <TableRow key={tagihan.id_tagihan}>
+                          <TableCell>{(currentPage - 1) * itemsPerPage + index + 1}</TableCell>
+                          <TableCell className="font-medium">
+                            <Tooltip>
+                              <TooltipTrigger className="max-w-[250px] whitespace-nowrap overflow-hidden text-ellipsis block">
+                                {tagihan.nomor_spm}
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>{tagihan.nomor_spm}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TableCell>
+                          <TableCell>{tagihan.jenis_spm}</TableCell>
+                          <TableCell>{tagihan.jenis_tagihan}</TableCell>
+                          <TableCell>{tagihan.sumber_dana || '-'}</TableCell>
+                          <TableCell className="min-w-[280px]">{tagihan.uraian}</TableCell>
+                          <TableCell>Rp{tagihan.jumlah_kotor.toLocaleString('id-ID')}</TableCell>
+                          <TableCell><StatusBadge status={tagihan.status_tagihan} /></TableCell>
+                          <TableCell className="text-center">
+                            {tagihan.status_tagihan === 'Menunggu Registrasi' ? (
+                              <div className="flex justify-center space-x-2">
+                                <Button
+                                  variant="outline"
+                                  size="icon"
+                                  onClick={() => handleEdit(tagihan)}
+                                  title="Edit Tagihan"
+                                  disabled={!isAccountVerified}
+                                >
+                                  <EditIcon className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="destructive"
+                                  size="icon"
+                                  onClick={() => handleDeleteClick(tagihan.id_tagihan, tagihan.nomor_spm)}
+                                  title="Hapus Tagihan"
+                                  disabled={!isAccountVerified}
+                                >
+                                  <Trash2Icon className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            ) : (
+                              <Button variant="outline" size="sm" onClick={() => handleDetailClick(tagihan)}>
+                                Detail
                               </Button>
-                              <Button
-                                variant="destructive"
-                                size="icon"
-                                onClick={() => handleDeleteClick(tagihan.id_tagihan, tagihan.nomor_spm)}
-                                title="Hapus Tagihan"
-                                disabled={!isAccountVerified}
-                              >
-                                <Trash2Icon className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          ) : (
-                            <Button variant="outline" size="sm" onClick={() => handleDetailClick(tagihan)}>
-                              Detail
-                            </Button>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </div>
-            <div className="mt-4 flex items-center justify-end space-x-4">
-              <div className="text-sm text-muted-foreground">
-                Halaman {totalItems === 0 ? 0 : currentPage} dari {totalPages} ({totalItems} total item)
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
               </div>
-              <Button
-                variant="outline"
-                onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-                disabled={currentPage === 1 || itemsPerPage === -1 || loadingPagination}
-              >
-                Sebelumnya
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-                disabled={currentPage === totalPages || itemsPerPage === -1 || loadingPagination}
-              >
-                Berikutnya
-              </Button>
-            </div>
-          </>
-        )}
-      </div>
+              <div className="mt-4 flex items-center justify-end space-x-4">
+                <div className="text-sm text-muted-foreground">
+                  Halaman {totalItems === 0 ? 0 : currentPage} dari {totalPages} ({totalItems} total item)
+                </div>
+                <Button
+                  variant="outline"
+                  onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1 || itemsPerPage === -1 || loadingPagination}
+                >
+                  Sebelumnya
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                  disabled={currentPage === totalPages || itemsPerPage === -1 || loadingPagination}
+                >
+                  Berikutnya
+                </Button>
+              </div>
+            </>
+          )}
+        </CardContent>
+      </Card>
 
       <Dialog open={isModalOpen} onOpenChange={(open) => { setIsModalOpen(open); if (!open) setEditingTagihan(null); }}>
         <DialogContent className="sm:max-w-[425px]">
@@ -869,7 +898,7 @@ const PortalSKPD = () => {
                 {uraianWatch?.length || 0} / 250 karakter
               </div>
               {form.formState.errors.uraian && (
-                <p className className="col-span-4 text-right text-red-500 text-sm">
+                <p className="col-span-4 text-right text-red-500 text-sm">
                   {form.formState.errors.uraian.message}
                 </p>
               )}
