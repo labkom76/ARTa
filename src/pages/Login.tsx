@@ -3,13 +3,19 @@ import { ThemeSupa } from '@supabase/auth-ui-shared';
 import { supabase } from '@/integrations/supabase/client';
 import { MadeWithDyad } from '@/components/made-with-dyad';
 import { Button } from '@/components/ui/button';
-import { ChromeIcon, Loader2, MailIcon } from 'lucide-react'; // Import MailIcon for OTP button
+import { ChromeIcon, Loader2, MailIcon } from 'lucide-react';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import ReactMarkdown from 'react-markdown';
-import { Input } from '@/components/ui/input'; // Import Input component
-import { Label } from '@/components/ui/label'; // Import Label component
-import { toast } from 'sonner'; // Import toast for notifications
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { toast } from 'sonner';
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSlot,
+  InputOTPSeparator,
+} from "@/components/ui/input-otp"; // Import InputOTP components
 
 const Login = () => {
   const [loginSettings, setLoginSettings] = useState({
@@ -40,9 +46,9 @@ const Login = () => {
   const [showOtpFlow, setShowOtpFlow] = useState(false);
   const [otpEmail, setOtpEmail] = useState('');
   const [isSendingOtp, setIsSendingOtp] = useState(false);
-  const [otpSent, setOtpSent] = useState(false); // To indicate if OTP has been sent
-  const [otpCode, setOtpCode] = useState(''); // NEW: State for the OTP code entered by user
-  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false); // NEW: State for OTP verification loading
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpCode, setOtpCode] = useState('');
+  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
 
   const fetchLoginSettings = useCallback(async () => {
     setLoadingSettings(true);
@@ -204,21 +210,18 @@ const Login = () => {
     }
   };
 
-  // MODIFIED: handleLoginWithOtp to toggle OTP flow
   const handleLoginWithOtp = () => {
     setShowOtpFlow(prev => !prev);
-    setOtpEmail(''); // Clear email when toggling
-    setOtpSent(false); // Reset OTP sent status
-    setOtpCode(''); // NEW: Clear OTP code
+    setOtpEmail('');
+    setOtpSent(false);
+    setOtpCode('');
   };
 
-  // NEW: Function to send OTP to email
   const sendOtpToEmail = async () => {
     if (!otpEmail) {
       toast.error('Email wajib diisi.');
       return;
     }
-    // Basic email format validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(otpEmail)) {
       toast.error('Format email tidak valid.');
@@ -230,7 +233,7 @@ const Login = () => {
       const { error } = await supabase.auth.signInWithOtp({
         email: otpEmail,
         options: {
-          emailRedirectTo: window.location.origin, // Optional: redirect after email link click
+          emailRedirectTo: window.location.origin,
         },
       });
 
@@ -248,7 +251,6 @@ const Login = () => {
     }
   };
 
-  // NEW: Function to verify OTP code
   const handleVerifyOtp = async () => {
     if (!otpEmail || !otpCode) {
       toast.error('Email dan Kode OTP wajib diisi.');
@@ -268,7 +270,6 @@ const Login = () => {
       }
 
       toast.success('Verifikasi OTP berhasil! Anda akan diarahkan.');
-      // Supabase's onAuthStateChange in SessionContext will handle the redirect
     } catch (error: any) {
       console.error('Error verifying OTP:', error.message);
       toast.error('Gagal memverifikasi kode OTP: ' + error.message);
@@ -326,14 +327,13 @@ const Login = () => {
       )}
 
       <div className={formContainerClasses}>
-        {/* Moved Logo and App Name inside the form container */}
         <div className="text-center mb-4 flex items-center justify-center gap-2">
           {appLogoUrl && (
             <div className="flex-shrink-0">
-              <img src={appLogoUrl} alt="App Logo" className="h-12 w-12 object-contain" /> {/* Adjusted size */}
+              <img src={appLogoUrl} alt="App Logo" className="h-12 w-12 object-contain" />
             </div>
           )}
-          <h2 className="text-2xl font-bold text-gray-800 dark:text-white">{appName}</h2> {/* Adjusted size to text-2xl */}
+          <h2 className="text-2xl font-bold text-gray-800 dark:text-white">{appName}</h2>
         </div>
 
         <div className="text-lg text-gray-600 dark:text-gray-400 mb-1 text-center">
@@ -435,22 +435,31 @@ const Login = () => {
                 <p className="text-sm text-green-600 dark:text-green-400 text-center">
                   Kode OTP telah dikirim ke <span className="font-semibold">{otpEmail}</span>. Silakan periksa kotak masuk Anda.
                 </p>
-                <div className="grid gap-2">
+                <div className="grid gap-2 text-center"> {/* Added text-center for InputOTP */}
                   <Label htmlFor="otp-code">Kode OTP</Label>
-                  <Input
-                    id="otp-code"
-                    type="text"
-                    placeholder="Masukkan kode OTP 6 digit"
-                    value={otpCode}
-                    onChange={(e) => setOtpCode(e.target.value)}
-                    disabled={isVerifyingOtp}
+                  <InputOTP
                     maxLength={6}
-                  />
+                    value={otpCode}
+                    onChange={(value) => setOtpCode(value)}
+                    disabled={isVerifyingOtp}
+                  >
+                    <InputOTPGroup>
+                      <InputOTPSlot index={0} />
+                      <InputOTPSlot index={1} />
+                      <InputOTPSlot index={2} />
+                    </InputOTPGroup>
+                    <InputOTPSeparator />
+                    <InputOTPGroup>
+                      <InputOTPSlot index={3} />
+                      <InputOTPSlot index={4} />
+                      <InputOTPSlot index={5} />
+                    </InputOTPGroup>
+                  </InputOTP>
                 </div>
                 <Button
                   className="w-full"
                   onClick={handleVerifyOtp}
-                  disabled={isVerifyingOtp}
+                  disabled={isVerifyingOtp || otpCode.length !== 6} // Disable if OTP is not 6 digits
                 >
                   {isVerifyingOtp && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Verifikasi Kode
@@ -488,11 +497,11 @@ const Login = () => {
 
         {/* Toggle button for OTP Login - Styled to match Google button */}
         <Button
-          variant="outline" // Changed to outline variant
-          className="w-full mt-2 flex items-center justify-center gap-2" // Added flex, items-center, justify-center, gap-2
+          variant="outline"
+          className="w-full mt-2 flex items-center justify-center gap-2"
           onClick={handleLoginWithOtp}
         >
-          <MailIcon className="h-5 w-5" /> {/* Added MailIcon */}
+          <MailIcon className="h-5 w-5" />
           {showOtpFlow ? 'Kembali ke Login Biasa' : 'Login dengan Kode OTP'}
         </Button>
       </div>
