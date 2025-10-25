@@ -15,7 +15,7 @@ import {
   InputOTPGroup,
   InputOTPSlot,
   InputOTPSeparator,
-} from "@/components/ui/input-otp"; // Import InputOTP components
+} from "@/components/ui/input-otp";
 
 const Login = () => {
   const [loginSettings, setLoginSettings] = useState({
@@ -435,8 +435,8 @@ const Login = () => {
                 <p className="text-sm text-green-600 dark:text-green-400 text-center">
                   Kode OTP telah dikirim ke <span className="font-semibold">{otpEmail}</span>. Silakan periksa kotak masuk Anda.
                 </p>
-                <div className="grid gap-2 text-center"> {/* Added text-center for InputOTP */}
-                  <Label htmlFor="otp-code">Kode OTP</Label>
+                <div className="grid gap-2 justify-center"> {/* Added justify-center to center InputOTP */}
+                  <Label htmlFor="otp-code" className="text-center">Kode OTP</Label>
                   <InputOTP
                     maxLength={6}
                     value={otpCode}
@@ -448,7 +448,7 @@ const Login = () => {
                       <InputOTPSlot index={1} />
                       <InputOTPSlot index={2} />
                     </InputOTPGroup>
-                    <InputOTPSeparator />
+                    {/* Removed InputOTPSeparator */}
                     <InputOTPGroup>
                       <InputOTPSlot index={3} />
                       <InputOTPSlot index={4} />
@@ -459,7 +459,7 @@ const Login = () => {
                 <Button
                   className="w-full"
                   onClick={handleVerifyOtp}
-                  disabled={isVerifyingOtp || otpCode.length !== 6} // Disable if OTP is not 6 digits
+                  disabled={isVerifyingOtp || otpCode.length !== 6}
                 >
                   {isVerifyingOtp && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Verifikasi Kode
