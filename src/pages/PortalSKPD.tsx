@@ -869,7 +869,7 @@ const PortalSKPD = () => {
                 {uraianWatch?.length || 0} / 250 karakter
               </div>
               {form.formState.errors.uraian && (
-                <p className="col-span-4 text-right text-red-500 text-sm">
+                <p className className="col-span-4 text-right text-red-500 text-sm">
                   {form.formState.errors.uraian.message}
                 </p>
               )}
