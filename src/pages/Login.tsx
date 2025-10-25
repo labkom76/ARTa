@@ -193,6 +193,12 @@ const Login = () => {
     }
   };
 
+  // NEW: Placeholder function for OTP login
+  const handleLoginWithOtp = () => {
+    console.log('Login with OTP clicked!');
+    // This will be implemented in the next step
+  };
+
   const loginContainerClasses = cn(
     "min-h-screen flex flex-col p-4 relative overflow-hidden bg-gray-50 dark:bg-gray-900",
     {
@@ -331,6 +337,15 @@ const Login = () => {
         >
           <ChromeIcon className="h-5 w-5" />
           Login with Google
+        </Button>
+
+        {/* NEW: Button for OTP Login */}
+        <Button
+          variant="link"
+          className="w-full mt-2 text-blue-600 dark:text-blue-400"
+          onClick={handleLoginWithOtp}
+        >
+          Login dengan Kode OTP
         </Button>
       </div>
       <MadeWithDyad />
