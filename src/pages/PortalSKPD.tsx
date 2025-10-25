@@ -32,7 +32,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { PlusCircleIcon, SearchIcon, EditIcon, Trash2Icon } from 'lucide-react';
-import { Textarea } => '@/components/ui/textarea';
+import { Textarea } from '@/components/ui/textarea';
 import DeleteConfirmationDialog from '@/components/DeleteConfirmationDialog';
 import TagihanDetailDialog from '@/components/TagihanDetailDialog'; // Import the new detail dialog
 import { format } from 'date-fns'; // Import format from date-fns
@@ -333,6 +333,7 @@ const PortalSKPD = () => {
 
       setTagihanList(data as Tagihan[]);
       setTotalItems(count || 0);
+
     } catch (error: any) {
       console.error('Error fetching tagihan:', error.message);
       toast.error('Gagal memuat daftar tagihan: ' + error.message);
