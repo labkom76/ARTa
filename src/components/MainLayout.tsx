@@ -38,12 +38,19 @@ const MainLayout = () => {
 
       <div
         className={cn(
-          "flex flex-col flex-1 transition-all duration-300",
+          "flex flex-col flex-1 transition-all duration-300 relative",
           isMobile ? "ml-0" : (isSidebarCollapsed ? "ml-16" : "ml-64")
         )}
       >
-        <Header toggleSidebar={isMobile ? () => setIsMobileSidebarOpen(true) : toggleSidebar} />
-        <main className="flex-1 p-4 bg-gray-100 dark:bg-gray-950">
+        {/* Fixed Header */}
+        <div className="fixed top-0 right-0 z-50" style={{
+          left: isMobile ? '0' : (isSidebarCollapsed ? '4rem' : '16rem')
+        }}>
+          <Header toggleSidebar={isMobile ? () => setIsMobileSidebarOpen(true) : toggleSidebar} />
+        </div>
+        
+        {/* Content with padding top */}
+        <main className="flex-1 p-4 bg-gray-100 dark:bg-gray-950 pt-20">
           <div className="container mx-auto max-w-7xl">
             <Outlet />
           </div>
