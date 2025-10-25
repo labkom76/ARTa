@@ -41,6 +41,8 @@ const Login = () => {
   const [otpEmail, setOtpEmail] = useState('');
   const [isSendingOtp, setIsSendingOtp] = useState(false);
   const [otpSent, setOtpSent] = useState(false); // To indicate if OTP has been sent
+  const [otpCode, setOtpCode] = useState(''); // NEW: State for the OTP code entered by user
+  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false); // NEW: State for OTP verification loading
 
   const fetchLoginSettings = useCallback(async () => {
     setLoadingSettings(true);
@@ -207,6 +209,7 @@ const Login = () => {
     setShowOtpFlow(prev => !prev);
     setOtpEmail(''); // Clear email when toggling
     setOtpSent(false); // Reset OTP sent status
+    setOtpCode(''); // NEW: Clear OTP code
   };
 
   // NEW: Function to send OTP to email
@@ -242,6 +245,35 @@ const Login = () => {
       toast.error('Gagal mengirim kode OTP: ' + error.message);
     } finally {
       setIsSendingOtp(false);
+    }
+  };
+
+  // NEW: Function to verify OTP code
+  const handleVerifyOtp = async () => {
+    if (!otpEmail || !otpCode) {
+      toast.error('Email dan Kode OTP wajib diisi.');
+      return;
+    }
+
+    setIsVerifyingOtp(true);
+    try {
+      const { error } = await supabase.auth.verifyOtp({
+        email: otpEmail,
+        token: otpCode,
+        type: 'email',
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      toast.success('Verifikasi OTP berhasil! Anda akan diarahkan.');
+      // Supabase's onAuthStateChange in SessionContext will handle the redirect
+    } catch (error: any) {
+      console.error('Error verifying OTP:', error.message);
+      toast.error('Gagal memverifikasi kode OTP: ' + error.message);
+    } finally {
+      setIsVerifyingOtp(false);
     }
   };
 
@@ -373,32 +405,65 @@ const Login = () => {
         {/* OTP Login Flow */}
         {showOtpFlow && (
           <div className="space-y-4">
-            <p className="text-sm text-muted-foreground text-center">
-              Masukkan email Anda untuk menerima kode login.
-            </p>
-            <div className="grid gap-2">
-              <Label htmlFor="otp-email">Email</Label>
-              <Input
-                id="otp-email"
-                type="email"
-                placeholder="Masukkan email Anda"
-                value={otpEmail}
-                onChange={(e) => setOtpEmail(e.target.value)}
-                disabled={isSendingOtp || otpSent}
-              />
-            </div>
-            <Button
-              className="w-full"
-              onClick={sendOtpToEmail}
-              disabled={isSendingOtp || otpSent}
-            >
-              {isSendingOtp && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {otpSent ? 'Kode OTP Terkirim!' : 'Kirim Kode OTP'}
-            </Button>
-            {otpSent && (
-              <p className="text-sm text-green-600 dark:text-green-400 text-center">
-                Kode OTP telah dikirim. Periksa email Anda.
-              </p>
+            {!otpSent ? (
+              <>
+                <p className="text-sm text-muted-foreground text-center">
+                  Masukkan email Anda untuk menerima kode login.
+                </p>
+                <div className="grid gap-2">
+                  <Label htmlFor="otp-email">Email</Label>
+                  <Input
+                    id="otp-email"
+                    type="email"
+                    placeholder="Masukkan email Anda"
+                    value={otpEmail}
+                    onChange={(e) => setOtpEmail(e.target.value)}
+                    disabled={isSendingOtp}
+                  />
+                </div>
+                <Button
+                  className="w-full"
+                  onClick={sendOtpToEmail}
+                  disabled={isSendingOtp}
+                >
+                  {isSendingOtp && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Kirim Kode OTP
+                </Button>
+              </>
+            ) : (
+              <>
+                <p className="text-sm text-green-600 dark:text-green-400 text-center">
+                  Kode OTP telah dikirim ke <span className="font-semibold">{otpEmail}</span>. Silakan periksa kotak masuk Anda.
+                </p>
+                <div className="grid gap-2">
+                  <Label htmlFor="otp-code">Kode OTP</Label>
+                  <Input
+                    id="otp-code"
+                    type="text"
+                    placeholder="Masukkan kode OTP 6 digit"
+                    value={otpCode}
+                    onChange={(e) => setOtpCode(e.target.value)}
+                    disabled={isVerifyingOtp}
+                    maxLength={6}
+                  />
+                </div>
+                <Button
+                  className="w-full"
+                  onClick={handleVerifyOtp}
+                  disabled={isVerifyingOtp}
+                >
+                  {isVerifyingOtp && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Verifikasi Kode
+                </Button>
+                <Button
+                  variant="link"
+                  className="w-full text-blue-600 dark:text-blue-400"
+                  onClick={sendOtpToEmail}
+                  disabled={isSendingOtp || isVerifyingOtp}
+                >
+                  {isSendingOtp ? 'Mengirim Ulang...' : 'Kirim Ulang Kode'}
+                </Button>
+              </>
             )}
           </div>
         )}
