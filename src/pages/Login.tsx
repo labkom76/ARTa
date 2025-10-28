@@ -302,7 +302,7 @@ const Login = () => {
   );
 
   const formContainerClasses = cn(
-    "w-full max-w-md p-8 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 z-10",
+    "w-full max-w-md p-4 sm:p-8 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 z-10", // Adjusted padding
     {
       'bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm': loginSettings.login_background_effect === 'true',
       'bg-white dark:bg-gray-800': loginSettings.login_background_effect !== 'true',
@@ -333,13 +333,13 @@ const Login = () => {
               <img src={appLogoUrl} alt="App Logo" className="h-12 w-12 object-contain" />
             </div>
           )}
-          <h2 className="text-2xl font-bold text-gray-800 dark:text-white">{appName}</h2>
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-800 dark:text-white">{appName}</h2> {/* Adjusted font size */}
         </div>
 
-        <div className="text-lg text-gray-600 dark:text-gray-400 mb-1 text-center">
+        <div className="text-base sm:text-lg text-gray-600 dark:text-gray-400 mb-1 text-center"> {/* Adjusted font size */}
           <ReactMarkdown>{appSubtitle1}</ReactMarkdown>
         </div>
-        <div className="text-md text-gray-600 dark:text-gray-400 mb-6 text-center">
+        <div className="text-sm sm:text-md text-gray-600 dark:text-gray-400 mb-6 text-center"> {/* Adjusted font size */}
           <ReactMarkdown>{appSubtitle2}</ReactMarkdown>
         </div>
 
