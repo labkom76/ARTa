@@ -33,7 +33,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { format, subDays, startOfDay, endOfDay, isSameDay, parseISO, differenceInMinutes } from 'date-fns';
+import { format, subDays, startOfDay, endOfDay, isSameDay, parseISO, differenceInMinutes, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from 'date-fns';
 import { id } from 'date-fns/locale';
 import {
   Select,
@@ -214,14 +214,43 @@ const DashboardRegistrasi = () => {
         });
         setBarChartData(Object.keys(dailyCounts).map(date => ({ date, count: dailyCounts[date] })));
 
-        // Chart 2: Komposisi Tagihan per SKPD (MODIFIED to Bar Chart by Status)
+        // Chart 2: Komposisi Tagihan per SKPD
         let compositionChartQuery = supabase
           .from('database_tagihan')
-          .select('status_tagihan');
+          .select('status_tagihan, waktu_input'); // Select waktu_input to filter by date
 
         if (selectedSkpdForChart !== 'Semua SKPD') {
           compositionChartQuery = compositionChartQuery.eq('nama_skpd', selectedSkpdForChart);
         }
+
+        // Calculate date range based on selectedTimeRangeChart
+        const now = new Date();
+        let filterStartDate: Date;
+        let filterEndDate: Date;
+
+        switch (selectedTimeRangeChart) {
+          case 'Hari Ini':
+            filterStartDate = startOfDay(now);
+            filterEndDate = endOfDay(now);
+            break;
+          case 'Minggu Ini':
+            filterStartDate = startOfWeek(now, { locale: id }); // Week starts on Monday for 'id' locale
+            filterEndDate = endOfWeek(now, { locale: id });
+            break;
+          case 'Bulan Ini':
+            filterStartDate = startOfMonth(now);
+            filterEndDate = endOfMonth(now);
+            break;
+          default:
+            // Default to 'Bulan Ini' if somehow an unexpected value is selected
+            filterStartDate = startOfMonth(now);
+            filterEndDate = endOfMonth(now);
+            break;
+        }
+
+        compositionChartQuery = compositionChartQuery
+          .gte('waktu_input', filterStartDate.toISOString())
+          .lte('waktu_input', filterEndDate.toISOString());
 
         const { data: tagihanStatusData, error: compositionError } = await compositionChartQuery;
         if (compositionError) throw compositionError;
@@ -264,7 +293,7 @@ const DashboardRegistrasi = () => {
     };
 
     fetchData();
-  }, [user, profile, sessionLoading, selectedSkpdForChart]); // Add selectedSkpdForChart to dependencies
+  }, [user, profile, sessionLoading, selectedSkpdForChart, selectedTimeRangeChart]); // Add selectedTimeRangeChart to dependencies
 
   if (sessionLoading || loading) {
     return (
