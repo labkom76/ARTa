@@ -70,7 +70,7 @@ interface BarChartDataItem {
   count: number;
 }
 
-interface PieChartDataItem { // This interface is now used for BarChart data
+interface PieChartDataItem {
   name: string;
   value: number;
 }
@@ -378,17 +378,26 @@ const DashboardRegistrasi = () => {
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={pieChartData}> {/* Changed to BarChart */}
-                <XAxis dataKey="name" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
-                <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
-                <Tooltip cursor={{ fill: 'transparent' }} />
-                <Legend />
-                <Bar dataKey="value" name="Jumlah Tagihan" radius={[4, 4, 0, 0]}>
+              <PieChart>
+                <Pie
+                  data={pieChartData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  outerRadius={100}
+                  innerRadius={60} // Kunci untuk Donut Chart
+                  dataKey="value"
+                  nameKey="name" // Menambahkan nameKey untuk label legend
+                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  paddingAngle={5}
+                >
                   {pieChartData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={STATUS_COLORS[entry.name as keyof typeof STATUS_COLORS] || '#CCCCCC'} />
                   ))}
-                </Bar>
-              </BarChart>
+                </Pie>
+                <Tooltip formatter={(value: number, name: string) => [`${value} tagihan`, name]} />
+                <Legend />
+              </PieChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
