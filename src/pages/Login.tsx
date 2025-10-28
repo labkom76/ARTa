@@ -447,9 +447,6 @@ const Login = () => {
                       <InputOTPSlot index={0} className="dark:border-gray-600 dark:bg-gray-700 dark:text-gray-50" />
                       <InputOTPSlot index={1} className="dark:border-gray-600 dark:bg-gray-700 dark:text-gray-50" />
                       <InputOTPSlot index={2} className="dark:border-gray-600 dark:bg-gray-700 dark:text-gray-50" />
-                    </InputOTPGroup>
-                    <InputOTPSeparator />
-                    <InputOTPGroup>
                       <InputOTPSlot index={3} className="dark:border-gray-600 dark:bg-gray-700 dark:text-gray-50" />
                       <InputOTPSlot index={4} className="dark:border-gray-600 dark:bg-gray-700 dark:text-gray-50" />
                       <InputOTPSlot index={5} className="dark:border-gray-600 dark:bg-gray-700 dark:text-gray-50" />
