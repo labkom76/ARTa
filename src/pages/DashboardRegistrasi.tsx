@@ -378,16 +378,16 @@ const DashboardRegistrasi = () => {
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
+              <PieChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}> {/* Added margin to PieChart */}
                 <Pie
                   data={pieChartData}
                   cx="50%"
                   cy="50%"
-                  labelLine={false}
-                  outerRadius={100}
-                  innerRadius={60} // Kunci untuk Donut Chart
+                  labelLine={true}
+                  outerRadius={80} // Reduced outerRadius to 80
+                  innerRadius={60}
                   dataKey="value"
-                  nameKey="name" // Menambahkan nameKey untuk label legend
+                  nameKey="name"
                   label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
                   paddingAngle={5}
                 >
@@ -396,7 +396,7 @@ const DashboardRegistrasi = () => {
                   ))}
                 </Pie>
                 <Tooltip formatter={(value: number, name: string) => [`${value} tagihan`, name]} />
-                <Legend />
+                <Legend layout="horizontal" verticalAlign="bottom" align="center" wrapperStyle={{ paddingTop: 10 }} /> {/* Adjusted Legend position */}
               </PieChart>
             </ResponsiveContainer>
           </CardContent>
