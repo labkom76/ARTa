@@ -506,7 +506,7 @@ const Login = () => {
             <path d="M2 5H22C22.5523 5 23 5.44772 23 6V18C23 18.5523 22.5523 19 22 19H2C1.44772 19 1 18.5523 1 18V6C1 5.44772 1.44772 5 2 5Z" stroke="#3B82F6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
             <path d="M23 6L12 12L1 6" stroke="#3B82F6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
-          {showOtpFlow ? 'Kembali ke Opsi Login' : 'Login dengan Kode OTP'}
+          {showOtpFlow ? 'Kembali ke Opsi Login' : 'Masuk dengan Kode OTP'}
         </Button>
       </div>
       <MadeWithDyad />
