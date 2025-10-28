@@ -187,9 +187,11 @@ const DashboardVerifikasi = () => {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-gray-800 dark:text-white">Dashboard Verifikasi</h1>
+      <h1 className="text-3xl font-bold text-gray-800 dark:text-white">
+        Selamat Datang, {profile?.nama_lengkap || 'Staf'}!
+      </h1>
       <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
-        Selamat datang, {profile?.nama_lengkap || user?.email}! Anda masuk sebagai {profile?.peran}.
+        Saat ini Anda masuk sebagai Staf Verifikasi. Siap memverifikasi tagihan hari ini?
       </p>
 
       {/* KPI Cards */}
