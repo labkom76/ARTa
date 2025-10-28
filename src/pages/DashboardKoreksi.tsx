@@ -125,7 +125,7 @@ const DashboardKoreksi = () => {
     <div className="space-y-6">
       <h1 className="text-3xl font-bold text-gray-800 dark:text-white">Dashboard Koreksi</h1>
       <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
-        Selamat Datang, {profile?.nama_lengkap || user?.email}!
+        Saat ini Anda masuk sebagai Kuasa BUD. Siap memproses tagihan hari ini?
       </p>
 
       {/* Kerangka Kotak Informasi */}
