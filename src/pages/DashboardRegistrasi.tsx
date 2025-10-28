@@ -95,6 +95,9 @@ const DashboardRegistrasi = () => {
   const [selectedSkpdForChart, setSelectedSkpdForChart] = useState<string>('Semua SKPD');
   const [skpdOptionsForChart, setSkpdOptionsForChart] = useState<string[]>([]);
 
+  // NEW: State for time range filter in chart
+  const [selectedTimeRangeChart, setSelectedTimeRangeChart] = useState<'Hari Ini' | 'Minggu Ini' | 'Bulan Ini'>('Bulan Ini');
+
   useEffect(() => {
     const fetchSkpdOptions = async () => {
       try {
@@ -362,19 +365,32 @@ const DashboardRegistrasi = () => {
               <PieChartIcon className="h-5 w-5 text-gray-600 dark:text-gray-300" />
               Komposisi Tagihan per SKPD
             </CardTitle>
-            {/* New Dropdown Filter */}
-            <Select onValueChange={setSelectedSkpdForChart} value={selectedSkpdForChart}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Pilih SKPD" />
-              </SelectTrigger>
-              <SelectContent>
-                {skpdOptionsForChart.map((skpd) => (
-                  <SelectItem key={skpd} value={skpd}>
-                    {skpd}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="flex items-center space-x-2"> {/* Container for multiple selects */}
+              {/* NEW: Time Range Select */}
+              <Select onValueChange={(value: 'Hari Ini' | 'Minggu Ini' | 'Bulan Ini') => setSelectedTimeRangeChart(value)} value={selectedTimeRangeChart}>
+                <SelectTrigger className="w-[120px]">
+                  <SelectValue placeholder="Rentang Waktu" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Hari Ini">Hari Ini</SelectItem>
+                  <SelectItem value="Minggu Ini">Minggu Ini</SelectItem>
+                  <SelectItem value="Bulan Ini">Bulan Ini</SelectItem>
+                </SelectContent>
+              </Select>
+              {/* Existing SKPD Select */}
+              <Select onValueChange={setSelectedSkpdForChart} value={selectedSkpdForChart}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Pilih SKPD" />
+                </SelectTrigger>
+                <SelectContent>
+                  {skpdOptionsForChart.map((skpd) => (
+                    <SelectItem key={skpd} value={skpd}>
+                      {skpd}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
