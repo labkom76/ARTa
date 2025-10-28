@@ -70,18 +70,24 @@ interface BarChartDataItem {
   count: number;
 }
 
-interface PieChartDataItem {
+interface PieChartDataItem { // This interface is now used for BarChart data
   name: string;
   value: number;
 }
 
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#A28DFF', '#FF6666', '#66CCFF'];
+// Define specific colors for each status for consistency in the bar chart
+const STATUS_COLORS: { [key: string]: string } = {
+  'Menunggu Registrasi': '#FFBB28', // Yellow
+  'Menunggu Verifikasi': '#0088FE', // Blue
+  'Diteruskan': '#00C49F', // Green
+  'Dikembalikan': '#FF8042', // Orange
+};
 
 const DashboardRegistrasi = () => {
   const { user, profile, loading: sessionLoading } = useSession();
   const [kpiData, setKpiData] = useState<KPIData | null>(null);
   const [barChartData, setBarChartData] = useState<BarChartDataItem[]>([]);
-  const [pieChartData, setPieChartData] = useState<PieChartDataItem[]>([]);
+  const [pieChartData, setPieChartData] = useState<PieChartDataItem[]>([]); // This state will now hold data for the Bar Chart
   const [oldestTagihan, setOldestTagihan] = useState<Tagihan[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -205,18 +211,36 @@ const DashboardRegistrasi = () => {
         });
         setBarChartData(Object.keys(dailyCounts).map(date => ({ date, count: dailyCounts[date] })));
 
-        // Chart 2: Komposisi Tagihan per SKPD
-        // No filtering by selectedSkpdForChart yet, as per instructions
-        const { data: allTagihanForPie, error: pieError } = await supabase
+        // Chart 2: Komposisi Tagihan per SKPD (MODIFIED to Bar Chart by Status)
+        let compositionChartQuery = supabase
           .from('database_tagihan')
-          .select('nama_skpd');
-        if (pieError) throw pieError;
+          .select('status_tagihan');
 
-        const skpdCounts: { [key: string]: number } = {};
-        allTagihanForPie.forEach((tagihan) => {
-          skpdCounts[tagihan.nama_skpd] = (skpdCounts[tagihan.nama_skpd] || 0) + 1;
+        if (selectedSkpdForChart !== 'Semua SKPD') {
+          compositionChartQuery = compositionChartQuery.eq('nama_skpd', selectedSkpdForChart);
+        }
+
+        const { data: tagihanStatusData, error: compositionError } = await compositionChartQuery;
+        if (compositionError) throw compositionError;
+
+        const statusCounts: { [key: string]: number } = {
+          'Menunggu Registrasi': 0,
+          'Menunggu Verifikasi': 0,
+          'Diteruskan': 0,
+          'Dikembalikan': 0,
+        };
+
+        tagihanStatusData.forEach((tagihan) => {
+          if (statusCounts.hasOwnProperty(tagihan.status_tagihan)) {
+            statusCounts[tagihan.status_tagihan]++;
+          }
         });
-        setPieChartData(Object.keys(skpdCounts).map(skpd => ({ name: skpd, value: skpdCounts[skpd] })));
+
+        const newCompositionChartData = Object.keys(statusCounts).map(status => ({
+          name: status,
+          value: statusCounts[status],
+        })).filter(item => item.value > 0); // Filter out statuses with 0 count for cleaner chart
+        setPieChartData(newCompositionChartData); // Still using pieChartData state, but it will be rendered as a bar chart
 
         // Tabel Akses Cepat: 5 Tagihan Terlama di Antrian
         const { data: oldestQueue, error: oldestQueueError } = await supabase
@@ -237,7 +261,7 @@ const DashboardRegistrasi = () => {
     };
 
     fetchData();
-  }, [user, profile, sessionLoading]); // selectedSkpdForChart is not a dependency yet
+  }, [user, profile, sessionLoading, selectedSkpdForChart]); // Add selectedSkpdForChart to dependencies
 
   if (sessionLoading || loading) {
     return (
@@ -354,24 +378,17 @@ const DashboardRegistrasi = () => {
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={pieChartData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                >
-                  {pieChartData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip />
+              <BarChart data={pieChartData}> {/* Changed to BarChart */}
+                <XAxis dataKey="name" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
+                <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
+                <Tooltip cursor={{ fill: 'transparent' }} />
                 <Legend />
-              </PieChart>
+                <Bar dataKey="value" name="Jumlah Tagihan" radius={[4, 4, 0, 0]}>
+                  {pieChartData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={STATUS_COLORS[entry.name as keyof typeof STATUS_COLORS] || '#CCCCCC'} />
+                  ))}
+                </Bar>
+              </BarChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
