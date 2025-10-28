@@ -35,6 +35,13 @@ import {
 } from '@/components/ui/table';
 import { format, subDays, startOfDay, endOfDay, isSameDay, parseISO, differenceInMinutes } from 'date-fns';
 import { id } from 'date-fns/locale';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'; // Import Select components
 
 interface Tagihan {
   id_tagihan: string;
@@ -77,6 +84,32 @@ const DashboardRegistrasi = () => {
   const [pieChartData, setPieChartData] = useState<PieChartDataItem[]>([]);
   const [oldestTagihan, setOldestTagihan] = useState<Tagihan[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // New states for SKPD filter in chart
+  const [selectedSkpdForChart, setSelectedSkpdForChart] = useState<string>('Semua SKPD');
+  const [skpdOptionsForChart, setSkpdOptionsForChart] = useState<string[]>([]);
+
+  useEffect(() => {
+    const fetchSkpdOptions = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('master_skpd')
+          .select('nama_skpd')
+          .order('nama_skpd', { ascending: true });
+
+        if (error) throw error;
+
+        const uniqueSkpd = Array.from(new Set(data.map(item => item.nama_skpd)))
+          .filter((skpd): skpd is string => skpd !== null && skpd.trim() !== '');
+
+        setSkpdOptionsForChart(['Semua SKPD', ...uniqueSkpd]);
+      } catch (error: any) {
+        console.error('Error fetching SKPD options for chart:', error.message);
+        toast.error('Gagal memuat daftar SKPD untuk filter chart: ' + error.message);
+      }
+    };
+    fetchSkpdOptions();
+  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -173,6 +206,7 @@ const DashboardRegistrasi = () => {
         setBarChartData(Object.keys(dailyCounts).map(date => ({ date, count: dailyCounts[date] })));
 
         // Chart 2: Komposisi Tagihan per SKPD
+        // No filtering by selectedSkpdForChart yet, as per instructions
         const { data: allTagihanForPie, error: pieError } = await supabase
           .from('database_tagihan')
           .select('nama_skpd');
@@ -203,7 +237,7 @@ const DashboardRegistrasi = () => {
     };
 
     fetchData();
-  }, [user, profile, sessionLoading]);
+  }, [user, profile, sessionLoading]); // selectedSkpdForChart is not a dependency yet
 
   if (sessionLoading || loading) {
     return (
@@ -299,11 +333,24 @@ const DashboardRegistrasi = () => {
         </Card>
 
         <Card className="shadow-sm rounded-lg">
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between"> {/* Added flex for alignment */}
             <CardTitle className="flex items-center gap-2 text-lg font-semibold">
               <PieChartIcon className="h-5 w-5 text-gray-600 dark:text-gray-300" />
               Komposisi Tagihan per SKPD
             </CardTitle>
+            {/* New Dropdown Filter */}
+            <Select onValueChange={setSelectedSkpdForChart} value={selectedSkpdForChart}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Pilih SKPD" />
+              </SelectTrigger>
+              <SelectContent>
+                {skpdOptionsForChart.map((skpd) => (
+                  <SelectItem key={skpd} value={skpd}>
+                    {skpd}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
