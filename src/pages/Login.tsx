@@ -501,7 +501,7 @@ const Login = () => {
           onClick={handleLoginWithOtp}
         >
           <MailIcon className="h-5 w-5" />
-          {showOtpFlow ? 'Kembali ke Login Biasa' : 'Login dengan Kode OTP'}
+          {showOtpFlow ? 'Kembali ke Opsi Login' : 'Login dengan Kode OTP'}
         </Button>
       </div>
       <MadeWithDyad />
