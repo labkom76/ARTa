@@ -392,7 +392,7 @@ const DashboardRegistrasi = () => {
           <CardHeader className="flex flex-row items-center justify-between"> {/* Added flex for alignment */}
             <CardTitle className="flex items-center gap-2 text-lg font-semibold">
               <PieChartIcon className="h-5 w-5 text-gray-600 dark:text-gray-300" />
-              Komposisi Tagihan per SKPD
+              Status Tagihan SKPD
             </CardTitle>
             <div className="flex items-center space-x-2"> {/* Container for multiple selects */}
               {/* NEW: Time Range Select */}
