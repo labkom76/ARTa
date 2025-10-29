@@ -378,19 +378,9 @@ const RiwayatVerifikasi = () => {
 
           <div className="overflow-x-auto">
             <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[50px]">No.</TableHead> {/* New TableHead for "No." */}
-                  <TableHead>Waktu Verifikasi</TableHead>
-                  <TableHead>Nomor Verifikasi</TableHead>
-                  <TableHead>Nama SKPD</TableHead>
-                  <TableHead>Nomor SPM</TableHead>
-                  <TableHead>Jumlah Kotor</TableHead>
-                  <TableHead>Status Akhir</TableHead>
-                  <TableHead>Diperiksa oleh</TableHead>
-                  <TableHead className="text-center">Aksi</TableHead>
-                </TableRow>
-              </TableHeader>
+              <TableHeader><TableRow>
+                  <TableHead className="w-[50px]">No.</TableHead><TableHead>Waktu Verifikasi</TableHead><TableHead>Nomor Verifikasi</TableHead><TableHead>Nama SKPD</TableHead><TableHead>Nomor SPM</TableHead><TableHead>Jumlah Kotor</TableHead><TableHead>Status Akhir</TableHead><TableHead>Diperiksa oleh</TableHead><TableHead className="text-center">Aksi</TableHead>
+                </TableRow></TableHeader>
               <TableBody>
                 {loadingData && !loadingPagination ? (
                   <TableRow>
@@ -406,37 +396,27 @@ const RiwayatVerifikasi = () => {
                   </TableRow>
                 ) : (
                   tagihanList.map((tagihan, index) => (
-                    <TableRow key={tagihan.id_tagihan}>
-                      <TableCell>{(currentPage - 1) * itemsPerPage + index + 1}</TableCell> {/* New TableCell for numbering */}
-                      <TableCell>
-                        {tagihan.waktu_verifikasi ? format(parseISO(tagihan.waktu_verifikasi), 'dd MMMM yyyy HH:mm', { locale: localeId }) : '-'}
-                      </TableCell>
-                      <TableCell className="font-medium">{tagihan.nomor_verifikasi || '-'}</TableCell>
-                      <TableCell>{tagihan.nama_skpd}</TableCell>
-                      <TableCell className="font-medium">
-                        <Tooltip>
-                          <TooltipTrigger className="max-w-[250px] whitespace-nowrap overflow-hidden text-ellipsis block">
-                            {tagihan.nomor_spm}
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>{tagihan.nomor_spm}</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TableCell>
-                      <TableCell>Rp{tagihan.jumlah_kotor.toLocaleString('id-ID')}</TableCell>
-                      <TableCell><StatusBadge status={tagihan.status_tagihan} /></TableCell>
-                      <TableCell>{tagihan.nama_verifikator || '-'}</TableCell>
-                      <TableCell className="text-center">
-                        <div className="flex justify-center space-x-2">
-                          <Button variant="outline" size="icon" title="Lihat Detail" onClick={() => handleDetailClick(tagihan)}>
-                            <EyeIcon className="h-4 w-4" />
-                          </Button>
-                          <Button variant="outline" size="icon" title="Cetak" onClick={() => handlePrintClick(tagihan.id_tagihan)}>
-                            <PrinterIcon className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
+                    <TableRow key={tagihan.id_tagihan}><TableCell>{(currentPage - 1) * itemsPerPage + index + 1}</TableCell><TableCell>
+                      {tagihan.waktu_verifikasi ? format(parseISO(tagihan.waktu_verifikasi), 'dd MMMM yyyy HH:mm', { locale: localeId }) : '-'}
+                    </TableCell><TableCell className="font-medium">{tagihan.nomor_verifikasi || '-'}</TableCell><TableCell>{tagihan.nama_skpd}</TableCell><TableCell className="font-medium">
+                      <Tooltip>
+                        <TooltipTrigger className="max-w-[250px] whitespace-nowrap overflow-hidden text-ellipsis block">
+                          {tagihan.nomor_spm}
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{tagihan.nomor_spm}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TableCell><TableCell>Rp{tagihan.jumlah_kotor.toLocaleString('id-ID')}</TableCell><TableCell><StatusBadge status={tagihan.status_tagihan} /></TableCell><TableCell>{tagihan.nama_verifikator || '-'}</TableCell><TableCell className="text-center">
+                      <div className="flex justify-center space-x-2">
+                        <Button variant="outline" size="icon" title="Lihat Detail" onClick={() => handleDetailClick(tagihan)}>
+                          <EyeIcon className="h-4 w-4" />
+                        </Button>
+                        <Button variant="outline" size="icon" title="Cetak" onClick={() => handlePrintClick(tagihan.id_tagihan)}>
+                          <PrinterIcon className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell></TableRow>
                   ))
                 )}
               </TableBody>
