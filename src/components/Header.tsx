@@ -107,7 +107,7 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
           filter: `user_id=eq.${user?.id}`,
         },
         (payload) => {
-          console.log('Realtime notification change:', payload);
+          // console.log('Realtime notification change:', payload);
           fetchNotifications();
         }
       )
@@ -138,7 +138,7 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
         .eq('is_read', false);
 
       if (error) throw error;
-      console.log('All unread notifications marked as read.');
+      // console.log('All unread notifications marked as read.');
     } catch (error: any) {
       console.error('Error marking notifications as read:', error.message);
       toast.error('Gagal menandai notifikasi sudah dibaca: ' + error.message);
@@ -202,7 +202,7 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
   };
 
   return (
-    <header className="flex items-center justify-between h-16 px-4 bg-white border-b border-gray-200 shadow-sm dark:bg-gray-800 dark:border-gray-700">
+    <header className="sticky top-0 z-40 flex items-center justify-between h-16 px-4 bg-white border-b border-gray-200 shadow-sm dark:bg-gray-800 dark:border-gray-700">
       <div className="flex items-center">
         <Button variant="ghost" size="icon" onClick={toggleSidebar} className="mr-2">
           <MenuIcon className="h-5 w-5 text-gray-600 dark:text-gray-300" />

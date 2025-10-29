@@ -33,8 +33,15 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { format, subDays, startOfDay, endOfDay, isSameDay, parseISO, differenceInMinutes } from 'date-fns';
+import { format, subDays, startOfDay, endOfDay, isSameDay, parseISO, differenceInMinutes, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from 'date-fns';
 import { id } from 'date-fns/locale';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'; // Import Select components
 
 interface Tagihan {
   id_tagihan: string;
@@ -68,15 +75,50 @@ interface PieChartDataItem {
   value: number;
 }
 
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#A28DFF', '#FF6666', '#66CCFF'];
+// Define specific colors for each status for consistency in the bar chart
+const STATUS_COLORS: { [key: string]: string } = {
+  'Menunggu Registrasi': '#FFBB28', // Yellow
+  'Menunggu Verifikasi': '#0088FE', // Blue
+  'Diteruskan': '#00C49F', // Green
+  'Dikembalikan': '#FF8042', // Orange
+};
 
 const DashboardRegistrasi = () => {
   const { user, profile, loading: sessionLoading } = useSession();
   const [kpiData, setKpiData] = useState<KPIData | null>(null);
   const [barChartData, setBarChartData] = useState<BarChartDataItem[]>([]);
-  const [pieChartData, setPieChartData] = useState<PieChartDataItem[]>([]);
+  const [pieChartData, setPieChartData] = useState<PieChartDataItem[]>([]); // This state will now hold data for the Bar Chart
   const [oldestTagihan, setOldestTagihan] = useState<Tagihan[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // New states for SKPD filter in chart
+  const [selectedSkpdForChart, setSelectedSkpdForChart] = useState<string>('Semua SKPD');
+  const [skpdOptionsForChart, setSkpdOptionsForChart] = useState<string[]>([]);
+
+  // NEW: State for time range filter in chart
+  const [selectedTimeRangeChart, setSelectedTimeRangeChart] = useState<'Hari Ini' | 'Minggu Ini' | 'Bulan Ini'>('Bulan Ini');
+
+  useEffect(() => {
+    const fetchSkpdOptions = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('master_skpd')
+          .select('nama_skpd')
+          .order('nama_skpd', { ascending: true });
+
+        if (error) throw error;
+
+        const uniqueSkpd = Array.from(new Set(data.map(item => item.nama_skpd)))
+          .filter((skpd): skpd is string => skpd !== null && skpd.trim() !== '');
+
+        setSkpdOptionsForChart(['Semua SKPD', ...uniqueSkpd]);
+      } catch (error: any) {
+        console.error('Error fetching SKPD options for chart:', error.message);
+        toast.error('Gagal memuat daftar SKPD untuk filter chart: ' + error.message);
+      }
+    };
+    fetchSkpdOptions();
+  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -173,16 +215,64 @@ const DashboardRegistrasi = () => {
         setBarChartData(Object.keys(dailyCounts).map(date => ({ date, count: dailyCounts[date] })));
 
         // Chart 2: Komposisi Tagihan per SKPD
-        const { data: allTagihanForPie, error: pieError } = await supabase
+        let compositionChartQuery = supabase
           .from('database_tagihan')
-          .select('nama_skpd');
-        if (pieError) throw pieError;
+          .select('status_tagihan, waktu_input'); // Select waktu_input to filter by date
 
-        const skpdCounts: { [key: string]: number } = {};
-        allTagihanForPie.forEach((tagihan) => {
-          skpdCounts[tagihan.nama_skpd] = (skpdCounts[tagihan.nama_skpd] || 0) + 1;
+        if (selectedSkpdForChart !== 'Semua SKPD') {
+          compositionChartQuery = compositionChartQuery.eq('nama_skpd', selectedSkpdForChart);
+        }
+
+        // Calculate date range based on selectedTimeRangeChart
+        const now = new Date();
+        let filterStartDate: Date;
+        let filterEndDate: Date;
+
+        switch (selectedTimeRangeChart) {
+          case 'Hari Ini':
+            filterStartDate = startOfDay(now);
+            filterEndDate = endOfDay(now);
+            break;
+          case 'Minggu Ini':
+            filterStartDate = startOfWeek(now, { locale: id }); // Week starts on Monday for 'id' locale
+            filterEndDate = endOfWeek(now, { locale: id });
+            break;
+          case 'Bulan Ini':
+            filterStartDate = startOfMonth(now);
+            filterEndDate = endOfMonth(now);
+            break;
+          default:
+            // Default to 'Bulan Ini' if somehow an unexpected value is selected
+            filterStartDate = startOfMonth(now);
+            filterEndDate = endOfMonth(now);
+            break;
+        }
+
+        compositionChartQuery = compositionChartQuery
+          .gte('waktu_input', filterStartDate.toISOString())
+          .lte('waktu_input', filterEndDate.toISOString());
+
+        const { data: tagihanStatusData, error: compositionError } = await compositionChartQuery;
+        if (compositionError) throw compositionError;
+
+        const statusCounts: { [key: string]: number } = {
+          'Menunggu Registrasi': 0,
+          'Menunggu Verifikasi': 0,
+          'Diteruskan': 0,
+          'Dikembalikan': 0,
+        };
+
+        tagihanStatusData.forEach((tagihan) => {
+          if (statusCounts.hasOwnProperty(tagihan.status_tagihan)) {
+            statusCounts[tagihan.status_tagihan]++;
+          }
         });
-        setPieChartData(Object.keys(skpdCounts).map(skpd => ({ name: skpd, value: skpdCounts[skpd] })));
+
+        const newCompositionChartData = Object.keys(statusCounts).map(status => ({
+          name: status,
+          value: statusCounts[status],
+        })).filter(item => item.value > 0); // Filter out statuses with 0 count for cleaner chart
+        setPieChartData(newCompositionChartData); // Still using pieChartData state, but it will be rendered as a bar chart
 
         // Tabel Akses Cepat: 5 Tagihan Terlama di Antrian
         const { data: oldestQueue, error: oldestQueueError } = await supabase
@@ -203,7 +293,7 @@ const DashboardRegistrasi = () => {
     };
 
     fetchData();
-  }, [user, profile, sessionLoading]);
+  }, [user, profile, sessionLoading, selectedSkpdForChart, selectedTimeRangeChart]); // Add selectedTimeRangeChart to dependencies
 
   if (sessionLoading || loading) {
     return (
@@ -225,9 +315,11 @@ const DashboardRegistrasi = () => {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-gray-800 dark:text-white">Dashboard Registrasi</h1>
+      <h1 className="text-3xl font-bold text-gray-800 dark:text-white mb-2">
+        Selamat Datang, {profile?.nama_lengkap || 'Staf'}!
+      </h1>
       <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
-        Selamat datang, {profile?.nama_lengkap || user?.email}! Anda masuk sebagai {profile?.peran}.
+        Saat ini Anda masuk sebagai Staf Registrasi. Siap memproses tagihan hari ini?
       </p>
 
       {/* KPI Cards */}
@@ -299,31 +391,59 @@ const DashboardRegistrasi = () => {
         </Card>
 
         <Card className="shadow-sm rounded-lg">
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between"> {/* Added flex for alignment */}
             <CardTitle className="flex items-center gap-2 text-lg font-semibold">
               <PieChartIcon className="h-5 w-5 text-gray-600 dark:text-gray-300" />
-              Komposisi Tagihan per SKPD
+              Status Tagihan SKPD
             </CardTitle>
+            <div className="flex items-center space-x-2"> {/* Container for multiple selects */}
+              {/* NEW: Time Range Select */}
+              <Select onValueChange={(value: 'Hari Ini' | 'Minggu Ini' | 'Bulan Ini') => setSelectedTimeRangeChart(value)} value={selectedTimeRangeChart}>
+                <SelectTrigger className="w-[120px]">
+                  <SelectValue placeholder="Rentang Waktu" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Hari Ini">Hari Ini</SelectItem>
+                  <SelectItem value="Minggu Ini">Minggu Ini</SelectItem>
+                  <SelectItem value="Bulan Ini">Bulan Ini</SelectItem>
+                </SelectContent>
+              </Select>
+              {/* Existing SKPD Select */}
+              <Select onValueChange={setSelectedSkpdForChart} value={selectedSkpdForChart}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Pilih SKPD" />
+                </SelectTrigger>
+                <SelectContent>
+                  {skpdOptionsForChart.map((skpd) => (
+                    <SelectItem key={skpd} value={skpd}>
+                      {skpd}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
+              <PieChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}> {/* Added margin to PieChart */}
                 <Pie
                   data={pieChartData}
                   cx="50%"
                   cy="50%"
-                  labelLine={false}
-                  outerRadius={80}
-                  fill="#8884d8"
+                  labelLine={true}
+                  outerRadius={80} // Reduced outerRadius to 80
+                  innerRadius={60}
                   dataKey="value"
+                  nameKey="name"
                   label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  paddingAngle={5}
                 >
                   {pieChartData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    <Cell key={`cell-${index}`} fill={STATUS_COLORS[entry.name as keyof typeof STATUS_COLORS] || '#CCCCCC'} />
                   ))}
                 </Pie>
-                <Tooltip />
-                <Legend />
+                <Tooltip formatter={(value: number, name: string) => [`${value} tagihan`, name]} />
+                <Legend layout="horizontal" verticalAlign="bottom" align="center" wrapperStyle={{ paddingTop: 10 }} /> {/* Adjusted Legend position */}
               </PieChart>
             </ResponsiveContainer>
           </CardContent>
@@ -346,19 +466,13 @@ const DashboardRegistrasi = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Nomor SPM</TableHead>
-                    <TableHead>SKPD</TableHead>
-                    <TableHead className="min-w-[280px]">Uraian</TableHead> {/* Applied min-width */}
-                    <TableHead>Waktu Input</TableHead>
+                    <TableHead>Nomor SPM</TableHead><TableHead>SKPD</TableHead><TableHead className="min-w-[280px]">Uraian</TableHead><TableHead>Waktu Input</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {oldestTagihan.map((tagihan) => (
                     <TableRow key={tagihan.id_tagihan}>
-                      <TableCell className="font-medium">{tagihan.nomor_spm}</TableCell>
-                      <TableCell>{tagihan.nama_skpd}</TableCell>
-                      <TableCell className="min-w-[280px]">{tagihan.uraian}</TableCell> {/* Applied min-width */}
-                      <TableCell>{format(parseISO(tagihan.waktu_input), 'dd MMMM yyyy HH:mm', { locale: id })}</TableCell>
+                      <TableCell className="font-medium">{tagihan.nomor_spm}</TableCell><TableCell>{tagihan.nama_skpd}</TableCell><TableCell className="min-w-[280px]">{tagihan.uraian}</TableCell><TableCell>{format(parseISO(tagihan.waktu_input), 'dd MMMM yyyy HH:mm', { locale: id })}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

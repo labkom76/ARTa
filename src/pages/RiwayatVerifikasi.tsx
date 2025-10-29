@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useSession } from '@/contexts/SessionContext';
 import { supabase } from '@/integrations/supabase/client';
 import {
@@ -37,6 +37,11 @@ import {
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'; // Import Card components
 import StatusBadge from '@/components/StatusBadge'; // Import StatusBadge
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"; // Import Tooltip components
 
 interface VerificationItem {
   item: string;
@@ -65,6 +70,11 @@ interface Tagihan {
   nama_verifikator?: string;
 }
 
+interface VerifierOption {
+  value: string;
+  label: string;
+}
+
 const RiwayatVerifikasi = () => {
   const { profile, loading: sessionLoading } = useSession();
   const [tagihanList, setTagihanList] = useState<Tagihan[]>([]);
@@ -74,6 +84,10 @@ const RiwayatVerifikasi = () => {
   const debouncedSearchQuery = useDebounce(searchQuery, 500);
   const [selectedStatus, setSelectedStatus] = useState<string>('Semua Status');
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+
+  // New states for Verifier Filter
+  const [selectedVerifierId, setSelectedVerifierId] = useState<string>('Semua Verifikator');
+  const [verifierOptions, setVerifierOptions] = useState<VerifierOption[]>([]);
 
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
@@ -89,6 +103,35 @@ const RiwayatVerifikasi = () => {
   const prevDateRange = React.useRef(dateRange);
   const prevItemsPerPage = React.useRef(itemsPerPage);
   const prevCurrentPage = React.useRef(currentPage);
+  const prevSelectedVerifierId = React.useRef(selectedVerifierId); // New ref for verifier filter
+
+  // Ref for search input
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Fetch verifier options on component mount
+  useEffect(() => {
+    const fetchVerifierOptions = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('id, nama_lengkap')
+          .eq('peran', 'Staf Verifikator')
+          .order('nama_lengkap', { ascending: true });
+
+        if (error) throw error;
+
+        const options: VerifierOption[] = [
+          { value: 'Semua Verifikator', label: 'Semua Verifikator' },
+          ...(data || []).map(p => ({ value: p.id, label: p.nama_lengkap || 'Nama Tidak Diketahui' }))
+        ];
+        setVerifierOptions(options);
+      } catch (error: any) {
+        console.error('Error fetching verifier options:', error.message);
+        toast.error('Gagal memuat daftar verifikator: ' + error.message);
+      }
+    };
+    fetchVerifierOptions();
+  }, []);
 
   useEffect(() => {
     const fetchRiwayatVerifikasi = async (isPaginationOnlyChange = false) => {
@@ -136,6 +179,15 @@ const RiwayatVerifikasi = () => {
           query = query.lte('waktu_verifikasi', endOfDay(dateRange.to).toISOString());
         }
 
+        // Apply verifier filter (NEW)
+        if (selectedVerifierId !== 'Semua Verifikator') {
+          // Find the label (nama_lengkap) corresponding to the selected ID
+          const verifierName = verifierOptions.find(opt => opt.value === selectedVerifierId)?.label;
+          if (verifierName) {
+            query = query.eq('nama_verifikator', verifierName);
+          }
+        }
+
         if (itemsPerPage !== -1) {
           const from = (currentPage - 1) * itemsPerPage;
           const to = from + itemsPerPage - 1;
@@ -166,7 +218,8 @@ const RiwayatVerifikasi = () => {
       prevSearchQuery.current === searchQuery &&
       prevSelectedStatus.current === selectedStatus &&
       prevDateRange.current === dateRange &&
-      prevItemsPerPage.current === itemsPerPage
+      prevItemsPerPage.current === itemsPerPage &&
+      prevSelectedVerifierId.current === selectedVerifierId // Include new ref
     ) {
       isPaginationOnlyChange = true;
     }
@@ -179,8 +232,16 @@ const RiwayatVerifikasi = () => {
     prevDateRange.current = dateRange;
     prevItemsPerPage.current = itemsPerPage;
     prevCurrentPage.current = currentPage;
+    prevSelectedVerifierId.current = selectedVerifierId; // Update new ref
 
-  }, [sessionLoading, profile, debouncedSearchQuery, selectedStatus, dateRange, currentPage, itemsPerPage]);
+  }, [sessionLoading, profile, debouncedSearchQuery, selectedStatus, dateRange, currentPage, itemsPerPage, selectedVerifierId, verifierOptions]); // Add selectedVerifierId to dependencies
+
+  // Efek baru untuk mengembalikan fokus ke input pencarian setelah loading selesai
+  useEffect(() => {
+    if (!loadingData && !loadingPagination && debouncedSearchQuery && searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  }, [loadingData, loadingPagination, debouncedSearchQuery]);
 
   const handleDetailClick = (tagihan: Tagihan) => {
     setSelectedTagihanForDetail(tagihan);
@@ -241,6 +302,7 @@ const RiwayatVerifikasi = () => {
             <div className="relative flex-1 w-full sm:w-auto">
               <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400" />
               <Input
+                ref={searchInputRef} // Lampirkan Ref ke Input
                 type="text"
                 placeholder="Cari berdasarkan Nomor SPM atau Nama SKPD..."
                 value={searchQuery}
@@ -259,6 +321,18 @@ const RiwayatVerifikasi = () => {
                 <SelectItem value="Semua Status">Semua Status</SelectItem>
                 <SelectItem value="Diteruskan">Diteruskan</SelectItem>
                 <SelectItem value="Dikembalikan">Dikembalikan</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select onValueChange={(value) => { setSelectedVerifierId(value); setCurrentPage(1); }} value={selectedVerifierId}>
+              <SelectTrigger className="w-full sm:w-[200px]">
+                <SelectValue placeholder="Filter Nama Verifikator" />
+              </SelectTrigger>
+              <SelectContent>
+                {verifierOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
             <DateRangePickerWithPresets
@@ -304,19 +378,9 @@ const RiwayatVerifikasi = () => {
 
           <div className="overflow-x-auto">
             <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[50px]">No.</TableHead> {/* New TableHead for "No." */}
-                  <TableHead>Waktu Verifikasi</TableHead>
-                  <TableHead>Nomor Verifikasi</TableHead>
-                  <TableHead>Nama SKPD</TableHead>
-                  <TableHead>Nomor SPM</TableHead>
-                  <TableHead>Jumlah Kotor</TableHead>
-                  <TableHead>Status Akhir</TableHead>
-                  <TableHead>Diperiksa oleh</TableHead>
-                  <TableHead className="text-center">Aksi</TableHead>
-                </TableRow>
-              </TableHeader>
+              <TableHeader><TableRow>
+                  <TableHead className="w-[50px]">No.</TableHead><TableHead>Waktu Verifikasi</TableHead><TableHead>Nomor Verifikasi</TableHead><TableHead>Nama SKPD</TableHead><TableHead>Nomor SPM</TableHead><TableHead>Jumlah Kotor</TableHead><TableHead>Status Akhir</TableHead><TableHead>Diperiksa oleh</TableHead><TableHead className="text-center">Aksi</TableHead>
+                </TableRow></TableHeader>
               <TableBody>
                 {loadingData && !loadingPagination ? (
                   <TableRow>
@@ -332,28 +396,27 @@ const RiwayatVerifikasi = () => {
                   </TableRow>
                 ) : (
                   tagihanList.map((tagihan, index) => (
-                    <TableRow key={tagihan.id_tagihan}>
-                      <TableCell>{(currentPage - 1) * itemsPerPage + index + 1}</TableCell> {/* New TableCell for numbering */}
-                      <TableCell>
-                        {tagihan.waktu_verifikasi ? format(parseISO(tagihan.waktu_verifikasi), 'dd MMMM yyyy HH:mm', { locale: localeId }) : '-'}
-                      </TableCell>
-                      <TableCell className="font-medium">{tagihan.nomor_verifikasi || '-'}</TableCell>
-                      <TableCell>{tagihan.nama_skpd}</TableCell>
-                      <TableCell>{tagihan.nomor_spm}</TableCell>
-                      <TableCell>Rp{tagihan.jumlah_kotor.toLocaleString('id-ID')}</TableCell>
-                      <TableCell><StatusBadge status={tagihan.status_tagihan} /></TableCell>
-                      <TableCell>{tagihan.nama_verifikator || '-'}</TableCell>
-                      <TableCell className="text-center">
-                        <div className="flex justify-center space-x-2">
-                          <Button variant="outline" size="icon" title="Lihat Detail" onClick={() => handleDetailClick(tagihan)}>
-                            <EyeIcon className="h-4 w-4" />
-                          </Button>
-                          <Button variant="outline" size="icon" title="Cetak" onClick={() => handlePrintClick(tagihan.id_tagihan)}>
-                            <PrinterIcon className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
+                    <TableRow key={tagihan.id_tagihan}><TableCell>{(currentPage - 1) * itemsPerPage + index + 1}</TableCell><TableCell>
+                      {tagihan.waktu_verifikasi ? format(parseISO(tagihan.waktu_verifikasi), 'dd MMMM yyyy HH:mm', { locale: localeId }) : '-'}
+                    </TableCell><TableCell className="font-medium">{tagihan.nomor_verifikasi || '-'}</TableCell><TableCell>{tagihan.nama_skpd}</TableCell><TableCell className="font-medium">
+                      <Tooltip>
+                        <TooltipTrigger className="max-w-[250px] whitespace-nowrap overflow-hidden text-ellipsis block">
+                          {tagihan.nomor_spm}
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{tagihan.nomor_spm}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TableCell><TableCell>Rp{tagihan.jumlah_kotor.toLocaleString('id-ID')}</TableCell><TableCell><StatusBadge status={tagihan.status_tagihan} /></TableCell><TableCell>{tagihan.nama_verifikator || '-'}</TableCell><TableCell className="text-center">
+                      <div className="flex justify-center space-x-2">
+                        <Button variant="outline" size="icon" title="Lihat Detail" onClick={() => handleDetailClick(tagihan)}>
+                          <EyeIcon className="h-4 w-4" />
+                        </Button>
+                        <Button variant="outline" size="icon" title="Cetak" onClick={() => handlePrintClick(tagihan.id_tagihan)}>
+                          <PrinterIcon className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell></TableRow>
                   ))
                 )}
               </TableBody>

@@ -25,9 +25,9 @@ import { id as localeId } from 'date-fns/locale';
 
 interface KPIData {
   antrianVerifikasi: number;
-  diverifikasiHariIni: number;
-  tingkatPengembalianBulanIni: string;
-  waktuVerifikasiRataRata: string;
+  totalDiprosesBulanIni: number; // Changed from diverifikasiHariIni
+  diteruskanHariIni: number;
+  dikembalikanHariIni: number;
 }
 
 interface DailyVerificationData {
@@ -71,71 +71,41 @@ const DashboardVerifikasi = () => {
           .eq('status_tagihan', 'Menunggu Verifikasi');
         if (antrianError) throw antrianError;
 
-        // KPI 2: Diverifikasi Hari Ini
-        const { count: diverifikasiHariIniCount, error: diverifikasiHariIniError } = await supabase
+        // KPI 2: Total Diproses (Bulan Ini) - MODIFIED
+        const { count: totalDiprosesBulanIniCount, error: totalDiprosesBulanIniError } = await supabase
           .from('database_tagihan')
           .select('*', { count: 'exact', head: true })
           .in('status_tagihan', ['Diteruskan', 'Dikembalikan'])
-          .gte('waktu_verifikasi', todayStart)
-          .lte('waktu_verifikasi', todayEnd);
-        if (diverifikasiHariIniError) throw diverifikasiHariIniError;
-
-        // KPI 3: Tingkat Pengembalian (Bulan Ini)
-        const { count: totalVerifikasiBulanIni, error: totalVerifikasiBulanIniError } = await supabase
-          .from('database_tagihan')
-          .select('*', { count: 'exact', head: true })
-          .in('status_tagihan', ['Diteruskan', 'Dikembalikan'])
+          .eq('nama_verifikator', profile?.nama_lengkap) // Filter by current verifier
           .gte('waktu_verifikasi', thisMonthStart)
           .lte('waktu_verifikasi', thisMonthEnd);
-        if (totalVerifikasiBulanIniError) throw totalVerifikasiBulanIniError;
+        if (totalDiprosesBulanIniError) throw totalDiprosesBulanIniError;
 
-        const { count: dikembalikanBulanIni, error: dikembalikanBulanIniError } = await supabase
+        // NEW KPI: Diteruskan Hari Ini
+        const { count: diteruskanHariIniCount, error: diteruskanHariIniError } = await supabase
+          .from('database_tagihan')
+          .select('*', { count: 'exact', head: true })
+          .eq('status_tagihan', 'Diteruskan')
+          .eq('nama_verifikator', profile?.nama_lengkap)
+          .gte('waktu_verifikasi', todayStart)
+          .lte('waktu_verifikasi', todayEnd);
+        if (diteruskanHariIniError) throw diteruskanHariIniError;
+
+        // NEW KPI: Dikembalikan Hari Ini
+        const { count: dikembalikanHariIniCount, error: dikembalikanHariIniError } = await supabase
           .from('database_tagihan')
           .select('*', { count: 'exact', head: true })
           .eq('status_tagihan', 'Dikembalikan')
-          .gte('waktu_verifikasi', thisMonthStart)
-          .lte('waktu_verifikasi', thisMonthEnd);
-        if (dikembalikanBulanIniError) throw dikembalikanBulanIniError;
-
-        const tingkatPengembalian = totalVerifikasiBulanIni > 0
-          ? ((dikembalikanBulanIni || 0) / totalVerifikasiBulanIni) * 100
-          : 0;
-
-        // KPI 4: Waktu Verifikasi Rata-rata
-        const { data: processedTagihan, error: processedError } = await supabase
-          .from('database_tagihan')
-          .select('waktu_registrasi, waktu_verifikasi')
-          .in('status_tagihan', ['Diteruskan', 'Dikembalikan'])
-          .not('waktu_registrasi', 'is', null)
-          .not('waktu_verifikasi', 'is', null);
-        if (processedError) throw processedError;
-
-        let totalProcessingMinutes = 0;
-        let processedCount = 0;
-        processedTagihan.forEach((tagihan) => {
-          if (tagihan.waktu_registrasi && tagihan.waktu_verifikasi) {
-            const registrasiDate = parseISO(tagihan.waktu_registrasi);
-            const verifikasiDate = parseISO(tagihan.waktu_verifikasi);
-            const diff = differenceInMinutes(verifikasiDate, registrasiDate);
-            if (diff >= 0) {
-              totalProcessingMinutes += diff;
-              processedCount++;
-            }
-          }
-        });
-
-        const averageProcessingTime = processedCount > 0 ? totalProcessingMinutes / processedCount : 0;
-        const hours = Math.floor(averageProcessingTime / 60);
-        const minutes = Math.round(averageProcessingTime % 60);
-        const waktuVerifikasiRataRataString = processedCount > 0
-          ? `${hours} jam ${minutes} menit`
-          : 'N/A';
+          .eq('nama_verifikator', profile?.nama_lengkap)
+          .gte('waktu_verifikasi', todayStart)
+          .lte('waktu_verifikasi', todayEnd);
+        if (dikembalikanHariIniError) throw dikembalikanHariIniError;
 
         setKpiData({
           antrianVerifikasi: antrianVerifikasiCount || 0,
-          diverifikasiHariIni: diverifikasiHariIniCount || 0,
-          tingkatPengembalianBulanIni: `${tingkatPengembalian.toFixed(2)}%`,
-          waktuVerifikasiRataRata: waktuVerifikasiRataRataString,
+          totalDiprosesBulanIni: totalDiprosesBulanIniCount || 0, // Updated
+          diteruskanHariIni: diteruskanHariIniCount || 0,
+          dikembalikanHariIni: dikembalikanHariIniCount || 0,
         });
 
         // Chart 1: Hasil Verifikasi (30 Hari Terakhir)
@@ -217,9 +187,11 @@ const DashboardVerifikasi = () => {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-gray-800 dark:text-white">Dashboard Verifikasi</h1>
+      <h1 className="text-3xl font-bold text-gray-800 dark:text-white">
+        Selamat Datang, {profile?.nama_lengkap || 'Staf'}!
+      </h1>
       <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
-        Selamat datang, {profile?.nama_lengkap || user?.email}! Anda masuk sebagai {profile?.peran}.
+        Saat ini Anda masuk sebagai Staf Verifikasi. Siap memverifikasi tagihan hari ini?
       </p>
 
       {/* KPI Cards */}
@@ -237,34 +209,34 @@ const DashboardVerifikasi = () => {
 
         <Card className="shadow-sm rounded-lg">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Diverifikasi Hari Ini</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Diproses (Bulan Ini)</CardTitle> {/* MODIFIED Title */}
             <CheckCircleIcon className="h-4 w-4 text-green-500 dark:text-green-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{kpiData?.diverifikasiHariIni}</div>
-            <p className="text-xs text-muted-foreground">Tagihan berhasil diverifikasi</p>
+            <div className="text-2xl font-bold">{kpiData?.totalDiprosesBulanIni}</div> {/* MODIFIED Value */}
+            <p className="text-xs text-muted-foreground">Total tagihan diproses bulan ini</p> {/* MODIFIED Description */}
           </CardContent>
         </Card>
 
         <Card className="shadow-sm rounded-lg">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Tingkat Pengembalian (Bulan Ini)</CardTitle>
+            <CardTitle className="text-sm font-medium">Diteruskan Hari Ini</CardTitle>
+            <CheckCircleIcon className="h-4 w-4 text-green-500 dark:text-green-400" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{kpiData?.diteruskanHariIni}</div>
+            <p className="text-xs text-muted-foreground">Tagihan diteruskan hari ini</p>
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-sm rounded-lg">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Dikembalikan Hari Ini</CardTitle>
             <RotateCcwIcon className="h-4 w-4 text-red-500 dark:text-red-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{kpiData?.tingkatPengembalianBulanIni}</div>
-            <p className="text-xs text-muted-foreground">Dari total verifikasi bulan ini</p>
-          </CardContent>
-        </Card>
-
-        <Card className="shadow-sm rounded-lg">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Waktu Verifikasi Rata-rata</CardTitle>
-            <TimerIcon className="h-4 w-4 text-blue-500 dark:text-blue-400" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{kpiData?.waktuVerifikasiRataRata}</div>
-            <p className="text-xs text-muted-foreground">Waktu dari registrasi hingga verifikasi</p>
+            <div className="text-2xl font-bold">{kpiData?.dikembalikanHariIni}</div>
+            <p className="text-xs text-muted-foreground">Tagihan dikembalikan hari ini</p>
           </CardContent>
         </Card>
       </div>

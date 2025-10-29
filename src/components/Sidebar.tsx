@@ -87,7 +87,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onLinkClick }) => {
   } else if (role === 'Staf Registrasi') {
     navItems.push(
       { to: '/dashboard-registrasi', icon: LayoutDashboardIcon, label: 'Dashboard' },
-      { to: '/portal-registrasi', icon: FileTextIcon, label: 'Portal' },
+      { to: '/portal-registrasi', icon: FileTextIcon, label: 'Portal Registrasi' },
       { to: '/riwayat-registrasi', icon: HistoryIcon, label: 'Riwayat Registrasi' },
     );
   } else if (role === 'Staf Verifikator') {
