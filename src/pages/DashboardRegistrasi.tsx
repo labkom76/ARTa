@@ -466,19 +466,13 @@ const DashboardRegistrasi = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Nomor SPM</TableHead>
-                    <TableHead>SKPD</TableHead>
-                    <TableHead className="min-w-[280px]">Uraian</TableHead> {/* Applied min-width */}
-                    <TableHead>Waktu Input</TableHead>
+                    <TableHead>Nomor SPM</TableHead><TableHead>SKPD</TableHead><TableHead className="min-w-[280px]">Uraian</TableHead><TableHead>Waktu Input</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {oldestTagihan.map((tagihan) => (
                     <TableRow key={tagihan.id_tagihan}>
-                      <TableCell className="font-medium">{tagihan.nomor_spm}</TableCell>
-                      <TableCell>{tagihan.nama_skpd}</TableCell>
-                      <TableCell className="min-w-[280px]">{tagihan.uraian}</TableCell> {/* Applied min-width */}
-                      <TableCell>{format(parseISO(tagihan.waktu_input), 'dd MMMM yyyy HH:mm', { locale: id })}</TableCell>
+                      <TableCell className="font-medium">{tagihan.nomor_spm}</TableCell><TableCell>{tagihan.nama_skpd}</TableCell><TableCell className="min-w-[280px]">{tagihan.uraian}</TableCell><TableCell>{format(parseISO(tagihan.waktu_input), 'dd MMMM yyyy HH:mm', { locale: id })}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
