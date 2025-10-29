@@ -107,7 +107,7 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
           filter: `user_id=eq.${user?.id}`,
         },
         (payload) => {
-          console.log('Realtime notification change:', payload);
+          // console.log('Realtime notification change:', payload);
           fetchNotifications();
         }
       )
