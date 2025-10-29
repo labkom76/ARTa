@@ -397,7 +397,7 @@ const PortalVerifikasi = () => {
         (payload) => {
           const oldTagihan = payload.old as Tagihan;
           const newTagihan = payload.new as Tagihan;
-          console.log('Realtime UPDATE received:', newTagihan); // Debug log
+          // console.log('Realtime UPDATE received:', newTagihan); // Debug log
 
           const now = new Date();
           const lockTimeoutThreshold = new Date(now.getTime() - LOCK_TIMEOUT_MINUTES * 60 * 1000);
