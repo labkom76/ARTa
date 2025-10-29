@@ -138,7 +138,7 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
         .eq('is_read', false);
 
       if (error) throw error;
-      console.log('All unread notifications marked as read.');
+      // console.log('All unread notifications marked as read.');
     } catch (error: any) {
       console.error('Error marking notifications as read:', error.message);
       toast.error('Gagal menandai notifikasi sudah dibaca: ' + error.message);
