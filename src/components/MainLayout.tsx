@@ -5,7 +5,7 @@ import Sidebar from './Sidebar';
 import { cn } from '@/lib/utils';
 import { MadeWithDyad } from './made-with-dyad';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'; // Import SheetHeader, SheetTitle, SheetDescription
 
 const MainLayout = () => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -29,6 +29,11 @@ const MainLayout = () => {
             <span className="sr-only">Open sidebar</span>
           </SheetTrigger>
           <SheetContent side="left" className="p-0 w-64">
+            {/* Added SheetHeader with Title and Description for accessibility */}
+            <SheetHeader className="sr-only"> {/* sr-only to hide visually but keep for screen readers */}
+              <SheetTitle>Menu Navigasi</SheetTitle>
+              <SheetDescription>Pilih halaman yang ingin Anda kunjungi.</SheetDescription>
+            </SheetHeader>
             <Sidebar isCollapsed={false} onLinkClick={handleMobileLinkClick} />
           </SheetContent>
         </Sheet>
