@@ -238,7 +238,7 @@ const PortalSKPD = () => {
           setKodeSkpd(data.kode_skpd);
         }
       };
-      fetchSkpdOptions();
+      fetchKodeSkpd(); // Corrected: Call fetchKodeSkpd here
     } else {
       setKodeSkpd(null);
     }
@@ -570,14 +570,7 @@ const PortalSKPD = () => {
       return;
     }
 
-    // Create a copy of tagihanList and sort it by nomor_urut ascending
-    const sortedTagihanList = [...tagihanList].sort((a, b) => {
-      const nomorUrutA = a.nomor_urut ?? 0; // Handle undefined/null nomor_urut
-      const nomorUrutB = b.nomor_urut ?? 0;
-      return nomorUrutA - nomorUrutB; // Ascending order
-    });
-
-    const dataToExport = sortedTagihanList.map(tagihan => ({
+    const dataToExport = tagihanList.map(tagihan => ({
       'Nomor SPM': tagihan.nomor_spm,
       'Nama SKPD': tagihan.nama_skpd,
       'Jenis SPM': tagihan.jenis_spm,
