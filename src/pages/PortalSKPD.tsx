@@ -45,6 +45,7 @@ import {
 } from "@/components/ui/tooltip"; // Import Tooltip components
 import { useLocation, useNavigate } from 'react-router-dom'; // Import useLocation and useNavigate
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'; // Import Card components
+import * as XLSX from 'xlsx'; // Import XLSX library
 
 // Zod schema for form validation
 const formSchema = z.object({
@@ -562,6 +563,32 @@ const PortalSKPD = () => {
     setIsDetailModalOpen(true);
   };
 
+  const handleExportToXLSX = () => {
+    if (tagihanList.length === 0) {
+      toast.info('Tidak ada data tagihan untuk diekspor.');
+      return;
+    }
+
+    const dataToExport = tagihanList.map(tagihan => ({
+      'Nomor SPM': tagihan.nomor_spm,
+      'Nama SKPD': tagihan.nama_skpd,
+      'Jenis SPM': tagihan.jenis_spm,
+      'Jenis Tagihan': tagihan.jenis_tagihan,
+      'Sumber Dana': tagihan.sumber_dana || '-',
+      'Uraian': tagihan.uraian,
+      'Jumlah Kotor': tagihan.jumlah_kotor,
+      'Status Tagihan': tagihan.status_tagihan,
+      'Waktu Input': format(new Date(tagihan.waktu_input), 'dd MMMM yyyy HH:mm', { locale: id }),
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(dataToExport);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Daftar Tagihan SKPD");
+    XLSX.writeFile(wb, "daftar_tagihan_skpd.xlsx");
+
+    toast.success('Data tagihan berhasil diekspor ke XLSX!');
+  };
+
   const totalPages = itemsPerPage === -1 ? 1 : Math.ceil(totalItems / itemsPerPage);
 
   return (
@@ -569,7 +596,7 @@ const PortalSKPD = () => {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold text-gray-800 dark:text-white">Portal SKPD</h1>
         <div className="flex space-x-2"> {/* Container for multiple buttons */}
-          <Button variant="outline" className="flex items-center gap-2" disabled={!isAccountVerified}>
+          <Button variant="outline" className="flex items-center gap-2" onClick={handleExportToXLSX} disabled={!isAccountVerified || tagihanList.length === 0}>
             <FileDownIcon className="h-4 w-4" /> Export ke XLSX
           </Button>
           <Button onClick={() => { setEditingTagihan(null); setIsModalOpen(true); }} className="flex items-center gap-2" disabled={!isAccountVerified}>
