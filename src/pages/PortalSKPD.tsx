@@ -31,7 +31,7 @@ import { toast } from 'sonner';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { PlusCircleIcon, SearchIcon, EditIcon, Trash2Icon } from 'lucide-react';
+import { PlusCircleIcon, SearchIcon, EditIcon, Trash2Icon, FileDownIcon } from 'lucide-react'; // Import FileDownIcon
 import { Textarea } from '@/components/ui/textarea';
 import DeleteConfirmationDialog from '@/components/DeleteConfirmationDialog';
 import TagihanDetailDialog from '@/components/TagihanDetailDialog'; // Import the new detail dialog
@@ -568,9 +568,14 @@ const PortalSKPD = () => {
     <div className="space-y-6"> {/* Added space-y-6 for consistent spacing */}
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold text-gray-800 dark:text-white">Portal SKPD</h1>
-        <Button onClick={() => { setEditingTagihan(null); setIsModalOpen(true); }} className="flex items-center gap-2" disabled={!isAccountVerified}>
-          <PlusCircleIcon className="h-4 w-4" /> Input Tagihan Baru
-        </Button>
+        <div className="flex space-x-2"> {/* Container for multiple buttons */}
+          <Button variant="outline" className="flex items-center gap-2" disabled={!isAccountVerified}>
+            <FileDownIcon className="h-4 w-4" /> Export ke XLSX
+          </Button>
+          <Button onClick={() => { setEditingTagihan(null); setIsModalOpen(true); }} className="flex items-center gap-2" disabled={!isAccountVerified}>
+            <PlusCircleIcon className="h-4 w-4" /> Input Tagihan Baru
+          </Button>
+        </div>
       </div>
 
       {/* Card for Table (now includes filters) */}
