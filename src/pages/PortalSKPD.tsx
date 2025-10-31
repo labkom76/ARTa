@@ -31,7 +31,7 @@ import { toast } from 'sonner';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { PlusCircleIcon, SearchIcon, EditIcon, Trash2Icon, FileDownIcon } from 'lucide-react'; // Import FileDownIcon
+import { PlusCircleIcon, SearchIcon, EditIcon, Trash2Icon, FileDownIcon, ArrowUp, ArrowDown } from 'lucide-react'; // Import FileDownIcon, ArrowUp, ArrowDown
 import { Textarea } from '@/components/ui/textarea';
 import DeleteConfirmationDialog from '@/components/DeleteConfirmationDialog';
 import TagihanDetailDialog from '@/components/TagihanDetailDialog'; // Import the new detail dialog
@@ -166,6 +166,10 @@ const PortalSKPD = () => {
   const [kodeSkpd, setKodeSkpd] = useState<string | null>(null); // New state for kode_skpd
   const [generatedNomorSpm, setGeneratedNomorSpm] = useState<string | null>(null); // State for generated Nomor SPM
   const [isSubmitting, setIsSubmitting] = useState(false); // Deklarasi state isSubmitting yang hilang
+
+  // NEW: State for sorting
+  const [sortColumn, setSortColumn] = useState<string>('nomor_urut');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
   const location = useLocation(); // Initialize useLocation
 
@@ -577,8 +581,6 @@ const PortalSKPD = () => {
       return nomorUrutA - nomorUrutB; // Ascending order
     });
 
-    // console.log("Sorted Tagihan List for Export:", sortedTagihanList); // Log the sorted list
-
     const dataToExport = sortedTagihanList.map(tagihan => ({
       'Nomor SPM': tagihan.nomor_spm,
       'Nama SKPD': tagihan.nama_skpd,
@@ -597,6 +599,16 @@ const PortalSKPD = () => {
     XLSX.writeFile(wb, "daftar_tagihan_skpd.xlsx");
 
     toast.success('Data tagihan berhasil diekspor ke XLSX!');
+  };
+
+  const handleSort = (column: string) => {
+    if (sortColumn === column) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortColumn(column);
+      setSortDirection('asc');
+    }
+    setCurrentPage(1); // Reset to first page on sort change
   };
 
   const totalPages = itemsPerPage === -1 ? 1 : Math.ceil(totalItems / itemsPerPage);
@@ -683,13 +695,55 @@ const PortalSKPD = () => {
                   <TableHeader>
                     <TableRow>
                       <TableHead className="w-[50px]">No.</TableHead>
-                      <TableHead>Nomor SPM</TableHead>
-                      <TableHead>Jenis SPM</TableHead>
-                      <TableHead>Jenis Tagihan</TableHead>
-                      <TableHead>Sumber Dana</TableHead>
+                      <TableHead>
+                        <Button variant="ghost" onClick={() => handleSort('nomor_spm')} className="p-0 h-auto">
+                          Nomor SPM
+                          {sortColumn === 'nomor_spm' && (
+                            sortDirection === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />
+                          )}
+                        </Button>
+                      </TableHead>
+                      <TableHead>
+                        <Button variant="ghost" onClick={() => handleSort('jenis_spm')} className="p-0 h-auto">
+                          Jenis SPM
+                          {sortColumn === 'jenis_spm' && (
+                            sortDirection === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />
+                          )}
+                        </Button>
+                      </TableHead>
+                      <TableHead>
+                        <Button variant="ghost" onClick={() => handleSort('jenis_tagihan')} className="p-0 h-auto">
+                          Jenis Tagihan
+                          {sortColumn === 'jenis_tagihan' && (
+                            sortDirection === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />
+                          )}
+                        </Button>
+                      </TableHead>
+                      <TableHead>
+                        <Button variant="ghost" onClick={() => handleSort('sumber_dana')} className="p-0 h-auto">
+                          Sumber Dana
+                          {sortColumn === 'sumber_dana' && (
+                            sortDirection === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />
+                          )}
+                        </Button>
+                      </TableHead>
                       <TableHead className="min-w-[280px]">Uraian</TableHead>
-                      <TableHead>Jumlah Kotor</TableHead>
-                      <TableHead>Status</TableHead>
+                      <TableHead>
+                        <Button variant="ghost" onClick={() => handleSort('jumlah_kotor')} className="p-0 h-auto">
+                          Jumlah Kotor
+                          {sortColumn === 'jumlah_kotor' && (
+                            sortDirection === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />
+                          )}
+                        </Button>
+                      </TableHead>
+                      <TableHead>
+                        <Button variant="ghost" onClick={() => handleSort('status_tagihan')} className="p-0 h-auto">
+                          Status
+                          {sortColumn === 'status_tagihan' && (
+                            sortDirection === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />
+                          )}
+                        </Button>
+                      </TableHead>
                       <TableHead className="text-center">Aksi</TableHead>
                     </TableRow>
                   </TableHeader>
