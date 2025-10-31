@@ -593,10 +593,10 @@ const PortalSKPD = () => {
   const totalPages = itemsPerPage === -1 ? 1 : Math.ceil(totalItems / itemsPerPage);
 
   return (
-    <div className="space-y-6"> {/* Added space-y-6 for consistent spacing */}
+    <div className="space-y-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold text-gray-800 dark:text-white">Portal SKPD</h1>
-        <div className="flex space-x-2"> {/* Container for multiple buttons */}
+        <div className="flex space-x-2">
           <Button variant="outline" className="flex items-center gap-2" onClick={handleExportToXLSX} disabled={!isAccountVerified || tagihanList.length === 0}>
             <FileDownIcon className="h-4 w-4" /> Export ke XLSX
           </Button>
@@ -614,8 +614,8 @@ const PortalSKPD = () => {
         </CardHeader>
         <CardContent>
           {/* Filter controls moved here */}
-          <div className="mb-4 flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-2"> {/* Added flex-col for mobile stacking */}
-            <div className="relative flex-1 w-full sm:w-auto"> {/* Added w-full for mobile */}
+          <div className="mb-4 flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-2">
+            <div className="relative flex-1 w-full sm:w-auto">
               <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400" />
               <Input
                 type="text"
@@ -625,11 +625,11 @@ const PortalSKPD = () => {
                   setSearchQuery(e.target.value);
                   setCurrentPage(1);
                 }}
-                className="pl-9 w-full" // Added w-full for mobile
+                className="pl-9 w-full"
               />
             </div>
             <Select onValueChange={(value) => { setSelectedStatus(value); setCurrentPage(1); }} value={selectedStatus}>
-              <SelectTrigger className="w-full sm:w-[200px]"> {/* Added w-full for mobile */}
+              <SelectTrigger className="w-full sm:w-[200px]">
                 <SelectValue placeholder="Filter berdasarkan Status" />
               </SelectTrigger>
               <SelectContent>
@@ -640,7 +640,7 @@ const PortalSKPD = () => {
                 <SelectItem value="Dikembalikan">Dikembalikan</SelectItem>
               </SelectContent>
             </Select>
-            <div className="flex items-center space-x-2 w-full sm:w-auto justify-end"> {/* Added w-full and justify-end for mobile */}
+            <div className="flex items-center space-x-2 w-full sm:w-auto justify-end">
               <Label htmlFor="items-per-page" className="whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">Per halaman:</Label>
               <Select
                 value={itemsPerPage.toString()}
@@ -770,7 +770,7 @@ const PortalSKPD = () => {
             <DialogDescription>
               {editingTagihan ? 'Perbarui detail tagihan Anda.' : 'Masukkan detail tagihan baru Anda di sini.'} Klik simpan setelah selesai.
             </DialogDescription>
-          </DialogDescription>
+          </DialogHeader>
           <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4">
             {/* Pratinjau Nomor SPM Otomatis */}
             <div className="grid grid-cols-4 items-center gap-4">
