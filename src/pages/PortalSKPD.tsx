@@ -320,7 +320,7 @@ const PortalSKPD = () => {
         query = query.eq('status_tagihan', selectedStatus);
       }
 
-      query = query.order('waktu_input', { ascending: false });
+      query = query.order('nomor_urut', { ascending: false }); // MODIFIED: Order by nomor_urut descending
 
       if (itemsPerPage !== -1) {
         query = query.range((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage - 1);
@@ -770,7 +770,7 @@ const PortalSKPD = () => {
             <DialogDescription>
               {editingTagihan ? 'Perbarui detail tagihan Anda.' : 'Masukkan detail tagihan baru Anda di sini.'} Klik simpan setelah selesai.
             </DialogDescription>
-          </DialogHeader>
+          </DialogDescription>
           <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4">
             {/* Pratinjau Nomor SPM Otomatis */}
             <div className="grid grid-cols-4 items-center gap-4">
