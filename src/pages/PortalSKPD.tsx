@@ -577,7 +577,7 @@ const PortalSKPD = () => {
       return nomorUrutA - nomorUrutB; // Ascending order
     });
 
-    console.log("Sorted Tagihan List for Export:", sortedTagihanList); // Log the sorted list
+    // console.log("Sorted Tagihan List for Export:", sortedTagihanList); // Log the sorted list
 
     const dataToExport = sortedTagihanList.map(tagihan => ({
       'Nomor SPM': tagihan.nomor_spm,
