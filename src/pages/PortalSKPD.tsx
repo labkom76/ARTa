@@ -36,6 +36,7 @@ import { Textarea } from '@/components/ui/textarea';
 import DeleteConfirmationDialog from '@/components/DeleteConfirmationDialog';
 import TagihanDetailDialog from '@/components/TagihanDetailDialog'; // Import the new detail dialog
 import { format } from 'date-fns'; // Import format from date-fns
+import { id as localeId } from 'date-fns/locale'; // Import locale for Indonesian date formatting, renamed to localeId
 import { generateNomorSpm, getJenisTagihanCode } from '@/utils/spmGenerator'; // Import utility functions
 import StatusBadge from '@/components/StatusBadge'; // Import StatusBadge
 import {
@@ -578,7 +579,7 @@ const PortalSKPD = () => {
       'Uraian': tagihan.uraian,
       'Jumlah Kotor': tagihan.jumlah_kotor,
       'Status Tagihan': tagihan.status_tagihan,
-      'Waktu Input': format(new Date(tagihan.waktu_input), 'dd MMMM yyyy HH:mm', { locale: id }),
+      'Waktu Input': format(new Date(tagihan.waktu_input), 'dd MMMM yyyy HH:mm', { locale: localeId }),
     }));
 
     const ws = XLSX.utils.json_to_sheet(dataToExport);
