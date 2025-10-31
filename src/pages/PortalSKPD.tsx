@@ -299,6 +299,8 @@ const PortalSKPD = () => {
   const prevSelectedStatus = useRef(selectedStatus);
   const prevItemsPerPage = useRef(itemsPerPage);
   const prevCurrentPage = useRef(currentPage);
+  const prevSortColumn = useRef(sortColumn); // New ref for sortColumn
+  const prevSortDirection = useRef(sortDirection); // New ref for sortDirection
 
   const fetchTagihan = async (isPaginationOnlyChange = false) => {
     if (!user || sessionLoading) return;
@@ -324,7 +326,8 @@ const PortalSKPD = () => {
         query = query.eq('status_tagihan', selectedStatus);
       }
 
-      query = query.order('nomor_urut', { ascending: false }); // MODIFIED: Order by nomor_urut descending
+      // MODIFIED: Apply dynamic sorting based on state
+      query = query.order(sortColumn, { ascending: sortDirection === 'asc' });
 
       if (itemsPerPage !== -1) {
         query = query.range((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage - 1);
@@ -373,7 +376,9 @@ const PortalSKPD = () => {
       prevCurrentPage.current !== currentPage &&
       prevSearchQuery.current === searchQuery &&
       prevSelectedStatus.current === selectedStatus &&
-      prevItemsPerPage.current === itemsPerPage
+      prevItemsPerPage.current === itemsPerPage &&
+      prevSortColumn.current === sortColumn && // Include sortColumn
+      prevSortDirection.current === sortDirection // Include sortDirection
     ) {
       isPaginationOnlyChange = true;
     }
@@ -385,8 +390,10 @@ const PortalSKPD = () => {
     prevSelectedStatus.current = selectedStatus;
     prevItemsPerPage.current = itemsPerPage;
     prevCurrentPage.current = currentPage;
+    prevSortColumn.current = sortColumn; // Update sortColumn ref
+    prevSortDirection.current = sortDirection; // Update sortDirection ref
 
-  }, [user, sessionLoading, searchQuery, selectedStatus, currentPage, itemsPerPage]); // Dependencies for this effect
+  }, [user, sessionLoading, searchQuery, selectedStatus, currentPage, itemsPerPage, sortColumn, sortDirection]); // Dependencies for this effect
 
   useEffect(() => {
     if (isModalOpen) { // Only reset when modal opens
