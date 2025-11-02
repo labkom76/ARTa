@@ -17,7 +17,7 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
+    SelectValue,
 } from '@/components/ui/select';
 import {
   Table,
@@ -31,11 +31,12 @@ import { toast } from 'sonner';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { PlusCircleIcon, SearchIcon, EditIcon, Trash2Icon } from 'lucide-react';
+import { PlusCircleIcon, SearchIcon, EditIcon, Trash2Icon, FileDownIcon, ArrowUp, ArrowDown } from 'lucide-react'; // Import FileDownIcon, ArrowUp, ArrowDown
 import { Textarea } from '@/components/ui/textarea';
 import DeleteConfirmationDialog from '@/components/DeleteConfirmationDialog';
 import TagihanDetailDialog from '@/components/TagihanDetailDialog'; // Import the new detail dialog
 import { format } from 'date-fns'; // Import format from date-fns
+import { id as localeId } from 'date-fns/locale'; // Import locale for Indonesian date formatting, renamed to localeId
 import { generateNomorSpm, getJenisTagihanCode } from '@/utils/spmGenerator'; // Import utility functions
 import StatusBadge from '@/components/StatusBadge'; // Import StatusBadge
 import {
@@ -45,6 +46,7 @@ import {
 } from "@/components/ui/tooltip"; // Import Tooltip components
 import { useLocation, useNavigate } from 'react-router-dom'; // Import useLocation and useNavigate
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'; // Import Card components
+import * as XLSX from 'xlsx'; // Import XLSX library
 
 // Zod schema for form validation
 const formSchema = z.object({
@@ -164,6 +166,10 @@ const PortalSKPD = () => {
   const [kodeSkpd, setKodeSkpd] = useState<string | null>(null); // New state for kode_skpd
   const [generatedNomorSpm, setGeneratedNomorSpm] = useState<string | null>(null); // State for generated Nomor SPM
   const [isSubmitting, setIsSubmitting] = useState(false); // Deklarasi state isSubmitting yang hilang
+
+  // NEW: State for sorting
+  const [sortColumn, setSortColumn] = useState<string>('nomor_urut');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
   const location = useLocation(); // Initialize useLocation
 
@@ -293,6 +299,8 @@ const PortalSKPD = () => {
   const prevSelectedStatus = useRef(selectedStatus);
   const prevItemsPerPage = useRef(itemsPerPage);
   const prevCurrentPage = useRef(currentPage);
+  const prevSortColumn = useRef(sortColumn); // New ref for sortColumn
+  const prevSortDirection = useRef(sortDirection); // New ref for sortDirection
 
   const fetchTagihan = async (isPaginationOnlyChange = false) => {
     if (!user || sessionLoading) return;
@@ -318,7 +326,8 @@ const PortalSKPD = () => {
         query = query.eq('status_tagihan', selectedStatus);
       }
 
-      query = query.order('waktu_input', { ascending: false });
+      // MODIFIED: Apply dynamic sorting based on state
+      query = query.order(sortColumn, { ascending: sortDirection === 'asc' });
 
       if (itemsPerPage !== -1) {
         query = query.range((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage - 1);
@@ -367,7 +376,9 @@ const PortalSKPD = () => {
       prevCurrentPage.current !== currentPage &&
       prevSearchQuery.current === searchQuery &&
       prevSelectedStatus.current === selectedStatus &&
-      prevItemsPerPage.current === itemsPerPage
+      prevItemsPerPage.current === itemsPerPage &&
+      prevSortColumn.current === sortColumn && // Include sortColumn
+      prevSortDirection.current === sortDirection // Include sortDirection
     ) {
       isPaginationOnlyChange = true;
     }
@@ -379,8 +390,10 @@ const PortalSKPD = () => {
     prevSelectedStatus.current = selectedStatus;
     prevItemsPerPage.current = itemsPerPage;
     prevCurrentPage.current = currentPage;
+    prevSortColumn.current = sortColumn; // Update sortColumn ref
+    prevSortDirection.current = sortDirection; // Update sortDirection ref
 
-  }, [user, sessionLoading, searchQuery, selectedStatus, currentPage, itemsPerPage]); // Dependencies for this effect
+  }, [user, sessionLoading, searchQuery, selectedStatus, currentPage, itemsPerPage, sortColumn, sortDirection]); // Dependencies for this effect
 
   useEffect(() => {
     if (isModalOpen) { // Only reset when modal opens
@@ -562,15 +575,63 @@ const PortalSKPD = () => {
     setIsDetailModalOpen(true);
   };
 
+  const handleExportToXLSX = () => {
+    if (tagihanList.length === 0) {
+      toast.info('Tidak ada data tagihan untuk diekspor.');
+      return;
+    }
+
+    // Create a copy of tagihanList and sort it by nomor_urut ascending
+    const sortedTagihanList = [...tagihanList].sort((a, b) => {
+      const nomorUrutA = a.nomor_urut ?? 0; // Handle undefined/null nomor_urut
+      const nomorUrutB = b.nomor_urut ?? 0;
+      return nomorUrutA - nomorUrutB; // Ascending order
+    });
+
+    const dataToExport = sortedTagihanList.map(tagihan => ({
+      'Nomor SPM': tagihan.nomor_spm,
+      'Nama SKPD': tagihan.nama_skpd,
+      'Jenis SPM': tagihan.jenis_spm,
+      'Jenis Tagihan': tagihan.jenis_tagihan,
+      'Sumber Dana': tagihan.sumber_dana || '-',
+      'Uraian': tagihan.uraian,
+      'Jumlah Kotor': tagihan.jumlah_kotor,
+      'Status Tagihan': tagihan.status_tagihan,
+      'Waktu Input': format(new Date(tagihan.waktu_input), 'dd MMMM yyyy HH:mm', { locale: localeId }),
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(dataToExport);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Daftar Tagihan SKPD");
+    XLSX.writeFile(wb, "daftar_tagihan_skpd.xlsx");
+
+    toast.success('Data tagihan berhasil diekspor ke XLSX!');
+  };
+
+  const handleSort = (column: string) => {
+    if (sortColumn === column) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortColumn(column);
+      setSortDirection('asc');
+    }
+    setCurrentPage(1); // Reset to first page on sort change
+  };
+
   const totalPages = itemsPerPage === -1 ? 1 : Math.ceil(totalItems / itemsPerPage);
 
   return (
-    <div className="space-y-6"> {/* Added space-y-6 for consistent spacing */}
+    <div className="space-y-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold text-gray-800 dark:text-white">Portal SKPD</h1>
-        <Button onClick={() => { setEditingTagihan(null); setIsModalOpen(true); }} className="flex items-center gap-2" disabled={!isAccountVerified}>
-          <PlusCircleIcon className="h-4 w-4" /> Input Tagihan Baru
-        </Button>
+        <div className="flex space-x-2">
+          <Button variant="outline" className="flex items-center gap-2" onClick={handleExportToXLSX} disabled={!isAccountVerified || tagihanList.length === 0}>
+            <FileDownIcon className="h-4 w-4" /> Export ke XLSX
+          </Button>
+          <Button onClick={() => { setEditingTagihan(null); setIsModalOpen(true); }} className="flex items-center gap-2" disabled={!isAccountVerified}>
+            <PlusCircleIcon className="h-4 w-4" /> Input Tagihan Baru
+          </Button>
+        </div>
       </div>
 
       {/* Card for Table (now includes filters) */}
@@ -581,8 +642,8 @@ const PortalSKPD = () => {
         </CardHeader>
         <CardContent>
           {/* Filter controls moved here */}
-          <div className="mb-4 flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-2"> {/* Added flex-col for mobile stacking */}
-            <div className="relative flex-1 w-full sm:w-auto"> {/* Added w-full for mobile */}
+          <div className="mb-4 flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-2">
+            <div className="relative flex-1 w-full sm:w-auto">
               <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400" />
               <Input
                 type="text"
@@ -592,11 +653,11 @@ const PortalSKPD = () => {
                   setSearchQuery(e.target.value);
                   setCurrentPage(1);
                 }}
-                className="pl-9 w-full" // Added w-full for mobile
+                className="pl-9 w-full"
               />
             </div>
             <Select onValueChange={(value) => { setSelectedStatus(value); setCurrentPage(1); }} value={selectedStatus}>
-              <SelectTrigger className="w-full sm:w-[200px]"> {/* Added w-full for mobile */}
+              <SelectTrigger className="w-full sm:w-[200px]">
                 <SelectValue placeholder="Filter berdasarkan Status" />
               </SelectTrigger>
               <SelectContent>
@@ -607,7 +668,7 @@ const PortalSKPD = () => {
                 <SelectItem value="Dikembalikan">Dikembalikan</SelectItem>
               </SelectContent>
             </Select>
-            <div className="flex items-center space-x-2 w-full sm:w-auto justify-end"> {/* Added w-full and justify-end for mobile */}
+            <div className="flex items-center space-x-2 w-full sm:w-auto justify-end">
               <Label htmlFor="items-per-page" className="whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">Per halaman:</Label>
               <Select
                 value={itemsPerPage.toString()}
@@ -641,13 +702,55 @@ const PortalSKPD = () => {
                   <TableHeader>
                     <TableRow>
                       <TableHead className="w-[50px]">No.</TableHead>
-                      <TableHead>Nomor SPM</TableHead>
-                      <TableHead>Jenis SPM</TableHead>
-                      <TableHead>Jenis Tagihan</TableHead>
-                      <TableHead>Sumber Dana</TableHead>
+                      <TableHead>
+                        <Button variant="ghost" onClick={() => handleSort('nomor_spm')} className="p-0 h-auto">
+                          Nomor SPM
+                          {sortColumn === 'nomor_spm' && (
+                            sortDirection === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />
+                          )}
+                        </Button>
+                      </TableHead>
+                      <TableHead>
+                        <Button variant="ghost" onClick={() => handleSort('jenis_spm')} className="p-0 h-auto">
+                          Jenis SPM
+                          {sortColumn === 'jenis_spm' && (
+                            sortDirection === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />
+                          )}
+                        </Button>
+                      </TableHead>
+                      <TableHead>
+                        <Button variant="ghost" onClick={() => handleSort('jenis_tagihan')} className="p-0 h-auto">
+                          Jenis Tagihan
+                          {sortColumn === 'jenis_tagihan' && (
+                            sortDirection === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />
+                          )}
+                        </Button>
+                      </TableHead>
+                      <TableHead>
+                        <Button variant="ghost" onClick={() => handleSort('sumber_dana')} className="p-0 h-auto">
+                          Sumber Dana
+                          {sortColumn === 'sumber_dana' && (
+                            sortDirection === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />
+                          )}
+                        </Button>
+                      </TableHead>
                       <TableHead className="min-w-[280px]">Uraian</TableHead>
-                      <TableHead>Jumlah Kotor</TableHead>
-                      <TableHead>Status</TableHead>
+                      <TableHead>
+                        <Button variant="ghost" onClick={() => handleSort('jumlah_kotor')} className="p-0 h-auto">
+                          Jumlah Kotor
+                          {sortColumn === 'jumlah_kotor' && (
+                            sortDirection === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />
+                          )}
+                        </Button>
+                      </TableHead>
+                      <TableHead>
+                        <Button variant="ghost" onClick={() => handleSort('status_tagihan')} className="p-0 h-auto">
+                          Status
+                          {sortColumn === 'status_tagihan' && (
+                            sortDirection === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />
+                          )}
+                        </Button>
+                      </TableHead>
                       <TableHead className="text-center">Aksi</TableHead>
                     </TableRow>
                   </TableHeader>
