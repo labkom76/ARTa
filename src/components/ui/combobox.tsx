@@ -11,7 +11,7 @@ import {
   CommandGroup,
   CommandInput,
   CommandItem,
-  CommandList, // Import CommandList
+  CommandList,
 } from "@/components/ui/command";
 import {
   Popover,
@@ -50,27 +50,47 @@ export function Combobox({
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className={cn("w-full justify-between", className)}
+          className={cn("w-full justify-between text-left", className)}
           disabled={disabled}
         >
-          {value
-            ? options.find((option) => option.value === value)?.label
-            : placeholder}
+          <span className="truncate">
+            {value
+              ? options.find((option) => option.value === value)?.label
+              : placeholder}
+          </span>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-        <Command>
+      <PopoverContent 
+        className="w-[--radix-popover-trigger-width] p-0"
+        // Tambahkan ini untuk mencegah popover menutup saat scroll
+        onWheel={(e) => {
+          e.stopPropagation();
+        }}
+      >
+        <Command
+          // Tambahkan filter manual untuk memastikan scroll tidak terganggu
+          filter={(value, search) => {
+            if (value.toLowerCase().includes(search.toLowerCase())) return 1;
+            return 0;
+          }}
+        >
           <CommandInput placeholder="Cari opsi..." />
           <CommandEmpty>Tidak ada opsi ditemukan.</CommandEmpty>
-          <CommandList className="max-h-64 overflow-y-auto"> {/* STYLING DIPINDAH KE SINI */}
-            <CommandGroup> {/* HAPUS STYLING DARI SINI */}
+          <CommandList 
+            className="max-h-64 overflow-y-auto"
+            // Pastikan scroll event tidak di-prevent
+            style={{ 
+              overflowY: 'auto',
+              maxHeight: '16rem' 
+            }}
+          >
+            <CommandGroup>
               {options.map((option) => (
                 <CommandItem
                   key={option.value}
-                  value={option.label} // Use label for searchability
+                  value={option.label}
                   onSelect={(currentValue) => {
-                    // Find the original value based on the selected label
                     const selectedOption = options.find(
                       (opt) => opt.label.toLowerCase() === currentValue.toLowerCase()
                     );
