@@ -75,7 +75,7 @@ export function Combobox({
             return 0;
           }}
         >
-          <CommandInput placeholder="Cari opsi..." />
+          <CommandInput placeholder="Cari SKPD..." />
           <CommandEmpty>Tidak ada opsi ditemukan.</CommandEmpty>
           <CommandList 
             className="max-h-64 overflow-y-auto"
