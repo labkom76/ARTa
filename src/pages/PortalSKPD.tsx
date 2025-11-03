@@ -858,7 +858,7 @@ const PortalSKPD = () => {
             {/* Input Nomor Urut Tagihan */}
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="nomor_urut_tagihan" className="text-right">
-                Nomor Urut Tagihan
+                Nomor Urut SPM
               </Label>
               <Input
                 id="nomor_urut_tagihan"

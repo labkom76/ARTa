@@ -68,6 +68,9 @@ const AdminUsers = () => {
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [totalItems, setTotalItems] = useState(0);
 
+  // NEW: State for role filter
+  const [selectedRoleFilter, setSelectedRoleFilter] = useState<string>('Semua Pengguna');
+
   // State for Transfer Data Modal
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
 
@@ -75,6 +78,7 @@ const AdminUsers = () => {
   const prevSearchQuery = useRef(searchQuery);
   const prevItemsPerPage = useRef(itemsPerPage);
   const prevCurrentPage = useRef(currentPage);
+  const prevSelectedRoleFilter = useRef(selectedRoleFilter); // NEW: Ref for role filter
 
   useEffect(() => {
     if (!sessionLoading) {
@@ -104,6 +108,18 @@ const AdminUsers = () => {
           `nama_lengkap.ilike.%${debouncedSearchQuery}%,email.ilike.%${debouncedSearchQuery}%`
         );
       }
+
+      // Apply conditional role filter
+      if (selectedRoleFilter === 'Administrator') {
+        query = query.eq('peran', 'Administrator');
+      } else if (selectedRoleFilter === 'Staf') {
+        query = query.in('peran', ['Staf Registrasi', 'Staf Verifikator', 'Staf Koreksi']);
+      } else if (selectedRoleFilter === 'SKPD (Semua)') {
+        query = query.eq('peran', 'SKPD');
+      } else if (selectedRoleFilter === 'SKPD (Menunggu Aktivasi)') {
+        query = query.eq('peran', 'SKPD').is('asal_skpd', null);
+      }
+      // If 'Semua Pengguna', no additional role filter is applied
 
       query = query.order('nama_lengkap', { ascending: true });
 
@@ -146,7 +162,8 @@ const AdminUsers = () => {
     if (
       prevCurrentPage.current !== currentPage &&
       prevSearchQuery.current === searchQuery &&
-      prevItemsPerPage.current === itemsPerPage
+      prevItemsPerPage.current === itemsPerPage &&
+      prevSelectedRoleFilter.current === selectedRoleFilter // NEW: Include role filter ref
     ) {
       isPaginationOnlyChange = true;
     }
@@ -157,8 +174,9 @@ const AdminUsers = () => {
     prevSearchQuery.current = searchQuery;
     prevItemsPerPage.current = itemsPerPage;
     prevCurrentPage.current = currentPage;
+    prevSelectedRoleFilter.current = selectedRoleFilter; // NEW: Update role filter ref
 
-  }, [sessionLoading, profile, debouncedSearchQuery, currentPage, itemsPerPage]);
+  }, [sessionLoading, profile, debouncedSearchQuery, currentPage, itemsPerPage, selectedRoleFilter]); // NEW: Add selectedRoleFilter to dependencies
 
   const handleUserAddedOrUpdated = () => {
     fetchUsers(); // Refresh the user list after a new user is added or updated
@@ -283,6 +301,19 @@ const AdminUsers = () => {
                 className="pl-9 w-full"
               />
             </div>
+            {/* NEW: Role Filter Dropdown */}
+            <Select onValueChange={(value) => { setSelectedRoleFilter(value); setCurrentPage(1); }} value={selectedRoleFilter}>
+              <SelectTrigger className="w-full sm:w-[200px]">
+                <SelectValue placeholder="Filter Peran" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Semua Pengguna">Semua Pengguna</SelectItem>
+                <SelectItem value="Administrator">Administrator</SelectItem>
+                <SelectItem value="Staf">Staf</SelectItem>
+                <SelectItem value="SKPD (Semua)">SKPD (Semua)</SelectItem>
+                <SelectItem value="SKPD (Menunggu Aktivasi)">SKPD (Menunggu Aktivasi)</SelectItem>
+              </SelectContent>
+            </Select>
             <div className="flex items-center space-x-2">
               <Label htmlFor="items-per-page" className="whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">Baris per halaman:</Label>
               <Select
