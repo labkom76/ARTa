@@ -109,6 +109,18 @@ const AdminUsers = () => {
         );
       }
 
+      // Apply conditional role filter
+      if (selectedRoleFilter === 'Administrator') {
+        query = query.eq('peran', 'Administrator');
+      } else if (selectedRoleFilter === 'Staf') {
+        query = query.in('peran', ['Staf Registrasi', 'Staf Verifikator', 'Staf Koreksi']);
+      } else if (selectedRoleFilter === 'SKPD (Semua)') {
+        query = query.eq('peran', 'SKPD');
+      } else if (selectedRoleFilter === 'SKPD (Menunggu Aktivasi)') {
+        query = query.eq('peran', 'SKPD').is('asal_skpd', null);
+      }
+      // If 'Semua Pengguna', no additional role filter is applied
+
       query = query.order('nama_lengkap', { ascending: true });
 
       if (itemsPerPage !== -1) { // Apply range only if not 'All'
