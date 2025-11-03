@@ -42,6 +42,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"; // Import Tooltip components
+import { Combobox } from '@/components/ui/combobox'; // Import Combobox
 
 interface VerificationItem {
   item: string;
@@ -75,6 +76,11 @@ interface VerifierOption {
   label: string;
 }
 
+interface SkpdOption { // New interface for SKPD options
+  value: string;
+  label: string;
+}
+
 const RiwayatVerifikasi = () => {
   const { profile, loading: sessionLoading } = useSession();
   const [tagihanList, setTagihanList] = useState<Tagihan[]>([]);
@@ -88,6 +94,10 @@ const RiwayatVerifikasi = () => {
   // New states for Verifier Filter
   const [selectedVerifierId, setSelectedVerifierId] = useState<string>('Semua Verifikator');
   const [verifierOptions, setVerifierOptions] = useState<VerifierOption[]>([]);
+
+  // NEW: State for SKPD Filter
+  const [selectedSkpd, setSelectedSkpd] = useState<string>('Semua SKPD');
+  const [skpdOptions, setSkpdOptions] = useState<SkpdOption[]>([]);
 
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
@@ -104,6 +114,7 @@ const RiwayatVerifikasi = () => {
   const prevItemsPerPage = React.useRef(itemsPerPage);
   const prevCurrentPage = React.useRef(currentPage);
   const prevSelectedVerifierId = React.useRef(selectedVerifierId); // New ref for verifier filter
+  const prevSelectedSkpd = React.useRef(selectedSkpd); // NEW: Ref for SKPD filter
 
   // Ref for search input
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -131,6 +142,30 @@ const RiwayatVerifikasi = () => {
       }
     };
     fetchVerifierOptions();
+  }, []);
+
+  // NEW: Fetch SKPD options on component mount
+  useEffect(() => {
+    const fetchSkpdOptions = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('master_skpd')
+          .select('nama_skpd')
+          .order('nama_skpd', { ascending: true });
+
+        if (error) throw error;
+
+        const options: SkpdOption[] = [
+          { value: 'Semua SKPD', label: 'Semua SKPD' },
+          ...(data || []).map(s => ({ value: s.nama_skpd, label: s.nama_skpd }))
+        ];
+        setSkpdOptions(options);
+      } catch (error: any) {
+        console.error('Error fetching SKPD options:', error.message);
+        toast.error('Gagal memuat daftar SKPD: ' + error.message);
+      }
+    };
+    fetchSkpdOptions();
   }, []);
 
   useEffect(() => {
@@ -188,6 +223,11 @@ const RiwayatVerifikasi = () => {
           }
         }
 
+        // NEW: Apply SKPD filter
+        if (selectedSkpd !== 'Semua SKPD') {
+          query = query.eq('nama_skpd', selectedSkpd);
+        }
+
         if (itemsPerPage !== -1) {
           const from = (currentPage - 1) * itemsPerPage;
           const to = from + itemsPerPage - 1;
@@ -219,7 +259,8 @@ const RiwayatVerifikasi = () => {
       prevSelectedStatus.current === selectedStatus &&
       prevDateRange.current === dateRange &&
       prevItemsPerPage.current === itemsPerPage &&
-      prevSelectedVerifierId.current === selectedVerifierId // Include new ref
+      prevSelectedVerifierId.current === selectedVerifierId && // Include new ref
+      prevSelectedSkpd.current === selectedSkpd // NEW: Include SKPD filter ref
     ) {
       isPaginationOnlyChange = true;
     }
@@ -233,8 +274,9 @@ const RiwayatVerifikasi = () => {
     prevItemsPerPage.current = itemsPerPage;
     prevCurrentPage.current = currentPage;
     prevSelectedVerifierId.current = selectedVerifierId; // Update new ref
+    prevSelectedSkpd.current = selectedSkpd; // NEW: Update SKPD filter ref
 
-  }, [sessionLoading, profile, debouncedSearchQuery, selectedStatus, dateRange, currentPage, itemsPerPage, selectedVerifierId, verifierOptions]); // Add selectedVerifierId to dependencies
+  }, [sessionLoading, profile, debouncedSearchQuery, selectedStatus, dateRange, currentPage, itemsPerPage, selectedVerifierId, selectedSkpd, verifierOptions, skpdOptions]); // Add selectedSkpd and skpdOptions to dependencies
 
   // Efek baru untuk mengembalikan fokus ke input pencarian setelah loading selesai
   useEffect(() => {
@@ -335,6 +377,17 @@ const RiwayatVerifikasi = () => {
                 ))}
               </SelectContent>
             </Select>
+            {/* NEW: Combobox for SKPD Filter */}
+            <Combobox
+              options={skpdOptions}
+              value={selectedSkpd}
+              onValueChange={(value) => {
+                setSelectedSkpd(value);
+                setCurrentPage(1); // Reset to first page on SKPD change
+              }}
+              placeholder="Filter SKPD"
+              className="w-full sm:w-[200px]"
+            />
             <DateRangePickerWithPresets
               date={dateRange}
               onDateChange={(newDateRange) => {
