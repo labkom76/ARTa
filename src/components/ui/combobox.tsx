@@ -1,23 +1,23 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { Check, ChevronsUpDown } from "lucide-react"
+import * as React from "react";
+import { Check, ChevronsUpDown } from "lucide-react";
 
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import {
   Command,
   CommandEmpty,
   CommandGroup,
   CommandInput,
   CommandItem,
-  CommandList,
-} from "@/components/ui/command"
+  CommandList, // Import CommandList
+} from "@/components/ui/command";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover"
+} from "@/components/ui/popover";
 
 interface ComboboxOption {
   value: string;
@@ -26,7 +26,7 @@ interface ComboboxOption {
 
 interface ComboboxProps {
   options: ComboboxOption[];
-  value: string | null;
+  value?: string;
   onValueChange: (value: string) => void;
   placeholder?: string;
   disabled?: boolean;
@@ -37,13 +37,11 @@ export function Combobox({
   options,
   value,
   onValueChange,
-  placeholder = "Pilih opsi...",
+  placeholder = "Pilih...",
   disabled = false,
   className,
 }: ComboboxProps) {
   const [open, setOpen] = React.useState(false);
-
-  const selectedLabel = options.find((option) => option.value === value)?.label;
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -55,27 +53,28 @@ export function Combobox({
           className={cn("w-full justify-between", className)}
           disabled={disabled}
         >
-          {selectedLabel || placeholder}
+          {value
+            ? options.find((option) => option.value === value)?.label
+            : placeholder}
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
         <Command>
           <CommandInput placeholder="Cari opsi..." />
-          <CommandList>
-            <CommandEmpty>Tidak ada opsi ditemukan.</CommandEmpty>
+          <CommandEmpty>Tidak ada opsi ditemukan.</CommandEmpty>
+          <CommandList className="max-h-64 overflow-y-auto"> {/* Added max-h-64 and overflow-y-auto here */}
             <CommandGroup>
               {options.map((option) => (
                 <CommandItem
                   key={option.value}
-                  value={option.label}
-                  onSelect={(currentLabel) => {
+                  value={option.label} // Use label for searchability
+                  onSelect={(currentValue) => {
+                    // Find the original value based on the selected label
                     const selectedOption = options.find(
-                      (opt) => opt.label.toLowerCase() === currentLabel.toLowerCase()
+                      (opt) => opt.label.toLowerCase() === currentValue.toLowerCase()
                     );
-                    if (selectedOption) {
-                      onValueChange(selectedOption.value);
-                    }
+                    onValueChange(selectedOption ? selectedOption.value : "");
                     setOpen(false);
                   }}
                 >
