@@ -11,7 +11,7 @@ import {
   CommandGroup,
   CommandInput,
   CommandItem,
-  CommandList, // Import CommandList
+  CommandList,
 } from "@/components/ui/command";
 import {
   Popover,
@@ -63,8 +63,8 @@ export function Combobox({
         <Command>
           <CommandInput placeholder="Cari opsi..." />
           <CommandEmpty>Tidak ada opsi ditemukan.</CommandEmpty>
-          <CommandList className="max-h-64 overflow-y-auto"> {/* Added max-h-64 and overflow-y-auto here */}
-            <CommandGroup>
+          <CommandList>
+            <CommandGroup className="max-h-64 overflow-y-auto"> {/* Memindahkan max-h-64 dan overflow-y-auto ke sini */}
               {options.map((option) => (
                 <CommandItem
                   key={option.value}
