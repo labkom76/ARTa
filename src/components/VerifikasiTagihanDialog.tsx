@@ -84,7 +84,7 @@ const checklistItems = [
 ];
 
 const verificationFormSchema = z.object({
-  status_keputusan: z.enum(['Diteruskan', 'Dikembalikan'], {
+  status_keputusan: z.enum(['Diteruskan', 'Dikembalikan'], { // 'Tinjau Kembali' is handled by a separate button
     required_error: 'Keputusan verifikasi wajib dipilih.',
   }),
   catatan_verifikator: z.string().optional(),
@@ -119,6 +119,7 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
   // Watch for changes in detail_verifikasi and status_keputusan
   const detailVerifikasiWatch = form.watch('detail_verifikasi');
   const statusKeputusanWatch = form.watch('status_keputusan');
+  const catatanVerifikatorWatch = form.watch('catatan_verifikator'); // Watch catatan_verifikator
 
   // Determine if all checklist items meet requirements
   const allChecklistItemsMet = detailVerifikasiWatch.every(item => item.memenuhi_syarat === true);
@@ -263,6 +264,63 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
     }
   };
 
+  const handleTinjauKembali = async () => {
+    if (!user || !profile?.nama_lengkap) {
+      toast.error('Informasi pengguna tidak lengkap. Harap login ulang.');
+      return;
+    }
+    if (!catatanVerifikatorWatch) {
+      toast.error('Catatan verifikator wajib diisi untuk opsi "Tinjau Kembali".');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const { error } = await supabase
+        .from('database_tagihan')
+        .update({
+          status_tagihan: 'Tinjau Kembali',
+          catatan_verifikator: catatanVerifikatorWatch,
+          waktu_verifikasi: new Date().toISOString(),
+          nama_verifikator: profile.nama_lengkap,
+          detail_verifikasi: form.getValues('detail_verifikasi'), // Include current checklist state
+          nomor_verifikasi: null, // No verification number for 'Tinjau Kembali'
+          locked_by: null,
+          locked_at: null,
+        })
+        .eq('id_tagihan', tagihan.id_tagihan);
+
+      if (error) {
+        console.error('Supabase update error for Tinjau Kembali:', error);
+        throw error;
+      }
+
+      // Notification for SKPD user
+      const notificationMessage = `Tagihan SPM ${tagihan.nomor_spm} Anda perlu DITINJAU KEMBALI. Silakan periksa catatan verifikator.`;
+      const { error: notificationError } = await supabase
+        .from('notifications')
+        .insert({
+          user_id: tagihan.id_pengguna_input,
+          message: notificationMessage,
+          is_read: false,
+          tagihan_id: tagihan.id_tagihan,
+        });
+
+      if (notificationError) {
+        console.error('Error inserting notification for Tinjau Kembali:', notificationError.message);
+      }
+
+      toast.success(`Tagihan ${tagihan.nomor_spm} berhasil diubah status menjadi 'Tinjau Kembali'.`);
+      onVerificationSuccess();
+      onClose();
+    } catch (error: any) {
+      console.error('Error processing Tinjau Kembali:', error.message);
+      toast.error('Gagal memproses "Tinjau Kembali": ' + error.message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const getButtonVariant = (status: 'Diteruskan' | 'Dikembalikan' | undefined) => {
     if (status === 'Diteruskan') return 'default';
     if (status === 'Dikembalikan') return 'destructive';
@@ -273,6 +331,9 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
   const isSubmitButtonDisabled = isSubmitting || !form.formState.isValid ||
     (statusKeputusanWatch === 'Diteruskan' && !allChecklistItemsMet) ||
     (statusKeputusanWatch === 'Dikembalikan' && allChecklistItemsMet);
+
+  // Determine if the "Tinjau Kembali" button should be disabled
+  const isTinjauKembaliButtonDisabled = isSubmitting || !user || !profile?.nama_lengkap || !catatanVerifikatorWatch;
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
@@ -408,14 +469,24 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
               />
             </div>
 
-            <Button
-              type="submit"
-              className="w-full mt-6"
-              variant={getButtonVariant(statusKeputusanWatch)}
-              disabled={isSubmitButtonDisabled}
-            >
-              {isSubmitting ? 'Memproses...' : `Proses Tagihan (${statusKeputusanWatch || 'Pilih Keputusan'})`}
-            </Button>
+            <DialogFooter className="flex flex-col sm:flex-row sm:justify-end gap-2 mt-6">
+              <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>Batal</Button>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={handleTinjauKembali}
+                disabled={isTinjauKembaliButtonDisabled}
+              >
+                {isSubmitting ? 'Memproses...' : 'Tinjau Kembali'}
+              </Button>
+              <Button
+                type="submit"
+                variant={getButtonVariant(statusKeputusanWatch)}
+                disabled={isSubmitButtonDisabled}
+              >
+                {isSubmitting ? 'Memproses...' : `Proses Tagihan (${statusKeputusanWatch || 'Pilih Keputusan'})`}
+              </Button>
+            </DialogFooter>
           </form>
         </div>
       </SheetContent>
