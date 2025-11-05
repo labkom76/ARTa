@@ -37,6 +37,12 @@ import { Label } from '@/components/ui/label';
 import useDebounce from '@/hooks/use-debounce';
 import KoreksiTagihanSidePanel from '@/components/KoreksiTagihanSidePanel'; // Import the new component
 import StatusBadge from '@/components/StatusBadge'; // Import StatusBadge
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"; // Import Tooltip components
 
 interface VerificationItem {
   item: string;
@@ -130,7 +136,7 @@ const PortalVerifikasi = () => {
         const { data, error } = await supabase
           .from('database_tagihan')
           .select('nama_skpd')
-          .eq('status_tagihan', 'Menunggu Verifikasi');
+          .in('status_tagihan', ['Menunggu Verifikasi', 'Tinjau Kembali']); // MODIFIED: Include 'Tinjau Kembali'
 
         if (error) throw error;
 
@@ -161,7 +167,7 @@ const PortalVerifikasi = () => {
         
         if (profile.peran === 'Staf Verifikator') {
           query = query
-            .in('status_tagihan', ['Diteruskan', 'Dikembalikan'])
+            .in('status_tagihan', ['Diteruskan', 'Dikembalikan', 'Tinjau Kembali']) // MODIFIED: Include 'Tinjau Kembali'
             .gte('waktu_verifikasi', todayStart)
             .lte('waktu_verifikasi', todayEnd)
             .eq('nama_verifikator', profile?.nama_lengkap) // ADDED THIS LINE
@@ -175,7 +181,7 @@ const PortalVerifikasi = () => {
         } else {
           // Default for other roles or if no specific filter needed
           query = query
-            .in('status_tagihan', ['Diteruskan', 'Dikembalikan'])
+            .in('status_tagihan', ['Diteruskan', 'Dikembalikan', 'Tinjau Kembali']) // MODIFIED: Include 'Tinjau Kembali'
             .gte('waktu_verifikasi', todayStart)
             .lte('waktu_verifikasi', todayEnd);
         }
@@ -215,7 +221,7 @@ const PortalVerifikasi = () => {
       let query = supabase
         .from('database_tagihan')
         .select('*', { count: 'exact' })
-        .eq('status_tagihan', 'Menunggu Verifikasi')
+        .in('status_tagihan', ['Menunggu Verifikasi', 'Tinjau Kembali']) // MODIFIED: Include 'Tinjau Kembali'
         .order('waktu_registrasi', { ascending: true });
 
       query = query.or(
@@ -279,7 +285,7 @@ const PortalVerifikasi = () => {
       if (profile.peran === 'Staf Verifikator') {
         setHistoryPanelTitle('Riwayat Verifikasi Hari Ini');
         query = query
-          .in('status_tagihan', ['Diteruskan', 'Dikembalikan'])
+          .in('status_tagihan', ['Diteruskan', 'Dikembalikan', 'Tinjau Kembali']) // MODIFIED: Include 'Tinjau Kembali'
           .gte('waktu_verifikasi', todayStart)
           .lte('waktu_verifikasi', todayEnd)
           .eq('nama_verifikator', profile?.nama_lengkap) // Filter by current verifier's name
@@ -294,10 +300,10 @@ const PortalVerifikasi = () => {
           .lte('waktu_koreksi', todayEnd);
         query = query.order('waktu_koreksi', { ascending: false });
       } else {
-        // Fallback for other roles, or if no specific filter is needed
+        // Fallback for other roles, or if no specific filter needed
         setHistoryPanelTitle('Riwayat Verifikasi Hari Ini');
         query = query
-          .in('status_tagihan', ['Diteruskan', 'Dikembalikan'])
+          .in('status_tagihan', ['Diteruskan', 'Dikembalikan', 'Tinjau Kembali']) // MODIFIED: Include 'Tinjau Kembali'
           .gte('waktu_verifikasi', todayStart)
           .lte('waktu_verifikasi', todayEnd);
         query = query.order('waktu_verifikasi', { ascending: false });
@@ -407,7 +413,7 @@ const PortalVerifikasi = () => {
             let updatedList = [...prevList];
 
             const isCurrentlyInQueue =
-              newTagihan.status_tagihan === 'Menunggu Verifikasi' &&
+              (newTagihan.status_tagihan === 'Menunggu Verifikasi' || newTagihan.status_tagihan === 'Tinjau Kembali') && // MODIFIED: Include 'Tinjau Kembali'
               (newTagihan.locked_by === null ||
                newTagihan.locked_by === user?.id ||
                (newTagihan.locked_at && parseISO(newTagihan.locked_at).getTime() < lockTimeoutThreshold.getTime()));
@@ -422,7 +428,7 @@ const PortalVerifikasi = () => {
             } else {
               if (existingIndex > -1) {
                 updatedList.splice(existingIndex, 1); // Remove from queue
-                if (newTagihan.status_tagihan !== 'Menunggu Verifikasi') {
+                if (newTagihan.status_tagihan !== 'Menunggu Verifikasi' && newTagihan.status_tagihan !== 'Tinjau Kembali') { // MODIFIED: Check for 'Tinjau Kembali'
                   toast.info(`Tagihan ${newTagihan.nomor_spm} telah diverifikasi.`);
                 } else if (newTagihan.locked_by !== null && newTagihan.locked_by !== user?.id) {
                   toast.info(`Tagihan ${newTagihan.nomor_spm} sedang diproses oleh verifikator lain.`);
@@ -435,7 +441,7 @@ const PortalVerifikasi = () => {
           setHistoryTagihanList(prevList => {
             const isVerifiedToday = newTagihan.waktu_verifikasi &&
                                     isSameDay(parseISO(newTagihan.waktu_verifikasi), new Date()) &&
-                                    (newTagihan.status_tagihan === 'Diteruskan' || newTagihan.status_tagihan === 'Dikembalikan');
+                                    (newTagihan.status_tagihan === 'Diteruskan' || newTagihan.status_tagihan === 'Dikembalikan' || newTagihan.status_tagihan === 'Tinjau Kembali'); // MODIFIED: Include 'Tinjau Kembali'
             const existingHistoryIndex = prevList.findIndex(t => t.id_tagihan === newTagihan.id_tagihan);
             let updatedHistoryList = [...prevList];
 
@@ -447,12 +453,6 @@ const PortalVerifikasi = () => {
                                                 newTagihan.id_korektor === user?.id;
 
             if (profile?.peran === 'Staf Verifikator' && shouldBeInHistoryForVerifier) {
-              if (existingHistoryIndex > -1) {
-                updatedHistoryList[existingHistoryIndex] = newTagihan;
-              } else {
-                updatedHistoryList.unshift(newTagihan);
-              }
-            } else if (profile?.peran === 'Staf Koreksi' && shouldBeInHistoryForKoreksi) {
               if (existingHistoryIndex > -1) {
                 updatedHistoryList[existingHistoryIndex] = newTagihan;
               } else {
@@ -537,7 +537,7 @@ const PortalVerifikasi = () => {
           .update({ locked_by: null, locked_at: null })
           .eq('id_tagihan', selectedTagihanForVerifikasi.id_tagihan)
           .eq('locked_by', user.id)
-          .eq('status_tagihan', 'Menunggu Verifikasi');
+          .in('status_tagihan', ['Menunggu Verifikasi', 'Tinjau Kembali']); // MODIFIED: Only unlock if still 'Menunggu Verifikasi' or 'Tinjau Kembali'
 
         if (error) {
           console.error('Error unlocking tagihan:', error.message);
@@ -685,19 +685,46 @@ const PortalVerifikasi = () => {
                           <TableCell>{(queueCurrentPage - 1) * queueItemsPerPage + index + 1}</TableCell><TableCell className="font-medium">{tagihan.nomor_registrasi || '-'}</TableCell><TableCell>
                             {tagihan.waktu_registrasi ? format(parseISO(tagihan.waktu_registrasi), 'dd MMMM yyyy HH:mm', { locale: localeId }) : '-'}
                           </TableCell><TableCell>{tagihan.nomor_spm}</TableCell><TableCell>{tagihan.nama_skpd}</TableCell><TableCell>Rp{tagihan.jumlah_kotor.toLocaleString('id-ID')}</TableCell><TableCell className="text-center">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              title={isDisabled ? "Tagihan ini sedang diproses oleh verifikator lain" : "Proses Verifikasi"}
-                              onClick={() => handleActionButtonClick(tagihan)} // Use the new handler
-                              disabled={isDisabled}
-                            >
-                              {isDisabled ? (
-                                <LockIcon className="h-5 w-5 text-gray-400" />
+                            {tagihan.status_tagihan === 'Menunggu Verifikasi' && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                title={isDisabled ? "Tagihan ini sedang diproses oleh verifikator lain" : "Proses Verifikasi"}
+                                onClick={() => handleActionButtonClick(tagihan)}
+                                disabled={isDisabled}
+                              >
+                                {isDisabled ? (
+                                  <LockIcon className="h-5 w-5 text-gray-400" />
+                                ) : (
+                                  <FileCheckIcon className="h-5 w-5 text-blue-500" />
+                                )}
+                              </Button>
+                            )}
+                            {tagihan.status_tagihan === 'Tinjau Kembali' && (
+                              tagihan.nama_verifikator === profile?.nama_lengkap ? (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  title="Lanjutkan Verifikasi"
+                                  onClick={() => handleActionButtonClick(tagihan)}
+                                >
+                                  Lanjutkan Verifikasi
+                                </Button>
                               ) : (
-                                <FileCheckIcon className="h-5 w-5 text-blue-500" />
-                              )}
-                            </Button>
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <span className="text-sm text-muted-foreground cursor-default">
+                                        Sedang Ditinjau oleh {tagihan.nama_verifikator || 'Verifikator Lain'}
+                                      </span>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>Tagihan ini sedang ditinjau oleh {tagihan.nama_verifikator || 'verifikator lain'}.</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              )
+                            )}
                           </TableCell>
                         </TableRow>
                       );
