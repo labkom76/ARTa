@@ -10,7 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { PlusCircleIcon, EditIcon, Trash2Icon, SearchIcon, KeyRoundIcon, ArrowRightLeftIcon } from 'lucide-react'; // Import KeyRoundIcon and ArrowRightLeftIcon
+import { PlusCircleIcon, EditIcon, Trash2Icon, SearchIcon, BanIcon, CheckCircleIcon, ArrowRightLeftIcon } from 'lucide-react'; // Import BanIcon and CheckCircleIcon
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
 import AddUserDialog from '@/components/AddUserDialog';
@@ -47,6 +47,7 @@ interface UserProfile {
   asal_skpd: string;
   peran: string;
   email: string;
+  is_active: boolean; // Add is_active to the interface
 }
 
 const AdminUsers = () => {
@@ -101,7 +102,7 @@ const AdminUsers = () => {
     try {
       let query = supabase
         .from('user_profiles_with_email')
-        .select('id, nama_lengkap, asal_skpd, peran, email', { count: 'exact' });
+        .select('id, nama_lengkap, asal_skpd, peran, email, is_active', { count: 'exact' }); // Select is_active
 
       if (debouncedSearchQuery) {
         query = query.or(
@@ -140,6 +141,7 @@ const AdminUsers = () => {
         asal_skpd: user.asal_skpd,
         peran: user.peran,
         email: user.email || 'N/A',
+        is_active: user.is_active, // Map is_active
       }));
 
       setUsers(usersWithEmail);
@@ -226,25 +228,22 @@ const AdminUsers = () => {
     }
   };
 
-  const handleSendResetPassword = async (userProfile: UserProfile) => {
-    if (!userProfile.email || userProfile.email === 'N/A') {
-      toast.error('Email pengguna tidak tersedia untuk reset password.');
-      return;
-    }
-
+  // NEW: handleToggleUserStatus function
+  const handleToggleUserStatus = async (userProfile: UserProfile) => {
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(userProfile.email, {
-        redirectTo: `${window.location.origin}/login`, // Redirect to login after reset
-      });
+      const newStatus = !userProfile.is_active;
+      const { error } = await supabase
+        .from('profiles')
+        .update({ is_active: newStatus })
+        .eq('id', userProfile.id);
 
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
 
-      toast.success(`Link reset password telah dikirim ke ${userProfile.email}.`);
+      toast.success(`Pengguna ${userProfile.nama_lengkap || userProfile.email} berhasil ${newStatus ? 'diaktifkan' : 'diblokir'}.`);
+      fetchUsers(); // Refresh the list to show updated status
     } catch (error: any) {
-      console.error('Error sending reset password link:', error.message);
-      toast.error('Gagal mengirim link reset password: ' + error.message);
+      console.error('Error toggling user status:', error.message);
+      toast.error('Gagal mengubah status pengguna: ' + error.message);
     }
   };
 
@@ -263,7 +262,7 @@ const AdminUsers = () => {
     return (
       <div className="p-6 bg-white rounded-lg shadow-sm border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
         <h1 className="text-3xl font-bold text-red-600 dark:text-red-400 mb-4">Akses Ditolak</h1>
-        <p className="text-gray-600 dark:text-gray-400">Anda tidak memiliki izin untuk mengakses halaman ini.</p>
+        <p className="text-xl text-gray-600 dark:text-gray-400">Anda tidak memiliki izin untuk mengakses halaman ini.</p>
       </div>
     );
   }
@@ -370,15 +369,24 @@ const AdminUsers = () => {
                               </TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
+                          {/* NEW: Toggle User Status Button */}
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <Button variant="outline" size="icon" onClick={() => handleSendResetPassword(userProfile)}>
-                                  <KeyRoundIcon className="h-4 w-4" />
+                                <Button
+                                  variant={userProfile.is_active ? 'destructive' : 'outline'}
+                                  size="icon"
+                                  onClick={() => handleToggleUserStatus(userProfile)}
+                                >
+                                  {userProfile.is_active ? (
+                                    <BanIcon className="h-4 w-4" />
+                                  ) : (
+                                    <CheckCircleIcon className="h-4 w-4 text-green-500" />
+                                  )}
                                 </Button>
                               </TooltipTrigger>
                               <TooltipContent>
-                                <p>Kirim Link Reset Password</p>
+                                <p>{userProfile.is_active ? 'Blokir Pengguna' : 'Aktifkan Pengguna'}</p>
                               </TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
