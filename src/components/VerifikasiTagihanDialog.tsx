@@ -34,6 +34,7 @@ import { useSession } from '@/contexts/SessionContext';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
+import { DialogFooter } from '@/components/ui/dialog'; // Import DialogFooter
 
 interface VerificationItem {
   item: string;
