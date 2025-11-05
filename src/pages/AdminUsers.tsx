@@ -369,27 +369,29 @@ const AdminUsers = () => {
                               </TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
-                          {/* NEW: Toggle User Status Button */}
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant={userProfile.is_active ? 'destructive' : 'outline'}
-                                  size="icon"
-                                  onClick={() => handleToggleUserStatus(userProfile)}
-                                >
-                                  {userProfile.is_active ? (
-                                    <BanIcon className="h-4 w-4" />
-                                  ) : (
-                                    <CheckCircleIcon className="h-4 w-4 text-green-500" />
-                                  )}
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>{userProfile.is_active ? 'Blokir Pengguna' : 'Aktifkan Pengguna'}</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
+                          {/* NEW: Toggle User Status Button - Only show for SKPD roles */}
+                          {userProfile.peran === 'SKPD' && (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant={userProfile.is_active ? 'destructive' : 'outline'}
+                                    size="icon"
+                                    onClick={() => handleToggleUserStatus(userProfile)}
+                                  >
+                                    {userProfile.is_active ? (
+                                      <BanIcon className="h-4 w-4" />
+                                    ) : (
+                                      <CheckCircleIcon className="h-4 w-4 text-green-500" />
+                                    )}
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>{userProfile.is_active ? 'Blokir Pengguna' : 'Aktifkan Pengguna'}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          )}
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger asChild>
