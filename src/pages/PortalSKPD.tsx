@@ -194,10 +194,11 @@ const PortalSKPD = () => {
 
   useEffect(() => {
     if (!sessionLoading && profile) {
-      if (profile.peran === 'SKPD' && !profile.asal_skpd) {
+      // MODIFIED: Check both asal_skpd and is_active
+      if (profile.peran === 'SKPD' && (!profile.asal_skpd || !profile.is_active)) {
         setIsAccountVerified(false);
         if (!toastShownRef.current) {
-          toast.error('Akun belum diverifikasi. Silakan hubungi admin untuk melanjutkan.');
+          toast.error('Akun belum diverifikasi atau diblokir. Silakan hubungi admin untuk melanjutkan.');
           toastShownRef.current = true;
         }
       } else {
@@ -427,7 +428,7 @@ const PortalSKPD = () => {
       return;
     }
     if (!isAccountVerified) {
-      toast.error('Akun Anda belum diverifikasi. Tidak dapat menginput tagihan.');
+      toast.error('Akun Anda belum diverifikasi atau diblokir. Tidak dapat menginput tagihan.');
       return;
     }
 
@@ -528,7 +529,7 @@ const PortalSKPD = () => {
 
   const handleEdit = (tagihan: Tagihan) => {
     if (!isAccountVerified) {
-      toast.error('Akun Anda belum diverifikasi. Tidak dapat mengedit tagihan.');
+      toast.error('Akun Anda belum diverifikasi atau diblokir. Tidak dapat mengedit tagihan.');
       return;
     }
     setEditingTagihan(tagihan);
@@ -537,7 +538,7 @@ const PortalSKPD = () => {
 
   const handleDeleteClick = (tagihanId: string, nomorSpm: string) => {
     if (!isAccountVerified) {
-      toast.error('Akun Anda belum diverifikasi. Tidak dapat menghapus tagihan.');
+      toast.error('Akun Anda belum diverifikasi atau diblokir. Tidak dapat menghapus tagihan.');
       return;
     }
     setTagihanToDelete({ id: tagihanId, nomorSpm: nomorSpm });
@@ -628,7 +629,7 @@ const PortalSKPD = () => {
           <Button variant="outline" className="flex items-center gap-2" onClick={handleExportToXLSX} disabled={!isAccountVerified || tagihanList.length === 0}>
             <FileDownIcon className="h-4 w-4" /> Export ke XLSX
           </Button>
-          <Button onClick={() => { setEditingTagihan(null); setIsModalOpen(true); }} className="flex items-center gap-2" disabled={!isAccountVerified}>
+          <Button onClick={() => { setEditingTagihan(null); setIsModalOpen(true); }} className="flex items-center gap-2" disabled={!isAccountVerified || !profile?.is_active}>
             <PlusCircleIcon className="h-4 w-4" /> Input Tagihan Baru
           </Button>
         </div>
@@ -783,7 +784,7 @@ const PortalSKPD = () => {
                                   size="icon"
                                   onClick={() => handleEdit(tagihan)}
                                   title="Edit Tagihan"
-                                  disabled={!isAccountVerified}
+                                  disabled={!isAccountVerified || !profile?.is_active}
                                 >
                                   <EditIcon className="h-4 w-4" />
                                 </Button>
@@ -792,7 +793,7 @@ const PortalSKPD = () => {
                                   size="icon"
                                   onClick={() => handleDeleteClick(tagihan.id_tagihan, tagihan.nomor_spm)}
                                   title="Hapus Tagihan"
-                                  disabled={!isAccountVerified}
+                                  disabled={!isAccountVerified || !profile?.is_active}
                                 >
                                   <Trash2Icon className="h-4 w-4" />
                                 </Button>
@@ -865,7 +866,7 @@ const PortalSKPD = () => {
                 type="number"
                 {...form.register('nomor_urut_tagihan', { valueAsNumber: true })}
                 className="col-span-3"
-                disabled={!isAccountVerified || !!editingTagihan} // Disable if editing or not verified
+                disabled={!isAccountVerified || !profile?.is_active || !!editingTagihan} // Disable if editing or not verified
               />
               {form.formState.errors.nomor_urut_tagihan && (
                 <p className="col-span-4 text-right text-red-500 text-sm">
@@ -878,7 +879,7 @@ const PortalSKPD = () => {
               <Label htmlFor="kode_jadwal" className="text-right">
                 Jadwal Penganggaran
               </Label>
-              <Select onValueChange={(value) => form.setValue('kode_jadwal', value)} value={form.watch('kode_jadwal')} disabled={!isAccountVerified}>
+              <Select onValueChange={(value) => form.setValue('kode_jadwal', value)} value={form.watch('kode_jadwal')} disabled={!isAccountVerified || !profile?.is_active}>
                 <SelectTrigger className="col-span-3">
                   <SelectValue placeholder="Pilih Jadwal" />
                 </SelectTrigger>
@@ -900,7 +901,7 @@ const PortalSKPD = () => {
               <Label htmlFor="jenis_spm" className="text-right">
                 Jenis SPM
               </Label>
-              <Select onValueChange={(value) => form.setValue('jenis_spm', value)} value={form.watch('jenis_spm')} disabled={!isAccountVerified}>
+              <Select onValueChange={(value) => form.setValue('jenis_spm', value)} value={form.watch('jenis_spm')} disabled={!isAccountVerified || !profile?.is_active}>
                 <SelectTrigger className="col-span-3">
                   <SelectValue placeholder="Pilih Jenis SPM" />
                 </SelectTrigger>
@@ -921,7 +922,7 @@ const PortalSKPD = () => {
               <Label htmlFor="jenis_tagihan" className="text-right">
                 Jenis Tagihan
               </Label>
-              <Select onValueChange={(value) => form.setValue('jenis_tagihan', value)} value={form.watch('jenis_tagihan')} disabled={!isAccountVerified}>
+              <Select onValueChange={(value) => form.setValue('jenis_tagihan', value)} value={form.watch('jenis_tagihan')} disabled={!isAccountVerified || !profile?.is_active}>
                 <SelectTrigger className="col-span-3">
                   <SelectValue placeholder="Pilih Jenis Tagihan" />
                 </SelectTrigger>
@@ -943,7 +944,7 @@ const PortalSKPD = () => {
               <Label htmlFor="sumber_dana" className="text-right">
                 Sumber Dana
               </Label>
-              <Select onValueChange={(value) => form.setValue('sumber_dana', value)} value={form.watch('sumber_dana')} disabled={!isAccountVerified}>
+              <Select onValueChange={(value) => form.setValue('sumber_dana', value)} value={form.watch('sumber_dana')} disabled={!isAccountVerified || !profile?.is_active}>
                 <SelectTrigger className="col-span-3">
                   <SelectValue placeholder="Pilih Sumber Dana" />
                 </SelectTrigger>
@@ -975,7 +976,7 @@ const PortalSKPD = () => {
                 className="col-span-3"
                 rows={3}
                 maxLength={250} // Added maxLength attribute
-                disabled={!isAccountVerified}
+                disabled={!isAccountVerified || !profile?.is_active}
               />
               {/* Indikator Hitungan Karakter Dinamis */}
               <div className="col-start-2 col-span-3 text-right text-xs text-muted-foreground">
@@ -996,7 +997,7 @@ const PortalSKPD = () => {
                 type="number"
                 {...form.register('jumlah_kotor')}
                 className="col-span-3"
-                disabled={!isAccountVerified}
+                disabled={!isAccountVerified || !profile?.is_active}
               />
               {form.formState.errors.jumlah_kotor && (
                 <p className="col-span-4 text-right text-red-500 text-sm">
@@ -1005,7 +1006,7 @@ const PortalSKPD = () => {
               )}
             </div>
             <DialogFooter>
-              <Button type="submit" disabled={isSubmitting || !isAccountVerified}>
+              <Button type="submit" disabled={isSubmitting || !isAccountVerified || !profile?.is_active}>
                 {isSubmitting ? (editingTagihan ? 'Memperbarui...' : 'Menyimpan...') : 'Simpan'}
               </Button>
             </DialogFooter>
