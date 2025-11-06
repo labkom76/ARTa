@@ -84,10 +84,10 @@ const checklistItems = [
 ];
 
 const verificationFormSchema = z.object({
-  status_keputusan: z.enum(['Diteruskan', 'Dikembalikan'], { // Removed 'Tinjau Kembali'
+  status_keputusan: z.enum(['Diteruskan', 'Dikembalikan'], {
     required_error: 'Keputusan verifikasi wajib dipilih.',
   }),
-  catatan_verifikator: z.string().optional(),
+  // catatan_verifikator: z.string().optional(), // Removed
   detail_verifikasi: z.array(
     z.object({
       item: z.string(),
@@ -102,13 +102,13 @@ type VerificationFormValues = z.infer<typeof verificationFormSchema>;
 const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpen, onClose, onVerificationSuccess, tagihan }) => {
   const { user, profile } = useSession();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [availableStatusOptions, setAvailableStatusOptions] = useState<Array<'Diteruskan' | 'Dikembalikan'>>([]); // Removed 'Tinjau Kembali'
+  const [availableStatusOptions, setAvailableStatusOptions] = useState<Array<'Diteruskan' | 'Dikembalikan'>>([]);
 
   const form = useForm<VerificationFormValues>({
     resolver: zodResolver(verificationFormSchema),
     defaultValues: {
       status_keputusan: undefined,
-      catatan_verifikator: '',
+      // catatan_verifikator: '', // Removed
       detail_verifikasi: checklistItems.map(item => ({
         item,
         memenuhi_syarat: true, // Default to true
@@ -153,7 +153,7 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
 
       form.reset({
         status_keputusan: initialStatusKeputusan,
-        catatan_verifikator: tagihan.catatan_verifikator || '',
+        // catatan_verifikator: tagihan.catatan_verifikator || '', // Removed
         detail_verifikasi: tagihan.detail_verifikasi && tagihan.detail_verifikasi.length > 0
           ? tagihan.detail_verifikasi
           : checklistItems.map(item => ({
@@ -242,7 +242,7 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
         .from('database_tagihan')
         .update({
           status_tagihan: values.status_keputusan,
-          catatan_verifikator: values.catatan_verifikator,
+          // catatan_verifikator: values.catatan_verifikator, // Removed
           waktu_verifikasi: new Date().toISOString(),
           nama_verifikator: profile.nama_lengkap,
           detail_verifikasi: values.detail_verifikasi,
@@ -433,17 +433,6 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
                   {form.formState.errors.status_keputusan.message}
                 </p>
               )}
-            </div>
-
-            {/* Catatan Verifikator */}
-            <div className="grid gap-2 mt-4">
-              <Label htmlFor="catatan_verifikator" className="text-lg font-semibold">Catatan Verifikator (Opsional)</Label>
-              <Textarea
-                id="catatan_verifikator"
-                {...form.register('catatan_verifikator')}
-                placeholder="Tambahkan catatan atau alasan pengembalian..."
-                rows={3}
-              />
             </div>
 
             <Button
