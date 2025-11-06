@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-} from '@/components/ui/sheet';
+  Dialog, // Changed from Sheet
+  DialogContent, // Changed from SheetContent
+  DialogHeader, // Changed from SheetHeader
+  DialogTitle, // Changed from SheetTitle
+  DialogDescription, // Changed from SheetDescription
+  DialogFooter, // Added DialogFooter for consistency, though not directly replacing SheetFooter
+} from '@/components/ui/dialog'; // Changed import path
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -87,7 +88,6 @@ const verificationFormSchema = z.object({
   status_keputusan: z.enum(['Diteruskan', 'Dikembalikan'], {
     required_error: 'Keputusan verifikasi wajib dipilih.',
   }),
-  // catatan_verifikator: z.string().optional(), // Removed
   detail_verifikasi: z.array(
     z.object({
       item: z.string(),
@@ -108,7 +108,6 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
     resolver: zodResolver(verificationFormSchema),
     defaultValues: {
       status_keputusan: undefined,
-      // catatan_verifikator: '', // Removed
       detail_verifikasi: checklistItems.map(item => ({
         item,
         memenuhi_syarat: true, // Default to true
@@ -153,7 +152,6 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
 
       form.reset({
         status_keputusan: initialStatusKeputusan,
-        // catatan_verifikator: tagihan.catatan_verifikator || '', // Removed
         detail_verifikasi: tagihan.detail_verifikasi && tagihan.detail_verifikasi.length > 0
           ? tagihan.detail_verifikasi
           : checklistItems.map(item => ({
@@ -241,8 +239,7 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
       const { error } = await supabase
         .from('database_tagihan')
         .update({
-          status_tagutusan: values.status_keputusan,
-          // catatan_verifikator: values.catatan_verifikator, // Removed
+          status_tagihan: values.status_keputusan,
           waktu_verifikasi: new Date().toISOString(),
           nama_verifikator: profile.nama_lengkap,
           detail_verifikasi: values.detail_verifikasi,
@@ -310,14 +307,14 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
     (statusKeputusanWatch === 'Dikembalikan' && allChecklistItemsMet);
 
   return (
-    <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent className="w-full sm:max-w-[600px] flex flex-col">
-        <SheetHeader>
-          <SheetTitle>Verifikasi Tagihan: {tagihan.nomor_spm}</SheetTitle>
-          <SheetDescription>
+    <Dialog open={isOpen} onOpenChange={onClose}> {/* Changed from Sheet */}
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] flex flex-col"> {/* Changed from SheetContent, added max-h and flex-col */}
+        <DialogHeader> {/* Changed from SheetHeader */}
+          <DialogTitle>Verifikasi Tagihan: {tagihan.nomor_spm}</DialogTitle> {/* Changed from SheetTitle */}
+          <DialogDescription>
             Periksa detail tagihan dan tentukan keputusan verifikasi.
-          </SheetDescription>
-        </SheetHeader>
+          </DialogDescription> {/* Changed from SheetDescription */}
+        </DialogHeader>
 
         <div className="flex-1 overflow-y-auto pr-4 -mr-4">
           <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-6 py-4">
@@ -347,7 +344,7 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
                 </div>
                 <div>
                   <Label className="text-muted-foreground">Jenis Tagihan</Label>
-                  <p className className="font-medium">{tagihan.jenis_tagihan}</p>
+                  <p className="font-medium">{tagihan.jenis_tagihan}</p>
                 </div>
                 {/* New: Sumber Dana */}
                 <div>
@@ -371,42 +368,47 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-[250px]">Uraian</TableHead> {/* Adjusted width */}
+                    <TableHead className="w-[250px]">Uraian</TableHead>
                     <TableHead className="w-[120px] text-center">Memenuhi Syarat</TableHead>
-                    <TableHead>Keterangan</TableHead> {/* Takes remaining space */}
+                    <TableHead></TableHead> {/* Empty header for the new row's content */}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {checklistItems.map((item, index) => (
-                    <TableRow key={item}>
-                      <TableCell>{item}</TableCell>
-                      <TableCell className="text-center">
-                        <Controller
-                          name={`detail_verifikasi.${index}.memenuhi_syarat`}
-                          control={form.control}
-                          render={({ field }) => (
-                            <Checkbox
-                              checked={field.value}
-                              onCheckedChange={field.onChange}
-                            />
-                          )}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Controller
-                          name={`detail_verifikasi.${index}.keterangan`}
-                          control={form.control}
-                          render={({ field }) => (
-                            <Input
-                              {...field}
-                              placeholder="Keterangan (opsional)"
-                              className="h-8"
-                              disabled={detailVerifikasiWatch[index]?.memenuhi_syarat} // Dynamic disabled logic
-                            />
-                          )}
-                        />
-                      </TableCell>
-                    </TableRow>
+                    <React.Fragment key={item}>
+                      <TableRow>
+                        <TableCell className="flex items-center">{item}</TableCell>
+                        <TableCell className="text-center">
+                          <Controller
+                            name={`detail_verifikasi.${index}.memenuhi_syarat`}
+                            control={form.control}
+                            render={({ field }) => (
+                              <Checkbox
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                              />
+                            )}
+                          />
+                        </TableCell>
+                        <TableCell></TableCell> {/* Empty cell for alignment */}
+                      </TableRow>
+                      <TableRow>
+                        <TableCell colSpan={3}> {/* Span across all columns */}
+                          <Controller
+                            name={`detail_verifikasi.${index}.keterangan`}
+                            control={form.control}
+                            render={({ field }) => (
+                              <Input
+                                {...field}
+                                placeholder="Keterangan (opsional)"
+                                className="h-8 w-full mt-2"
+                                disabled={detailVerifikasiWatch[index]?.memenuhi_syarat}
+                              />
+                            )}
+                          />
+                        </TableCell>
+                      </TableRow>
+                    </React.Fragment>
                   ))}
                 </TableBody>
               </Table>
@@ -444,19 +446,20 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
                 </p>
               )}
             </div>
-
-            <Button
-              type="submit"
-              className="w-full mt-6"
-              variant={getButtonVariant(statusKeputusanWatch)}
-              disabled={isSubmitButtonDisabled}
-            >
-              {isSubmitting ? 'Memproses...' : `Proses Tagihan (${statusKeputusanWatch || 'Pilih Keputusan'})`}
-            </Button>
+            <DialogFooter> {/* Added DialogFooter */}
+              <Button
+                type="submit"
+                className="w-full"
+                variant={getButtonVariant(statusKeputusanWatch)}
+                disabled={isSubmitButtonDisabled}
+              >
+                {isSubmitting ? 'Memproses...' : `Proses Tagihan (${statusKeputusanWatch || 'Pilih Keputusan'})`}
+              </Button>
+            </DialogFooter>
           </form>
         </div>
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   );
 };
 
