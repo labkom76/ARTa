@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Dialog, // Changed from Sheet
-  DialogContent, // Changed from SheetContent
-  DialogHeader, // Changed from SheetHeader
-  DialogTitle, // Changed from SheetTitle
-  DialogDescription, // Changed from SheetDescription
-  DialogFooter, // Added DialogFooter for consistency, though not directly replacing SheetFooter
-} from '@/components/ui/dialog'; // Changed import path
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -307,17 +307,18 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
     (statusKeputusanWatch === 'Dikembalikan' && allChecklistItemsMet);
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}> {/* Changed from Sheet */}
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] flex flex-col"> {/* Changed from SheetContent, added max-h and flex-col */}
-        <DialogHeader> {/* Changed from SheetHeader */}
-          <DialogTitle>Verifikasi Tagihan: {tagihan.nomor_spm}</DialogTitle> {/* Changed from SheetTitle */}
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] flex flex-col">
+        <DialogHeader>
+          <DialogTitle>Verifikasi Tagihan: {tagihan.nomor_spm}</DialogTitle>
           <DialogDescription>
             Periksa detail tagihan dan tentukan keputusan verifikasi.
-          </DialogDescription> {/* Changed from SheetDescription */}
+          </DialogDescription>
         </DialogHeader>
 
+        {/* Scrollable content area */}
         <div className="flex-1 overflow-y-auto pr-4 -mr-4">
-          <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-6 py-4">
+          <form id="verification-form" onSubmit={form.handleSubmit(onSubmit)} className="grid gap-6 py-4">
             {/* Detail Tagihan */}
             <div className="grid gap-2">
               <h3 className="text-lg font-semibold">Detail Tagihan</h3>
@@ -446,18 +447,20 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
                 </p>
               )}
             </div>
-            <DialogFooter> {/* Added DialogFooter */}
-              <Button
-                type="submit"
-                className="w-full"
-                variant={getButtonVariant(statusKeputusanWatch)}
-                disabled={isSubmitButtonDisabled}
-              >
-                {isSubmitting ? 'Memproses...' : `Proses Tagihan (${statusKeputusanWatch || 'Pilih Keputusan'})`}
-              </Button>
-            </DialogFooter>
           </form>
         </div>
+
+        <DialogFooter>
+          <Button
+            type="submit"
+            form="verification-form" // Link button to the form by its ID
+            className="w-full"
+            variant={getButtonVariant(statusKeputusanWatch)}
+            disabled={isSubmitButtonDisabled}
+          >
+            {isSubmitting ? 'Memproses...' : `Proses Tagihan (${statusKeputusanWatch || 'Pilih Keputusan'})`}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
