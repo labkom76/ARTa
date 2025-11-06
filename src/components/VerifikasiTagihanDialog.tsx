@@ -134,9 +134,9 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
       }
     } else {
       setAvailableStatusOptions(['Dikembalikan']); // Only 'Dikembalikan' if not all items met
-      // If current selection is 'Diteruskan', reset it to undefined
-      if (statusKeputusanWatch === 'Diteruskan') {
-        form.setValue('status_keputusan', undefined);
+      // If current selection is not 'Dikembalikan', set it to 'Dikembalikan'
+      if (statusKeputusanWatch !== 'Dikembalikan') {
+        form.setValue('status_keputusan', 'Dikembalikan');
       }
     }
   }, [allChecklistItemsMet, form, statusKeputusanWatch]);
