@@ -84,7 +84,7 @@ const checklistItems = [
 ];
 
 const verificationFormSchema = z.object({
-  status_keputusan: z.enum(['Diteruskan', 'Dikembalikan'], {
+  status_keputusan: z.enum(['Diteruskan', 'Dikembalikan'], { // Removed 'Tinjau Kembali'
     required_error: 'Keputusan verifikasi wajib dipilih.',
   }),
   catatan_verifikator: z.string().optional(),
@@ -102,6 +102,7 @@ type VerificationFormValues = z.infer<typeof verificationFormSchema>;
 const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpen, onClose, onVerificationSuccess, tagihan }) => {
   const { user, profile } = useSession();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [availableStatusOptions, setAvailableStatusOptions] = useState<Array<'Diteruskan' | 'Dikembalikan'>>([]); // Removed 'Tinjau Kembali'
 
   const form = useForm<VerificationFormValues>({
     resolver: zodResolver(verificationFormSchema),
@@ -123,16 +124,43 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
   // Determine if all checklist items meet requirements
   const allChecklistItemsMet = detailVerifikasiWatch.every(item => item.memenuhi_syarat === true);
 
+  // Effect to dynamically set available status options
+  useEffect(() => {
+    if (allChecklistItemsMet) {
+      setAvailableStatusOptions(['Diteruskan']);
+      // If current selection is not 'Diteruskan', reset it
+      if (statusKeputusanWatch !== 'Diteruskan') {
+        form.setValue('status_keputusan', 'Diteruskan');
+      }
+    } else {
+      setAvailableStatusOptions(['Dikembalikan']); // Only 'Dikembalikan' if not all items met
+      // If current selection is 'Diteruskan', reset it to undefined
+      if (statusKeputusanWatch === 'Diteruskan') {
+        form.setValue('status_keputusan', undefined);
+      }
+    }
+  }, [allChecklistItemsMet, form, statusKeputusanWatch]);
+
+
   useEffect(() => {
     if (isOpen && tagihan) {
+      let initialStatusKeputusan: VerificationFormValues['status_keputusan'] | undefined;
+      if (tagihan.status_tagihan === 'Dikembalikan') {
+        initialStatusKeputusan = 'Dikembalikan';
+      } else {
+        initialStatusKeputusan = undefined; // For 'Menunggu Verifikasi'
+      }
+
       form.reset({
-        status_keputusan: undefined,
-        catatan_verifikator: '',
-        detail_verifikasi: checklistItems.map(item => ({
-          item,
-          memenuhi_syarat: true,
-          keterangan: '',
-        })),
+        status_keputusan: initialStatusKeputusan,
+        catatan_verifikator: tagihan.catatan_verifikator || '',
+        detail_verifikasi: tagihan.detail_verifikasi && tagihan.detail_verifikasi.length > 0
+          ? tagihan.detail_verifikasi
+          : checklistItems.map(item => ({
+              item,
+              memenuhi_syarat: true,
+              keterangan: '',
+            })),
       });
     }
   }, [isOpen, tagihan, form]);
@@ -195,12 +223,14 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
     // Additional check for 'Diteruskan' decision
     if (values.status_keputusan === 'Diteruskan' && !allChecklistItemsMet) {
       toast.error('Tidak dapat meneruskan tagihan. Semua item checklist harus memenuhi syarat.');
+      setIsSubmitting(false);
       return;
     }
 
     // Additional check for 'Dikembalikan' decision
     if (values.status_keputusan === 'Dikembalikan' && allChecklistItemsMet) {
       toast.error('Tidak dapat mengembalikan tagihan. Semua item checklist sudah memenuhi syarat.');
+      setIsSubmitting(false);
       return;
     }
 
@@ -219,6 +249,11 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
           nomor_verifikasi: nomorVerifikasi,
           locked_by: null,
           locked_at: null,
+          // Clear correction-related fields if it was previously 'Dikembalikan'
+          nomor_koreksi: null,
+          id_korektor: null,
+          waktu_koreksi: null,
+          catatan_koreksi: null,
         })
         .eq('id_tagihan', tagihan.id_tagihan);
 
@@ -270,7 +305,7 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
   };
 
   // Determine if the submit button should be disabled
-  const isSubmitButtonDisabled = isSubmitting || !form.formState.isValid ||
+  const isSubmitButtonDisabled = isSubmitting || !statusKeputusanWatch ||
     (statusKeputusanWatch === 'Diteruskan' && !allChecklistItemsMet) ||
     (statusKeputusanWatch === 'Dikembalikan' && allChecklistItemsMet);
 
@@ -384,8 +419,11 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
                       <SelectValue placeholder="Pilih Keputusan" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Diteruskan" disabled={!allChecklistItemsMet}>Diteruskan</SelectItem>
-                      <SelectItem value="Dikembalikan" disabled={allChecklistItemsMet}>Dikembalikan</SelectItem>
+                      {availableStatusOptions.map(option => (
+                        <SelectItem key={option} value={option}>
+                          {option}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 )}
