@@ -241,7 +241,7 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
       const { error } = await supabase
         .from('database_tagihan')
         .update({
-          status_tagihan: values.status_keputusan,
+          status_tagutusan: values.status_keputusan,
           // catatan_verifikator: values.catatan_verifikator, // Removed
           waktu_verifikasi: new Date().toISOString(),
           nama_verifikator: profile.nama_lengkap,
@@ -347,7 +347,7 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
                 </div>
                 <div>
                   <Label className="text-muted-foreground">Jenis Tagihan</Label>
-                  <p className="font-medium">{tagihan.jenis_tagihan}</p>
+                  <p className className="font-medium">{tagihan.jenis_tagihan}</p>
                 </div>
                 {/* New: Sumber Dana */}
                 <div>
@@ -368,12 +368,19 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
             {/* Checklist Verifikasi */}
             <div className="grid gap-2 mt-4">
               <h3 className="text-lg font-semibold">Checklist Verifikasi</h3>
-              <Table><TableHeader><TableRow>
-                    <TableHead>Uraian</TableHead><TableHead className="w-[120px] text-center">Memenuhi Syarat</TableHead><TableHead>Keterangan</TableHead>
-                  </TableRow></TableHeader><TableBody>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[250px]">Uraian</TableHead> {/* Adjusted width */}
+                    <TableHead className="w-[120px] text-center">Memenuhi Syarat</TableHead>
+                    <TableHead>Keterangan</TableHead> {/* Takes remaining space */}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {checklistItems.map((item, index) => (
                     <TableRow key={item}>
-                      <TableCell>{item}</TableCell><TableCell className="text-center">
+                      <TableCell>{item}</TableCell>
+                      <TableCell className="text-center">
                         <Controller
                           name={`detail_verifikasi.${index}.memenuhi_syarat`}
                           control={form.control}
@@ -384,7 +391,8 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
                             />
                           )}
                         />
-                      </TableCell><TableCell>
+                      </TableCell>
+                      <TableCell>
                         <Controller
                           name={`detail_verifikasi.${index}.keterangan`}
                           control={form.control}
@@ -393,13 +401,15 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
                               {...field}
                               placeholder="Keterangan (opsional)"
                               className="h-8"
+                              disabled={detailVerifikasiWatch[index]?.memenuhi_syarat} // Dynamic disabled logic
                             />
                           )}
                         />
                       </TableCell>
                     </TableRow>
                   ))}
-                </TableBody></Table>
+                </TableBody>
+              </Table>
               {form.formState.errors.detail_verifikasi && (
                 <p className="text-red-500 text-sm mt-2">
                   {form.formState.errors.detail_verifikasi.message}
