@@ -335,10 +335,7 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
                   <Label className="text-muted-foreground">Nama SKPD</Label>
                   <p className="font-medium">{tagihan.nama_skpd}</p>
                 </div>
-                <div>
-                  <Label className="text-muted-foreground">Nomor SPM</Label>
-                  <p className="font-medium">{tagihan.nomor_spm}</p>
-                </div>
+                {/* Removed duplicated Nomor SPM */}
                 <div>
                   <Label className="text-muted-foreground">Jenis SPM</Label>
                   <p className="font-medium">{tagihan.jenis_spm}</p>
