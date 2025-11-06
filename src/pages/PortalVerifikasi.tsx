@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { format, parseISO, startOfDay, endOfDay, isSameDay } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
-import { FileCheckIcon, LockIcon, EyeIcon, PrinterIcon, SearchIcon } from 'lucide-react';
+import { FileCheckIcon, LockIcon, EyeIcon, PrinterIcon, SearchIcon, FilePenLine } from 'lucide-react'; // Import FilePenLine icon
 import VerifikasiTagihanDialog from '@/components/VerifikasiTagihanDialog';
 import {
   Pagination,
@@ -581,6 +581,12 @@ const PortalVerifikasi = () => {
     }
   };
 
+  // NEW: handleEditVerificationClick for 'Dikembalikan' status
+  const handleEditVerificationClick = (tagihan: Tagihan) => {
+    setSelectedTagihanForVerifikasi(tagihan);
+    setIsVerifikasiModalOpen(true);
+  };
+
   const queueTotalPages = queueItemsPerPage === -1 ? 1 : Math.ceil(queueTotalItems / queueItemsPerPage);
   const historyTotalPages = historyItemsPerPage === -1 ? 1 : Math.ceil(historyTotalItems / historyItemsPerPage);
 
@@ -812,6 +818,11 @@ const PortalVerifikasi = () => {
                             <Button variant="outline" size="icon" title="Cetak" onClick={() => handlePrintClick(tagihan.id_tagihan)}>
                               <PrinterIcon className="h-4 w-4" />
                             </Button>
+                            {tagihan.status_tagihan === 'Dikembalikan' && (
+                              <Button variant="outline" size="icon" title="Edit (Verifikasi Ulang)" onClick={() => handleEditVerificationClick(tagihan)}>
+                                <FilePenLine className="h-4 w-4" />
+                              </Button>
+                            )}
                           </div>
                         </TableCell>
                       </TableRow>
