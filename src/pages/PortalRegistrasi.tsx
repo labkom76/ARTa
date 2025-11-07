@@ -785,7 +785,16 @@ const PortalRegistrasi = () => {
             <div className="grid gap-4 py-4">
               <div className="grid grid-cols-3 items-center gap-4">
                 <Label className="text-right">Nomor SPM</Label>
-                <p className="col-span-2 font-medium">{selectedTagihanForTinjau?.nomor_spm || '-'}</p>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger className="col-span-2 max-w-[250px] whitespace-nowrap overflow-hidden text-ellipsis block font-medium">
+                      {selectedTagihanForTinjau?.nomor_spm || '-'}
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>{selectedTagihanForTinjau?.nomor_spm || '-'}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </div>
               <div className="grid grid-cols-3 items-center gap-4">
                 <Label className="text-right">Nama SKPD</Label>
@@ -821,7 +830,7 @@ const PortalRegistrasi = () => {
                 <p className="col-span-2 font-medium">{formatDate(selectedTagihanForTinjau?.waktu_input)}</p>
               </div>
               {/* END NEW: Added full tagihan details */}
-              <div className="grid gap-2"> {/* Adjusted col-span for consistency */}
+              <div className="grid gap-2">
                 <Label htmlFor="catatan-tinjau">Catatan Tinjau Kembali</Label>
                 <Textarea
                   id="catatan-tinjau"
