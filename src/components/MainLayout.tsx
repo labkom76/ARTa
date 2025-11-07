@@ -120,7 +120,7 @@ const MainLayout = () => {
           <DialogHeader>
             <DialogTitle>Papan Informasi</DialogTitle>
             <DialogDescription>
-              <ReactMarkdown>{announcementContent}</ReactMarkdown>
+              <ReactMarkdown className="prose dark:prose-invert">{announcementContent}</ReactMarkdown>
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
