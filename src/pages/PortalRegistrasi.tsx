@@ -77,6 +77,7 @@ interface Tagihan {
   nomor_verifikasi?: string;
   nama_verifikator?: string;
   catatan_registrasi?: string; // NEW: Add catatan_registrasi
+  sumber_dana?: string; // Add sumber_dana
 }
 
 const PortalRegistrasi = () => {
@@ -475,6 +476,17 @@ const PortalRegistrasi = () => {
   const queueTotalPages = queueItemsPerPage === -1 ? 1 : Math.ceil(queueTotalItems / queueItemsPerPage);
   const historyTotalPages = historyItemsPerPage === -1 ? 1 : Math.ceil(historyTotalItems / historyItemsPerPage);
 
+  // Helper function for date formatting
+  const formatDate = (dateString: string | undefined) => {
+    if (!dateString) return '-';
+    try {
+      return format(new Date(dateString), 'dd MMMM yyyy HH:mm', { locale: localeId });
+    } catch (e) {
+      console.error("Error formatting date:", dateString, e);
+      return dateString; // Fallback to raw string if formatting fails
+    }
+  };
+
   if (sessionLoading || loadingQueue || loadingHistory) {
     return (
       <div className="p-6 bg-white rounded-lg shadow-sm border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
@@ -762,35 +774,67 @@ const PortalRegistrasi = () => {
 
       {/* NEW: Modal for Tinjau Kembali */}
       <Dialog open={isTinjauModalOpen} onOpenChange={setIsTinjauModalOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[425px] max-h-[90vh] flex flex-col"> {/* Added max-h and flex-col */}
           <DialogHeader>
             <DialogTitle>Tinjau Kembali Tagihan</DialogTitle>
             <DialogDescription>
               Masukkan catatan untuk tagihan yang akan ditinjau kembali.
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label className="text-right">Nomor SPM</Label>
-              <p className="col-span-3 font-medium">{selectedTagihanForTinjau?.nomor_spm || '-'}</p>
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label className="text-right">Nama SKPD</Label>
-              <p className="col-span-3 font-medium">{selectedTagihanForTinjau?.nama_skpd || '-'}</p>
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="catatan-tinjau">Catatan Tinjau Kembali</Label>
-              <Textarea
-                id="catatan-tinjau"
-                placeholder="Wajib diisi: Jelaskan alasan peninjauan kembali..."
-                value={catatanTinjau}
-                onChange={(e) => setCatatanTinjau(e.target.value)}
-                rows={4}
-                disabled={isSubmittingTinjau}
-              />
-              {!catatanTinjau.trim() && (
-                <p className="text-red-500 text-sm mt-1">Catatan wajib diisi.</p>
-              )}
+          <div className="flex-1 overflow-y-auto pr-4 -mr-4"> {/* Scrollable content wrapper */}
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-3 items-center gap-4">
+                <Label className="text-right">Nomor SPM</Label>
+                <p className="col-span-2 font-medium">{selectedTagihanForTinjau?.nomor_spm || '-'}</p>
+              </div>
+              <div className="grid grid-cols-3 items-center gap-4">
+                <Label className="text-right">Nama SKPD</Label>
+                <p className="col-span-2 font-medium">{selectedTagihanForTinjau?.nama_skpd || '-'}</p>
+              </div>
+              {/* NEW: Added full tagihan details */}
+              <div className="grid grid-cols-3 items-center gap-4">
+                <Label className="text-right">Nomor Registrasi</Label>
+                <p className="col-span-2 font-medium">{selectedTagihanForTinjau?.nomor_registrasi || '-'}</p>
+              </div>
+              <div className="grid grid-cols-3 items-center gap-4">
+                <Label className="text-right">Jenis SPM</Label>
+                <p className="col-span-2 font-medium">{selectedTagihanForTinjau?.jenis_spm || '-'}</p>
+              </div>
+              <div className="grid grid-cols-3 items-center gap-4">
+                <Label className="text-right">Jenis Tagihan</Label>
+                <p className="col-span-2 font-medium">{selectedTagihanForTinjau?.jenis_tagihan || '-'}</p>
+              </div>
+              <div className="grid grid-cols-3 items-center gap-4">
+                <Label className="text-right">Sumber Dana</Label>
+                <p className="col-span-2 font-medium">{selectedTagihanForTinjau?.sumber_dana || '-'}</p>
+              </div>
+              <div className="grid grid-cols-3 items-center gap-4">
+                <Label className="text-right">Uraian</Label>
+                <p className="col-span-2 font-medium">{selectedTagihanForTinjau?.uraian || '-'}</p>
+              </div>
+              <div className="grid grid-cols-3 items-center gap-4">
+                <Label className="text-right">Jumlah Kotor</Label>
+                <p className="col-span-2 font-medium">Rp{selectedTagihanForTinjau?.jumlah_kotor?.toLocaleString('id-ID') || '0'}</p>
+              </div>
+              <div className="grid grid-cols-3 items-center gap-4">
+                <Label className="text-right">Waktu Input</Label>
+                <p className="col-span-2 font-medium">{formatDate(selectedTagihanForTinjau?.waktu_input)}</p>
+              </div>
+              {/* END NEW: Added full tagihan details */}
+              <div className="grid gap-2 col-span-3"> {/* Adjusted col-span for consistency */}
+                <Label htmlFor="catatan-tinjau">Catatan Tinjau Kembali</Label>
+                <Textarea
+                  id="catatan-tinjau"
+                  placeholder="Wajib diisi: Jelaskan alasan peninjauan kembali..."
+                  value={catatanTinjau}
+                  onChange={(e) => setCatatanTinjau(e.target.value)}
+                  rows={4}
+                  disabled={isSubmittingTinjau}
+                />
+                {!catatanTinjau.trim() && (
+                  <p className="text-red-500 text-sm mt-1">Catatan wajib diisi.</p>
+                )}
+              </div>
             </div>
           </div>
           <DialogFooter>
