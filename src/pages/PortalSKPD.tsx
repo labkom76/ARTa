@@ -796,7 +796,7 @@ const PortalSKPD = () => {
                           <TableCell>Rp{tagihan.jumlah_kotor.toLocaleString('id-ID')}</TableCell>
                           <TableCell><StatusBadge status={tagihan.status_tagihan} /></TableCell>
                           <TableCell className="text-center">
-                            {tagihan.status_tagihan === 'Menunggu Registrasi' || tagihan.status_tagihan === 'Tinjau Kembali' ? ( // NEW: Conditional rendering for 'Tinjau Kembali'
+                            {(tagihan.status_tagihan === 'Menunggu Registrasi' || tagihan.status_tagihan === 'Tinjau Kembali') ? (
                               <div className="flex justify-center space-x-2">
                                 <Button
                                   variant="outline"
@@ -805,17 +805,19 @@ const PortalSKPD = () => {
                                   title="Edit Tagihan"
                                   disabled={!isAccountVerified || !profile?.is_active}
                                 >
-                                  <FilePenLine className="h-4 w-4" /> {/* Changed to FilePenLine icon */}
+                                  <FilePenLine className="h-4 w-4" />
                                 </Button>
-                                <Button
-                                  variant="destructive"
-                                  size="icon"
-                                  onClick={() => handleDeleteClick(tagihan.id_tagihan, tagihan.nomor_spm)}
-                                  title="Hapus Tagihan"
-                                  disabled={!isAccountVerified || !profile?.is_active}
-                                >
-                                  <Trash2Icon className="h-4 w-4" />
-                                </Button>
+                                {tagihan.status_tagihan === 'Menunggu Registrasi' && ( // Only show delete for 'Menunggu Registrasi'
+                                  <Button
+                                    variant="destructive"
+                                    size="icon"
+                                    onClick={() => handleDeleteClick(tagihan.id_tagihan, tagihan.nomor_spm)}
+                                    title="Hapus Tagihan"
+                                    disabled={!isAccountVerified || !profile?.is_active}
+                                  >
+                                    <Trash2Icon className="h-4 w-4" />
+                                  </Button>
+                                )}
                               </div>
                             ) : (
                               <Button variant="outline" size="sm" onClick={() => handleDetailClick(tagihan)}>
