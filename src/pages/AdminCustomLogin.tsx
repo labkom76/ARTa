@@ -393,7 +393,7 @@ const AdminCustomLogin = () => {
                 <Switch
                   id="announcement-visibility"
                   checked={announcementVisibility}
-                  onCheckedChange={setAnnouncementVisibility} {/* Perbaikan di sini */}
+                  onCheckedChange={setAnnouncementVisibility}
                   aria-label="Toggle announcement board visibility"
                   className="data-[state=checked]:bg-green-500"
                 />
