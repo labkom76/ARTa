@@ -34,7 +34,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from '@/components/ui/pagination';
-import { SearchIcon, CheckCircleIcon, EyeIcon } from 'lucide-react';
+import { SearchIcon, CheckCircleIcon, EyeIcon, Undo2Icon } from 'lucide-react'; // Import Undo2Icon
 import { format, parseISO, startOfMonth, endOfMonth } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -43,6 +43,12 @@ import RegistrasiConfirmationDialog from '@/components/RegistrasiConfirmationDia
 import TagihanDetailDialog from '@/components/TagihanDetailDialog'; // Import the detail dialog
 import StatusBadge from '@/components/StatusBadge'; // Import StatusBadge
 import { Label } from '@/components/ui/label'; // Import Label for "Per halaman"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"; // Import Tooltip components
 
 interface VerificationItem {
   item: string;
@@ -104,6 +110,10 @@ const PortalRegistrasi = () => {
   // State for Detail Dialog
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [selectedTagihanForDetail, setSelectedTagihanForDetail] = useState<Tagihan | null>(null);
+
+  // NEW: State for Tinjau Kembali Modal
+  const [isTinjauModalOpen, setIsTinjauModalOpen] = useState(false);
+  const [selectedTagihanForTinjau, setSelectedTagihanForTinjau] = useState<Tagihan | null>(null);
 
   // Refs to track previous values for determining pagination-only changes
   const prevQueueSearchQuery = useRef(searchQuery);
@@ -397,6 +407,13 @@ const PortalRegistrasi = () => {
     setIsDetailModalOpen(true);
   };
 
+  // NEW: Handler for Tinjau Kembali button
+  const handleTinjauKembaliClick = (tagihan: Tagihan) => {
+    setSelectedTagihanForTinjau(tagihan);
+    setIsTinjauModalOpen(true);
+    // No further logic for now, as per instructions.
+  };
+
   const queueTotalPages = queueItemsPerPage === -1 ? 1 : Math.ceil(queueTotalItems / queueItemsPerPage);
   const historyTotalPages = historyItemsPerPage === -1 ? 1 : Math.ceil(historyTotalItems / historyItemsPerPage);
 
@@ -506,15 +523,47 @@ const PortalRegistrasi = () => {
                       <TableCell>{tagihan.uraian}</TableCell>
                       <TableCell>Rp{tagihan.jumlah_kotor.toLocaleString('id-ID')}</TableCell>
                       <TableCell className="text-center">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          title="Registrasi Tagihan"
-                          onClick={() => handleRegistrasiClick(tagihan)}
-                          disabled={isConfirming}
-                        >
-                          <CheckCircleIcon className="h-5 w-5 text-green-500" />
-                        </Button>
+                        {tagihan.status_tagihan === 'Menunggu Registrasi' && (
+                          <div className="flex justify-center space-x-2">
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    title="Registrasi Tagihan"
+                                    onClick={() => handleRegistrasiClick(tagihan)}
+                                    disabled={isConfirming}
+                                  >
+                                    <CheckCircleIcon className="h-5 w-5 text-green-500" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Registrasi Tagihan</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                            {/* NEW: Tinjau Kembali Button */}
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    title="Tinjau Kembali"
+                                    onClick={() => handleTinjauKembaliClick(tagihan)}
+                                    disabled={isConfirming}
+                                  >
+                                    <Undo2Icon className="h-5 w-5 text-red-500" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Tinjau Kembali</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </div>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -652,6 +701,23 @@ const PortalRegistrasi = () => {
         onClose={() => setIsDetailModalOpen(false)}
         tagihan={selectedTagihanForDetail}
       />
+
+      {/* Placeholder for Tinjau Kembali Modal (not implemented in this step) */}
+      {isTinjauModalOpen && (
+        <Dialog open={isTinjauModalOpen} onOpenChange={setIsTinjauModalOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Tinjau Kembali Tagihan</DialogTitle>
+              <DialogDescription>
+                Detail untuk tagihan {selectedTagihanForTinjau?.nomor_spm} akan ditampilkan di sini.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button onClick={() => setIsTinjauModalOpen(false)}>Tutup</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 };
