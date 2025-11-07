@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useSession } from '@/contexts/SessionContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -47,6 +47,12 @@ const AdminCustomLogin = () => {
   const [appSubtitle2, setAppSubtitle2] = useState('Pemerintah Daerah Kabupaten Gorontalo'); // New state for subtitle 2
   const [loadingBranding, setLoadingBranding] = useState(true);
 
+  // NEW STATES FOR ANNOUNCEMENT BOARD
+  const [announcementVisibility, setAnnouncementVisibility] = useState(false);
+  const [announcementContent, setAnnouncementContent] = useState('');
+  const [isSavingAnnouncement, setIsSavingAnnouncement] = useState(false);
+
+
   // Generic function to update a setting in app_settings table
   const updateSetting = useCallback(async (key: string, value: string) => {
     try {
@@ -88,6 +94,10 @@ const AdminCustomLogin = () => {
       setAppLogoUrl(settingsMap.get('app_logo_url') || null);
       setAppSubtitle1(settingsMap.get('app_subtitle_1') || '(Aplikasi Registrasi Tagihan)'); // Set subtitle 1
       setAppSubtitle2(settingsMap.get('app_subtitle_2') || 'Pemerintah Daerah Kabupaten Gorontalo'); // Set subtitle 2
+
+      // NEW: Fetch announcement settings
+      setAnnouncementVisibility(settingsMap.get('announcement_visibility') === 'true');
+      setAnnouncementContent(settingsMap.get('announcement_content') || '');
 
     } catch (error: any) {
       console.error('Error fetching settings:', error.message);
@@ -254,6 +264,21 @@ const AdminCustomLogin = () => {
     }
   };
 
+  // NEW: Function to save announcement settings
+  const handleSaveAnnouncementSettings = async () => {
+    setIsSavingAnnouncement(true);
+    try {
+      await updateSetting('announcement_visibility', String(announcementVisibility));
+      await updateSetting('announcement_content', announcementContent);
+      toast.success('Pengaturan papan informasi berhasil disimpan!');
+    } catch (error: any) {
+      console.error('Error saving announcement settings:', error.message);
+      toast.error('Gagal menyimpan pengaturan papan informasi: ' + error.message);
+    } finally {
+      setIsSavingAnnouncement(false);
+    }
+  };
+
 
   if (sessionLoading || loadingBranding) {
     return (
@@ -354,6 +379,38 @@ const AdminCustomLogin = () => {
                   </div>
                 )}
               </div>
+            </CardContent>
+          </Card>
+
+          {/* NEW: Pengaturan Papan Informasi Card */}
+          <Card className="shadow-sm rounded-lg">
+            <CardHeader>
+              <CardTitle className="text-xl font-semibold">Pengaturan Papan Informasi</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="announcement-visibility">Tampilkan Papan Informasi</Label>
+                <Switch
+                  id="announcement-visibility"
+                  checked={announcementVisibility}
+                  onCheckedChange={setAnnouncementVisibility}
+                  aria-label="Toggle announcement board visibility"
+                  className="data-[state=checked]:bg-green-500"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="announcement-content">Konten Papan Informasi</Label>
+                <Textarea
+                  id="announcement-content"
+                  value={announcementContent}
+                  onChange={(e) => setAnnouncementContent(e.target.value)}
+                  placeholder="Masukkan pesan yang akan ditampilkan di papan informasi..."
+                  rows={5}
+                />
+              </div>
+              <Button onClick={handleSaveAnnouncementSettings} disabled={isSavingAnnouncement} className="w-full">
+                {isSavingAnnouncement ? 'Menyimpan...' : 'Simpan Pengaturan Papan Informasi'}
+              </Button>
             </CardContent>
           </Card>
 
