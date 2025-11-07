@@ -410,6 +410,8 @@ const AdminCustomLogin = () => {
                   placeholder="Masukkan pesan yang akan ditampilkan di papan informasi..."
                   rows={5}
                 />
+                {/* Helper text for Markdown */}
+                <p className="text-xs text-muted-foreground">Gunakan format Markdown (misal: `**bold**`, `*italic*`, `1. list item`).</p>
               </div>
               <Button onClick={handleSaveAnnouncementSettings} disabled={isSavingAnnouncement} className="w-full">
                 {isSavingAnnouncement ? 'Menyimpan...' : 'Simpan Pengaturan Papan Informasi'}
