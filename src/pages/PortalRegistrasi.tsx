@@ -821,7 +821,7 @@ const PortalRegistrasi = () => {
                 <p className="col-span-2 font-medium">{formatDate(selectedTagihanForTinjau?.waktu_input)}</p>
               </div>
               {/* END NEW: Added full tagihan details */}
-              <div className="grid gap-2 col-span-3"> {/* Adjusted col-span for consistency */}
+              <div className="grid gap-2"> {/* Adjusted col-span for consistency */}
                 <Label htmlFor="catatan-tinjau">Catatan Tinjau Kembali</Label>
                 <Textarea
                   id="catatan-tinjau"
