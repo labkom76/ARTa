@@ -31,7 +31,7 @@ import { toast } from 'sonner';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { PlusCircleIcon, SearchIcon, EditIcon, Trash2Icon, FileDownIcon, ArrowUp, ArrowDown } from 'lucide-react'; // Import FileDownIcon, ArrowUp, ArrowDown
+import { PlusCircleIcon, SearchIcon, EditIcon, Trash2Icon, FileDownIcon, ArrowUp, ArrowDown, FilePenLine } from 'lucide-react'; // Import FileDownIcon, ArrowUp, ArrowDown, FilePenLine
 import { Textarea } from '@/components/ui/textarea';
 import DeleteConfirmationDialog from '@/components/DeleteConfirmationDialog';
 import TagihanDetailDialog from '@/components/TagihanDetailDialog'; // Import the new detail dialog
@@ -101,6 +101,7 @@ interface Tagihan {
   kode_jadwal?: string; // Add kode_jadwal to Tagihan interface
   nomor_urut?: number; // Add nomor_urut to Tagihan interface
   sumber_dana?: string; // Add sumber_dana to Tagihan interface
+  catatan_registrasi?: string; // NEW: Add catatan_registrasi
 }
 
 // --- FUNGSI BARU: isNomorSpmDuplicate (MODIFIED) ---
@@ -179,7 +180,7 @@ const PortalSKPD = () => {
       uraian: '',
       jumlah_kotor: 0,
       jenis_spm: '',
-      jenis_tagihan: '',
+            jenis_tagihan: '',
       kode_jadwal: '', // Default value for new field
       nomor_urut_tagihan: 1, // Default value for new field
       sumber_dana: '', // Default value for new field
@@ -198,7 +199,7 @@ const PortalSKPD = () => {
       if (profile.peran === 'SKPD' && (!profile.asal_skpd || !profile.is_active)) {
         setIsAccountVerified(false);
         if (!toastShownRef.current) {
-          toast.error('Akun belum diverifikasi atau diblokir. Silakan hubungi admin untuk melanjutkan.');
+          toast.error('Akun Anda belum diverifikasi atau diblokir. Silakan hubungi admin untuk melanjutkan.');
           toastShownRef.current = true;
         }
       } else {
@@ -490,11 +491,28 @@ const PortalSKPD = () => {
             nomor_urut: values.nomor_urut_tagihan, // Update nomor_urut
             nomor_spm: newNomorSpm, // Update with the newly generated SPM
             sumber_dana: values.sumber_dana, // Update sumber_dana
+            status_tagihan: 'Menunggu Registrasi', // NEW: Reset status to Menunggu Registrasi
+            catatan_registrasi: null, // NEW: Clear catatan_registrasi
           })
           .eq('id_tagihan', editingTagihan.id_tagihan)
           .eq('id_pengguna_input', user.id);
 
         if (error) throw error;
+
+        // NEW: Send notification to Registration Staff
+        const { error: notificationError } = await supabase
+          .from('notifications')
+          .insert({
+            user_id: 'staf_registrasi_id_placeholder', // Placeholder: Replace with actual Registration Staff ID(s)
+            message: `Tagihan SPM ${newNomorSpm} dari SKPD ${profile.asal_skpd} telah diperbarui dan siap diregistrasi ulang.`,
+            is_read: false,
+            tagihan_id: editingTagihan.id_tagihan,
+          });
+
+        if (notificationError) {
+          console.error('Error inserting notification for Registration Staff:', notificationError.message);
+        }
+
         toast.success('Tagihan berhasil diperbarui!');
       } else {
         const { error } = await supabase.from('database_tagihan').insert({
@@ -664,6 +682,7 @@ const PortalSKPD = () => {
               <SelectContent>
                 <SelectItem value="Semua Status">Semua Status</SelectItem>
                 <SelectItem value="Menunggu Registrasi">Menunggu Registrasi</SelectItem>
+                <SelectItem value="Tinjau Kembali">Tinjau Kembali</SelectItem> {/* NEW: Add Tinjau Kembali to filter */}
                 <SelectItem value="Menunggu Verifikasi">Menunggu Verifikasi</SelectItem>
                 <SelectItem value="Diteruskan">Diteruskan</SelectItem>
                 <SelectItem value="Dikembalikan">Dikembalikan</SelectItem>
@@ -777,7 +796,7 @@ const PortalSKPD = () => {
                           <TableCell>Rp{tagihan.jumlah_kotor.toLocaleString('id-ID')}</TableCell>
                           <TableCell><StatusBadge status={tagihan.status_tagihan} /></TableCell>
                           <TableCell className="text-center">
-                            {tagihan.status_tagihan === 'Menunggu Registrasi' ? (
+                            {tagihan.status_tagihan === 'Menunggu Registrasi' || tagihan.status_tagihan === 'Tinjau Kembali' ? ( // NEW: Conditional rendering for 'Tinjau Kembali'
                               <div className="flex justify-center space-x-2">
                                 <Button
                                   variant="outline"
@@ -786,7 +805,7 @@ const PortalSKPD = () => {
                                   title="Edit Tagihan"
                                   disabled={!isAccountVerified || !profile?.is_active}
                                 >
-                                  <EditIcon className="h-4 w-4" />
+                                  <FilePenLine className="h-4 w-4" /> {/* Changed to FilePenLine icon */}
                                 </Button>
                                 <Button
                                   variant="destructive"
@@ -843,6 +862,14 @@ const PortalSKPD = () => {
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4">
+            {/* NEW: Display catatan_registrasi if status is 'Tinjau Kembali' */}
+            {editingTagihan && editingTagihan.status_tagihan === 'Tinjau Kembali' && editingTagihan.catatan_registrasi && (
+              <div className="grid gap-2 p-4 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-700 rounded-md mb-4">
+                <Label className="text-red-700 dark:text-red-300 font-semibold">Catatan Peninjauan Kembali dari Staf Registrasi:</Label>
+                <p className="text-sm text-red-600 dark:text-red-400">{editingTagihan.catatan_registrasi}</p>
+              </div>
+            )}
+
             {/* Pratinjau Nomor SPM Otomatis */}
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="nomor_spm_otomatis" className="text-right">
