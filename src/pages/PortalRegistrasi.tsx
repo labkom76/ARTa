@@ -49,6 +49,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"; // Import Tooltip components
+import { Textarea } from '@/components/ui/textarea'; // Import Textarea
 
 interface VerificationItem {
   item: string;
@@ -75,6 +76,7 @@ interface Tagihan {
   detail_verifikasi?: VerificationItem[];
   nomor_verifikasi?: string;
   nama_verifikator?: string;
+  catatan_registrasi?: string; // NEW: Add catatan_registrasi
 }
 
 const PortalRegistrasi = () => {
@@ -114,6 +116,8 @@ const PortalRegistrasi = () => {
   // NEW: State for Tinjau Kembali Modal
   const [isTinjauModalOpen, setIsTinjauModalOpen] = useState(false);
   const [selectedTagihanForTinjau, setSelectedTagihanForTinjau] = useState<Tagihan | null>(null);
+  const [catatanTinjau, setCatatanTinjau] = useState(''); // NEW: State for Tinjau Kembali notes
+  const [isSubmittingTinjau, setIsSubmittingTinjau] = useState(false); // NEW: State for Tinjau Kembali submission
 
   // Refs to track previous values for determining pagination-only changes
   const prevQueueSearchQuery = useRef(searchQuery);
@@ -410,8 +414,62 @@ const PortalRegistrasi = () => {
   // NEW: Handler for Tinjau Kembali button
   const handleTinjauKembaliClick = (tagihan: Tagihan) => {
     setSelectedTagihanForTinjau(tagihan);
+    setCatatanTinjau(''); // Reset catatan saat modal dibuka
     setIsTinjauModalOpen(true);
-    // No further logic for now, as per instructions.
+  };
+
+  // NEW: Handler for submitting Tinjau Kembali
+  const handleSubmitTinjauKembali = async () => {
+    if (!selectedTagihanForTinjau) {
+      toast.error('Tidak ada tagihan yang dipilih untuk ditinjau kembali.');
+      return;
+    }
+    if (!catatanTinjau.trim()) {
+      toast.error('Catatan wajib diisi untuk meninjau kembali tagihan.');
+      return;
+    }
+
+    setIsSubmittingTinjau(true);
+    try {
+      const { error } = await supabase
+        .from('database_tagihan')
+        .update({
+          status_tagihan: 'Tinjau Kembali',
+          catatan_registrasi: catatanTinjau.trim(),
+          // Clear any previous registration info if it was registered before being returned
+          nomor_registrasi: null,
+          waktu_registrasi: null,
+          nama_registrator: null,
+        })
+        .eq('id_tagihan', selectedTagihanForTinjau.id_tagihan);
+
+      if (error) throw error;
+
+      // Insert notification for the SKPD user
+      const { error: notificationError } = await supabase
+        .from('notifications')
+        .insert({
+          user_id: selectedTagihanForTinjau.id_pengguna_input,
+          message: `Tagihan SPM ${selectedTagihanForTinjau.nomor_spm} Anda dikembalikan untuk ditinjau kembali.`,
+          is_read: false,
+          tagihan_id: selectedTagihanForTinjau.id_tagihan,
+        });
+
+      if (notificationError) {
+        console.error('Error inserting notification for Tinjau Kembali:', notificationError.message);
+      }
+
+      toast.success(`Tagihan ${selectedTagihanForTinjau.nomor_spm} berhasil ditinjau kembali.`);
+      setIsTinjauModalOpen(false);
+      setCatatanTinjau('');
+      fetchQueueTagihan(); // Refresh the queue list
+      fetchHistoryTagihan(); // Refresh history (though it won't appear here, good practice)
+    } catch (error: any) {
+      console.error('Error submitting Tinjau Kembali:', error.message);
+      toast.error('Gagal meninjau kembali tagihan: ' + error.message);
+    } finally {
+      setIsSubmittingTinjau(false);
+    }
   };
 
   const queueTotalPages = queueItemsPerPage === -1 ? 1 : Math.ceil(queueTotalItems / queueItemsPerPage);
@@ -702,22 +760,49 @@ const PortalRegistrasi = () => {
         tagihan={selectedTagihanForDetail}
       />
 
-      {/* Placeholder for Tinjau Kembali Modal (not implemented in this step) */}
-      {isTinjauModalOpen && (
-        <Dialog open={isTinjauModalOpen} onOpenChange={setIsTinjauModalOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Tinjau Kembali Tagihan</DialogTitle>
-              <DialogDescription>
-                Detail untuk tagihan {selectedTagihanForTinjau?.nomor_spm} akan ditampilkan di sini.
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter>
-              <Button onClick={() => setIsTinjauModalOpen(false)}>Tutup</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      )}
+      {/* NEW: Modal for Tinjau Kembali */}
+      <Dialog open={isTinjauModalOpen} onOpenChange={setIsTinjauModalOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Tinjau Kembali Tagihan</DialogTitle>
+            <DialogDescription>
+              Masukkan catatan untuk tagihan yang akan ditinjau kembali.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label className="text-right">Nomor SPM</Label>
+              <p className="col-span-3 font-medium">{selectedTagihanForTinjau?.nomor_spm || '-'}</p>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label className="text-right">Nama SKPD</Label>
+              <p className="col-span-3 font-medium">{selectedTagihanForTinjau?.nama_skpd || '-'}</p>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="catatan-tinjau">Catatan Tinjau Kembali</Label>
+              <Textarea
+                id="catatan-tinjau"
+                placeholder="Wajib diisi: Jelaskan alasan peninjauan kembali..."
+                value={catatanTinjau}
+                onChange={(e) => setCatatanTinjau(e.target.value)}
+                rows={4}
+                disabled={isSubmittingTinjau}
+              />
+              {!catatanTinjau.trim() && (
+                <p className="text-red-500 text-sm mt-1">Catatan wajib diisi.</p>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsTinjauModalOpen(false)} disabled={isSubmittingTinjau}>
+              Batal
+            </Button>
+            <Button onClick={handleSubmitTinjauKembali} disabled={isSubmittingTinjau || !catatanTinjau.trim()}>
+              {isSubmittingTinjau ? 'Memproses...' : 'Submit Tinjau Kembali'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
