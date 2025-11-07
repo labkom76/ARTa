@@ -22,6 +22,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { supabase } from '@/integrations/supabase/client';
+import { Combobox } from '@/components/ui/combobox'; // Import the new Combobox
 
 interface UserProfile {
   id: string;
@@ -61,7 +62,7 @@ type AddUserFormValues = z.infer<typeof formSchema>;
 
 const AddUserDialog: React.FC<AddUserDialogProps> = ({ isOpen, onClose, onUserAdded, editingUser }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [skpdOptions, setSkpdOptions] = useState<string[]>([]); // State to store SKPD options
+  const [skpdOptions, setSkpdOptions] = useState<{ value: string; label: string }[]>([]); // State to store SKPD options in Combobox format
 
   const form = useForm<AddUserFormValues>({
     resolver: zodResolver(formSchema),
@@ -86,7 +87,8 @@ const AddUserDialog: React.FC<AddUserDialogProps> = ({ isOpen, onClose, onUserAd
           .order('nama_skpd', { ascending: true });
 
         if (error) throw error;
-        setSkpdOptions(data.map(item => item.nama_skpd));
+        // Map to { value: string, label: string } format for Combobox
+        setSkpdOptions(data.map(item => ({ value: item.nama_skpd, label: item.nama_skpd })));
       } catch (error: any) {
         console.error('Error fetching SKPD options:', error.message);
         toast.error('Gagal memuat daftar SKPD: ' + error.message);
@@ -316,22 +318,14 @@ const AddUserDialog: React.FC<AddUserDialogProps> = ({ isOpen, onClose, onUserAd
               name="asal_skpd"
               control={form.control}
               render={({ field }) => (
-                <Select
+                <Combobox
+                  options={skpdOptions}
+                  value={field.value || ''}
                   onValueChange={field.onChange}
-                  value={field.value || ''} // Ensure value is string for Select
+                  placeholder="Pilih Asal SKPD"
                   disabled={isSubmitting || selectedPeran !== 'SKPD'} // Disable if not SKPD
-                >
-                  <SelectTrigger className="col-span-3">
-                    <SelectValue placeholder="Pilih Asal SKPD" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {skpdOptions.map((skpd) => (
-                      <SelectItem key={skpd} value={skpd}>
-                        {skpd}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  className="col-span-3"
+                />
               )}
             />
             {form.formState.errors.asal_skpd && (

@@ -1,10 +1,10 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { Check, ChevronsUpDown } from "lucide-react"
+import * as React from "react";
+import { Check, ChevronsUpDown } from "lucide-react";
 
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import {
   Command,
   CommandEmpty,
@@ -12,12 +12,12 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-} from "@/components/ui/command"
+} from "@/components/ui/command";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover"
+} from "@/components/ui/popover";
 
 interface ComboboxOption {
   value: string;
@@ -26,7 +26,7 @@ interface ComboboxOption {
 
 interface ComboboxProps {
   options: ComboboxOption[];
-  value: string | null;
+  value?: string;
   onValueChange: (value: string) => void;
   placeholder?: string;
   disabled?: boolean;
@@ -37,13 +37,11 @@ export function Combobox({
   options,
   value,
   onValueChange,
-  placeholder = "Pilih opsi...",
+  placeholder = "Pilih...",
   disabled = false,
   className,
 }: ComboboxProps) {
   const [open, setOpen] = React.useState(false);
-
-  const selectedLabel = options.find((option) => option.value === value)?.label;
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -52,30 +50,51 @@ export function Combobox({
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className={cn("w-full justify-between", className)}
+          className={cn("w-full justify-between text-left", className)}
           disabled={disabled}
         >
-          {selectedLabel || placeholder}
+          <span className="truncate">
+            {value
+              ? options.find((option) => option.value === value)?.label
+              : placeholder}
+          </span>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-        <Command>
-          <CommandInput placeholder="Cari opsi..." />
-          <CommandList>
-            <CommandEmpty>Tidak ada opsi ditemukan.</CommandEmpty>
+      <PopoverContent 
+        className="w-[--radix-popover-trigger-width] p-0"
+        // Tambahkan ini untuk mencegah popover menutup saat scroll
+        onWheel={(e) => {
+          e.stopPropagation();
+        }}
+      >
+        <Command
+          // Tambahkan filter manual untuk memastikan scroll tidak terganggu
+          filter={(value, search) => {
+            if (value.toLowerCase().includes(search.toLowerCase())) return 1;
+            return 0;
+          }}
+        >
+          <CommandInput placeholder="Cari SKPD..." />
+          <CommandEmpty>Tidak ada opsi ditemukan.</CommandEmpty>
+          <CommandList 
+            className="max-h-64 overflow-y-auto"
+            // Pastikan scroll event tidak di-prevent
+            style={{ 
+              overflowY: 'auto',
+              maxHeight: '16rem' 
+            }}
+          >
             <CommandGroup>
               {options.map((option) => (
                 <CommandItem
                   key={option.value}
                   value={option.label}
-                  onSelect={(currentLabel) => {
+                  onSelect={(currentValue) => {
                     const selectedOption = options.find(
-                      (opt) => opt.label.toLowerCase() === currentLabel.toLowerCase()
+                      (opt) => opt.label.toLowerCase() === currentValue.toLowerCase()
                     );
-                    if (selectedOption) {
-                      onValueChange(selectedOption.value);
-                    }
+                    onValueChange(selectedOption ? selectedOption.value : "");
                     setOpen(false);
                   }}
                 >
