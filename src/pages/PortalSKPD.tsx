@@ -895,7 +895,7 @@ const PortalSKPD = () => {
                 type="number"
                 {...form.register('nomor_urut_tagihan', { valueAsNumber: true })}
                 className="col-span-3"
-                disabled={!isAccountVerified || !profile?.is_active || !!editingTagihan} // Disable if editing or not verified
+                disabled={!isAccountVerified || !profile?.is_active} {/* MODIFIED: Removed || !!editingTagihan */}
               />
               {form.formState.errors.nomor_urut_tagihan && (
                 <p className="col-span-4 text-right text-red-500 text-sm">
