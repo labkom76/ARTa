@@ -1,13 +1,13 @@
 import React from 'react';
 import { Badge } from '@/components/ui/badge';
-import { TriangleAlertIcon, InfoIcon, CheckCircleIcon, XCircleIcon } from 'lucide-react'; // Import icons
+import { TriangleAlertIcon, InfoIcon, CheckCircleIcon, XCircleIcon, FilePenLine } from 'lucide-react'; // Import FilePenLine icon
 
 interface StatusBadgeProps {
   status: string;
 }
 
 const StatusBadge: React.FC<StatusBadgeProps> = ({ status }) => {
-  let variant: 'default' | 'secondary' | 'destructive' | 'outline' | 'success' | 'warning' | 'info' | 'error';
+  let variant: 'default' | 'secondary' | 'destructive' | 'outline' | 'success' | 'warning' | 'info' | 'error' | 'review-needed';
   let IconComponent: React.ElementType | null = null;
 
   switch (status) {
@@ -26,6 +26,10 @@ const StatusBadge: React.FC<StatusBadgeProps> = ({ status }) => {
     case 'Dikembalikan':
       variant = 'error';
       IconComponent = XCircleIcon;
+      break;
+    case 'Tinjau Kembali': // NEW: Case for 'Tinjau Kembali'
+      variant = 'review-needed';
+      IconComponent = FilePenLine;
       break;
     default:
       variant = 'default'; // Fallback for unknown statuses

@@ -79,6 +79,10 @@ export default {
           DEFAULT: "hsl(var(--error))",
           foreground: "hsl(var(--error-foreground))",
         },
+        'review-needed': {
+          DEFAULT: "hsl(var(--review-needed))",
+          foreground: "hsl(var(--review-needed-foreground))",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",
