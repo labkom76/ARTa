@@ -268,7 +268,7 @@ const AdminCustomLogin = () => {
   const handleSaveAnnouncementSettings = async () => {
     setIsSavingAnnouncement(true);
     try {
-      await updateSetting('announcement_visibility', String(announcementVisibility));
+      // announcementVisibility sudah disimpan otomatis oleh switch, jadi hanya simpan content
       await updateSetting('announcement_content', announcementContent);
       toast.success('Pengaturan papan informasi berhasil disimpan!');
     } catch (error: any) {
@@ -393,7 +393,10 @@ const AdminCustomLogin = () => {
                 <Switch
                   id="announcement-visibility"
                   checked={announcementVisibility}
-                  onCheckedChange={setAnnouncementVisibility}
+                  onCheckedChange={(checked) => {
+                    setAnnouncementVisibility(checked); // Update local state
+                    updateSetting('announcement_visibility', String(checked)); // Persist to database immediately
+                  }}
                   aria-label="Toggle announcement board visibility"
                   className="data-[state=checked]:bg-green-500"
                 />
