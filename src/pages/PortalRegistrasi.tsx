@@ -50,6 +50,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"; // Import Tooltip components
 import { Textarea } from '@/components/ui/textarea'; // Import Textarea
+import { Combobox } from '@/components/ui/combobox'; // Import Combobox
 
 interface VerificationItem {
   item: string;
@@ -80,6 +81,11 @@ interface Tagihan {
   sumber_dana?: string; // Add sumber_dana
 }
 
+interface SkpdOption { // Define interface for SKPD options
+  value: string;
+  label: string;
+}
+
 const PortalRegistrasi = () => {
   const { user, profile, loading: sessionLoading } = useSession();
   const [queueTagihanList, setQueueTagihanList] = useState<Tagihan[]>([]);
@@ -89,8 +95,8 @@ const PortalRegistrasi = () => {
   const debouncedSearchQuery = useDebounce(searchQuery, 700);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  const [skpdOptions, setSkpdOptions] = useState<string[]>([]);
-  const [selectedSkpd, setSelectedSkpd] = useState<string>('Semua SKPD');
+  const [skpdOptions, setSkpdOptions] = useState<SkpdOption[]>([]); // Changed to SkpdOption[]
+  const [selectedSkpd, setSelectedSkpd] = useState<string>('Semua SKPD'); // Default value
 
   const [isRegistrasiModalOpen, setIsRegistrasiModalOpen] = useState(false);
   const [selectedTagihanForRegistrasi, setSelectedTagihanForRegistrasi] = useState<Tagihan | null>(null);
@@ -142,16 +148,17 @@ const PortalRegistrasi = () => {
     const fetchSkpdOptions = async () => {
       try {
         const { data, error } = await supabase
-          .from('database_tagihan')
+          .from('master_skpd') // Fetch from master_skpd
           .select('nama_skpd')
-          .eq('status_tagihan', 'Menunggu Registrasi');
+          .order('nama_skpd', { ascending: true });
 
         if (error) throw error;
 
-        const uniqueSkpd = Array.from(new Set(data.map(item => item.nama_skpd)))
-          .filter((skpd): skpd is string => skpd !== null && skpd.trim() !== '');
+        const uniqueSkpd: SkpdOption[] = Array.from(new Set(data.map(item => item.nama_skpd)))
+          .filter((skpd): skpd is string => skpd !== null && skpd.trim() !== '')
+          .map(skpd => ({ value: skpd, label: skpd })); // Map to { value, label } format
 
-        setSkpdOptions(['Semua SKPD', ...uniqueSkpd.sort()]);
+        setSkpdOptions([{ value: 'Semua SKPD', label: 'Semua SKPD' }, ...uniqueSkpd]); // Add 'Semua SKPD' option
       } catch (error: any) {
         console.error('Error fetching SKPD options:', error.message);
         toast.error('Gagal memuat daftar SKPD: ' + error.message);
@@ -183,7 +190,7 @@ const PortalRegistrasi = () => {
         query = query.ilike('nomor_spm', `%${debouncedSearchQuery}%`);
       }
 
-      if (selectedSkpd !== 'Semua SKPD') {
+      if (selectedSkpd !== 'Semua SKPD') { // Apply filter based on selectedSkpd
         query = query.eq('nama_skpd', selectedSkpd);
       }
 
@@ -526,18 +533,16 @@ const PortalRegistrasi = () => {
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
-            <Select onValueChange={setSelectedSkpd} value={selectedSkpd}>
-              <SelectTrigger className="w-full sm:w-[180px]">
-                <SelectValue placeholder="Filter SKPD" />
-              </SelectTrigger>
-              <SelectContent>
-                {skpdOptions.map((skpd) => (
-                  <SelectItem key={skpd} value={skpd}>
-                    {skpd}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Combobox
+              options={skpdOptions}
+              value={selectedSkpd}
+              onValueChange={(value) => {
+                setSelectedSkpd(value);
+                setQueueCurrentPage(1); // Reset page on SKPD change
+              }}
+              placeholder="Filter SKPD"
+              className="w-full sm:w-[180px]"
+            />
           </div>
           <div className="flex items-center space-x-2"> {/* Moved to top right */}
             <label htmlFor="queue-items-per-page" className="whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">Baris per halaman:</label>
