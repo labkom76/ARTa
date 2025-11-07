@@ -119,8 +119,8 @@ const MainLayout = () => {
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>Papan Informasi</DialogTitle>
-            <DialogDescription>
-              <ReactMarkdown className="prose dark:prose-invert">{announcementContent}</ReactMarkdown>
+            <DialogDescription className="prose dark:prose-invert"> {/* className moved here */}
+              <ReactMarkdown>{announcementContent}</ReactMarkdown>
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
