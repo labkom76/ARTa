@@ -755,7 +755,6 @@ const PortalSKPD = () => {
                           )}
                         </Button>
                       </TableHead>
-                      {/* Hapus TableHead Uraian */}
                       <TableHead>
                         <Button variant="ghost" onClick={() => handleSort('jumlah_kotor')} className="p-0 h-auto">
                           Jumlah Kotor
@@ -784,22 +783,13 @@ const PortalSKPD = () => {
                               <TableRow>
                                 <TableCell>{(currentPage - 1) * itemsPerPage + index + 1}</TableCell>
                                 <TableCell className="font-medium w-[180px] overflow-hidden"> {/* MODIFIED: Set fixed width and overflow */}
-                                  {/* Keep the existing Tooltip for Nomor SPM */}
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <span className="block max-w-full truncate whitespace-nowrap overflow-hidden text-ellipsis"> {/* MODIFIED: Added truncation classes */}
-                                        {tagihan.nomor_spm}
-                                      </span>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                      <p className="max-w-md">{tagihan.nomor_spm}</p>
-                                    </TooltipContent>
-                                  </Tooltip>
+                                  <span className="block max-w-full truncate whitespace-nowrap overflow-hidden text-ellipsis">
+                                    {tagihan.nomor_spm}
+                                  </span>
                                 </TableCell>
                                 <TableCell>{tagihan.jenis_spm}</TableCell>
                                 <TableCell>{tagihan.jenis_tagihan}</TableCell>
                                 <TableCell>{tagihan.sumber_dana || '-'}</TableCell>
-                                {/* Hapus TableCell Uraian */}
                                 <TableCell>Rp{tagihan.jumlah_kotor.toLocaleString('id-ID')}</TableCell>
                                 <TableCell><StatusBadge status={tagihan.status_tagihan} /></TableCell>
                                 <TableCell className="text-center w-[100px]"> {/* MODIFIED: Set fixed width for Aksi */}
