@@ -116,13 +116,16 @@ const MainLayout = () => {
 
       {/* Announcement Modal */}
       <Dialog open={isAnnouncementOpen} onOpenChange={setIsAnnouncementOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[425px] flex flex-col max-h-[90vh]"> {/* Added flex-col and max-h */}
           <DialogHeader>
             <DialogTitle>Papan Informasi</DialogTitle>
-            <DialogDescription className="prose dark:prose-invert"> {/* className moved here */}
+          </DialogHeader>
+          {/* Scrollable content area, taking remaining space */}
+          <div className="flex-1 overflow-y-auto px-6 py-2"> {/* px-6 to match DialogContent's horizontal padding, py-2 for vertical spacing */}
+            <DialogDescription className="prose dark:prose-invert">
               <ReactMarkdown>{announcementContent}</ReactMarkdown>
             </DialogDescription>
-          </DialogHeader>
+          </div>
           <DialogFooter>
             <Button onClick={() => setIsAnnouncementOpen(false)}>Tutup</Button>
           </DialogFooter>
