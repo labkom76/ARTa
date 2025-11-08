@@ -237,10 +237,10 @@ const PortalVerifikasi = () => {
         );
       }
 
-      // REMOVED: SKPD filter for queue, as per instruction to not filter yet
-      // if (selectedSkpdAntrian !== 'Semua SKPD') {
-      //   query = query.eq('nama_skpd', selectedSkpdAntrian);
-      // }
+      // NEW: Apply SKPD filter for queue
+      if (selectedSkpdAntrian !== 'Semua SKPD') {
+        query = query.eq('nama_skpd', selectedSkpdAntrian);
+      }
 
       if (queueItemsPerPage !== -1) {
         query = query.range(
@@ -299,7 +299,7 @@ const PortalVerifikasi = () => {
         setHistoryPanelTitle('Pengembalian Terakhir Anda');
         query = query
           .eq('status_tagihan', 'Dikembalikan')
-          .eq('id_korektor', user.id) // Filter by current corrector's ID
+          .eq('id_korektor', user.id)
           .gte('waktu_koreksi', todayStart)
           .lte('waktu_koreksi', todayEnd);
         query = query.order('waktu_koreksi', { ascending: false });
