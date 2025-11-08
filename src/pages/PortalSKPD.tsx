@@ -43,6 +43,7 @@ import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
+  TooltipProvider, // Import TooltipProvider
 } from "@/components/ui/tooltip"; // Import Tooltip components
 import { useLocation, useNavigate } from 'react-router-dom'; // Import useLocation and useNavigate
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'; // Import Card components
@@ -244,7 +245,7 @@ const PortalSKPD = () => {
           setKodeSkpd(data.kode_skpd);
         }
       };
-      fetchKodeSkpd();
+      fetchKodeSkpd(); // Corrected: Call fetchKodeSkpd() instead of fetchSkpd()
     } else {
       setKodeSkpd(null);
     }
@@ -343,7 +344,7 @@ const PortalSKPD = () => {
       }
 
       setTagihanList(data as Tagihan[]);
-      setTotalItems(count || 0);
+      setTotalItems(count || 0); // Ensure count is used here
 
     } catch (error: any) {
       console.error('Error fetching tagihan:', error.message);
@@ -722,7 +723,7 @@ const PortalSKPD = () => {
                   <TableHeader>
                     <TableRow>
                       <TableHead className="w-[50px]">No.</TableHead>
-                      <TableHead>
+                      <TableHead className="w-[180px]"> {/* MODIFIED: Set fixed width for Nomor SPM */}
                         <Button variant="ghost" onClick={() => handleSort('nomor_spm')} className="p-0 h-auto">
                           Nomor SPM
                           {sortColumn === 'nomor_spm' && (
@@ -754,7 +755,7 @@ const PortalSKPD = () => {
                           )}
                         </Button>
                       </TableHead>
-                      <TableHead className="min-w-[280px]">Uraian</TableHead>
+                      {/* Hapus TableHead Uraian */}
                       <TableHead>
                         <Button variant="ghost" onClick={() => handleSort('jumlah_kotor')} className="p-0 h-auto">
                           Jumlah Kotor
@@ -771,61 +772,73 @@ const PortalSKPD = () => {
                           )}
                         </Button>
                       </TableHead>
-                      <TableHead className="text-center">Aksi</TableHead>
+                      <TableHead className="text-center w-[100px]">Aksi</TableHead> {/* MODIFIED: Set fixed width for Aksi */}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {tagihanList.map((tagihan, index) => {
                       return (
-                        <TableRow key={tagihan.id_tagihan}>
-                          <TableCell>{(currentPage - 1) * itemsPerPage + index + 1}</TableCell>
-                          <TableCell className="font-medium">
-                            <Tooltip>
-                              <TooltipTrigger className="max-w-[250px] whitespace-nowrap overflow-hidden text-ellipsis block">
-                                {tagihan.nomor_spm}
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>{tagihan.nomor_spm}</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TableCell>
-                          <TableCell>{tagihan.jenis_spm}</TableCell>
-                          <TableCell>{tagihan.jenis_tagihan}</TableCell>
-                          <TableCell>{tagihan.sumber_dana || '-'}</TableCell>
-                          <TableCell className="min-w-[280px]">{tagihan.uraian}</TableCell>
-                          <TableCell>Rp{tagihan.jumlah_kotor.toLocaleString('id-ID')}</TableCell>
-                          <TableCell><StatusBadge status={tagihan.status_tagihan} /></TableCell>
-                          <TableCell className="text-center">
-                            {(tagihan.status_tagihan === 'Menunggu Registrasi' || tagihan.status_tagihan === 'Tinjau Kembali') ? (
-                              <div className="flex justify-center space-x-2">
-                                <Button
-                                  variant="outline"
-                                  size="icon"
-                                  onClick={() => handleEdit(tagihan)}
-                                  title="Edit Tagihan"
-                                  disabled={!isAccountVerified || !profile?.is_active}
-                                >
-                                  <FilePenLine className="h-4 w-4" />
-                                </Button>
-                                {tagihan.status_tagihan === 'Menunggu Registrasi' && ( // Only show delete for 'Menunggu Registrasi'
-                                  <Button
-                                    variant="destructive"
-                                    size="icon"
-                                    onClick={() => handleDeleteClick(tagihan.id_tagihan, tagihan.nomor_spm)}
-                                    title="Hapus Tagihan"
-                                    disabled={!isAccountVerified || !profile?.is_active}
-                                  >
-                                    <Trash2Icon className="h-4 w-4" />
-                                  </Button>
-                                )}
-                              </div>
-                            ) : (
-                              <Button variant="outline" size="sm" onClick={() => handleDetailClick(tagihan)}>
-                                Detail
-                              </Button>
-                            )}
-                          </TableCell>
-                        </TableRow>
+                        <TooltipProvider key={tagihan.id_tagihan + "-row-tooltip"}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <TableRow>
+                                <TableCell>{(currentPage - 1) * itemsPerPage + index + 1}</TableCell>
+                                <TableCell className="font-medium w-[180px] overflow-hidden"> {/* MODIFIED: Set fixed width and overflow */}
+                                  {/* Keep the existing Tooltip for Nomor SPM */}
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <span className="block max-w-full truncate whitespace-nowrap overflow-hidden text-ellipsis"> {/* MODIFIED: Added truncation classes */}
+                                        {tagihan.nomor_spm}
+                                      </span>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p className="max-w-md">{tagihan.nomor_spm}</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TableCell>
+                                <TableCell>{tagihan.jenis_spm}</TableCell>
+                                <TableCell>{tagihan.jenis_tagihan}</TableCell>
+                                <TableCell>{tagihan.sumber_dana || '-'}</TableCell>
+                                {/* Hapus TableCell Uraian */}
+                                <TableCell>Rp{tagihan.jumlah_kotor.toLocaleString('id-ID')}</TableCell>
+                                <TableCell><StatusBadge status={tagihan.status_tagihan} /></TableCell>
+                                <TableCell className="text-center w-[100px]"> {/* MODIFIED: Set fixed width for Aksi */}
+                                  {(tagihan.status_tagihan === 'Menunggu Registrasi' || tagihan.status_tagihan === 'Tinjau Kembali') ? (
+                                    <div className="flex justify-center space-x-2">
+                                      <Button
+                                        variant="outline"
+                                        size="icon"
+                                        onClick={() => handleEdit(tagihan)}
+                                        title="Edit Tagihan"
+                                        disabled={!isAccountVerified || !profile?.is_active}
+                                      >
+                                        <FilePenLine className="h-4 w-4" />
+                                      </Button>
+                                      {tagihan.status_tagihan === 'Menunggu Registrasi' && ( // Only show delete for 'Menunggu Registrasi'
+                                        <Button
+                                          variant="destructive"
+                                          size="icon"
+                                          onClick={() => handleDeleteClick(tagihan.id_tagihan, tagihan.nomor_spm)}
+                                          title="Hapus Tagihan"
+                                          disabled={!isAccountVerified || !profile?.is_active}
+                                        >
+                                          <Trash2Icon className="h-4 w-4" />
+                                        </Button>
+                                      )}
+                                    </div>
+                                  ) : (
+                                    <Button variant="outline" size="sm" onClick={() => handleDetailClick(tagihan)}>
+                                      Detail
+                                    </Button>
+                                  )}
+                                </TableCell>
+                              </TableRow>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p className="max-w-md">Uraian: {tagihan.uraian}</p> {/* Display uraian here */}
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       );
                     })}
                   </TableBody>
