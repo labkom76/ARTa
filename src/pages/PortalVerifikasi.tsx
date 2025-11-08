@@ -258,7 +258,7 @@ const PortalVerifikasi = () => {
           .lte('waktu_koreksi', todayEnd);
         query = query.order('waktu_koreksi', { ascending: false });
       } else {
-        // Fallback for other roles, or if no specific filter needed
+        // Fallback for other roles, or if no specific filter is needed
         setHistoryPanelTitle('Riwayat Verifikasi Hari Ini');
         query = query
           .in('status_tagihan', ['Diteruskan', 'Dikembalikan'])
