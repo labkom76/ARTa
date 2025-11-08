@@ -37,6 +37,7 @@ import { Label } from '@/components/ui/label';
 import useDebounce from '@/hooks/use-debounce';
 import KoreksiTagihanSidePanel from '@/components/KoreksiTagihanSidePanel'; // Import the new component
 import StatusBadge from '@/components/StatusBadge'; // Import StatusBadge
+import { Combobox } from '@/components/ui/combobox'; // Import Combobox
 
 interface VerificationItem {
   item: string;
@@ -71,6 +72,11 @@ interface Tagihan {
   catatan_koreksi?: string;
 }
 
+interface SkpdOption { // Define interface for SKPD options
+  value: string;
+  label: string;
+}
+
 const LOCK_TIMEOUT_MINUTES = 30; // Define lock timeout: 30 minutes
 
 const PortalVerifikasi = () => {
@@ -80,8 +86,10 @@ const PortalVerifikasi = () => {
   const [loadingQueuePagination, setLoadingQueuePagination] = useState(false); // New state for queue pagination loading
   const [queueSearchQuery, setQueueSearchQuery] = useState('');
   const debouncedQueueSearchQuery = useDebounce(queueSearchQuery, 500);
-  const [queueSkpdOptions, setQueueSkpdOptions] = useState<string[]>([]);
-  const [selectedQueueSkpd, setSelectedQueueSkpd] = useState<string>('Semua SKPD');
+  
+  // MODIFIED: Renamed and changed type for Combobox
+  const [skpdOptionsAntrian, setSkpdOptionsAntrian] = useState<SkpdOption[]>([]);
+  const [selectedSkpdAntrian, setSelectedSkpdAntrian] = useState<string>('Semua SKPD');
 
   // State for Queue Table Pagination
   const [queueCurrentPage, setQueueCurrentPage] = useState(1);
@@ -114,7 +122,7 @@ const PortalVerifikasi = () => {
 
   // Refs to track previous values for determining pagination-only changes
   const prevQueueSearchQueryRef = useRef(queueSearchQuery);
-  const prevSelectedQueueSkpdRef = useRef(selectedQueueSkpd);
+  const prevSelectedSkpdAntrianRef = useRef(selectedSkpdAntrian); // MODIFIED: Ref for new SKPD state
   const prevQueueItemsPerPageRef = useRef(queueItemsPerPage);
   const prevQueueCurrentPageRef = useRef(queueCurrentPage);
 
@@ -123,27 +131,28 @@ const PortalVerifikasi = () => {
   const prevHistoryItemsPerPageRef = useRef(historyItemsPerPage);
   const prevHistoryCurrentPageRef = useRef(historyCurrentPage);
 
-  // Fetch unique SKPD names for the queue filter dropdown
+  // Fetch unique SKPD names for the queue filter dropdown (MODIFIED)
   useEffect(() => {
-    const fetchQueueSkpdOptions = async () => {
+    const fetchSkpdOptionsForAntrian = async () => {
       try {
         const { data, error } = await supabase
-          .from('database_tagihan')
+          .from('master_skpd') // Fetch from master_skpd
           .select('nama_skpd')
-          .eq('status_tagihan', 'Menunggu Verifikasi');
+          .order('nama_skpd', { ascending: true });
 
         if (error) throw error;
 
-        const uniqueSkpd = Array.from(new Set(data.map(item => item.nama_skpd)))
-          .filter((skpd): skpd is string => skpd !== null && skpd.trim() !== '');
+        const uniqueSkpd: SkpdOption[] = Array.from(new Set(data.map(item => item.nama_skpd)))
+          .filter((skpd): skpd is string => skpd !== null && skpd.trim() !== '')
+          .map(skpd => ({ value: skpd, label: skpd }));
 
-        setQueueSkpdOptions(['Semua SKPD', ...uniqueSkpd.sort()]);
+        setSkpdOptionsAntrian([{ value: 'Semua SKPD', label: 'Semua SKPD' }, ...uniqueSkpd]);
       } catch (error: any) {
-        console.error('Error fetching queue SKPD options:', error.message);
+        console.error('Error fetching SKPD options for antrian:', error.message);
         toast.error('Gagal memuat daftar SKPD untuk antrian: ' + error.message);
       }
     };
-    fetchQueueSkpdOptions();
+    fetchSkpdOptionsForAntrian();
   }, []);
 
   // Fetch unique SKPD names for the history filter dropdown
@@ -228,9 +237,10 @@ const PortalVerifikasi = () => {
         );
       }
 
-      if (selectedQueueSkpd !== 'Semua SKPD') {
-        query = query.eq('nama_skpd', selectedQueueSkpd);
-      }
+      // REMOVED: SKPD filter for queue, as per instruction to not filter yet
+      // if (selectedSkpdAntrian !== 'Semua SKPD') {
+      //   query = query.eq('nama_skpd', selectedSkpdAntrian);
+      // }
 
       if (queueItemsPerPage !== -1) {
         query = query.range(
@@ -350,7 +360,7 @@ const PortalVerifikasi = () => {
     if (
       prevQueueCurrentPageRef.current !== queueCurrentPage &&
       prevQueueSearchQueryRef.current === debouncedQueueSearchQuery &&
-      prevSelectedQueueSkpdRef.current === selectedQueueSkpd &&
+      prevSelectedSkpdAntrianRef.current === selectedSkpdAntrian && // MODIFIED: Use new ref
       prevQueueItemsPerPageRef.current === queueItemsPerPage
     ) {
       isPaginationOnlyChange = true;
@@ -359,11 +369,11 @@ const PortalVerifikasi = () => {
     fetchQueueTagihan(isPaginationOnlyChange);
 
     prevQueueSearchQueryRef.current = debouncedQueueSearchQuery;
-    prevSelectedQueueSkpdRef.current = selectedQueueSkpd;
+    prevSelectedSkpdAntrianRef.current = selectedSkpdAntrian; // MODIFIED: Update new ref
     prevQueueItemsPerPageRef.current = queueItemsPerPage;
     prevQueueCurrentPageRef.current = queueCurrentPage;
 
-  }, [user, sessionLoading, profile, debouncedQueueSearchQuery, selectedQueueSkpd, queueCurrentPage, queueItemsPerPage]);
+  }, [user, sessionLoading, profile, debouncedQueueSearchQuery, selectedSkpdAntrian, queueCurrentPage, queueItemsPerPage]); // MODIFIED: Add selectedSkpdAntrian to dependencies
 
   useEffect(() => {
     let isPaginationOnlyChange = false;
@@ -634,18 +644,17 @@ const PortalVerifikasi = () => {
                   }}
                 />
               </div>
-              <Select onValueChange={(value) => { setSelectedQueueSkpd(value); setQueueCurrentPage(1); }} value={selectedQueueSkpd}>
-                <SelectTrigger className="w-full sm:w-[180px]">
-                  <SelectValue placeholder="Filter SKPD" />
-                </SelectTrigger>
-                <SelectContent>
-                  {queueSkpdOptions.map((skpd) => (
-                    <SelectItem key={skpd} value={skpd}>
-                      {skpd}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {/* MODIFIED: Replaced Select with Combobox */}
+              <Combobox
+                options={skpdOptionsAntrian}
+                value={selectedSkpdAntrian}
+                onValueChange={(value) => {
+                  setSelectedSkpdAntrian(value);
+                  setQueueCurrentPage(1); // Reset page on SKPD change
+                }}
+                placeholder="Filter SKPD"
+                className="w-full sm:w-[180px]"
+              />
             </div>
             <div className="flex items-center space-x-2">
               <Label htmlFor="queue-items-per-page" className="whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">Baris per halaman:</Label>
