@@ -582,7 +582,6 @@ const PortalRegistrasi = () => {
                     <TableHead>Nama SKPD</TableHead>
                     <TableHead>Nomor SPM</TableHead>
                     <TableHead>Jenis SPM</TableHead>
-                    <TableHead>Uraian</TableHead>
                     <TableHead>Jumlah Kotor</TableHead>
                     <TableHead className="text-center">Aksi</TableHead>
                   </TableRow>
@@ -595,7 +594,6 @@ const PortalRegistrasi = () => {
                       <TableCell className="font-medium">{tagihan.nama_skpd}</TableCell>
                       <TableCell>{tagihan.nomor_spm}</TableCell>
                       <TableCell>{tagihan.jenis_spm}</TableCell>
-                      <TableCell>{tagihan.uraian}</TableCell>
                       <TableCell>Rp{tagihan.jumlah_kotor.toLocaleString('id-ID')}</TableCell>
                       <TableCell className="text-center">
                         {tagihan.status_tagihan === 'Menunggu Registrasi' && (
@@ -782,10 +780,8 @@ const PortalRegistrasi = () => {
         <DialogContent className="sm:max-w-[425px] max-h-[90vh] flex flex-col"> {/* Added max-h and flex-col */}
           <DialogHeader>
             <DialogTitle>Tinjau Kembali Tagihan</DialogTitle>
-            <DialogDescription>
-              Masukkan catatan untuk tagihan yang akan ditinjau kembali.
-            </DialogDescription>
           </DialogHeader>
+          {/* Scrollable content area, taking remaining space */}
           <div className="flex-1 overflow-y-auto pr-4 -mr-4"> {/* Scrollable content wrapper */}
             <div className="grid gap-4 py-4">
               <div className="grid grid-cols-3 items-center gap-4">
