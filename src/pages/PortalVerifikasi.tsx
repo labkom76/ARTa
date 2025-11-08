@@ -101,7 +101,8 @@ const PortalVerifikasi = () => {
   const [loadingHistoryPagination, setLoadingHistoryPagination] = useState(false); // New state for history pagination loading
   const [historySearchQuery, setHistorySearchQuery] = useState(''); // New state for history search
   const debouncedHistorySearchQuery = useDebounce(historySearchQuery, 500); // Debounced history search
-  const [historySkpdOptions, setHistorySkpdOptions] = useState<string[]>([]); // New state for history SKPD options
+  // MODIFIED: Changed type to SkpdOption[] and renamed for clarity
+  const [skpdOptionsHistory, setSkpdOptionsHistory] = useState<SkpdOption[]>([]); 
   const [selectedHistorySkpd, setSelectedHistorySkpd] = useState<string>('Semua SKPD'); // New state for selected history SKPD
   const [historyPanelTitle, setHistoryPanelTitle] = useState('Riwayat Verifikasi Hari Ini'); // Dynamic title for history panel
 
@@ -133,7 +134,7 @@ const PortalVerifikasi = () => {
 
   // Fetch unique SKPD names for the queue filter dropdown (MODIFIED)
   useEffect(() => {
-    const fetchSkpdOptionsForAntrian = async () => {
+    const fetchSkpdOptions = async () => {
       try {
         const { data, error } = await supabase
           .from('master_skpd') // Fetch from master_skpd
@@ -147,63 +148,16 @@ const PortalVerifikasi = () => {
           .map(skpd => ({ value: skpd, label: skpd }));
 
         setSkpdOptionsAntrian([{ value: 'Semua SKPD', label: 'Semua SKPD' }, ...uniqueSkpd]);
+        setSkpdOptionsHistory([{ value: 'Semua SKPD', label: 'Semua SKPD' }, ...uniqueSkpd]); // Set for history as well
       } catch (error: any) {
-        console.error('Error fetching SKPD options for antrian:', error.message);
-        toast.error('Gagal memuat daftar SKPD untuk antrian: ' + error.message);
+        console.error('Error fetching SKPD options:', error.message);
+        toast.error('Gagal memuat daftar SKPD: ' + error.message);
       }
     };
-    fetchSkpdOptionsForAntrian();
+    fetchSkpdOptions();
   }, []);
 
-  // Fetch unique SKPD names for the history filter dropdown
-  useEffect(() => {
-    if (!user || !profile?.peran) return;
-
-    const fetchHistorySkpdOptions = async () => {
-      try {
-        const todayStart = startOfDay(new Date()).toISOString();
-        const todayEnd = endOfDay(new Date()).toISOString();
-
-        let query = supabase
-          .from('database_tagihan')
-          .select('nama_skpd');
-        
-        if (profile.peran === 'Staf Verifikator') {
-          query = query
-            .in('status_tagihan', ['Diteruskan', 'Dikembalikan'])
-            .gte('waktu_verifikasi', todayStart)
-            .lte('waktu_verifikasi', todayEnd)
-            .eq('nama_verifikator', profile?.nama_lengkap) // ADDED THIS LINE
-            .is('id_korektor', null); // Filter for Staf Verifikasi
-        } else if (profile.peran === 'Staf Koreksi') {
-          query = query
-            .eq('status_tagihan', 'Dikembalikan')
-            .eq('id_korektor', user.id)
-            .gte('waktu_koreksi', todayStart)
-            .lte('waktu_koreksi', todayEnd);
-        } else {
-          // Default for other roles or if no specific filter needed
-          query = query
-            .in('status_tagihan', ['Diteruskan', 'Dikembalikan'])
-            .gte('waktu_verifikasi', todayStart)
-            .lte('waktu_verifikasi', todayEnd);
-        }
-
-        const { data, error } = await query;
-
-        if (error) throw error;
-
-        const uniqueSkpd = Array.from(new Set(data.map(item => item.nama_skpd)))
-          .filter((skpd): skpd is string => skpd !== null && skpd.trim() !== '');
-
-        setHistorySkpdOptions(['Semua SKPD', ...uniqueSkpd.sort()]);
-      } catch (error: any) {
-        console.error('Error fetching history SKPD options:', error.message);
-        toast.error('Gagal memuat daftar SKPD untuk riwayat: ' + error.message);
-      }
-    };
-    fetchHistorySkpdOptions();
-  }, [profile?.peran, user]); // Add profile.peran and user to dependencies
+  // Removed redundant fetchHistorySkpdOptions useEffect as it's now combined with fetchSkpdOptions
 
   const fetchQueueTagihan = async (isPaginationOnlyChange = false) => {
     if (sessionLoading || (profile?.peran !== 'Staf Verifikator' && profile?.peran !== 'Staf Koreksi')) {
@@ -304,7 +258,7 @@ const PortalVerifikasi = () => {
           .lte('waktu_koreksi', todayEnd);
         query = query.order('waktu_koreksi', { ascending: false });
       } else {
-        // Fallback for other roles, or if no specific filter is needed
+        // Fallback for other roles, or if no specific filter needed
         setHistoryPanelTitle('Riwayat Verifikasi Hari Ini');
         query = query
           .in('status_tagihan', ['Diteruskan', 'Dikembalikan'])
@@ -320,7 +274,7 @@ const PortalVerifikasi = () => {
         );
       }
 
-      // Apply history SKPD filter
+      // NEW: Apply history SKPD filter
       if (selectedHistorySkpd !== 'Semua SKPD') {
         query = query.eq('nama_skpd', selectedHistorySkpd);
       }
@@ -765,18 +719,17 @@ const PortalVerifikasi = () => {
                   }}
                 />
               </div>
-              <Select onValueChange={(value) => { setSelectedHistorySkpd(value); setHistoryCurrentPage(1); }} value={selectedHistorySkpd}>
-                <SelectTrigger className="w-full sm:w-[180px]">
-                  <SelectValue placeholder="Filter SKPD" />
-                </SelectTrigger>
-                <SelectContent>
-                  {historySkpdOptions.map((skpd) => (
-                    <SelectItem key={skpd} value={skpd}>
-                      {skpd}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {/* MODIFIED: Replaced Select with Combobox */}
+              <Combobox
+                options={skpdOptionsHistory}
+                value={selectedHistorySkpd}
+                onValueChange={(value) => {
+                  setSelectedHistorySkpd(value);
+                  setHistoryCurrentPage(1); // Reset page on SKPD change
+                }}
+                placeholder="Filter SKPD"
+                className="w-full sm:w-[180px]"
+              />
             </div>
             <div className="flex items-center space-x-2">
               <Label htmlFor="history-items-per-page" className="whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">Baris per halaman:</Label>
