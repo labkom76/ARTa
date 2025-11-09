@@ -27,6 +27,12 @@ import {
 import { format, subDays, startOfDay, endOfDay, startOfMonth, endOfMonth, parseISO, differenceInMinutes } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
 
+// NEW IMPORTS FOR SWIPER
+import { Swiper, SwiperSlide } from 'swiper/react';
+import 'swiper/css';
+import 'swiper/css/pagination'; // Import Swiper pagination styles
+import { Pagination } from 'swiper/modules'; // Import Swiper modules
+
 interface KPIData {
   antrianVerifikasi: number;
   totalDiprosesBulanIni: number; // Changed from diverifikasiHariIni
@@ -299,9 +305,34 @@ const DashboardVerifikasi = () => {
                   ))}
                 </Pie>
                 <Tooltip formatter={(value: number, name: string) => [`${value} tagihan`, name]} /> {/* Formatter for tooltip */}
-                <Legend />
+                {/* REMOVED: <Legend /> */}
               </PieChart>
             </ResponsiveContainer>
+            {/* NEW: Swiper for custom legend */}
+            {skpdProblemChartData.length > 0 && (
+              <Swiper
+                slidesPerView={3}
+                spaceBetween={10}
+                loop={true}
+                pagination={{ clickable: true }}
+                modules={[Pagination]}
+                className="mt-4 pb-8" // Add some margin top and padding bottom for pagination dots
+              >
+                {skpdProblemChartData.map((entry, index) => (
+                  <SwiperSlide key={entry.name}>
+                    <div className="flex items-center gap-2 p-2 rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700">
+                      <span
+                        className="w-4 h-4 rounded-full flex-shrink-0"
+                        style={{ backgroundColor: PIE_COLORS[index % PIE_COLORS.length] }}
+                      ></span>
+                      <span className="text-sm text-gray-800 dark:text-gray-200 truncate">
+                        {entry.name}
+                      </span>
+                    </div>
+                  </SwiperSlide>
+                ))}
+              </Swiper>
+            )}
           </CardContent>
         </Card>
       </div>
