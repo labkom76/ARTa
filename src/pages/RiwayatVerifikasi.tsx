@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { SearchIcon, EyeIcon, PrinterIcon } from 'lucide-react'; // Import PrinterIcon
+import { SearchIcon, EyeIcon, PrinterIcon, FileDownIcon } from 'lucide-react'; // Import FileDownIcon
 import { format, parseISO, startOfDay, endOfDay } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -332,7 +332,12 @@ const RiwayatVerifikasi = () => {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-gray-800 dark:text-white mb-6">Riwayat Verifikasi Tagihan</h1>
+      <div className="flex justify-between items-center mb-6"> {/* New wrapper div */}
+        <h1 className="text-3xl font-bold text-gray-800 dark:text-white">Riwayat Verifikasi Tagihan</h1>
+        <Button variant="outline" className="flex items-center gap-2">
+          <FileDownIcon className="h-4 w-4" /> Export ke XLSX
+        </Button>
+      </div>
 
       {/* Area Kontrol Filter */}
       <Card className="shadow-sm rounded-lg">
