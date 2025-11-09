@@ -320,12 +320,12 @@ const DashboardVerifikasi = () => {
               >
                 {skpdProblemChartData.map((entry, index) => (
                   <SwiperSlide key={entry.name}>
-                    <div className="flex items-center gap-2 p-2 rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700">
+                    <div className="flex items-center gap-2 p-2 rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700 h-auto"> {/* Added h-auto */}
                       <span
                         className="w-4 h-4 rounded-full flex-shrink-0"
                         style={{ backgroundColor: PIE_COLORS[index % PIE_COLORS.length] }}
                       ></span>
-                      <span className="text-sm text-gray-800 dark:text-gray-200 truncate">
+                      <span className="text-sm text-gray-800 dark:text-gray-200 whitespace-normal"> {/* Removed truncate */}
                         {entry.name}
                       </span>
                     </div>
