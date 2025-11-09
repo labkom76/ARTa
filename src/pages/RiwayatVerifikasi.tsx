@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { SearchIcon, EyeIcon, PrinterIcon } from 'lucide-react'; // Import PrinterIcon
+import { SearchIcon, EyeIcon, PrinterIcon, FileDownIcon } from 'lucide-react'; // Import FileDownIcon
 import { format, parseISO, startOfDay, endOfDay } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -43,6 +43,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"; // Import Tooltip components
 import { Combobox } from '@/components/ui/combobox'; // Import Combobox
+import * as XLSX from 'xlsx'; // Import XLSX library
 
 interface VerificationItem {
   item: string;
@@ -310,6 +311,34 @@ const RiwayatVerifikasi = () => {
     }
   };
 
+  // NEW: Function to handle export to XLSX
+  const handleExportToXLSX = () => {
+    if (tagihanList.length === 0) {
+      toast.info('Tidak ada data tagihan untuk diekspor.');
+      return;
+    }
+
+    const dataToExport = tagihanList.map(tagihan => ({
+      'Waktu Verifikasi': tagihan.waktu_verifikasi ? format(parseISO(tagihan.waktu_verifikasi), 'dd MMMM yyyy HH:mm', { locale: localeId }) : '-',
+      'Nomor Verifikasi': tagihan.nomor_verifikasi || '-',
+      'Nama SKPD': tagihan.nama_skpd,
+      'Nomor SPM': tagihan.nomor_spm,
+      'Jenis SPM': tagihan.jenis_spm,
+      'Jenis Tagihan': tagihan.jenis_tagihan,
+      'Uraian': tagihan.uraian,
+      'Jumlah Kotor': tagihan.jumlah_kotor,
+      'Status Akhir': tagihan.status_tagihan,
+      'Diperiksa oleh': tagihan.nama_verifikator || '-',
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(dataToExport);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Riwayat Verifikasi");
+    XLSX.writeFile(wb, "riwayat_verifikasi.xlsx");
+
+    toast.success('Data riwayat verifikasi berhasil diekspor ke XLSX!');
+  };
+
   const totalPages = itemsPerPage === -1 ? 1 : Math.ceil(totalItems / itemsPerPage);
 
   if (sessionLoading || loadingData) {
@@ -332,7 +361,12 @@ const RiwayatVerifikasi = () => {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-gray-800 dark:text-white mb-6">Riwayat Verifikasi Tagihan</h1>
+      <div className="flex justify-between items-center mb-6"> {/* New wrapper div */}
+        <h1 className="text-3xl font-bold text-gray-800 dark:text-white">Riwayat Verifikasi Tagihan</h1>
+        <Button variant="outline" className="flex items-center gap-2" onClick={handleExportToXLSX}>
+          <FileDownIcon className="h-4 w-4" /> Export ke XLSX
+        </Button>
+      </div>
 
       {/* Area Kontrol Filter */}
       <Card className="shadow-sm rounded-lg">

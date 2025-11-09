@@ -10,6 +10,7 @@ import {
   TimerIcon,
   BarChart3Icon,
   BarChartIcon,
+  PieChartIcon, // Import PieChartIcon
 } from 'lucide-react';
 import {
   BarChart,
@@ -19,6 +20,9 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
+  PieChart, // Import PieChart
+  Pie,      // Import Pie
+  Cell,     // Import Cell for PieChart colors
 } from 'recharts';
 import { format, subDays, startOfDay, endOfDay, startOfMonth, endOfMonth, parseISO, differenceInMinutes } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
@@ -47,6 +51,10 @@ const DashboardVerifikasi = () => {
   const [dailyVerificationChartData, setDailyVerificationChartData] = useState<DailyVerificationData[]>([]);
   const [skpdProblemChartData, setSkpdProblemChartData] = useState<SkpdProblemData[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Define colors for the Pie Chart
+  const PIE_COLORS = ['#EF4444', '#F97316', '#F59E0B', '#EAB308', '#84CC16', '#3B82F6', '#6366F1'];
+
 
   useEffect(() => {
     const fetchData = async () => {
@@ -267,19 +275,32 @@ const DashboardVerifikasi = () => {
         <Card className="shadow-sm rounded-lg">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-              <BarChartIcon className="h-5 w-5 text-gray-600 dark:text-gray-300" />
-              Sumber Tagihan Bermasalah (per SKPD)
+              <PieChartIcon className="h-5 w-5 text-gray-600 dark:text-gray-300" /> {/* Changed icon to PieChartIcon */}
+              Tagihan yang dikembalikan (PerSKPD) {/* Changed title */}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={skpdProblemChartData}>
-                <XAxis dataKey="name" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
-                <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
-                <Tooltip cursor={{ fill: 'transparent' }} />
+              <PieChart>
+                <Pie
+                  data={skpdProblemChartData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false} // Menonaktifkan garis label
+                  label={false} // Menonaktifkan label teks langsung pada irisan
+                  outerRadius={100} // Adjusted outerRadius
+                  innerRadius={60} // For donut effect
+                  dataKey="value"
+                  nameKey="name"
+                  paddingAngle={5}
+                >
+                  {skpdProblemChartData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip formatter={(value: number, name: string) => [`${value} tagihan`, name]} /> {/* Formatter for tooltip */}
                 <Legend />
-                <Bar dataKey="value" fill="#8884d8" name="Jumlah Dikembalikan" radius={[4, 4, 0, 0]} />
-              </BarChart>
+              </PieChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>

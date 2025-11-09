@@ -34,7 +34,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from '@/components/ui/pagination';
-import { SearchIcon, CheckCircleIcon, EyeIcon } from 'lucide-react';
+import { SearchIcon, CheckCircleIcon, EyeIcon, Undo2Icon } from 'lucide-react'; // Import Undo2Icon
 import { format, parseISO, startOfMonth, endOfMonth } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -43,6 +43,14 @@ import RegistrasiConfirmationDialog from '@/components/RegistrasiConfirmationDia
 import TagihanDetailDialog from '@/components/TagihanDetailDialog'; // Import the detail dialog
 import StatusBadge from '@/components/StatusBadge'; // Import StatusBadge
 import { Label } from '@/components/ui/label'; // Import Label for "Per halaman"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"; // Import Tooltip components
+import { Textarea } from '@/components/ui/textarea'; // Import Textarea
+import { Combobox } from '@/components/ui/combobox'; // Import Combobox
 
 interface VerificationItem {
   item: string;
@@ -69,6 +77,13 @@ interface Tagihan {
   detail_verifikasi?: VerificationItem[];
   nomor_verifikasi?: string;
   nama_verifikator?: string;
+  catatan_registrasi?: string; // NEW: Add catatan_registrasi
+  sumber_dana?: string; // Add sumber_dana
+}
+
+interface SkpdOption { // Define interface for SKPD options
+  value: string;
+  label: string;
 }
 
 const PortalRegistrasi = () => {
@@ -80,8 +95,8 @@ const PortalRegistrasi = () => {
   const debouncedSearchQuery = useDebounce(searchQuery, 700);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  const [skpdOptions, setSkpdOptions] = useState<string[]>([]);
-  const [selectedSkpd, setSelectedSkpd] = useState<string>('Semua SKPD');
+  const [skpdOptions, setSkpdOptions] = useState<SkpdOption[]>([]); // Changed to SkpdOption[]
+  const [selectedSkpd, setSelectedSkpd] = useState<string>('Semua SKPD'); // Default value
 
   const [isRegistrasiModalOpen, setIsRegistrasiModalOpen] = useState(false);
   const [selectedTagihanForRegistrasi, setSelectedTagihanForRegistrasi] = useState<Tagihan | null>(null);
@@ -105,6 +120,12 @@ const PortalRegistrasi = () => {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [selectedTagihanForDetail, setSelectedTagihanForDetail] = useState<Tagihan | null>(null);
 
+  // NEW: State for Tinjau Kembali Modal
+  const [isTinjauModalOpen, setIsTinjauModalOpen] = useState(false);
+  const [selectedTagihanForTinjau, setSelectedTagihanForTinjau] = useState<Tagihan | null>(null);
+  const [catatanTinjau, setCatatanTinjau] = useState(''); // NEW: State for Tinjau Kembali notes
+  const [isSubmittingTinjau, setIsSubmittingTinjau] = useState(false); // NEW: State for Tinjau Kembali submission
+
   // Refs to track previous values for determining pagination-only changes
   const prevQueueSearchQuery = useRef(searchQuery);
   const prevSelectedSkpd = useRef(selectedSkpd);
@@ -127,16 +148,17 @@ const PortalRegistrasi = () => {
     const fetchSkpdOptions = async () => {
       try {
         const { data, error } = await supabase
-          .from('database_tagihan')
+          .from('master_skpd') // Fetch from master_skpd
           .select('nama_skpd')
-          .eq('status_tagihan', 'Menunggu Registrasi');
+          .order('nama_skpd', { ascending: true });
 
         if (error) throw error;
 
-        const uniqueSkpd = Array.from(new Set(data.map(item => item.nama_skpd)))
-          .filter((skpd): skpd is string => skpd !== null && skpd.trim() !== '');
+        const uniqueSkpd: SkpdOption[] = Array.from(new Set(data.map(item => item.nama_skpd)))
+          .filter((skpd): skpd is string => skpd !== null && skpd.trim() !== '')
+          .map(skpd => ({ value: skpd, label: skpd })); // Map to { value, label } format
 
-        setSkpdOptions(['Semua SKPD', ...uniqueSkpd.sort()]);
+        setSkpdOptions([{ value: 'Semua SKPD', label: 'Semua SKPD' }, ...uniqueSkpd]); // Add 'Semua SKPD' option
       } catch (error: any) {
         console.error('Error fetching SKPD options:', error.message);
         toast.error('Gagal memuat daftar SKPD: ' + error.message);
@@ -168,7 +190,7 @@ const PortalRegistrasi = () => {
         query = query.ilike('nomor_spm', `%${debouncedSearchQuery}%`);
       }
 
-      if (selectedSkpd !== 'Semua SKPD') {
+      if (selectedSkpd !== 'Semua SKPD') { // Apply filter based on selectedSkpd
         query = query.eq('nama_skpd', selectedSkpd);
       }
 
@@ -397,8 +419,80 @@ const PortalRegistrasi = () => {
     setIsDetailModalOpen(true);
   };
 
+  // NEW: Handler for Tinjau Kembali button
+  const handleTinjauKembaliClick = (tagihan: Tagihan) => {
+    setSelectedTagihanForTinjau(tagihan);
+    setCatatanTinjau(''); // Reset catatan saat modal dibuka
+    setIsTinjauModalOpen(true);
+  };
+
+  // NEW: Handler for submitting Tinjau Kembali
+  const handleSubmitTinjauKembali = async () => {
+    if (!selectedTagihanForTinjau) {
+      toast.error('Tidak ada tagihan yang dipilih untuk ditinjau kembali.');
+      return;
+    }
+    if (!catatanTinjau.trim()) {
+      toast.error('Catatan wajib diisi untuk meninjau kembali tagihan.');
+      return;
+    }
+
+    setIsSubmittingTinjau(true);
+    try {
+      const { error } = await supabase
+        .from('database_tagihan')
+        .update({
+          status_tagihan: 'Tinjau Kembali',
+          catatan_registrasi: catatanTinjau.trim(),
+          // Clear any previous registration info if it was registered before being returned
+          nomor_registrasi: null,
+          waktu_registrasi: null,
+          nama_registrator: null,
+        })
+        .eq('id_tagihan', selectedTagihanForTinjau.id_tagihan);
+
+      if (error) throw error;
+
+      // Insert notification for the SKPD user
+      const { error: notificationError } = await supabase
+        .from('notifications')
+        .insert({
+          user_id: selectedTagihanForTinjau.id_pengguna_input,
+          message: `Tagihan SPM ${selectedTagihanForTinjau.nomor_spm} Anda dikembalikan untuk ditinjau kembali.`,
+          is_read: false,
+          tagihan_id: selectedTagihanForTinjau.id_tagihan,
+        });
+
+      if (notificationError) {
+        console.error('Error inserting notification for Tinjau Kembali:', notificationError.message);
+      }
+
+      toast.success(`Tagihan ${selectedTagihanForTinjau.nomor_spm} berhasil ditinjau kembali.`);
+      setIsTinjauModalOpen(false);
+      setCatatanTinjau('');
+      fetchQueueTagihan(); // Refresh the queue list
+      fetchHistoryTagihan(); // Refresh history (though it won't appear here, good practice)
+    } catch (error: any) {
+      console.error('Error submitting Tinjau Kembali:', error.message);
+      toast.error('Gagal meninjau kembali tagihan: ' + error.message);
+    } finally {
+      setIsSubmittingTinjau(false);
+    }
+  };
+
   const queueTotalPages = queueItemsPerPage === -1 ? 1 : Math.ceil(queueTotalItems / queueItemsPerPage);
   const historyTotalPages = historyItemsPerPage === -1 ? 1 : Math.ceil(historyTotalItems / historyItemsPerPage);
+
+  // Helper function for date formatting
+  const formatDate = (dateString: string | undefined) => {
+    if (!dateString) return '-';
+    try {
+      return format(new Date(dateString), 'dd MMMM yyyy HH:mm', { locale: localeId });
+    } catch (e) {
+      console.error("Error formatting date:", dateString, e);
+      return dateString; // Fallback to raw string if formatting fails
+    }
+  };
 
   if (sessionLoading || loadingQueue || loadingHistory) {
     return (
@@ -439,18 +533,16 @@ const PortalRegistrasi = () => {
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
-            <Select onValueChange={setSelectedSkpd} value={selectedSkpd}>
-              <SelectTrigger className="w-full sm:w-[180px]">
-                <SelectValue placeholder="Filter SKPD" />
-              </SelectTrigger>
-              <SelectContent>
-                {skpdOptions.map((skpd) => (
-                  <SelectItem key={skpd} value={skpd}>
-                    {skpd}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Combobox
+              options={skpdOptions}
+              value={selectedSkpd}
+              onValueChange={(value) => {
+                setSelectedSkpd(value);
+                setQueueCurrentPage(1); // Reset page on SKPD change
+              }}
+              placeholder="Filter SKPD"
+              className="w-full sm:w-[180px]"
+            />
           </div>
           <div className="flex items-center space-x-2"> {/* Moved to top right */}
             <label htmlFor="queue-items-per-page" className="whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">Baris per halaman:</label>
@@ -490,7 +582,6 @@ const PortalRegistrasi = () => {
                     <TableHead>Nama SKPD</TableHead>
                     <TableHead>Nomor SPM</TableHead>
                     <TableHead>Jenis SPM</TableHead>
-                    <TableHead>Uraian</TableHead>
                     <TableHead>Jumlah Kotor</TableHead>
                     <TableHead className="text-center">Aksi</TableHead>
                   </TableRow>
@@ -503,18 +594,49 @@ const PortalRegistrasi = () => {
                       <TableCell className="font-medium">{tagihan.nama_skpd}</TableCell>
                       <TableCell>{tagihan.nomor_spm}</TableCell>
                       <TableCell>{tagihan.jenis_spm}</TableCell>
-                      <TableCell>{tagihan.uraian}</TableCell>
                       <TableCell>Rp{tagihan.jumlah_kotor.toLocaleString('id-ID')}</TableCell>
                       <TableCell className="text-center">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          title="Registrasi Tagihan"
-                          onClick={() => handleRegistrasiClick(tagihan)}
-                          disabled={isConfirming}
-                        >
-                          <CheckCircleIcon className="h-5 w-5 text-green-500" />
-                        </Button>
+                        {tagihan.status_tagihan === 'Menunggu Registrasi' && (
+                          <div className="flex justify-center space-x-2">
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    title="Registrasi Tagihan"
+                                    onClick={() => handleRegistrasiClick(tagihan)}
+                                    disabled={isConfirming}
+                                  >
+                                    <CheckCircleIcon className="h-5 w-5 text-green-500" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Registrasi Tagihan</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                            {/* NEW: Tinjau Kembali Button */}
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    title="Tinjau Kembali"
+                                    onClick={() => handleTinjauKembaliClick(tagihan)}
+                                    disabled={isConfirming}
+                                  >
+                                    <Undo2Icon className="h-5 w-5 text-red-500" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Tinjau Kembali</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </div>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -652,6 +774,89 @@ const PortalRegistrasi = () => {
         onClose={() => setIsDetailModalOpen(false)}
         tagihan={selectedTagihanForDetail}
       />
+
+      {/* NEW: Modal for Tinjau Kembali */}
+      <Dialog open={isTinjauModalOpen} onOpenChange={setIsTinjauModalOpen}>
+        <DialogContent className="sm:max-w-[425px] max-h-[90vh] flex flex-col"> {/* Added max-h and flex-col */}
+          <DialogHeader>
+            <DialogTitle>Tinjau Kembali Tagihan</DialogTitle>
+          </DialogHeader>
+          {/* Scrollable content area, taking remaining space */}
+          <div className="flex-1 overflow-y-auto pr-4 -mr-4"> {/* Scrollable content wrapper */}
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-3 items-center gap-4">
+                <Label className="text-right">Nomor SPM</Label>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger className="col-span-2 max-w-[250px] whitespace-nowrap overflow-hidden text-ellipsis block font-medium">
+                      {selectedTagihanForTinjau?.nomor_spm || '-'}
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>{selectedTagihanForTinjau?.nomor_spm || '-'}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+              <div className="grid grid-cols-3 items-center gap-4">
+                <Label className="text-right">Nama SKPD</Label>
+                <p className="col-span-2 font-medium">{selectedTagihanForTinjau?.nama_skpd || '-'}</p>
+              </div>
+              {/* NEW: Added full tagihan details */}
+              <div className="grid grid-cols-3 items-center gap-4">
+                <Label className="text-right">Nomor Registrasi</Label>
+                <p className="col-span-2 font-medium">{selectedTagihanForTinjau?.nomor_registrasi || '-'}</p>
+              </div>
+              <div className="grid grid-cols-3 items-center gap-4">
+                <Label className="text-right">Jenis SPM</Label>
+                <p className="col-span-2 font-medium">{selectedTagihanForTinjau?.jenis_spm || '-'}</p>
+              </div>
+              <div className="grid grid-cols-3 items-center gap-4">
+                <Label className="text-right">Jenis Tagihan</Label>
+                <p className="col-span-2 font-medium">{selectedTagihanForTinjau?.jenis_tagihan || '-'}</p>
+              </div>
+              <div className="grid grid-cols-3 items-center gap-4">
+                <Label className="text-right">Sumber Dana</Label>
+                <p className="col-span-2 font-medium">{selectedTagihanForTinjau?.sumber_dana || '-'}</p>
+              </div>
+              <div className="grid grid-cols-3 items-center gap-4">
+                <Label className="text-right">Uraian</Label>
+                <p className="col-span-2 font-medium">{selectedTagihanForTinjau?.uraian || '-'}</p>
+              </div>
+              <div className="grid grid-cols-3 items-center gap-4">
+                <Label className="text-right">Jumlah Kotor</Label>
+                <p className="col-span-2 font-medium">Rp{selectedTagihanForTinjau?.jumlah_kotor?.toLocaleString('id-ID') || '0'}</p>
+              </div>
+              <div className="grid grid-cols-3 items-center gap-4">
+                <Label className="text-right">Waktu Input</Label>
+                <p className="col-span-2 font-medium">{formatDate(selectedTagihanForTinjau?.waktu_input)}</p>
+              </div>
+              {/* END NEW: Added full tagihan details */}
+              <div className="grid gap-2">
+                <Label htmlFor="catatan-tinjau">Catatan Tinjau Kembali</Label>
+                <Textarea
+                  id="catatan-tinjau"
+                  placeholder="Wajib diisi: Jelaskan alasan peninjauan kembali..."
+                  value={catatanTinjau}
+                  onChange={(e) => setCatatanTinjau(e.target.value)}
+                  rows={4}
+                  disabled={isSubmittingTinjau}
+                />
+                {!catatanTinjau.trim() && (
+                  <p className="text-red-500 text-sm mt-1">Catatan wajib diisi.</p>
+                )}
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsTinjauModalOpen(false)} disabled={isSubmittingTinjau}>
+              Batal
+            </Button>
+            <Button onClick={handleSubmitTinjauKembali} disabled={isSubmittingTinjau || !catatanTinjau.trim()}>
+              {isSubmittingTinjau ? 'Memproses...' : 'Submit Tinjau Kembali'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

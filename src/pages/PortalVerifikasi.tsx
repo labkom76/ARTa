@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { format, parseISO, startOfDay, endOfDay, isSameDay } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
-import { FileCheckIcon, LockIcon, EyeIcon, PrinterIcon, SearchIcon } from 'lucide-react';
+import { FileCheckIcon, LockIcon, EyeIcon, PrinterIcon, SearchIcon, FilePenLine } from 'lucide-react'; // Import FilePenLine icon
 import VerifikasiTagihanDialog from '@/components/VerifikasiTagihanDialog';
 import {
   Pagination,
@@ -37,6 +37,7 @@ import { Label } from '@/components/ui/label';
 import useDebounce from '@/hooks/use-debounce';
 import KoreksiTagihanSidePanel from '@/components/KoreksiTagihanSidePanel'; // Import the new component
 import StatusBadge from '@/components/StatusBadge'; // Import StatusBadge
+import { Combobox } from '@/components/ui/combobox'; // Import Combobox
 
 interface VerificationItem {
   item: string;
@@ -71,6 +72,11 @@ interface Tagihan {
   catatan_koreksi?: string;
 }
 
+interface SkpdOption { // Define interface for SKPD options
+  value: string;
+  label: string;
+}
+
 const LOCK_TIMEOUT_MINUTES = 30; // Define lock timeout: 30 minutes
 
 const PortalVerifikasi = () => {
@@ -80,8 +86,10 @@ const PortalVerifikasi = () => {
   const [loadingQueuePagination, setLoadingQueuePagination] = useState(false); // New state for queue pagination loading
   const [queueSearchQuery, setQueueSearchQuery] = useState('');
   const debouncedQueueSearchQuery = useDebounce(queueSearchQuery, 500);
-  const [queueSkpdOptions, setQueueSkpdOptions] = useState<string[]>([]);
-  const [selectedQueueSkpd, setSelectedQueueSkpd] = useState<string>('Semua SKPD');
+  
+  // MODIFIED: Renamed and changed type for Combobox
+  const [skpdOptionsAntrian, setSkpdOptionsAntrian] = useState<SkpdOption[]>([]);
+  const [selectedSkpdAntrian, setSelectedSkpdAntrian] = useState<string>('Semua SKPD');
 
   // State for Queue Table Pagination
   const [queueCurrentPage, setQueueCurrentPage] = useState(1);
@@ -93,7 +101,8 @@ const PortalVerifikasi = () => {
   const [loadingHistoryPagination, setLoadingHistoryPagination] = useState(false); // New state for history pagination loading
   const [historySearchQuery, setHistorySearchQuery] = useState(''); // New state for history search
   const debouncedHistorySearchQuery = useDebounce(historySearchQuery, 500); // Debounced history search
-  const [historySkpdOptions, setHistorySkpdOptions] = useState<string[]>([]); // New state for history SKPD options
+  // MODIFIED: Changed type to SkpdOption[] and renamed for clarity
+  const [skpdOptionsHistory, setSkpdOptionsHistory] = useState<SkpdOption[]>([]); 
   const [selectedHistorySkpd, setSelectedHistorySkpd] = useState<string>('Semua SKPD'); // New state for selected history SKPD
   const [historyPanelTitle, setHistoryPanelTitle] = useState('Riwayat Verifikasi Hari Ini'); // Dynamic title for history panel
 
@@ -114,7 +123,7 @@ const PortalVerifikasi = () => {
 
   // Refs to track previous values for determining pagination-only changes
   const prevQueueSearchQueryRef = useRef(queueSearchQuery);
-  const prevSelectedQueueSkpdRef = useRef(selectedQueueSkpd);
+  const prevSelectedSkpdAntrianRef = useRef(selectedSkpdAntrian); // MODIFIED: Ref for new SKPD state
   const prevQueueItemsPerPageRef = useRef(queueItemsPerPage);
   const prevQueueCurrentPageRef = useRef(queueCurrentPage);
 
@@ -123,78 +132,32 @@ const PortalVerifikasi = () => {
   const prevHistoryItemsPerPageRef = useRef(historyItemsPerPage);
   const prevHistoryCurrentPageRef = useRef(historyCurrentPage);
 
-  // Fetch unique SKPD names for the queue filter dropdown
+  // Fetch unique SKPD names for the queue filter dropdown (MODIFIED)
   useEffect(() => {
-    const fetchQueueSkpdOptions = async () => {
+    const fetchSkpdOptions = async () => {
       try {
         const { data, error } = await supabase
-          .from('database_tagihan')
+          .from('master_skpd') // Fetch from master_skpd
           .select('nama_skpd')
-          .eq('status_tagihan', 'Menunggu Verifikasi');
+          .order('nama_skpd', { ascending: true });
 
         if (error) throw error;
 
-        const uniqueSkpd = Array.from(new Set(data.map(item => item.nama_skpd)))
-          .filter((skpd): skpd is string => skpd !== null && skpd.trim() !== '');
+        const uniqueSkpd: SkpdOption[] = Array.from(new Set(data.map(item => item.nama_skpd)))
+          .filter((skpd): skpd is string => skpd !== null && skpd.trim() !== '')
+          .map(skpd => ({ value: skpd, label: skpd }));
 
-        setQueueSkpdOptions(['Semua SKPD', ...uniqueSkpd.sort()]);
+        setSkpdOptionsAntrian([{ value: 'Semua SKPD', label: 'Semua SKPD' }, ...uniqueSkpd]);
+        setSkpdOptionsHistory([{ value: 'Semua SKPD', label: 'Semua SKPD' }, ...uniqueSkpd]); // Set for history as well
       } catch (error: any) {
-        console.error('Error fetching queue SKPD options:', error.message);
-        toast.error('Gagal memuat daftar SKPD untuk antrian: ' + error.message);
+        console.error('Error fetching SKPD options:', error.message);
+        toast.error('Gagal memuat daftar SKPD: ' + error.message);
       }
     };
-    fetchQueueSkpdOptions();
+    fetchSkpdOptions();
   }, []);
 
-  // Fetch unique SKPD names for the history filter dropdown
-  useEffect(() => {
-    if (!user || !profile?.peran) return;
-
-    const fetchHistorySkpdOptions = async () => {
-      try {
-        const todayStart = startOfDay(new Date()).toISOString();
-        const todayEnd = endOfDay(new Date()).toISOString();
-
-        let query = supabase
-          .from('database_tagihan')
-          .select('nama_skpd');
-        
-        if (profile.peran === 'Staf Verifikator') {
-          query = query
-            .in('status_tagihan', ['Diteruskan', 'Dikembalikan'])
-            .gte('waktu_verifikasi', todayStart)
-            .lte('waktu_verifikasi', todayEnd)
-            .eq('nama_verifikator', profile?.nama_lengkap) // ADDED THIS LINE
-            .is('id_korektor', null); // Filter for Staf Verifikasi
-        } else if (profile.peran === 'Staf Koreksi') {
-          query = query
-            .eq('status_tagihan', 'Dikembalikan')
-            .eq('id_korektor', user.id)
-            .gte('waktu_koreksi', todayStart)
-            .lte('waktu_koreksi', todayEnd);
-        } else {
-          // Default for other roles or if no specific filter needed
-          query = query
-            .in('status_tagihan', ['Diteruskan', 'Dikembalikan'])
-            .gte('waktu_verifikasi', todayStart)
-            .lte('waktu_verifikasi', todayEnd);
-        }
-
-        const { data, error } = await query;
-
-        if (error) throw error;
-
-        const uniqueSkpd = Array.from(new Set(data.map(item => item.nama_skpd)))
-          .filter((skpd): skpd is string => skpd !== null && skpd.trim() !== '');
-
-        setHistorySkpdOptions(['Semua SKPD', ...uniqueSkpd.sort()]);
-      } catch (error: any) {
-        console.error('Error fetching history SKPD options:', error.message);
-        toast.error('Gagal memuat daftar SKPD untuk riwayat: ' + error.message);
-      }
-    };
-    fetchHistorySkpdOptions();
-  }, [profile?.peran, user]); // Add profile.peran and user to dependencies
+  // Removed redundant fetchHistorySkpdOptions useEffect as it's now combined with fetchSkpdOptions
 
   const fetchQueueTagihan = async (isPaginationOnlyChange = false) => {
     if (sessionLoading || (profile?.peran !== 'Staf Verifikator' && profile?.peran !== 'Staf Koreksi')) {
@@ -228,8 +191,9 @@ const PortalVerifikasi = () => {
         );
       }
 
-      if (selectedQueueSkpd !== 'Semua SKPD') {
-        query = query.eq('nama_skpd', selectedQueueSkpd);
+      // NEW: Apply SKPD filter for queue
+      if (selectedSkpdAntrian !== 'Semua SKPD') {
+        query = query.eq('nama_skpd', selectedSkpdAntrian);
       }
 
       if (queueItemsPerPage !== -1) {
@@ -289,7 +253,7 @@ const PortalVerifikasi = () => {
         setHistoryPanelTitle('Pengembalian Terakhir Anda');
         query = query
           .eq('status_tagihan', 'Dikembalikan')
-          .eq('id_korektor', user.id) // Filter by current corrector's ID
+          .eq('id_korektor', user.id)
           .gte('waktu_koreksi', todayStart)
           .lte('waktu_koreksi', todayEnd);
         query = query.order('waktu_koreksi', { ascending: false });
@@ -310,7 +274,7 @@ const PortalVerifikasi = () => {
         );
       }
 
-      // Apply history SKPD filter
+      // NEW: Apply history SKPD filter
       if (selectedHistorySkpd !== 'Semua SKPD') {
         query = query.eq('nama_skpd', selectedHistorySkpd);
       }
@@ -350,7 +314,7 @@ const PortalVerifikasi = () => {
     if (
       prevQueueCurrentPageRef.current !== queueCurrentPage &&
       prevQueueSearchQueryRef.current === debouncedQueueSearchQuery &&
-      prevSelectedQueueSkpdRef.current === selectedQueueSkpd &&
+      prevSelectedSkpdAntrianRef.current === selectedSkpdAntrian && // MODIFIED: Use new ref
       prevQueueItemsPerPageRef.current === queueItemsPerPage
     ) {
       isPaginationOnlyChange = true;
@@ -359,11 +323,11 @@ const PortalVerifikasi = () => {
     fetchQueueTagihan(isPaginationOnlyChange);
 
     prevQueueSearchQueryRef.current = debouncedQueueSearchQuery;
-    prevSelectedQueueSkpdRef.current = selectedQueueSkpd;
+    prevSelectedSkpdAntrianRef.current = selectedSkpdAntrian; // MODIFIED: Update new ref
     prevQueueItemsPerPageRef.current = queueItemsPerPage;
     prevQueueCurrentPageRef.current = queueCurrentPage;
 
-  }, [user, sessionLoading, profile, debouncedQueueSearchQuery, selectedQueueSkpd, queueCurrentPage, queueItemsPerPage]);
+  }, [user, sessionLoading, profile, debouncedQueueSearchQuery, selectedSkpdAntrian, queueCurrentPage, queueItemsPerPage]); // MODIFIED: Add selectedSkpdAntrian to dependencies
 
   useEffect(() => {
     let isPaginationOnlyChange = false;
@@ -581,6 +545,12 @@ const PortalVerifikasi = () => {
     }
   };
 
+  // NEW: handleEditVerificationClick for 'Dikembalikan' status
+  const handleEditVerificationClick = (tagihan: Tagihan) => {
+    setSelectedTagihanForVerifikasi(tagihan);
+    setIsVerifikasiModalOpen(true);
+  };
+
   const queueTotalPages = queueItemsPerPage === -1 ? 1 : Math.ceil(queueTotalItems / queueItemsPerPage);
   const historyTotalPages = historyItemsPerPage === -1 ? 1 : Math.ceil(historyTotalItems / historyItemsPerPage);
 
@@ -628,18 +598,17 @@ const PortalVerifikasi = () => {
                   }}
                 />
               </div>
-              <Select onValueChange={(value) => { setSelectedQueueSkpd(value); setQueueCurrentPage(1); }} value={selectedQueueSkpd}>
-                <SelectTrigger className="w-full sm:w-[180px]">
-                  <SelectValue placeholder="Filter SKPD" />
-                </SelectTrigger>
-                <SelectContent>
-                  {queueSkpdOptions.map((skpd) => (
-                    <SelectItem key={skpd} value={skpd}>
-                      {skpd}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {/* MODIFIED: Replaced Select with Combobox */}
+              <Combobox
+                options={skpdOptionsAntrian}
+                value={selectedSkpdAntrian}
+                onValueChange={(value) => {
+                  setSelectedSkpdAntrian(value);
+                  setQueueCurrentPage(1); // Reset page on SKPD change
+                }}
+                placeholder="Filter SKPD"
+                className="w-full sm:w-[180px]"
+              />
             </div>
             <div className="flex items-center space-x-2">
               <Label htmlFor="queue-items-per-page" className="whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">Baris per halaman:</Label>
@@ -750,18 +719,17 @@ const PortalVerifikasi = () => {
                   }}
                 />
               </div>
-              <Select onValueChange={(value) => { setSelectedHistorySkpd(value); setHistoryCurrentPage(1); }} value={selectedHistorySkpd}>
-                <SelectTrigger className="w-full sm:w-[180px]">
-                  <SelectValue placeholder="Filter SKPD" />
-                </SelectTrigger>
-                <SelectContent>
-                  {historySkpdOptions.map((skpd) => (
-                    <SelectItem key={skpd} value={skpd}>
-                      {skpd}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {/* MODIFIED: Replaced Select with Combobox */}
+              <Combobox
+                options={skpdOptionsHistory}
+                value={selectedHistorySkpd}
+                onValueChange={(value) => {
+                  setSelectedHistorySkpd(value);
+                  setHistoryCurrentPage(1); // Reset page on SKPD change
+                }}
+                placeholder="Filter SKPD"
+                className="w-full sm:w-[180px]"
+              />
             </div>
             <div className="flex items-center space-x-2">
               <Label htmlFor="history-items-per-page" className="whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">Baris per halaman:</Label>
@@ -812,6 +780,11 @@ const PortalVerifikasi = () => {
                             <Button variant="outline" size="icon" title="Cetak" onClick={() => handlePrintClick(tagihan.id_tagihan)}>
                               <PrinterIcon className="h-4 w-4" />
                             </Button>
+                            {tagihan.status_tagihan === 'Dikembalikan' && (
+                              <Button variant="outline" size="icon" title="Edit (Verifikasi Ulang)" onClick={() => handleEditVerificationClick(tagihan)}>
+                                <FilePenLine className="h-4 w-4" />
+                              </Button>
+                            )}
                           </div>
                         </TableCell>
                       </TableRow>

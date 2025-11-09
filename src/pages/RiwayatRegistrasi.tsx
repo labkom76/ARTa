@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { SearchIcon, EyeIcon, PrinterIcon } from 'lucide-react';
+import { SearchIcon, EyeIcon, PrinterIcon } from 'lucide-react'; // Import PrinterIcon
 import { format, parseISO, startOfDay, endOfDay } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -114,7 +114,7 @@ const RiwayatRegistrasi = () => {
         let query = supabase
           .from('database_tagihan')
           .select('*', { count: 'exact' })
-          .not('status_tagihan', 'eq', 'Menunggu Registrasi')
+          .in('status_tagihan', ['Menunggu Verifikasi', 'Diteruskan', 'Dikembalikan']) // MODIFIED: Hanya ambil status yang sudah diregistrasi
           .order('waktu_registrasi', { ascending: false });
 
         if (debouncedSearchQuery) {

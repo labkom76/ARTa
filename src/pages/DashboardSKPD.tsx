@@ -249,6 +249,10 @@ const DashboardSKPD = () => {
                     message = `Tagihan ${activity.nomor_spm} Anda telah Dikembalikan.`;
                     statusColor = 'text-red-600 dark:text-red-400';
                     break;
+                  case 'Tinjau Kembali': // NEW: Case for 'Tinjau Kembali'
+                    message = `Tagihan ${activity.nomor_spm} Anda Perlu Ditinjau Kembali.`;
+                    statusColor = 'text-[#8338ec]'; // Custom color for 'Tinjau Kembali'
+                    break;
                   default:
                     message = `Aktivitas tidak diketahui untuk tagihan ${activity.nomor_spm}.`;
                     break;
