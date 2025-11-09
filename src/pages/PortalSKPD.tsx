@@ -721,58 +721,49 @@ const PortalSKPD = () => {
               <div className="overflow-x-auto">
                 <Table key={`${selectedStatus}-${currentPage}`}>
                   <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-[50px]">No.</TableHead>
-                      <TableHead className="w-[180px]"> {/* MODIFIED: Set fixed width for Nomor SPM */}
+                    <TableRow><TableHead className="w-[50px]">No.</TableHead><TableHead className="w-[180px]"> {/* MODIFIED: Set fixed width for Nomor SPM */}
                         <Button variant="ghost" onClick={() => handleSort('nomor_spm')} className="p-0 h-auto">
                           Nomor SPM
                           {sortColumn === 'nomor_spm' && (
                             sortDirection === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />
                           )}
                         </Button>
-                      </TableHead>
-                      <TableHead>
+                      </TableHead><TableHead>
                         <Button variant="ghost" onClick={() => handleSort('jenis_spm')} className="p-0 h-auto">
                           Jenis SPM
                           {sortColumn === 'jenis_spm' && (
                             sortDirection === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />
                           )}
                         </Button>
-                      </TableHead>
-                      <TableHead>
+                      </TableHead><TableHead>
                         <Button variant="ghost" onClick={() => handleSort('jenis_tagihan')} className="p-0 h-auto">
                           Jenis Tagihan
                           {sortColumn === 'jenis_tagihan' && (
                             sortDirection === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />
                           )}
                         </Button>
-                      </TableHead>
-                      <TableHead>
+                      </TableHead><TableHead>
                         <Button variant="ghost" onClick={() => handleSort('sumber_dana')} className="p-0 h-auto">
                           Sumber Dana
                           {sortColumn === 'sumber_dana' && (
                             sortDirection === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />
                           )}
                         </Button>
-                      </TableHead>
-                      <TableHead>
+                      </TableHead><TableHead>
                         <Button variant="ghost" onClick={() => handleSort('jumlah_kotor')} className="p-0 h-auto">
                           Jumlah Kotor
                           {sortColumn === 'jumlah_kotor' && (
                             sortDirection === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />
                           )}
                         </Button>
-                      </TableHead>
-                      <TableHead>
+                      </TableHead><TableHead>
                         <Button variant="ghost" onClick={() => handleSort('status_tagihan')} className="p-0 h-auto">
                           Status
                           {sortColumn === 'status_tagihan' && (
                             sortDirection === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />
                           )}
                         </Button>
-                      </TableHead>
-                      <TableHead className="text-center w-[100px]">Aksi</TableHead> {/* MODIFIED: Set fixed width for Aksi */}
-                    </TableRow>
+                      </TableHead><TableHead className="text-center w-[100px]">Aksi</TableHead></TableRow>
                   </TableHeader>
                   <TableBody>
                     {tagihanList.map((tagihan, index) => {
