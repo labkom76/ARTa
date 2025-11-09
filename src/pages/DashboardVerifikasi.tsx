@@ -31,7 +31,7 @@ import { id as localeId } from 'date-fns/locale';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import 'swiper/css';
 import 'swiper/css/pagination'; // Import Swiper pagination styles
-import { Pagination } from 'swiper/modules'; // Import Swiper modules
+import { Pagination, Autoplay } from 'swiper/modules'; // Import Swiper modules, including Autoplay
 
 interface KPIData {
   antrianVerifikasi: number;
@@ -315,7 +315,8 @@ const DashboardVerifikasi = () => {
                 spaceBetween={10}
                 loop={true}
                 pagination={{ clickable: true }}
-                modules={[Pagination]}
+                modules={[Pagination, Autoplay]} // Added Autoplay module
+                autoplay={{ delay: 3000, disableOnInteraction: false }} // Enabled autoplay
                 className="mt-4 pb-8" // Add some margin top and padding bottom for pagination dots
               >
                 {skpdProblemChartData.map((entry, index) => (
