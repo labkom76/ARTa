@@ -286,12 +286,12 @@ const DashboardVerifikasi = () => {
                   data={skpdProblemChartData}
                   cx="50%"
                   cy="50%"
-                  labelLine={false}
+                  labelLine={false} // Menonaktifkan garis label
+                  label={false} // Menonaktifkan label teks langsung pada irisan
                   outerRadius={100} // Adjusted outerRadius
                   innerRadius={60} // For donut effect
                   dataKey="value"
                   nameKey="name"
-                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
                   paddingAngle={5}
                 >
                   {skpdProblemChartData.map((entry, index) => (
