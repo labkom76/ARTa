@@ -291,8 +291,11 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
       if (values.status_keputusan === 'Diteruskan') {
         notificationMessage = `Selamat! Tagihan SPM ${tagihan.nomor_spm} Anda telah DITERUSKAN.`;
       } else if (values.status_keputusan === 'Dikembalikan') {
-        const formattedTenggat = tenggatPerbaikan ? format(parseISO(tenggatPerbaikan), 'dd MMMM yyyy', { locale: localeId }) : 'tanggal tidak ditentukan';
-        notificationMessage = `Perhatian! Tagihan SPM ${tagihan.nomor_spm} DIKEMBALIKAN. Harap perbaiki sebelum ${formattedTenggat}.`;
+        notificationMessage = `Perhatian! Tagihan SPM ${tagihan.nomor_spm} DIKEMBALIKAN.`;
+        if (tenggatPerbaikan) { // Only add deadline if tenggatPerbaikan exists
+          const formattedTenggat = format(parseISO(tenggatPerbaikan), 'dd MMMM yyyy', { locale: localeId });
+          notificationMessage += ` Harap perbaiki sebelum ${formattedTenggat}.`;
+        }
       }
 
       if (notificationMessage) {
@@ -487,7 +490,7 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
                         <SelectValue placeholder="Pilih Durasi" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="1">Default (Final)</SelectItem> {/* MODIFIED: Label changed here */}
+                        <SelectItem value="1">Default (Final)</SelectItem>
                         <SelectItem value="2">2 Hari</SelectItem>
                         <SelectItem value="3">3 Hari</SelectItem>
                       </SelectContent>
