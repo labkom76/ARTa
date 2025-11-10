@@ -27,7 +27,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { format, parseISO, startOfMonth, endOfMonth, addDays } from 'date-fns'; // Import addDays
+import { format, parseISO, startOfMonth, endOfMonth, addDays } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -63,7 +63,7 @@ interface Tagihan {
   nama_verifikator?: string;
   locked_by?: string;
   locked_at?: string;
-  sumber_dana?: string; // Add sumber_dana
+  sumber_dana?: string;
 }
 
 interface VerifikasiTagihanDialogProps {
@@ -483,7 +483,7 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
                         <SelectValue placeholder="Pilih Durasi" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="1">1 Hari</SelectItem>
+                        <SelectItem value="1">Default (Final)</SelectItem> {/* MODIFIED: Label changed here */}
                         <SelectItem value="2">2 Hari</SelectItem>
                         <SelectItem value="3">3 Hari</SelectItem>
                       </SelectContent>
