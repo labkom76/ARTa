@@ -253,13 +253,9 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
       const now = new Date();
 
       let tenggatPerbaikan: string | null = null;
-      if (values.status_keputusan === 'Dikembalikan') {
-        if (values.durasi_penahanan && values.durasi_penahanan > 1) { // If duration is 2 or 3 days
-          const tenggat = addDays(now, values.durasi_penahanan);
-          tenggatPerbaikan = tenggat.toISOString();
-        } else { // If duration is 1 (Default/Final)
-          tenggatPerbaikan = null;
-        }
+      if (values.status_keputusan === 'Dikembalikan' && values.durasi_penahanan) {
+        const tenggat = addDays(now, values.durasi_penahanan);
+        tenggatPerbaikan = tenggat.toISOString();
       }
 
       const { error } = await supabase
