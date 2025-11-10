@@ -169,7 +169,7 @@ const AdminTagihan = () => {
       }
 
       // Apply SKPD filter if not 'Semua SKPD' (NO CHANGE TO LOGIC, ONLY UI)
-      if (selectedSkpd !== 'Semua SKPD') {
+      if (selectedSkpd !== 'Semua SKPD') { // MODIFIED: Apply conditional filter
         query = query.eq('nama_skpd', selectedSkpd);
       }
 
@@ -229,7 +229,7 @@ const AdminTagihan = () => {
     prevItemsPerPage.current = itemsPerPage;
     prevCurrentPage.current = currentPage;
 
-  }, [sessionLoading, profile, debouncedSearchQuery, selectedStatus, selectedSkpd, dateRange, currentPage, itemsPerPage]); // Add pagination states to dependencies
+  }, [sessionLoading, profile, debouncedSearchQuery, selectedStatus, selectedSkpd, dateRange, currentPage, itemsPerPage]); // MODIFIED: Add selectedSkpd to dependencies
 
   const formatDate = (dateString: string | undefined) => {
     if (!dateString) return '-';
