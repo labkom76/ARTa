@@ -95,6 +95,19 @@ const verificationFormSchema = z.object({
       keterangan: z.string().optional(),
     })
   ).min(1, { message: 'Checklist verifikasi tidak boleh kosong.' }),
+  durasi_penahanan: z.preprocess(
+    (val) => Number(val),
+    z.number().int().min(1).max(3, { message: 'Durasi penahanan harus antara 1 hingga 3 hari.' }).optional()
+  ),
+}).superRefine((data, ctx) => {
+  // Conditional validation for durasi_penahanan
+  if (data.status_keputusan === 'Dikembalikan' && (!data.durasi_penahanan || data.durasi_penahanan < 1 || data.durasi_penahanan > 3)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'Durasi Penahanan wajib dipilih jika status dikembalikan.',
+      path: ['durasi_penahanan'],
+    });
+  }
 });
 
 type VerificationFormValues = z.infer<typeof verificationFormSchema>;
@@ -113,6 +126,7 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
         memenuhi_syarat: true, // Default to true
         keterangan: '',
       })),
+      durasi_penahanan: 1, // Default to 1 day
     },
   });
 
@@ -159,6 +173,7 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
               memenuhi_syarat: true,
               keterangan: '',
             })),
+        durasi_penahanan: 1, // Default to 1 day when opening
       });
     }
   }, [isOpen, tagihan, form]);
@@ -444,6 +459,34 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
                 </p>
               )}
             </div>
+
+            {/* NEW: Durasi Penahanan (Kondisional) */}
+            {statusKeputusanWatch === 'Dikembalikan' && (
+              <div className="grid gap-2 mt-4">
+                <Label htmlFor="durasi_penahanan" className="text-lg font-semibold">Durasi Penahanan (Opsional)</Label>
+                <Controller
+                  name="durasi_penahanan"
+                  control={form.control}
+                  render={({ field }) => (
+                    <Select onValueChange={field.onChange} value={field.value?.toString()}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Pilih Durasi" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="1">1 Hari</SelectItem>
+                        <SelectItem value="2">2 Hari</SelectItem>
+                        <SelectItem value="3">3 Hari</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+                {form.formState.errors.durasi_penahanan && (
+                  <p className="text-red-500 text-sm">
+                    {form.formState.errors.durasi_penahanan.message}
+                  </p>
+                )}
+              </div>
+            )}
           </form>
         </div>
 
