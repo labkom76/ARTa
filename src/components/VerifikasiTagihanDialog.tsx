@@ -27,7 +27,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { format, parseISO, startOfMonth, endOfMonth } from 'date-fns';
+import { format, parseISO, startOfMonth, endOfMonth, addDays } from 'date-fns'; // Import addDays
 import { id as localeId } from 'date-fns/locale';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -250,12 +250,19 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
     setIsSubmitting(true);
     try {
       const nomorVerifikasi = await generateNomorVerifikasi();
+      const now = new Date();
+
+      let tenggatPerbaikan: string | null = null;
+      if (values.status_keputusan === 'Dikembalikan' && values.durasi_penahanan) {
+        const tenggat = addDays(now, values.durasi_penahanan);
+        tenggatPerbaikan = tenggat.toISOString();
+      }
 
       const { error } = await supabase
         .from('database_tagihan')
         .update({
           status_tagihan: values.status_keputusan,
-          waktu_verifikasi: new Date().toISOString(),
+          waktu_verifikasi: now.toISOString(),
           nama_verifikator: profile.nama_lengkap,
           detail_verifikasi: values.detail_verifikasi,
           nomor_verifikasi: nomorVerifikasi,
@@ -266,6 +273,7 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
           id_korektor: null,
           waktu_koreksi: null,
           catatan_koreksi: null,
+          tenggat_perbaikan: tenggatPerbaikan, // NEW: Save tenggat_perbaikan
         })
         .eq('id_tagihan', tagihan.id_tagihan);
 
@@ -279,7 +287,8 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
       if (values.status_keputusan === 'Diteruskan') {
         notificationMessage = `Selamat! Tagihan SPM ${tagihan.nomor_spm} Anda telah DITERUSKAN.`;
       } else if (values.status_keputusan === 'Dikembalikan') {
-        notificationMessage = `Perhatian! Tagihan SPM ${tagihan.nomor_spm} DIKEMBALIKAN. Silakan periksa detailnya.`;
+        const formattedTenggat = tenggatPerbaikan ? format(parseISO(tenggatPerbaikan), 'dd MMMM yyyy', { locale: localeId }) : 'tanggal tidak ditentukan';
+        notificationMessage = `Perhatian! Tagihan SPM ${tagihan.nomor_spm} DIKEMBALIKAN. Harap perbaiki sebelum ${formattedTenggat}.`;
       }
 
       if (notificationMessage) {
@@ -290,6 +299,7 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
             message: notificationMessage,
             is_read: false,
             tagihan_id: tagihan.id_tagihan, // Include tagihan_id
+            tenggat_perbaikan: tenggatPerbaikan, // NEW: Include tenggat_perbaikan in notification
           });
 
         if (notificationError) {
