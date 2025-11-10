@@ -288,7 +288,8 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
         notificationMessage = `Selamat! Tagihan SPM ${tagihan.nomor_spm} Anda telah DITERUSKAN.`;
       } else if (values.status_keputusan === 'Dikembalikan') {
         notificationMessage = `Perhatian! Tagihan SPM ${tagihan.nomor_spm} DIKEMBALIKAN.`;
-        if (tenggatPerbaikan) { // Only add deadline if tenggatPerbaikan exists
+        // Only add deadline if tenggatPerbaikan exists AND the duration is more than 1 day
+        if (tenggatPerbaikan && values.durasi_penahanan && values.durasi_penahanan > 1) {
           const formattedTenggat = format(parseISO(tenggatPerbaikan), 'dd MMMM yyyy', { locale: localeId });
           notificationMessage += ` Harap perbaiki sebelum ${formattedTenggat}.`;
         }
