@@ -70,6 +70,7 @@ interface Tagihan {
   id_korektor?: string;
   waktu_koreksi?: string;
   catatan_koreksi?: string;
+  tenggat_perbaikan?: string; // NEW: Add tenggat_perbaikan
 }
 
 interface SkpdOption { // Define interface for SKPD options
@@ -235,19 +236,21 @@ const PortalVerifikasi = () => {
     try {
       const todayStart = startOfDay(new Date()).toISOString();
       const todayEnd = endOfDay(new Date()).toISOString();
+      const now = new Date().toISOString(); // Current time for tenggat_perbaikan check
 
       let query = supabase
         .from('database_tagihan')
         .select('*', { count: 'exact' });
 
       if (profile.peran === 'Staf Verifikator') {
-        setHistoryPanelTitle('Riwayat Verifikasi Hari Ini');
+        setHistoryPanelTitle('Riwayat Verifikasi Hari Ini & Ditahan'); // Updated title
         query = query
-          .in('status_tagihan', ['Diteruskan', 'Dikembalikan'])
-          .gte('waktu_verifikasi', todayStart)
-          .lte('waktu_verifikasi', todayEnd)
           .eq('nama_verifikator', profile?.nama_lengkap) // Filter by current verifier's name
-          .is('id_korektor', null); // Filter for Staf Verifikasi
+          .is('id_korektor', null) // Filter for Staf Verifikasi
+          .or(
+            `and(status_tagihan.eq.Diteruskan,waktu_verifikasi.gte.${todayStart},waktu_verifikasi.lte.${todayEnd}),` + // Condition A: Diteruskan today
+            `and(status_tagihan.eq.Dikembalikan,tenggat_perbaikan.gte.${now})` // Condition B: Dikembalikan, deadline from now onwards
+          );
         query = query.order('waktu_verifikasi', { ascending: false });
       } else if (profile.peran === 'Staf Koreksi') {
         setHistoryPanelTitle('Pengembalian Terakhir Anda');
