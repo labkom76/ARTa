@@ -27,7 +27,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { format, parseISO, startOfMonth, endOfMonth, addDays } from 'date-fns';
+import { format, parseISO, startOfMonth, endOfMonth, addDays, differenceInDays } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -64,6 +64,8 @@ interface Tagihan {
   locked_by?: string;
   locked_at?: string;
   sumber_dana?: string;
+  skpd_can_edit?: boolean; // Add skpd_can_edit
+  tenggat_perbaikan?: string; // Add tenggat_perbaikan
 }
 
 interface VerifikasiTagihanDialogProps {
@@ -160,25 +162,41 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
 
   useEffect(() => {
     if (isOpen && tagihan) {
-      let initialStatusKeputusan: VerificationFormValues['status_keputusan'] | undefined;
-      if (tagihan.status_tagihan === 'Dikembalikan') {
-        initialStatusKeputusan = 'Dikembalikan';
-      } else {
-        initialStatusKeputusan = undefined; // For 'Menunggu Verifikasi'
-      }
+      const defaultDetailVerifikasi = checklistItems.map(item => ({
+        item,
+        memenuhi_syarat: true,
+        keterangan: '',
+      }));
 
-      form.reset({
-        status_keputusan: initialStatusKeputusan,
+      let initialValues: VerificationFormValues = {
+        status_keputusan: undefined,
         detail_verifikasi: tagihan.detail_verifikasi && tagihan.detail_verifikasi.length > 0
           ? tagihan.detail_verifikasi
-          : checklistItems.map(item => ({
-              item,
-              memenuhi_syarat: true,
-              keterangan: '',
-            })),
-        durasi_penahanan: 1, // Default to 1 day when opening
-        allow_skpd_edit: false, // NEW: Reset to false on open
-      });
+          : defaultDetailVerifikasi,
+        durasi_penahanan: 1, // Default for new/non-returned
+        allow_skpd_edit: false, // Default for new/non-returned
+      };
+
+      if (tagihan.status_tagihan === 'Dikembalikan') {
+        initialValues.status_keputusan = 'Dikembalikan';
+        initialValues.allow_skpd_edit = tagihan.skpd_can_edit || false; // Load existing value
+
+        if (tagihan.tenggat_perbaikan && tagihan.waktu_verifikasi) {
+          const deadlineDate = parseISO(tagihan.tenggat_perbaikan);
+          const verificationDate = parseISO(tagihan.waktu_verifikasi);
+          const diffDays = differenceInDays(deadlineDate, verificationDate);
+
+          if (diffDays >= 1 && diffDays <= 3) { // Ensure it's within valid range
+            initialValues.durasi_penahanan = diffDays;
+          } else {
+            initialValues.durasi_penahanan = 1; // Fallback to default if outside range
+          }
+        } else {
+          initialValues.durasi_penahanan = 1; // Fallback if dates are missing
+        }
+      }
+
+      form.reset(initialValues);
     }
   }, [isOpen, tagihan, form]);
 
