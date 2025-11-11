@@ -289,13 +289,36 @@ const PortalVerifikasi = () => {
           queryB = queryB.eq('nama_skpd', selectedHistorySkpd);
         }
 
+        // Query for Condition C: Status 'Menunggu Verifikasi' DAN nomor_verifikasi TIDAK KOSONG
+        let queryC = supabase
+          .from('database_tagihan')
+          .select('*', { count: 'exact' })
+          .eq('nama_verifikator', profile.nama_lengkap)
+          .is('id_korektor', null)
+          .eq('status_tagihan', 'Menunggu Verifikasi')
+          .not('nomor_verifikasi', 'is', null);
+
+        // Apply history search query to queryC
+        if (debouncedHistorySearchQuery) {
+          queryC = queryC.or(
+            `nomor_spm.ilike.%${debouncedHistorySearchQuery}%,nama_skpd.ilike.%${debouncedHistorySearchQuery}%`
+          );
+        }
+
+        // Apply history SKPD filter to queryC
+        if (selectedHistorySkpd !== 'Semua SKPD') {
+          queryC = queryC.eq('nama_skpd', selectedHistorySkpd);
+        }
+
         const { data: dataA, error: errorA, count: countA } = await queryA;
         const { data: dataB, error: errorB, count: countB } = await queryB;
+        const { data: dataC, error: errorC, count: countC } = await queryC; // Execute queryC
 
         if (errorA) throw errorA;
         if (errorB) throw errorB;
+        if (errorC) throw errorC; // Handle error for queryC
 
-        const combinedData = [...(dataA || []), ...(dataB || [])];
+        const combinedData = [...(dataA || []), ...(dataB || []), ...(dataC || [])]; // Combine all three datasets
         // Sort combined data by waktu_verifikasi descending
         combinedData.sort((a, b) => {
           const dateA = parseISO(a.waktu_verifikasi || '1970-01-01T00:00:00Z');
@@ -304,7 +327,7 @@ const PortalVerifikasi = () => {
         });
 
         setHistoryTagihanList(combinedData as Tagihan[]);
-        setHistoryTotalItems((countA || 0) + (countB || 0)); // Sum counts for total items
+        setHistoryTotalItems((countA || 0) + (countB || 0) + (countC || 0)); // Sum all counts for total items
 
       } else if (profile.peran === 'Staf Koreksi') {
         setHistoryPanelTitle('Pengembalian Terakhir Anda');
