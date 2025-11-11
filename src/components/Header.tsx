@@ -159,6 +159,8 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
 
     if (profile.peran === 'Staf Registrasi') {
       navigate(`/portal-registrasi?open_tagihan=${notification.tagihan_id}`);
+    } else if (profile.peran === 'Staf Verifikator') { // NEW: Logic for Staf Verifikator
+      navigate(`/portal-verifikasi?open_verifikasi=${notification.tagihan_id}`);
     } else if (profile.peran === 'SKPD') {
       try {
         // Fetch tagihan details for SKPD user
