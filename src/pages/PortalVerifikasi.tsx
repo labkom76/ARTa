@@ -184,6 +184,7 @@ const PortalVerifikasi = () => {
         .from('database_tagihan')
         .select('*', { count: 'exact' })
         .eq('status_tagihan', 'Menunggu Verifikasi')
+        .is('nomor_verifikasi', null) // NEW: Only show if nomor_verifikasi is NULL
         .order('waktu_registrasi', { ascending: true });
 
       query = query.or(
@@ -377,8 +378,10 @@ const PortalVerifikasi = () => {
             const existingIndex = prevList.findIndex(t => t.id_tagihan === newTagihan.id_tagihan);
             let updatedList = [...prevList];
 
+            // MODIFIED: Add check for nomor_verifikasi === null
             const isCurrentlyInQueue =
               newTagihan.status_tagihan === 'Menunggu Verifikasi' &&
+              newTagihan.nomor_verifikasi === null && // Only if not yet verified
               (newTagihan.locked_by === null ||
                newTagihan.locked_by === user?.id ||
                (newTagihan.locked_at && parseISO(newTagihan.locked_at).getTime() < lockTimeoutThreshold.getTime()));
@@ -393,7 +396,7 @@ const PortalVerifikasi = () => {
             } else {
               if (existingIndex > -1) {
                 updatedList.splice(existingIndex, 1); // Remove from queue
-                if (newTagihan.status_tagihan !== 'Menunggu Verifikasi') {
+                if (newTagihan.status_tagihan !== 'Menunggu Verifikasi' || newTagihan.nomor_verifikasi !== null) {
                   toast.info(`Tagihan ${newTagihan.nomor_spm} telah diverifikasi.`);
                 } else if (newTagihan.locked_by !== null && newTagihan.locked_by !== user?.id) {
                   toast.info(`Tagihan ${newTagihan.nomor_spm} sedang diproses oleh verifikator lain.`);
