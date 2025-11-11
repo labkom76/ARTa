@@ -15,9 +15,9 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { formatDistanceToNow, parseISO } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
-import TagihanDetailDialog from './TagihanDetailDialog'; // Import TagihanDetailDialog
 import { cn } from '@/lib/utils'; // Import cn for class merging
 import { ThemeToggle } from "@/components/ThemeToggle"; // Import ThemeToggle
+import { useNavigate } from 'react-router-dom'; // Import useNavigate
 
 interface HeaderProps {
   toggleSidebar: () => void;
@@ -32,41 +32,11 @@ interface Notification {
   tagihan_id?: string;
 }
 
-// Define Tagihan interface for the detail dialog
-interface Tagihan {
-  id_tagihan: string;
-  nama_skpd: string;
-  nomor_spm: string;
-  jenis_spm: string;
-  jenis_tagihan: string;
-  uraian: string;
-  jumlah_kotor: number;
-  status_tagihan: string;
-  waktu_input: string;
-  id_pengguna_input: string;
-  catatan_verifikator?: string;
-  nomor_registrasi?: string;
-  waktu_registrasi?: string;
-  nama_registrator?: string;
-  waktu_verifikasi?: string;
-  detail_verifikasi?: { item: string; memenuhi_syarat: boolean; keterangan: string }[];
-  nomor_verifikasi?: string;
-  nama_verifikator?: string;
-  nomor_koreksi?: string;
-  id_korektor?: string;
-  waktu_koreksi?: string;
-  catatan_koreksi?: string;
-  sumber_dana?: string;
-}
-
 const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
   const { profile, user } = useSession();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
-
-  // State for Tagihan Detail Dialog
-  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
-  const [selectedTagihanForDetail, setSelectedTagihanForDetail] = useState<Tagihan | null>(null);
+  const navigate = useNavigate(); // Initialize useNavigate
 
   const fetchNotifications = async () => {
     if (!user) {
@@ -173,23 +143,8 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
       await markNotificationAsRead(notification.id);
     }
 
-    // Fetch tagihan details
-    try {
-      const { data, error } = await supabase
-        .from('database_tagihan')
-        .select('*')
-        .eq('id_tagihan', notification.tagihan_id)
-        .single();
-
-      if (error) throw error;
-      if (!data) throw new Error('Tagihan tidak ditemukan.');
-
-      setSelectedTagihanForDetail(data as Tagihan);
-      setIsDetailModalOpen(true);
-    } catch (error: any) {
-      console.error('Error fetching tagihan details:', error.message);
-      toast.error('Gagal memuat detail tagihan: ' + error.message);
-    }
+    // Navigate to /portal-registrasi with tagihan_id as a search parameter
+    navigate(`/portal-registrasi?open_tagihan=${notification.tagihan_id}`);
   };
 
   const getInitials = (name: string | undefined) => {
@@ -317,12 +272,6 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
           </Button>
         )}
       </div>
-
-      <TagihanDetailDialog
-        isOpen={isDetailModalOpen}
-        onClose={() => setIsDetailModalOpen(false)}
-        tagihan={selectedTagihanForDetail}
-      />
     </header>
   );
 };
