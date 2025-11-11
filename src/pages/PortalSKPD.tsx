@@ -31,7 +31,7 @@ import { toast } from 'sonner';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { PlusCircleIcon, SearchIcon, EditIcon, Trash2Icon, FileDownIcon, ArrowUp, ArrowDown, FilePenLine } from 'lucide-react'; // Import FileDownIcon, ArrowUp, ArrowDown, FilePenLine
+import { PlusCircleIcon, SearchIcon, EditIcon, Trash2Icon, FileDownIcon, ArrowUp, ArrowDown, FilePenLine, EyeIcon } from 'lucide-react'; // Import FileDownIcon, ArrowUp, ArrowDown, FilePenLine, EyeIcon
 import { Textarea } from '@/components/ui/textarea';
 import DeleteConfirmationDialog from '@/components/DeleteConfirmationDialog';
 import TagihanDetailDialog from '@/components/TagihanDetailDialog'; // Import the new detail dialog
@@ -822,8 +822,16 @@ const PortalSKPD = () => {
                                 <TableCell>Rp{tagihan.jumlah_kotor.toLocaleString('id-ID')}</TableCell>
                                 <TableCell><StatusBadge status={tagihan.status_tagihan} /></TableCell>
                                 <TableCell className="text-center w-[100px]"> {/* MODIFIED: Set fixed width for Aksi */}
-                                  {canEdit ? (
-                                    <div className="flex justify-center space-x-2">
+                                  <div className="flex justify-center space-x-2">
+                                    {/* Always show Detail button for 'Dikembalikan' status */}
+                                    {tagihan.status_tagihan === 'Dikembalikan' && (
+                                      <Button variant="outline" size="icon" title="Lihat Detail" onClick={() => handleDetailClick(tagihan)}>
+                                        <EyeIcon className="h-4 w-4" />
+                                      </Button>
+                                    )}
+
+                                    {/* Show Edit button if canEdit is true */}
+                                    {canEdit && (
                                       <Button
                                         variant="outline"
                                         size="icon"
@@ -833,23 +841,28 @@ const PortalSKPD = () => {
                                       >
                                         <FilePenLine className="h-4 w-4" />
                                       </Button>
-                                      {tagihan.status_tagihan === 'Menunggu Registrasi' && ( // Only show delete for 'Menunggu Registrasi'
-                                        <Button
-                                          variant="destructive"
-                                          size="icon"
-                                          onClick={() => handleDeleteClick(tagihan.id_tagihan, tagihan.nomor_spm)}
-                                          title="Hapus Tagihan"
-                                          disabled={!isAccountVerified || !profile?.is_active}
-                                        >
-                                          <Trash2Icon className="h-4 w-4" />
-                                        </Button>
-                                      )}
-                                    </div>
-                                  ) : (
-                                    <Button variant="outline" size="sm" onClick={() => handleDetailClick(tagihan)}>
-                                      Detail
-                                    </Button>
-                                  )}
+                                    )}
+
+                                    {/* Show Delete button only for 'Menunggu Registrasi' */}
+                                    {tagihan.status_tagihan === 'Menunggu Registrasi' && (
+                                      <Button
+                                        variant="destructive"
+                                        size="icon"
+                                        onClick={() => handleDeleteClick(tagihan.id_tagihan, tagihan.nomor_spm)}
+                                        title="Hapus Tagihan"
+                                        disabled={!isAccountVerified || !profile?.is_active}
+                                      >
+                                        <Trash2Icon className="h-4 w-4" />
+                                      </Button>
+                                    )}
+
+                                    {/* If not editable AND not 'Dikembalikan', show only Detail button */}
+                                    {!canEdit && tagihan.status_tagihan !== 'Dikembalikan' && (
+                                      <Button variant="outline" size="icon" title="Lihat Detail" onClick={() => handleDetailClick(tagihan)}>
+                                        <EyeIcon className="h-4 w-4" />
+                                      </Button>
+                                    )}
+                                  </div>
                                 </TableCell>
                               </TableRow>
                             </TooltipTrigger>
