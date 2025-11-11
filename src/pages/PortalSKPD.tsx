@@ -482,7 +482,7 @@ const PortalSKPD = () => {
       }
 
       if (editingTagihan) {
-        const { error } = await supabase
+        const { data, error } = await supabase // MODIFIED: Added 'data' to destructuring
           .from('database_tagihan')
           .update({
             uraian: values.uraian,
@@ -498,9 +498,23 @@ const PortalSKPD = () => {
             skpd_can_edit: false, // NEW: Reset skpd_can_edit to false after editing
           })
           .eq('id_tagihan', editingTagihan.id_tagihan)
-          .eq('id_pengguna_input', user.id);
+          .eq('id_pengguna_input', user.id)
+          .select(); // IMPORTANT: Added .select() to get affected rows
 
-        if (error) throw error;
+        if (error) {
+          console.error('Supabase update error:', error);
+          toast.error('Gagal memperbarui tagihan: ' + error.message);
+          setIsSubmitting(false);
+          return; // Stop execution if there's an error
+        }
+
+        // NEW: Check if any rows were actually updated
+        if (!data || data.length === 0) {
+          console.warn('Supabase update warning: No rows affected. Possible RLS issue or record not found/editable.');
+          toast.error('Gagal memperbarui tagihan: Tidak ada perubahan yang disimpan. Pastikan Anda memiliki izin untuk mengedit tagihan ini.');
+          setIsSubmitting(false);
+          return;
+        }
 
         // NEW: Send notification to Registration Staff
         const { error: notificationError } = await supabase
@@ -532,7 +546,12 @@ const PortalSKPD = () => {
           status_tagihan: 'Menunggu Registrasi',
         });
 
-        if (error) throw error;
+        if (error) {
+          console.error('Supabase insert error:', error);
+          toast.error('Gagal menyimpan tagihan: ' + error.message);
+          setIsSubmitting(false);
+          return; // Stop execution if there's an error
+        }
         toast.success('Tagihan baru berhasil disimpan!');
       }
 
