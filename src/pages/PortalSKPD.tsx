@@ -339,7 +339,7 @@ const PortalSKPD = () => {
         query = query.range((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage - 1);
       }
 
-      const { data, error } = await query;
+      const { data, error, count } = await query; // MODIFIED: Added 'count' to destructuring
 
       if (error) {
         console.error('Supabase query error:', error); // Log full error object
