@@ -38,6 +38,7 @@ import useDebounce from '@/hooks/use-debounce';
 import KoreksiTagihanSidePanel from '@/components/KoreksiTagihanSidePanel'; // Import the new component
 import StatusBadge from '@/components/StatusBadge'; // Import StatusBadge
 import { Combobox } from '@/components/ui/combobox'; // Import Combobox
+import Countdown from 'react-countdown'; // Import Countdown
 
 interface VerificationItem {
   item: string;
@@ -557,6 +558,21 @@ const PortalVerifikasi = () => {
   const queueTotalPages = queueItemsPerPage === -1 ? 1 : Math.ceil(queueTotalItems / queueItemsPerPage);
   const historyTotalPages = historyItemsPerPage === -1 ? 1 : Math.ceil(historyTotalItems / historyItemsPerPage);
 
+  // Renderer for Countdown component
+  const renderer = ({ days, hours, minutes, seconds, completed }: any) => {
+    if (completed) {
+      // Render a completed state
+      return <span className="text-xs text-red-500">Waktu Habis!</span>;
+    } else {
+      // Render a countdown
+      return (
+        <span className="text-xs text-muted-foreground mt-1">
+          Sisa waktu: {days > 0 && `${days} hari `}{hours.toString().padStart(2, '0')}:{minutes.toString().padStart(2, '0')}:{seconds.toString().padStart(2, '0')}
+        </span>
+      );
+    }
+  };
+
   if (sessionLoading || loadingQueue || loadingHistory) {
     return (
       <div className="p-6 bg-white rounded-lg shadow-sm border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
@@ -778,9 +794,7 @@ const PortalVerifikasi = () => {
                         </TableCell><TableCell>{tagihan.nama_skpd}</TableCell><TableCell>{tagihan.nomor_spm}</TableCell><TableCell>
                           <StatusBadge status={tagihan.status_tagihan} />
                           {tagihan.status_tagihan === 'Dikembalikan' && tagihan.tenggat_perbaikan && (
-                            <p className="text-xs text-muted-foreground mt-1">
-                              Sisa waktu: {formatDistanceToNow(parseISO(tagihan.tenggat_perbaikan), { addSuffix: true, locale: localeId })}
-                            </p>
+                            <Countdown date={new Date(tagihan.tenggat_perbaikan)} renderer={renderer} />
                           )}
                         </TableCell><TableCell className="text-center">
                           <div className="flex justify-center space-x-2">
