@@ -99,6 +99,7 @@ const verificationFormSchema = z.object({
     (val) => Number(val),
     z.number().int().min(1).max(3, { message: 'Durasi penahanan harus antara 1 hingga 3 hari.' }).optional()
   ),
+  allow_skpd_edit: z.boolean().optional(), // NEW: Add to schema
 }).superRefine((data, ctx) => {
   // Conditional validation for durasi_penahanan
   if (data.status_keputusan === 'Dikembalikan' && (!data.durasi_penahanan || data.durasi_penahanan < 1 || data.durasi_penahanan > 3)) {
@@ -127,12 +128,14 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
         keterangan: '',
       })),
       durasi_penahanan: 1, // Default to 1 day
+      allow_skpd_edit: false, // NEW: Default to false
     },
   });
 
   // Watch for changes in detail_verifikasi and status_keputusan
   const detailVerifikasiWatch = form.watch('detail_verifikasi');
   const statusKeputusanWatch = form.watch('status_keputusan');
+  // const allowSkpdEditWatch = form.watch('allow_skpd_edit'); // Watch new field
 
   // Determine if all checklist items meet requirements
   const allChecklistItemsMet = detailVerifikasiWatch.every(item => item.memenuhi_syarat === true);
@@ -174,6 +177,7 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
               keterangan: '',
             })),
         durasi_penahanan: 1, // Default to 1 day when opening
+        allow_skpd_edit: false, // NEW: Reset to false on open
       });
     }
   }, [isOpen, tagihan, form]);
@@ -274,6 +278,7 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
           waktu_koreksi: null,
           catatan_koreksi: null,
           tenggat_perbaikan: tenggatPerbaikan, // NEW: Save tenggat_perbaikan
+          skpd_can_edit: values.allow_skpd_edit, // NEW: Save allow_skpd_edit
         })
         .eq('id_tagihan', tagihan.id_tagihan);
 
@@ -482,30 +487,49 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
 
             {/* NEW: Durasi Penahanan (Kondisional) */}
             {statusKeputusanWatch === 'Dikembalikan' && (
-              <div className="grid gap-2 mt-4">
-                <Label htmlFor="durasi_penahanan" className="text-lg font-semibold">Durasi Penahanan (Opsional)</Label>
-                <Controller
-                  name="durasi_penahanan"
-                  control={form.control}
-                  render={({ field }) => (
-                    <Select onValueChange={field.onChange} value={field.value?.toString()}>
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Pilih Durasi" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="1">Default (Final)</SelectItem>
-                        <SelectItem value="2">2 Hari</SelectItem>
-                        <SelectItem value="3">3 Hari</SelectItem>
-                      </SelectContent>
-                    </Select>
+              <>
+                <div className="grid gap-2 mt-4">
+                  <Label htmlFor="durasi_penahanan" className="text-lg font-semibold">Durasi Penahanan (Opsional)</Label>
+                  <Controller
+                    name="durasi_penahanan"
+                    control={form.control}
+                    render={({ field }) => (
+                      <Select onValueChange={field.onChange} value={field.value?.toString()}>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Pilih Durasi" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="1">Default (Final)</SelectItem>
+                          <SelectItem value="2">2 Hari</SelectItem>
+                          <SelectItem value="3">3 Hari</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                  {form.formState.errors.durasi_penahanan && (
+                    <p className="text-red-500 text-sm">
+                      {form.formState.errors.durasi_penahanan.message}
+                    </p>
                   )}
-                />
-                {form.formState.errors.durasi_penahanan && (
-                  <p className="text-red-500 text-sm">
-                    {form.formState.errors.durasi_penahanan.message}
-                  </p>
-                )}
-              </div>
+                </div>
+                {/* NEW: Checkbox "Izinkan SKPD mengedit?" */}
+                <div className="flex items-center space-x-2 mt-4">
+                  <Controller
+                    name="allow_skpd_edit"
+                    control={form.control}
+                    render={({ field }) => (
+                      <Checkbox
+                        id="allow-skpd-edit"
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    )}
+                  />
+                  <Label htmlFor="allow-skpd-edit" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                    Izinkan SKPD mengedit?
+                  </Label>
+                </div>
+              </>
             )}
           </form>
         </div>
