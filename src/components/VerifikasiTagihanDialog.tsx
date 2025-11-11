@@ -412,7 +412,13 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
                             render={({ field }) => (
                               <Checkbox
                                 checked={field.value}
-                                onCheckedChange={field.onChange}
+                                onCheckedChange={(checked) => {
+                                  field.onChange(checked);
+                                  // NEW LOGIC: Clear 'keterangan' if checkbox is checked
+                                  if (checked) {
+                                    form.setValue(`detail_verifikasi.${index}.keterangan`, '');
+                                  }
+                                }}
                               />
                             )}
                           />
