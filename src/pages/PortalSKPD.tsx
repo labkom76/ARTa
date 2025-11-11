@@ -103,6 +103,7 @@ interface Tagihan {
   nomor_urut?: number; // Add nomor_urut to Tagihan interface
   sumber_dana?: string; // Add sumber_dana to Tagihan interface
   catatan_registrasi?: string; // NEW: Add catatan_registrasi
+  skpd_can_edit?: boolean; // NEW: Add skpd_can_edit
 }
 
 // --- FUNGSI BARU: isNomorSpmDuplicate (MODIFIED) ---
@@ -157,7 +158,7 @@ const PortalSKPD = () => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [tagihanToDelete, setTagihanToDelete] = useState<{ id: string; nomorSpm: string } | null>(null);
 
-  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [isDetailModalOpen, setIsDetailModal] = useState(false);
   const [selectedTagihanForDetail, setSelectedTagihanForDetail] = useState<Tagihan | null>(null);
 
   const [isAccountVerified, setIsAccountVerified] = useState(true);
@@ -317,7 +318,7 @@ const PortalSKPD = () => {
     try {
       let query = supabase
         .from('database_tagihan')
-        .select('*', { count: 'exact' }) // Select all columns for detail view
+        .select('*, skpd_can_edit', { count: 'exact' }) // Select all columns for detail view, including skpd_can_edit
         .eq('id_pengguna_input', user.id);
 
       if (searchQuery) {
@@ -494,6 +495,7 @@ const PortalSKPD = () => {
             sumber_dana: values.sumber_dana, // Update sumber_dana
             status_tagihan: 'Menunggu Registrasi', // NEW: Reset status to Menunggu Registrasi
             catatan_registrasi: null, // NEW: Clear catatan_registrasi
+            skpd_can_edit: false, // NEW: Reset skpd_can_edit to false after editing
           })
           .eq('id_tagihan', editingTagihan.id_tagihan)
           .eq('id_pengguna_input', user.id);
@@ -592,7 +594,7 @@ const PortalSKPD = () => {
 
   const handleDetailClick = (tagihan: Tagihan) => {
     setSelectedTagihanForDetail(tagihan);
-    setIsDetailModalOpen(true);
+    setIsDetailModal(true);
   };
 
   const handleExportToXLSX = () => {
@@ -767,6 +769,10 @@ const PortalSKPD = () => {
                   </TableHeader>
                   <TableBody>
                     {tagihanList.map((tagihan, index) => {
+                      // NEW: Conditional rendering for edit button
+                      const canEdit = tagihan.status_tagihan === 'Menunggu Registrasi' ||
+                                      tagihan.status_tagihan === 'Tinjau Kembali' ||
+                                      (tagihan.status_tagihan === 'Dikembalikan' && tagihan.skpd_can_edit === true);
                       return (
                         <TooltipProvider key={tagihan.id_tagihan + "-row-tooltip"}>
                           <Tooltip>
@@ -784,7 +790,7 @@ const PortalSKPD = () => {
                                 <TableCell>Rp{tagihan.jumlah_kotor.toLocaleString('id-ID')}</TableCell>
                                 <TableCell><StatusBadge status={tagihan.status_tagihan} /></TableCell>
                                 <TableCell className="text-center w-[100px]"> {/* MODIFIED: Set fixed width for Aksi */}
-                                  {(tagihan.status_tagihan === 'Menunggu Registrasi' || tagihan.status_tagihan === 'Tinjau Kembali') ? (
+                                  {canEdit ? (
                                     <div className="flex justify-center space-x-2">
                                       <Button
                                         variant="outline"
@@ -1047,7 +1053,7 @@ const PortalSKPD = () => {
 
       <TagihanDetailDialog
         isOpen={isDetailModalOpen}
-        onClose={() => setIsDetailModalOpen(false)}
+        onClose={() => setIsDetailModal(false)}
         tagihan={selectedTagihanForDetail}
       />
     </div>
