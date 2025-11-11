@@ -500,12 +500,11 @@ const PortalSKPD = () => {
         // Preserve the original status if it was 'Dikembalikan'
         // Otherwise, if it was 'Tinjau Kembali' or 'Menunggu Registrasi', set it to 'Menunggu Registrasi'
         if (editingTagihan.status_tagihan === 'Dikembalikan') {
-          updateObject.status_tagihan = 'Dikembalikan';
-          // updateObject.skpd_can_edit = editingTagihan.skpd_can_edit; // This line is now overridden by the explicit false above
-          updateObject.tenggat_perbaikan = editingTagihan.tenggat_perbaikan; // Preserve original tenggat_perbaikan
-        } else {
+          updateObject.status_tagihan = 'Menunggu Verifikasi'; // MODIFIED: Change status to 'Menunggu Verifikasi'
+          // skpd_can_edit is already set to false above, which is correct.
+          // tenggat_perbaikan and nomor_verifikasi are not explicitly set here, so they will retain their old values.
+        } else { // This covers 'Tinjau Kembali' and 'Menunggu Registrasi'
           updateObject.status_tagihan = 'Menunggu Registrasi';
-          // updateObject.skpd_can_edit = false; // This line is now redundant due to the explicit false above
           updateObject.tenggat_perbaikan = null; // Clear tenggat_perbaikan for non-Dikembalikan statuses
         }
 
