@@ -241,17 +241,15 @@ const PortalVerifikasi = () => {
     try {
       const todayStart = startOfDay(new Date()).toISOString();
       const todayEnd = endOfDay(new Date()).toISOString();
-      // const now = new Date().toISOString(); // Not needed for Condition A yet
-
-      let query = supabase
-        .from('database_tagihan')
-        .select('*', { count: 'exact' });
+      const now = new Date().toISOString(); // Current time for tenggat_perbaikan check
 
       if (profile.peran === 'Staf Verifikator') {
         setHistoryPanelTitle('Riwayat Verifikasi Hari Ini & Ditahan');
         
         // Query for Condition A: Status 'Diteruskan' HARI INI
-        query = query
+        let queryA = supabase
+          .from('database_tagihan')
+          .select('*', { count: 'exact' })
           .eq('nama_verifikator', profile.nama_lengkap)
           .is('id_korektor', null)
           .eq('status_tagihan', 'Diteruskan')
@@ -260,34 +258,59 @@ const PortalVerifikasi = () => {
 
         // Apply history search query to queryA
         if (debouncedHistorySearchQuery) {
-          query = query.or(
+          queryA = queryA.or(
             `nomor_spm.ilike.%${debouncedHistorySearchQuery}%,nama_skpd.ilike.%${debouncedHistorySearchQuery}%`
           );
         }
 
         // Apply history SKPD filter to queryA
         if (selectedHistorySkpd !== 'Semua SKPD') {
-          query = query.eq('nama_skpd', selectedHistorySkpd);
+          queryA = queryA.eq('nama_skpd', selectedHistorySkpd);
         }
 
-        query = query.order('waktu_verifikasi', { ascending: false });
+        // Query for Condition B: Status 'Dikembalikan' DAN tenggat belum lewat
+        let queryB = supabase
+          .from('database_tagihan')
+          .select('*', { count: 'exact' })
+          .eq('nama_verifikator', profile.nama_lengkap)
+          .is('id_korektor', null)
+          .eq('status_tagihan', 'Dikembalikan')
+          .gte('tenggat_perbaikan', now); // tenggat_perbaikan masih di masa depan
 
-        if (historyItemsPerPage !== -1) {
-          query = query.range(
-            (historyCurrentPage - 1) * historyItemsPerPage,
-            historyCurrentPage * historyItemsPerPage - 1
+        // Apply history search query to queryB
+        if (debouncedHistorySearchQuery) {
+          queryB = queryB.or(
+            `nomor_spm.ilike.%${debouncedHistorySearchQuery}%,nama_skpd.ilike.%${debouncedHistorySearchQuery}%`
           );
         }
 
-        const { data: dataA, error: errorA, count: countA } = await query;
+        // Apply history SKPD filter to queryB
+        if (selectedHistorySkpd !== 'Semua SKPD') {
+          queryB = queryB.eq('nama_skpd', selectedHistorySkpd);
+        }
+
+        const { data: dataA, error: errorA, count: countA } = await queryA;
+        const { data: dataB, error: errorB, count: countB } = await queryB;
 
         if (errorA) throw errorA;
-        setHistoryTagihanList(dataA as Tagihan[]);
-        setHistoryTotalItems(countA || 0);
+        if (errorB) throw errorB;
+
+        const combinedData = [...(dataA || []), ...(dataB || [])];
+        // Sort combined data by waktu_verifikasi descending
+        combinedData.sort((a, b) => {
+          const dateA = parseISO(a.waktu_verifikasi || '1970-01-01T00:00:00Z');
+          const dateB = parseISO(b.waktu_verifikasi || '1970-01-01T00:00:00Z');
+          return dateB.getTime() - dateA.getTime();
+        });
+
+        setHistoryTagihanList(combinedData as Tagihan[]);
+        setHistoryTotalItems((countA || 0) + (countB || 0)); // Sum counts for total items
 
       } else if (profile.peran === 'Staf Koreksi') {
         setHistoryPanelTitle('Pengembalian Terakhir Anda');
-        query = query
+        let query = supabase
+          .from('database_tagihan')
+          .select('*', { count: 'exact' })
           .eq('status_tagihan', 'Dikembalikan')
           .eq('id_korektor', user.id)
           .gte('waktu_koreksi', todayStart)
@@ -322,7 +345,9 @@ const PortalVerifikasi = () => {
       } else {
         // Fallback for other roles, or if no specific filter is needed
         setHistoryPanelTitle('Riwayat Verifikasi Hari Ini');
-        query = query
+        let query = supabase
+          .from('database_tagihan')
+          .select('*', { count: 'exact' })
           .in('status_tagihan', ['Diteruskan', 'Dikembalikan'])
           .gte('waktu_verifikasi', todayStart)
           .lte('waktu_verifikasi', todayEnd);
@@ -462,23 +487,37 @@ const PortalVerifikasi = () => {
           });
 
           setHistoryTagihanList(prevList => {
-            const isVerifiedToday = newTagihan.waktu_verifikasi &&
-                                    isSameDay(parseISO(newTagihan.waktu_verifikasi), new Date()) &&
-                                    (newTagihan.status_tagihan === 'Diteruskan' || newTagihan.status_tagihan === 'Dikembalikan');
-            const existingHistoryIndex = prevList.findIndex(t => t.id_tagihan === newTagihan.id_tagihan);
-            let updatedHistoryList = [...prevList];
+            const now = new Date();
+            const todayStart = startOfDay(now).toISOString();
+            const todayEnd = endOfDay(now).toISOString();
 
-            // Apply conditional filter for 'Staf Verifikator' in realtime updates
-            const shouldBeInHistoryForVerifier = (profile?.peran === 'Staf Verifikator' && newTagihan.nama_verifikator === profile?.nama_lengkap) && (
-              (isVerifiedToday && newTagihan.id_korektor === null) || // Condition A: Diteruskan today
-              (newTagihan.status_tagihan === 'Dikembalikan' && newTagihan.tenggat_perbaikan && parseISO(newTagihan.tenggat_perbaikan).getTime() >= now.getTime()) || // Condition B: Dikembalikan, deadline from now onwards
-              (newTagihan.status_tagihan === 'Menunggu Verifikasi' && newTagihan.nomor_verifikasi !== null) // NEW Condition C: Menunggu Verifikasi, but already has a verification number
-            );
+            const isConditionA = newTagihan.status_tagihan === 'Diteruskan' &&
+                                 newTagihan.nama_verifikator === profile?.nama_lengkap &&
+                                 newTagihan.id_korektor === null &&
+                                 newTagihan.waktu_verifikasi &&
+                                 parseISO(newTagihan.waktu_verifikasi).toISOString() >= todayStart &&
+                                 parseISO(newTagihan.waktu_verifikasi).toISOString() <= todayEnd;
+
+            const isConditionB = newTagihan.status_tagihan === 'Dikembalikan' &&
+                                 newTagihan.nama_verifikator === profile?.nama_lengkap &&
+                                 newTagihan.id_korektor === null &&
+                                 newTagihan.tenggat_perbaikan &&
+                                 parseISO(newTagihan.tenggat_perbaikan).getTime() >= now.getTime();
+
+            const isConditionC = newTagihan.status_tagihan === 'Menunggu Verifikasi' &&
+                                 newTagihan.nama_verifikator === profile?.nama_lengkap &&
+                                 newTagihan.id_korektor === null &&
+                                 newTagihan.nomor_verifikasi !== null;
+
+            const shouldBeInHistoryForVerifier = profile?.peran === 'Staf Verifikator' && (isConditionA || isConditionB || isConditionC);
             
             const shouldBeInHistoryForKoreksi = newTagihan.waktu_koreksi &&
                                                 isSameDay(parseISO(newTagihan.waktu_koreksi), new Date()) &&
                                                 newTagihan.status_tagihan === 'Dikembalikan' &&
                                                 newTagihan.id_korektor === user?.id;
+
+            const existingHistoryIndex = prevList.findIndex(t => t.id_tagihan === newTagihan.id_tagihan);
+            let updatedHistoryList = [...prevList];
 
             if (profile?.peran === 'Staf Verifikator' && shouldBeInHistoryForVerifier) {
               if (existingHistoryIndex > -1) {
@@ -497,7 +536,11 @@ const PortalVerifikasi = () => {
                 updatedHistoryList.splice(existingHistoryIndex, 1);
               }
             }
-            return updatedHistoryList.sort((a, b) => (b.waktu_verifikasi || b.waktu_koreksi || '').localeCompare(a.waktu_verifikasi || a.waktu_koreksi || ''));
+            return updatedHistoryList.sort((a, b) => {
+              const dateA = parseISO(a.waktu_verifikasi || a.waktu_koreksi || '1970-01-01T00:00:00Z');
+              const dateB = parseISO(b.waktu_verifikasi || b.waktu_koreksi || '1970-01-01T00:00:00Z');
+              return dateB.getTime() - dateA.getTime();
+            });
           });
         }
       )
