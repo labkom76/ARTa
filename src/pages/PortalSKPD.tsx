@@ -104,6 +104,7 @@ interface Tagihan {
   sumber_dana?: string; // Add sumber_dana to Tagihan interface
   catatan_registrasi?: string; // NEW: Add catatan_registrasi
   skpd_can_edit?: boolean; // NEW: Add skpd_can_edit
+  tenggat_perbaikan?: string; // Add tenggat_perbaikan
 }
 
 // --- FUNGSI BARU: isNomorSpmDuplicate (MODIFIED) ---
@@ -482,21 +483,32 @@ const PortalSKPD = () => {
       }
 
       if (editingTagihan) {
-        const { data, error } = await supabase // MODIFIED: Added 'data' to destructuring
+        const updateObject: any = {
+          uraian: values.uraian,
+          jumlah_kotor: values.jumlah_kotor,
+          jenis_spm: values.jenis_spm,
+          jenis_tagihan: values.jenis_tagihan,
+          kode_jadwal: values.kode_jadwal,
+          nomor_urut: values.nomor_urut_tagihan,
+          nomor_spm: newNomorSpm,
+          sumber_dana: values.sumber_dana,
+          skpd_can_edit: false, // Always reset this after an edit by SKPD
+          catatan_registrasi: null, // Clear any previous review notes
+        };
+
+        // Preserve the original status if it was 'Dikembalikan'
+        // Otherwise, if it was 'Tinjau Kembali' or 'Menunggu Registrasi', set it to 'Menunggu Registrasi'
+        if (editingTagihan.status_tagihan === 'Dikembalikan') {
+          updateObject.status_tagihan = 'Dikembalikan';
+          // tenggat_perbaikan is not explicitly set here, so it will retain its value.
+          // This is the desired behavior.
+        } else {
+          updateObject.status_tagihan = 'Menunggu Registrasi';
+        }
+
+        const { data, error } = await supabase
           .from('database_tagihan')
-          .update({
-            uraian: values.uraian,
-            jumlah_kotor: values.jumlah_kotor,
-            jenis_spm: values.jenis_spm,
-            jenis_tagihan: values.jenis_tagihan,
-            kode_jadwal: values.kode_jadwal, // Update kode_jadwal
-            nomor_urut: values.nomor_urut_tagihan, // Update nomor_urut
-            nomor_spm: newNomorSpm, // Update with the newly generated SPM
-            sumber_dana: values.sumber_dana, // Update sumber_dana
-            status_tagihan: 'Menunggu Registrasi', // NEW: Reset status to Menunggu Registrasi
-            catatan_registrasi: null, // NEW: Clear catatan_registrasi
-            skpd_can_edit: false, // NEW: Reset skpd_can_edit to false after editing
-          })
+          .update(updateObject) // Use the constructed updateObject
           .eq('id_tagihan', editingTagihan.id_tagihan)
           .eq('id_pengguna_input', user.id)
           .select(); // IMPORTANT: Added .select() to get affected rows
