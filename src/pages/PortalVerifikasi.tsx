@@ -241,22 +241,50 @@ const PortalVerifikasi = () => {
     try {
       const todayStart = startOfDay(new Date()).toISOString();
       const todayEnd = endOfDay(new Date()).toISOString();
-      const now = new Date().toISOString(); // Current time for tenggat_perbaikan check
+      // const now = new Date().toISOString(); // Not needed for Condition A yet
 
       let query = supabase
         .from('database_tagihan')
         .select('*', { count: 'exact' });
 
       if (profile.peran === 'Staf Verifikator') {
-        setHistoryPanelTitle('Riwayat Verifikasi Hari Ini & Ditahan'); // Updated title
+        setHistoryPanelTitle('Riwayat Verifikasi Hari Ini & Ditahan');
+        
+        // Query for Condition A: Status 'Diteruskan' HARI INI
         query = query
-          .eq('nama_verifikator', profile?.nama_lengkap) // Filter by current verifier's name
-          .is('id_korektor', null) // Filter for Staf Verifikasi
-          .or(
-            `and(status_tagihan.eq.Diteruskan,waktu_verifikasi.gte.${todayStart},waktu_verifikasi.lte.${todayEnd}),` + // Condition A: Diteruskan today
-            `and(status_tagihan.eq.Dikembalikan,tenggat_perbaikan.gte.${now})` // Condition B: Dikembalikan, deadline from now onwards
+          .eq('nama_verifikator', profile.nama_lengkap)
+          .is('id_korektor', null)
+          .eq('status_tagihan', 'Diteruskan')
+          .gte('waktu_verifikasi', todayStart)
+          .lte('waktu_verifikasi', todayEnd);
+
+        // Apply history search query to queryA
+        if (debouncedHistorySearchQuery) {
+          query = query.or(
+            `nomor_spm.ilike.%${debouncedHistorySearchQuery}%,nama_skpd.ilike.%${debouncedHistorySearchQuery}%`
           );
+        }
+
+        // Apply history SKPD filter to queryA
+        if (selectedHistorySkpd !== 'Semua SKPD') {
+          query = query.eq('nama_skpd', selectedHistorySkpd);
+        }
+
         query = query.order('waktu_verifikasi', { ascending: false });
+
+        if (historyItemsPerPage !== -1) {
+          query = query.range(
+            (historyCurrentPage - 1) * historyItemsPerPage,
+            historyCurrentPage * historyItemsPerPage - 1
+          );
+        }
+
+        const { data: dataA, error: errorA, count: countA } = await query;
+
+        if (errorA) throw errorA;
+        setHistoryTagihanList(dataA as Tagihan[]);
+        setHistoryTotalItems(countA || 0);
+
       } else if (profile.peran === 'Staf Koreksi') {
         setHistoryPanelTitle('Pengembalian Terakhir Anda');
         query = query
@@ -265,6 +293,32 @@ const PortalVerifikasi = () => {
           .gte('waktu_koreksi', todayStart)
           .lte('waktu_koreksi', todayEnd);
         query = query.order('waktu_koreksi', { ascending: false });
+
+        // Apply history search query
+        if (debouncedHistorySearchQuery) {
+          query = query.or(
+            `nomor_spm.ilike.%${debouncedHistorySearchQuery}%,nama_skpd.ilike.%${debouncedHistorySearchQuery}%`
+          );
+        }
+
+        // NEW: Apply history SKPD filter
+        if (selectedHistorySkpd !== 'Semua SKPD') {
+          query = query.eq('nama_skpd', selectedHistorySkpd);
+        }
+
+        if (historyItemsPerPage !== -1) {
+          query = query.range(
+            (historyCurrentPage - 1) * historyItemsPerPage,
+            historyCurrentPage * historyItemsPerPage - 1
+          );
+        }
+
+        const { data, error, count } = await query;
+
+        if (error) throw error;
+        setHistoryTagihanList(data as Tagihan[]);
+        setHistoryTotalItems(count || 0);
+
       } else {
         // Fallback for other roles, or if no specific filter is needed
         setHistoryPanelTitle('Riwayat Verifikasi Hari Ini');
@@ -273,32 +327,33 @@ const PortalVerifikasi = () => {
           .gte('waktu_verifikasi', todayStart)
           .lte('waktu_verifikasi', todayEnd);
         query = query.order('waktu_verifikasi', { ascending: false });
+
+        // Apply history search query
+        if (debouncedHistorySearchQuery) {
+          query = query.or(
+            `nomor_spm.ilike.%${debouncedHistorySearchQuery}%,nama_skpd.ilike.%${debouncedHistorySearchQuery}%`
+          );
+        }
+
+        // NEW: Apply history SKPD filter
+        if (selectedHistorySkpd !== 'Semua SKPD') {
+          query = query.eq('nama_skpd', selectedHistorySkpd);
+        }
+
+        if (historyItemsPerPage !== -1) {
+          query = query.range(
+            (historyCurrentPage - 1) * historyItemsPerPage,
+            historyCurrentPage * historyItemsPerPage - 1
+          );
+        }
+
+        const { data, error, count } = await query;
+
+        if (error) throw error;
+        setHistoryTagihanList(data as Tagihan[]);
+        setHistoryTotalItems(count || 0);
       }
 
-      // Apply history search query
-      if (debouncedHistorySearchQuery) {
-        query = query.or(
-          `nomor_spm.ilike.%${debouncedHistorySearchQuery}%,nama_skpd.ilike.%${debouncedHistorySearchQuery}%`
-        );
-      }
-
-      // NEW: Apply history SKPD filter
-      if (selectedHistorySkpd !== 'Semua SKPD') {
-        query = query.eq('nama_skpd', selectedHistorySkpd);
-      }
-
-      if (historyItemsPerPage !== -1) {
-        query = query.range(
-          (historyCurrentPage - 1) * historyItemsPerPage,
-          historyCurrentPage * historyItemsPerPage - 1
-        );
-      }
-
-      const { data, error, count } = await query;
-
-      if (error) throw error;
-      setHistoryTagihanList(data as Tagihan[]);
-      setHistoryTotalItems(count || 0);
     } catch (error: any) {
       console.error('Error fetching history tagihan:', error.message);
       toast.error('Gagal memuat riwayat verifikasi: ' + error.message);
@@ -414,7 +469,12 @@ const PortalVerifikasi = () => {
             let updatedHistoryList = [...prevList];
 
             // Apply conditional filter for 'Staf Verifikator' in realtime updates
-            const shouldBeInHistoryForVerifier = isVerifiedToday && (profile?.peran !== 'Staf Verifikator' || newTagihan.id_korektor === null) && newTagihan.nama_verifikator === profile?.nama_lengkap;
+            const shouldBeInHistoryForVerifier = (profile?.peran === 'Staf Verifikator' && newTagihan.nama_verifikator === profile?.nama_lengkap) && (
+              (isVerifiedToday && newTagihan.id_korektor === null) || // Condition A: Diteruskan today
+              (newTagihan.status_tagihan === 'Dikembalikan' && newTagihan.tenggat_perbaikan && parseISO(newTagihan.tenggat_perbaikan).getTime() >= now.getTime()) || // Condition B: Dikembalikan, deadline from now onwards
+              (newTagihan.status_tagihan === 'Menunggu Verifikasi' && newTagihan.nomor_verifikasi !== null) // NEW Condition C: Menunggu Verifikasi, but already has a verification number
+            );
+            
             const shouldBeInHistoryForKoreksi = newTagihan.waktu_koreksi &&
                                                 isSameDay(parseISO(newTagihan.waktu_koreksi), new Date()) &&
                                                 newTagihan.status_tagihan === 'Dikembalikan' &&
