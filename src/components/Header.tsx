@@ -18,6 +18,12 @@ import { id as localeId } from 'date-fns/locale';
 import { cn } from '@/lib/utils'; // Import cn for class merging
 import { ThemeToggle } from "@/components/ThemeToggle"; // Import ThemeToggle
 import { useNavigate } from 'react-router-dom'; // Import useNavigate
+import TagihanDetailDialog from '@/components/TagihanDetailDialog'; // Re-import TagihanDetailDialog
+
+// Re-define Tagihan interface or import it from a shared location
+// For now, I'll define a minimal one here, but ideally it would be imported.
+// Given the context, I'll import from PortalSKPD for consistency.
+import { Tagihan } from '@/pages/PortalSKPD'; 
 
 interface HeaderProps {
   toggleSidebar: () => void;
@@ -37,6 +43,10 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const navigate = useNavigate(); // Initialize useNavigate
+
+  // State for TagihanDetailDialog
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [selectedTagihanForDetail, setSelectedTagihanForDetail] = useState<Tagihan | null>(null);
 
   const fetchNotifications = async () => {
     if (!user) {
@@ -133,6 +143,10 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
   };
 
   const handleNotificationClick = async (notification: Notification) => {
+    if (!user || !profile) {
+      toast.error('Informasi pengguna tidak lengkap.');
+      return;
+    }
     if (!notification.tagihan_id) {
       toast.info('Detail tagihan tidak tersedia untuk notifikasi ini.');
       return;
@@ -143,8 +157,29 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
       await markNotificationAsRead(notification.id);
     }
 
-    // Navigate to /portal-registrasi with tagihan_id as a search parameter
-    navigate(`/portal-registrasi?open_tagihan=${notification.tagihan_id}`);
+    if (profile.peran === 'Staf Registrasi') {
+      navigate(`/portal-registrasi?open_tagihan=${notification.tagihan_id}`);
+    } else if (profile.peran === 'SKPD') {
+      try {
+        // Fetch tagihan details for SKPD user
+        const { data: tagihanData, error: tagihanError } = await supabase
+          .from('database_tagihan')
+          .select('*')
+          .eq('id_tagihan', notification.tagihan_id)
+          .single();
+
+        if (tagihanError) throw tagihanError;
+        if (!tagihanData) throw new Error('Tagihan tidak ditemukan.');
+
+        setSelectedTagihanForDetail(tagihanData as Tagihan);
+        setIsDetailModalOpen(true);
+      } catch (error: any) {
+        console.error('Error fetching tagihan details for SKPD:', error.message);
+        toast.error('Gagal memuat detail tagihan: ' + error.message);
+      }
+    } else {
+      toast.info('Aksi tidak tersedia untuk peran Anda.');
+    }
   };
 
   const getInitials = (name: string | undefined) => {
@@ -272,6 +307,12 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
           </Button>
         )}
       </div>
+
+      <TagihanDetailDialog
+        isOpen={isDetailModalOpen}
+        onClose={() => setIsDetailModalOpen(false)}
+        tagihan={selectedTagihanForDetail}
+      />
     </header>
   );
 };
