@@ -530,36 +530,6 @@ const PortalSKPD = () => {
           return;
         }
 
-        // --- START NEW NOTIFICATION LOGIC ---
-        // 1. Get the ID of a 'Staf Registrasi' user
-        const { data: stafRegistrasiProfile, error: stafError } = await supabase
-          .from('profiles')
-          .select('id')
-          .eq('peran', 'Staf Registrasi')
-          .limit(1)
-          .single();
-
-        if (stafError || !stafRegistrasiProfile) {
-          console.error('Error fetching Staf Registrasi ID:', stafError?.message || 'Staf Registrasi not found.');
-          // Continue without sending notification if staff ID cannot be fetched
-        } else {
-          // 2. Send notification to the fetched Staf Registrasi ID
-          const { error: notificationError } = await supabase
-            .from('notifications')
-            .insert({
-              user_id: stafRegistrasiProfile.id, // Use the actual Staf Registrasi ID
-              message: `Tagihan SPM ${newNomorSpm} Telah di perbarui, Harap segera di periksa dan di proses`,
-              is_read: false,
-              tagihan_id: editingTagihan.id_tagihan, // Include tagihan_id
-            });
-
-          if (notificationError) {
-            console.error('Error inserting notification for Registration Staff:', notificationError.message);
-            // Don't throw error here, as tagihan update is more critical
-          }
-        }
-        // --- END NEW NOTIFICATION LOGIC ---
-
         toast.success('Tagihan berhasil diperbarui!');
       } else {
         const { error } = await supabase.from('database_tagihan').insert({
