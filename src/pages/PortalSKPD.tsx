@@ -45,7 +45,7 @@ import {
   TooltipTrigger,
   TooltipProvider, // Import TooltipProvider
 } from "@/components/ui/tooltip"; // Import Tooltip components
-import { useLocation, useNavigate } from 'react-router-dom'; // Import useLocation and useNavigate
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'; // Import useLocation and useNavigate
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'; // Import Card components
 import * as XLSX from 'xlsx'; // Import XLSX library
 import Countdown from 'react-countdown'; // Import Countdown
@@ -494,17 +494,18 @@ const PortalSKPD = () => {
           nomor_spm: newNomorSpm,
           sumber_dana: values.sumber_dana,
           catatan_registrasi: null, // Clear any previous review notes
+          skpd_can_edit: false, // ALWAYS set to false when SKPD submits an edit
         };
 
         // Preserve the original status if it was 'Dikembalikan'
         // Otherwise, if it was 'Tinjau Kembali' or 'Menunggu Registrasi', set it to 'Menunggu Registrasi'
         if (editingTagihan.status_tagihan === 'Dikembalikan') {
           updateObject.status_tagihan = 'Dikembalikan';
-          updateObject.skpd_can_edit = editingTagihan.skpd_can_edit; // Preserve original skpd_can_edit
+          // updateObject.skpd_can_edit = editingTagihan.skpd_can_edit; // This line is now overridden by the explicit false above
           updateObject.tenggat_perbaikan = editingTagihan.tenggat_perbaikan; // Preserve original tenggat_perbaikan
         } else {
           updateObject.status_tagihan = 'Menunggu Registrasi';
-          updateObject.skpd_can_edit = false; // Default for new or non-Dikembalikan statuses
+          // updateObject.skpd_can_edit = false; // This line is now redundant due to the explicit false above
           updateObject.tenggat_perbaikan = null; // Clear tenggat_perbaikan for non-Dikembalikan statuses
         }
 
