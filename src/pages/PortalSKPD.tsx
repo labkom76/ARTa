@@ -319,7 +319,7 @@ const PortalSKPD = () => {
     try {
       let query = supabase
         .from('database_tagihan')
-        .select('*, skpd_can_edit', { count: 'exact' }) // Select all columns for detail view, including skpd_can_edit
+        .select('*, skpd_can_edit, tenggat_perbaikan', { count: 'exact' }) // Select all columns for detail view, including skpd_can_edit and tenggat_perbaikan
         .eq('id_pengguna_input', user.id);
 
       if (searchQuery) {
@@ -492,7 +492,6 @@ const PortalSKPD = () => {
           nomor_urut: values.nomor_urut_tagihan,
           nomor_spm: newNomorSpm,
           sumber_dana: values.sumber_dana,
-          skpd_can_edit: false, // Always reset this after an edit by SKPD
           catatan_registrasi: null, // Clear any previous review notes
         };
 
@@ -500,10 +499,12 @@ const PortalSKPD = () => {
         // Otherwise, if it was 'Tinjau Kembali' or 'Menunggu Registrasi', set it to 'Menunggu Registrasi'
         if (editingTagihan.status_tagihan === 'Dikembalikan') {
           updateObject.status_tagihan = 'Dikembalikan';
-          // tenggat_perbaikan is not explicitly set here, so it will retain its value.
-          // This is the desired behavior.
+          updateObject.skpd_can_edit = editingTagihan.skpd_can_edit; // Preserve original skpd_can_edit
+          updateObject.tenggat_perbaikan = editingTagihan.tenggat_perbaikan; // Preserve original tenggat_perbaikan
         } else {
           updateObject.status_tagihan = 'Menunggu Registrasi';
+          updateObject.skpd_can_edit = false; // Default for new or non-Dikembalikan statuses
+          updateObject.tenggat_perbaikan = null; // Clear tenggat_perbaikan for non-Dikembalikan statuses
         }
 
         const { data, error } = await supabase
