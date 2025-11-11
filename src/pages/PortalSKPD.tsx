@@ -35,7 +35,7 @@ import { PlusCircleIcon, SearchIcon, EditIcon, Trash2Icon, FileDownIcon, ArrowUp
 import { Textarea } from '@/components/ui/textarea';
 import DeleteConfirmationDialog from '@/components/DeleteConfirmationDialog';
 import TagihanDetailDialog from '@/components/TagihanDetailDialog'; // Import the new detail dialog
-import { format } from 'date-fns'; // Import format from date-fns
+import { format, differenceInDays, parseISO } from 'date-fns'; // Import format, differenceInDays, parseISO
 import { id as localeId } from 'date-fns/locale'; // Import locale for Indonesian date formatting, renamed to localeId
 import { generateNomorSpm, getJenisTagihanCode } from '@/utils/spmGenerator'; // Import utility functions
 import StatusBadge from '@/components/StatusBadge'; // Import StatusBadge
@@ -48,6 +48,7 @@ import {
 import { useLocation, useNavigate } from 'react-router-dom'; // Import useLocation and useNavigate
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'; // Import Card components
 import * as XLSX from 'xlsx'; // Import XLSX library
+import Countdown from 'react-countdown'; // Import Countdown
 
 // Zod schema for form validation
 const formSchema = z.object({
@@ -319,7 +320,7 @@ const PortalSKPD = () => {
     try {
       let query = supabase
         .from('database_tagihan')
-        .select('*, skpd_can_edit, tenggat_perbaikan', { count: 'exact' }) // Select all columns for detail view, including skpd_can_edit and tenggat_perbaikan
+        .select('*, skpd_can_edit, tenggat_perbaikan, waktu_verifikasi', { count: 'exact' }) // Select all columns for detail view, including skpd_can_edit and tenggat_perbaikan
         .eq('id_pengguna_input', user.id);
 
       if (searchQuery) {
@@ -674,6 +675,21 @@ const PortalSKPD = () => {
 
   const totalPages = itemsPerPage === -1 ? 1 : Math.ceil(totalItems / itemsPerPage);
 
+  // Renderer for Countdown component
+  const renderer = ({ days, hours, minutes, seconds, completed }: any) => {
+    if (completed) {
+      // Render a completed state
+      return <span className="text-xs text-red-500">Waktu Habis!</span>;
+    } else {
+      // Render a countdown
+      return (
+        <span className="text-xs text-muted-foreground mt-1">
+          Sisa waktu: {days > 0 && `${days} hari `}{hours.toString().padStart(2, '0')}:{minutes.toString().padStart(2, '0')}:{seconds.toString().padStart(2, '0')}
+        </span>
+      );
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center mb-6">
@@ -805,6 +821,13 @@ const PortalSKPD = () => {
                       const canEdit = tagihan.status_tagihan === 'Menunggu Registrasi' ||
                                       tagihan.status_tagihan === 'Tinjau Kembali' ||
                                       (tagihan.status_tagihan === 'Dikembalikan' && tagihan.skpd_can_edit === true);
+
+                      // Logic for countdown timer
+                      const showCountdown = tagihan.status_tagihan === 'Dikembalikan' &&
+                                            tagihan.tenggat_perbaikan &&
+                                            tagihan.waktu_verifikasi &&
+                                            differenceInDays(parseISO(tagihan.tenggat_perbaikan), parseISO(tagihan.waktu_verifikasi)) > 1;
+
                       return (
                         <TooltipProvider key={tagihan.id_tagihan + "-row-tooltip"}>
                           <Tooltip>
@@ -820,7 +843,12 @@ const PortalSKPD = () => {
                                 <TableCell>{tagihan.jenis_tagihan}</TableCell>
                                 <TableCell>{tagihan.sumber_dana || '-'}</TableCell>
                                 <TableCell>Rp{tagihan.jumlah_kotor.toLocaleString('id-ID')}</TableCell>
-                                <TableCell><StatusBadge status={tagihan.status_tagihan} /></TableCell>
+                                <TableCell>
+                                  <StatusBadge status={tagihan.status_tagihan} />
+                                  {showCountdown && (
+                                    <Countdown date={new Date(tagihan.tenggat_perbaikan!)} renderer={renderer} />
+                                  )}
+                                </TableCell>
                                 <TableCell className="text-center w-[100px]"> {/* MODIFIED: Set fixed width for Aksi */}
                                   <div className="flex justify-center space-x-2">
                                     {/* Always show Detail button for 'Dikembalikan' status */}
