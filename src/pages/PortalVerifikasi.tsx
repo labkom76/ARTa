@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { format, parseISO, startOfDay, endOfDay, isSameDay } from 'date-fns';
+import { format, parseISO, startOfDay, endOfDay, isSameDay, formatDistanceToNow } from 'date-fns'; // Import formatDistanceToNow
 import { id as localeId } from 'date-fns/locale';
 import { FileCheckIcon, LockIcon, EyeIcon, PrinterIcon, SearchIcon, FilePenLine } from 'lucide-react'; // Import FilePenLine icon
 import VerifikasiTagihanDialog from '@/components/VerifikasiTagihanDialog';
@@ -775,7 +775,14 @@ const PortalVerifikasi = () => {
                             : (tagihan.waktu_verifikasi ? format(parseISO(tagihan.waktu_verifikasi), 'dd MMMM yyyy HH:mm', { locale: localeId }) : '-')}
                         </TableCell><TableCell className="font-medium">
                           {profile?.peran === 'Staf Koreksi' ? (tagihan.nomor_koreksi || '-') : (tagihan.nomor_verifikasi || '-')}
-                        </TableCell><TableCell>{tagihan.nama_skpd}</TableCell><TableCell>{tagihan.nomor_spm}</TableCell><TableCell><StatusBadge status={tagihan.status_tagihan} /></TableCell><TableCell className="text-center">
+                        </TableCell><TableCell>{tagihan.nama_skpd}</TableCell><TableCell>{tagihan.nomor_spm}</TableCell><TableCell>
+                          <StatusBadge status={tagihan.status_tagihan} />
+                          {tagihan.status_tagihan === 'Dikembalikan' && tagihan.tenggat_perbaikan && (
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Sisa waktu: {formatDistanceToNow(parseISO(tagihan.tenggat_perbaikan), { addSuffix: true, locale: localeId })}
+                            </p>
+                          )}
+                        </TableCell><TableCell className="text-center">
                           <div className="flex justify-center space-x-2">
                             <Button variant="outline" size="icon" title="Lihat Detail" onClick={() => handleDetailClick(tagihan)}>
                               <EyeIcon className="h-4 w-4" />
