@@ -339,7 +339,7 @@ const PortalSKPD = () => {
         query = query.range((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage - 1);
       }
 
-      const { data, error, count } = await query;
+      const { data, error } = await query;
 
       if (error) {
         console.error('Supabase query error:', error); // Log full error object
@@ -684,7 +684,7 @@ const PortalSKPD = () => {
       // Render a countdown
       return (
         <span className="text-xs text-muted-foreground mt-1">
-          Sisa waktu: {days > 0 && `${days} hari `}{hours.toString().padStart(2, '0')}:{minutes.toString().padStart(2, '0')}:{seconds.toString().padStart(2, '0')}
+          Selesaikan sebelum: {days > 0 && `${days} hari `}{hours.toString().padStart(2, '0')}:{minutes.toString().padStart(2, '0')}:{seconds.toString().padStart(2, '0')}
         </span>
       );
     }
