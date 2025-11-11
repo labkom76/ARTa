@@ -39,6 +39,7 @@ import KoreksiTagihanSidePanel from '@/components/KoreksiTagihanSidePanel'; // I
 import StatusBadge from '@/components/StatusBadge'; // Import StatusBadge
 import { Combobox } from '@/components/ui/combobox'; // Import Combobox
 import Countdown from 'react-countdown'; // Import Countdown
+import { useSearchParams } from 'react-router-dom'; // Import useSearchParams
 
 interface VerificationItem {
   item: string;
@@ -133,6 +134,8 @@ const PortalVerifikasi = () => {
   const prevSelectedHistorySkpdRef = useRef(selectedHistorySkpd);
   const prevHistoryItemsPerPageRef = useRef(historyItemsPerPage);
   const prevHistoryCurrentPageRef = useRef(historyCurrentPage);
+
+  const [searchParams, setSearchParams] = useSearchParams(); // Initialize useSearchParams and its setter
 
   // Fetch unique SKPD names for the queue filter dropdown (MODIFIED)
   useEffect(() => {
@@ -572,6 +575,49 @@ const PortalVerifikasi = () => {
       );
     }
   };
+
+  // NEW: useEffect to handle URL parameter for opening modal
+  useEffect(() => {
+    const tagihanToOpenId = searchParams.get('open_verifikasi');
+    if (tagihanToOpenId && user && profile?.peran === 'Staf Verifikator') {
+      const fetchAndOpenModal = async () => {
+        setLoadingQueue(true); // Show loading while fetching
+        try {
+          const now = new Date();
+          const lockTimeoutThreshold = new Date(now.getTime() - LOCK_TIMEOUT_MINUTES * 60 * 1000).toISOString();
+
+          const { data, error } = await supabase
+            .from('database_tagihan')
+            .select('*')
+            .eq('id_tagihan', tagihanToOpenId)
+            .eq('status_tagihan', 'Menunggu Verifikasi') // Only open if it's in the queue
+            .or(
+              `locked_by.is.null,locked_by.eq.${user.id},locked_at.lt.${lockTimeoutThreshold}`
+            )
+            .single();
+
+          if (error) {
+            if (error.code === 'PGRST116') { // No rows found
+              toast.info('Tagihan tidak ditemukan di antrian atau sudah diproses.');
+            } else {
+              throw error;
+            }
+          } else if (data) {
+            // Acquire lock and open modal
+            await handleProcessVerification(data as Tagihan);
+          }
+        } catch (error: any) {
+          console.error('Error fetching tagihan from URL param:', error.message);
+          toast.error('Gagal memuat tagihan dari URL: ' + error.message);
+        } finally {
+          setLoadingQueue(false); // Hide loading
+          // Clear the URL parameter to prevent re-opening on refresh
+          setSearchParams({}, { replace: true }); // Use setSearchParams to clear the URL param
+        }
+      };
+      fetchAndOpenModal();
+    }
+  }, [searchParams, user, profile, setSearchParams]); // Depend on searchParams, user, and profile
 
   if (sessionLoading || loadingQueue || loadingHistory) {
     return (
