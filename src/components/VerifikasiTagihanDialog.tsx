@@ -257,9 +257,14 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
       const now = new Date();
 
       let tenggatPerbaikan: string | null = null;
-      if (values.status_keputusan === 'Dikembalikan' && values.durasi_penahanan) {
-        const tenggat = addDays(now, values.durasi_penahanan);
-        tenggatPerbaikan = tenggat.toISOString();
+      let skpdCanEdit: boolean = false; // Default to false
+
+      if (values.status_keputusan === 'Dikembalikan') {
+        if (values.durasi_penahanan) {
+          const tenggat = addDays(now, values.durasi_penahanan);
+          tenggatPerbaikan = tenggat.toISOString();
+        }
+        skpdCanEdit = values.allow_skpd_edit || false; // Set based on checkbox value
       }
 
       const { error } = await supabase
@@ -278,7 +283,7 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
           waktu_koreksi: null,
           catatan_koreksi: null,
           tenggat_perbaikan: tenggatPerbaikan, // NEW: Save tenggat_perbaikan
-          skpd_can_edit: values.allow_skpd_edit, // NEW: Save allow_skpd_edit
+          skpd_can_edit: skpdCanEdit, // NEW: Save allow_skpd_edit
         })
         .eq('id_tagihan', tagihan.id_tagihan);
 
