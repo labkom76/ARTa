@@ -136,7 +136,7 @@ const PortalRegistrasi = () => {
   const prevHistoryCurrentPage = useRef(historyCurrentPage);
   const prevHistoryItemsPerPage = useRef(historyItemsPerPage);
 
-  const [searchParams] = useSearchParams(); // Initialize useSearchParams
+  const [searchParams, setSearchParams] = useSearchParams(); // Initialize useSearchParams and its setter
 
   // Effect untuk memfokuskan kembali input pencarian setelah data dimuat
   useEffect(() => {
@@ -525,13 +525,12 @@ const PortalRegistrasi = () => {
         } finally {
           setLoadingQueue(false); // Hide loading
           // Clear the URL parameter to prevent re-opening on refresh
-          searchParams.delete('open_tagihan');
-          window.history.replaceState({}, document.title, window.location.pathname);
+          setSearchParams({}, { replace: true }); // Use setSearchParams to clear the URL param
         }
       };
       fetchAndOpenModal();
     }
-  }, [searchParams, user, profile]); // Depend on searchParams, user, and profile
+  }, [searchParams, user, profile, setSearchParams]); // Depend on searchParams, user, and profile
 
   if (sessionLoading || loadingQueue || loadingHistory) {
     return (
