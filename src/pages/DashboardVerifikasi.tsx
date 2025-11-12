@@ -10,6 +10,7 @@ import {
   TimerIcon,
   BarChart3Icon,
   BarChartIcon,
+  PieChartIcon, // Import PieChartIcon
 } from 'lucide-react';
 import {
   BarChart,
@@ -19,9 +20,18 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
+  PieChart, // Import PieChart
+  Pie,      // Import Pie
+  Cell,     // Import Cell for PieChart colors
 } from 'recharts';
 import { format, subDays, startOfDay, endOfDay, startOfMonth, endOfMonth, parseISO, differenceInMinutes } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
+
+// NEW IMPORTS FOR SWIPER
+import { Swiper, SwiperSlide } from 'swiper/react';
+import 'swiper/css';
+import 'swiper/css/pagination'; // Import Swiper pagination styles
+import { Pagination, Autoplay } from 'swiper/modules'; // Import Swiper modules, including Autoplay
 
 interface KPIData {
   antrianVerifikasi: number;
@@ -47,6 +57,10 @@ const DashboardVerifikasi = () => {
   const [dailyVerificationChartData, setDailyVerificationChartData] = useState<DailyVerificationData[]>([]);
   const [skpdProblemChartData, setSkpdProblemChartData] = useState<SkpdProblemData[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Define colors for the Pie Chart
+  const PIE_COLORS = ['#EF4444', '#F97316', '#F59E0B', '#EAB308', '#84CC16', '#3B82F6', '#6366F1'];
+
 
   useEffect(() => {
     const fetchData = async () => {
@@ -267,20 +281,59 @@ const DashboardVerifikasi = () => {
         <Card className="shadow-sm rounded-lg">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-              <BarChartIcon className="h-5 w-5 text-gray-600 dark:text-gray-300" />
-              Sumber Tagihan Bermasalah (per SKPD)
+              <PieChartIcon className="h-5 w-5 text-gray-600 dark:text-gray-300" /> {/* Changed icon to PieChartIcon */}
+              Tagihan yang dikembalikan (PerSKPD) {/* Changed title */}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={skpdProblemChartData}>
-                <XAxis dataKey="name" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
-                <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
-                <Tooltip cursor={{ fill: 'transparent' }} />
-                <Legend />
-                <Bar dataKey="value" fill="#8884d8" name="Jumlah Dikembalikan" radius={[4, 4, 0, 0]} />
-              </BarChart>
+              <PieChart>
+                <Pie
+                  data={skpdProblemChartData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false} // Menonaktifkan garis label
+                  label={false} // Menonaktifkan label teks langsung pada irisan
+                  outerRadius={100} // Adjusted outerRadius
+                  innerRadius={60} // For donut effect
+                  dataKey="value"
+                  nameKey="name"
+                  paddingAngle={5}
+                >
+                  {skpdProblemChartData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip formatter={(value: number, name: string) => [`${value} tagihan`, name]} /> {/* Formatter for tooltip */}
+                {/* REMOVED: <Legend /> */}
+              </PieChart>
             </ResponsiveContainer>
+            {/* NEW: Swiper for custom legend */}
+            {skpdProblemChartData.length > 0 && (
+              <Swiper
+                slidesPerView={3}
+                spaceBetween={10}
+                loop={true}
+                pagination={{ clickable: true }}
+                modules={[Pagination, Autoplay]} // Added Autoplay module
+                autoplay={{ delay: 3000, disableOnInteraction: false }} // Enabled autoplay
+                className="mt-4 pb-8" // Add some margin top and padding bottom for pagination dots
+              >
+                {skpdProblemChartData.map((entry, index) => (
+                  <SwiperSlide key={entry.name}>
+                    <div className="flex items-center gap-2 p-2 rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700 h-auto"> {/* Added h-auto */}
+                      <span
+                        className="w-4 h-4 rounded-full flex-shrink-0"
+                        style={{ backgroundColor: PIE_COLORS[index % PIE_COLORS.length] }}
+                      ></span>
+                      <span className="text-sm text-gray-800 dark:text-gray-200 whitespace-normal"> {/* Removed truncate */}
+                        {entry.name}
+                      </span>
+                    </div>
+                  </SwiperSlide>
+                ))}
+              </Swiper>
+            )}
           </CardContent>
         </Card>
       </div>

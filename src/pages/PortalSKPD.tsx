@@ -31,7 +31,7 @@ import { toast } from 'sonner';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { PlusCircleIcon, SearchIcon, EditIcon, Trash2Icon, FileDownIcon, ArrowUp, ArrowDown } from 'lucide-react'; // Import FileDownIcon, ArrowUp, ArrowDown
+import { PlusCircleIcon, SearchIcon, EditIcon, Trash2Icon, FileDownIcon, ArrowUp, ArrowDown, FilePenLine } from 'lucide-react'; // Import FileDownIcon, ArrowUp, ArrowDown, FilePenLine
 import { Textarea } from '@/components/ui/textarea';
 import DeleteConfirmationDialog from '@/components/DeleteConfirmationDialog';
 import TagihanDetailDialog from '@/components/TagihanDetailDialog'; // Import the new detail dialog
@@ -43,6 +43,7 @@ import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
+  TooltipProvider, // Import TooltipProvider
 } from "@/components/ui/tooltip"; // Import Tooltip components
 import { useLocation, useNavigate } from 'react-router-dom'; // Import useLocation and useNavigate
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'; // Import Card components
@@ -101,6 +102,7 @@ interface Tagihan {
   kode_jadwal?: string; // Add kode_jadwal to Tagihan interface
   nomor_urut?: number; // Add nomor_urut to Tagihan interface
   sumber_dana?: string; // Add sumber_dana to Tagihan interface
+  catatan_registrasi?: string; // NEW: Add catatan_registrasi
 }
 
 // --- FUNGSI BARU: isNomorSpmDuplicate (MODIFIED) ---
@@ -179,7 +181,7 @@ const PortalSKPD = () => {
       uraian: '',
       jumlah_kotor: 0,
       jenis_spm: '',
-      jenis_tagihan: '',
+            jenis_tagihan: '',
       kode_jadwal: '', // Default value for new field
       nomor_urut_tagihan: 1, // Default value for new field
       sumber_dana: '', // Default value for new field
@@ -194,10 +196,11 @@ const PortalSKPD = () => {
 
   useEffect(() => {
     if (!sessionLoading && profile) {
-      if (profile.peran === 'SKPD' && !profile.asal_skpd) {
+      // MODIFIED: Check both asal_skpd and is_active
+      if (profile.peran === 'SKPD' && (!profile.asal_skpd || !profile.is_active)) {
         setIsAccountVerified(false);
         if (!toastShownRef.current) {
-          toast.error('Akun belum diverifikasi. Silakan hubungi admin untuk melanjutkan.');
+          toast.error('Akun Anda belum diverifikasi atau diblokir. Silakan hubungi admin untuk melanjutkan.');
           toastShownRef.current = true;
         }
       } else {
@@ -242,7 +245,7 @@ const PortalSKPD = () => {
           setKodeSkpd(data.kode_skpd);
         }
       };
-      fetchKodeSkpd();
+      fetchKodeSkpd(); // Corrected: Call fetchKodeSkpd() instead of fetchSkpd()
     } else {
       setKodeSkpd(null);
     }
@@ -341,7 +344,7 @@ const PortalSKPD = () => {
       }
 
       setTagihanList(data as Tagihan[]);
-      setTotalItems(count || 0);
+      setTotalItems(count || 0); // Ensure count is used here
 
     } catch (error: any) {
       console.error('Error fetching tagihan:', error.message);
@@ -427,7 +430,7 @@ const PortalSKPD = () => {
       return;
     }
     if (!isAccountVerified) {
-      toast.error('Akun Anda belum diverifikasi. Tidak dapat menginput tagihan.');
+      toast.error('Akun Anda belum diverifikasi atau diblokir. Tidak dapat menginput tagihan.');
       return;
     }
 
@@ -489,11 +492,28 @@ const PortalSKPD = () => {
             nomor_urut: values.nomor_urut_tagihan, // Update nomor_urut
             nomor_spm: newNomorSpm, // Update with the newly generated SPM
             sumber_dana: values.sumber_dana, // Update sumber_dana
+            status_tagihan: 'Menunggu Registrasi', // NEW: Reset status to Menunggu Registrasi
+            catatan_registrasi: null, // NEW: Clear catatan_registrasi
           })
           .eq('id_tagihan', editingTagihan.id_tagihan)
           .eq('id_pengguna_input', user.id);
 
         if (error) throw error;
+
+        // NEW: Send notification to Registration Staff
+        const { error: notificationError } = await supabase
+          .from('notifications')
+          .insert({
+            user_id: 'staf_registrasi_id_placeholder', // Placeholder: Replace with actual Registration Staff ID(s)
+            message: `Tagihan SPM ${newNomorSpm} dari SKPD ${profile.asal_skpd} telah diperbarui dan siap diregistrasi ulang.`,
+            is_read: false,
+            tagihan_id: editingTagihan.id_tagihan,
+          });
+
+        if (notificationError) {
+          console.error('Error inserting notification for Registration Staff:', notificationError.message);
+        }
+
         toast.success('Tagihan berhasil diperbarui!');
       } else {
         const { error } = await supabase.from('database_tagihan').insert({
@@ -528,7 +548,7 @@ const PortalSKPD = () => {
 
   const handleEdit = (tagihan: Tagihan) => {
     if (!isAccountVerified) {
-      toast.error('Akun Anda belum diverifikasi. Tidak dapat mengedit tagihan.');
+      toast.error('Akun Anda belum diverifikasi atau diblokir. Tidak dapat mengedit tagihan.');
       return;
     }
     setEditingTagihan(tagihan);
@@ -537,7 +557,7 @@ const PortalSKPD = () => {
 
   const handleDeleteClick = (tagihanId: string, nomorSpm: string) => {
     if (!isAccountVerified) {
-      toast.error('Akun Anda belum diverifikasi. Tidak dapat menghapus tagihan.');
+      toast.error('Akun Anda belum diverifikasi atau diblokir. Tidak dapat menghapus tagihan.');
       return;
     }
     setTagihanToDelete({ id: tagihanId, nomorSpm: nomorSpm });
@@ -628,7 +648,7 @@ const PortalSKPD = () => {
           <Button variant="outline" className="flex items-center gap-2" onClick={handleExportToXLSX} disabled={!isAccountVerified || tagihanList.length === 0}>
             <FileDownIcon className="h-4 w-4" /> Export ke XLSX
           </Button>
-          <Button onClick={() => { setEditingTagihan(null); setIsModalOpen(true); }} className="flex items-center gap-2" disabled={!isAccountVerified}>
+          <Button onClick={() => { setEditingTagihan(null); setIsModalOpen(true); }} className="flex items-center gap-2" disabled={!isAccountVerified || !profile?.is_active}>
             <PlusCircleIcon className="h-4 w-4" /> Input Tagihan Baru
           </Button>
         </div>
@@ -663,6 +683,7 @@ const PortalSKPD = () => {
               <SelectContent>
                 <SelectItem value="Semua Status">Semua Status</SelectItem>
                 <SelectItem value="Menunggu Registrasi">Menunggu Registrasi</SelectItem>
+                <SelectItem value="Tinjau Kembali">Tinjau Kembali</SelectItem> {/* NEW: Add Tinjau Kembali to filter */}
                 <SelectItem value="Menunggu Verifikasi">Menunggu Verifikasi</SelectItem>
                 <SelectItem value="Diteruskan">Diteruskan</SelectItem>
                 <SelectItem value="Dikembalikan">Dikembalikan</SelectItem>
@@ -700,110 +721,105 @@ const PortalSKPD = () => {
               <div className="overflow-x-auto">
                 <Table key={`${selectedStatus}-${currentPage}`}>
                   <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-[50px]">No.</TableHead>
-                      <TableHead>
+                    <TableRow><TableHead className="w-[50px]">No.</TableHead><TableHead className="w-[180px]"> {/* MODIFIED: Set fixed width for Nomor SPM */}
                         <Button variant="ghost" onClick={() => handleSort('nomor_spm')} className="p-0 h-auto">
                           Nomor SPM
                           {sortColumn === 'nomor_spm' && (
                             sortDirection === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />
                           )}
                         </Button>
-                      </TableHead>
-                      <TableHead>
+                      </TableHead><TableHead>
                         <Button variant="ghost" onClick={() => handleSort('jenis_spm')} className="p-0 h-auto">
                           Jenis SPM
                           {sortColumn === 'jenis_spm' && (
                             sortDirection === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />
                           )}
                         </Button>
-                      </TableHead>
-                      <TableHead>
+                      </TableHead><TableHead>
                         <Button variant="ghost" onClick={() => handleSort('jenis_tagihan')} className="p-0 h-auto">
                           Jenis Tagihan
                           {sortColumn === 'jenis_tagihan' && (
                             sortDirection === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />
                           )}
                         </Button>
-                      </TableHead>
-                      <TableHead>
+                      </TableHead><TableHead>
                         <Button variant="ghost" onClick={() => handleSort('sumber_dana')} className="p-0 h-auto">
                           Sumber Dana
                           {sortColumn === 'sumber_dana' && (
                             sortDirection === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />
                           )}
                         </Button>
-                      </TableHead>
-                      <TableHead className="min-w-[280px]">Uraian</TableHead>
-                      <TableHead>
+                      </TableHead><TableHead>
                         <Button variant="ghost" onClick={() => handleSort('jumlah_kotor')} className="p-0 h-auto">
                           Jumlah Kotor
                           {sortColumn === 'jumlah_kotor' && (
                             sortDirection === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />
                           )}
                         </Button>
-                      </TableHead>
-                      <TableHead>
+                      </TableHead><TableHead>
                         <Button variant="ghost" onClick={() => handleSort('status_tagihan')} className="p-0 h-auto">
                           Status
                           {sortColumn === 'status_tagihan' && (
                             sortDirection === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />
                           )}
                         </Button>
-                      </TableHead>
-                      <TableHead className="text-center">Aksi</TableHead>
-                    </TableRow>
+                      </TableHead><TableHead className="text-center w-[100px]">Aksi</TableHead></TableRow>
                   </TableHeader>
                   <TableBody>
                     {tagihanList.map((tagihan, index) => {
                       return (
-                        <TableRow key={tagihan.id_tagihan}>
-                          <TableCell>{(currentPage - 1) * itemsPerPage + index + 1}</TableCell>
-                          <TableCell className="font-medium">
-                            <Tooltip>
-                              <TooltipTrigger className="max-w-[250px] whitespace-nowrap overflow-hidden text-ellipsis block">
-                                {tagihan.nomor_spm}
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>{tagihan.nomor_spm}</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TableCell>
-                          <TableCell>{tagihan.jenis_spm}</TableCell>
-                          <TableCell>{tagihan.jenis_tagihan}</TableCell>
-                          <TableCell>{tagihan.sumber_dana || '-'}</TableCell>
-                          <TableCell className="min-w-[280px]">{tagihan.uraian}</TableCell>
-                          <TableCell>Rp{tagihan.jumlah_kotor.toLocaleString('id-ID')}</TableCell>
-                          <TableCell><StatusBadge status={tagihan.status_tagihan} /></TableCell>
-                          <TableCell className="text-center">
-                            {tagihan.status_tagihan === 'Menunggu Registrasi' ? (
-                              <div className="flex justify-center space-x-2">
-                                <Button
-                                  variant="outline"
-                                  size="icon"
-                                  onClick={() => handleEdit(tagihan)}
-                                  title="Edit Tagihan"
-                                  disabled={!isAccountVerified}
-                                >
-                                  <EditIcon className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  variant="destructive"
-                                  size="icon"
-                                  onClick={() => handleDeleteClick(tagihan.id_tagihan, tagihan.nomor_spm)}
-                                  title="Hapus Tagihan"
-                                  disabled={!isAccountVerified}
-                                >
-                                  <Trash2Icon className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            ) : (
-                              <Button variant="outline" size="sm" onClick={() => handleDetailClick(tagihan)}>
-                                Detail
-                              </Button>
-                            )}
-                          </TableCell>
-                        </TableRow>
+                        <TooltipProvider key={tagihan.id_tagihan + "-row-tooltip"}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <TableRow>
+                                <TableCell>{(currentPage - 1) * itemsPerPage + index + 1}</TableCell>
+                                <TableCell className="font-medium w-[180px] overflow-hidden"> {/* MODIFIED: Set fixed width and overflow */}
+                                  <span className="block max-w-full truncate whitespace-nowrap overflow-hidden text-ellipsis">
+                                    {tagihan.nomor_spm}
+                                  </span>
+                                </TableCell>
+                                <TableCell>{tagihan.jenis_spm}</TableCell>
+                                <TableCell>{tagihan.jenis_tagihan}</TableCell>
+                                <TableCell>{tagihan.sumber_dana || '-'}</TableCell>
+                                <TableCell>Rp{tagihan.jumlah_kotor.toLocaleString('id-ID')}</TableCell>
+                                <TableCell><StatusBadge status={tagihan.status_tagihan} /></TableCell>
+                                <TableCell className="text-center w-[100px]"> {/* MODIFIED: Set fixed width for Aksi */}
+                                  {(tagihan.status_tagihan === 'Menunggu Registrasi' || tagihan.status_tagihan === 'Tinjau Kembali') ? (
+                                    <div className="flex justify-center space-x-2">
+                                      <Button
+                                        variant="outline"
+                                        size="icon"
+                                        onClick={() => handleEdit(tagihan)}
+                                        title="Edit Tagihan"
+                                        disabled={!isAccountVerified || !profile?.is_active}
+                                      >
+                                        <FilePenLine className="h-4 w-4" />
+                                      </Button>
+                                      {tagihan.status_tagihan === 'Menunggu Registrasi' && ( // Only show delete for 'Menunggu Registrasi'
+                                        <Button
+                                          variant="destructive"
+                                          size="icon"
+                                          onClick={() => handleDeleteClick(tagihan.id_tagihan, tagihan.nomor_spm)}
+                                          title="Hapus Tagihan"
+                                          disabled={!isAccountVerified || !profile?.is_active}
+                                        >
+                                          <Trash2Icon className="h-4 w-4" />
+                                        </Button>
+                                      )}
+                                    </div>
+                                  ) : (
+                                    <Button variant="outline" size="sm" onClick={() => handleDetailClick(tagihan)}>
+                                      Detail
+                                    </Button>
+                                  )}
+                                </TableCell>
+                              </TableRow>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p className="max-w-md">Uraian: {tagihan.uraian}</p> {/* Display uraian here */}
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       );
                     })}
                   </TableBody>
@@ -842,6 +858,14 @@ const PortalSKPD = () => {
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4">
+            {/* NEW: Display catatan_registrasi if status is 'Tinjau Kembali' */}
+            {editingTagihan && editingTagihan.status_tagihan === 'Tinjau Kembali' && editingTagihan.catatan_registrasi && (
+              <div className="grid gap-2 p-4 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-700 rounded-md mb-4">
+                <Label className="text-red-700 dark:text-red-300 font-semibold">Catatan Peninjauan Kembali dari Staf Registrasi:</Label>
+                <p className="text-sm text-red-600 dark:text-red-400">{editingTagihan.catatan_registrasi}</p>
+              </div>
+            )}
+
             {/* Pratinjau Nomor SPM Otomatis */}
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="nomor_spm_otomatis" className="text-right">
@@ -865,7 +889,7 @@ const PortalSKPD = () => {
                 type="number"
                 {...form.register('nomor_urut_tagihan', { valueAsNumber: true })}
                 className="col-span-3"
-                disabled={!isAccountVerified || !!editingTagihan} // Disable if editing or not verified
+                disabled={!isAccountVerified || !profile?.is_active} // MODIFIED: Removed || !!editingTagihan
               />
               {form.formState.errors.nomor_urut_tagihan && (
                 <p className="col-span-4 text-right text-red-500 text-sm">
@@ -878,7 +902,7 @@ const PortalSKPD = () => {
               <Label htmlFor="kode_jadwal" className="text-right">
                 Jadwal Penganggaran
               </Label>
-              <Select onValueChange={(value) => form.setValue('kode_jadwal', value)} value={form.watch('kode_jadwal')} disabled={!isAccountVerified}>
+              <Select onValueChange={(value) => form.setValue('kode_jadwal', value)} value={form.watch('kode_jadwal')} disabled={!isAccountVerified || !profile?.is_active}>
                 <SelectTrigger className="col-span-3">
                   <SelectValue placeholder="Pilih Jadwal" />
                 </SelectTrigger>
@@ -900,7 +924,7 @@ const PortalSKPD = () => {
               <Label htmlFor="jenis_spm" className="text-right">
                 Jenis SPM
               </Label>
-              <Select onValueChange={(value) => form.setValue('jenis_spm', value)} value={form.watch('jenis_spm')} disabled={!isAccountVerified}>
+              <Select onValueChange={(value) => form.setValue('jenis_spm', value)} value={form.watch('jenis_spm')} disabled={!isAccountVerified || !profile?.is_active}>
                 <SelectTrigger className="col-span-3">
                   <SelectValue placeholder="Pilih Jenis SPM" />
                 </SelectTrigger>
@@ -921,7 +945,7 @@ const PortalSKPD = () => {
               <Label htmlFor="jenis_tagihan" className="text-right">
                 Jenis Tagihan
               </Label>
-              <Select onValueChange={(value) => form.setValue('jenis_tagihan', value)} value={form.watch('jenis_tagihan')} disabled={!isAccountVerified}>
+              <Select onValueChange={(value) => form.setValue('jenis_tagihan', value)} value={form.watch('jenis_tagihan')} disabled={!isAccountVerified || !profile?.is_active}>
                 <SelectTrigger className="col-span-3">
                   <SelectValue placeholder="Pilih Jenis Tagihan" />
                 </SelectTrigger>
@@ -943,7 +967,7 @@ const PortalSKPD = () => {
               <Label htmlFor="sumber_dana" className="text-right">
                 Sumber Dana
               </Label>
-              <Select onValueChange={(value) => form.setValue('sumber_dana', value)} value={form.watch('sumber_dana')} disabled={!isAccountVerified}>
+              <Select onValueChange={(value) => form.setValue('sumber_dana', value)} value={form.watch('sumber_dana')} disabled={!isAccountVerified || !profile?.is_active}>
                 <SelectTrigger className="col-span-3">
                   <SelectValue placeholder="Pilih Sumber Dana" />
                 </SelectTrigger>
@@ -975,7 +999,7 @@ const PortalSKPD = () => {
                 className="col-span-3"
                 rows={3}
                 maxLength={250} // Added maxLength attribute
-                disabled={!isAccountVerified}
+                disabled={!isAccountVerified || !profile?.is_active}
               />
               {/* Indikator Hitungan Karakter Dinamis */}
               <div className="col-start-2 col-span-3 text-right text-xs text-muted-foreground">
@@ -996,7 +1020,7 @@ const PortalSKPD = () => {
                 type="number"
                 {...form.register('jumlah_kotor')}
                 className="col-span-3"
-                disabled={!isAccountVerified}
+                disabled={!isAccountVerified || !profile?.is_active}
               />
               {form.formState.errors.jumlah_kotor && (
                 <p className="col-span-4 text-right text-red-500 text-sm">
@@ -1005,7 +1029,7 @@ const PortalSKPD = () => {
               )}
             </div>
             <DialogFooter>
-              <Button type="submit" disabled={isSubmitting || !isAccountVerified}>
+              <Button type="submit" disabled={isSubmitting || !isAccountVerified || !profile?.is_active}>
                 {isSubmitting ? (editingTagihan ? 'Memperbarui...' : 'Menyimpan...') : 'Simpan'}
               </Button>
             </DialogFooter>

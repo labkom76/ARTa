@@ -10,6 +10,7 @@ interface Profile {
   asal_skpd: string;
   peran: string;
   avatar_url?: string;
+  is_active: boolean; // NEW: Add is_active to Profile interface
 }
 
 interface SessionContextType {
@@ -56,7 +57,7 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
     try {
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
-        .select('nama_lengkap, asal_skpd, peran, avatar_url')
+        .select('nama_lengkap, asal_skpd, peran, avatar_url, is_active') // MODIFIED: Add is_active
         .eq('id', userId)
         .single();
 
@@ -247,8 +248,19 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
     }
 
     // PERBAIKAN: Redirect dari halaman login atau root jika sudah login
-    if (session && role && (location.pathname === '/login' || location.pathname === '/')) {
+    if (session && profile && role && (location.pathname === '/login' || location.pathname === '/')) { // MODIFIED: Check for profile existence
       navigationPending.current = true;
+
+      // NEW: Check if user is active
+      if (!profile.is_active) {
+        toast.error('Akun Anda telah diblokir. Silakan hubungi administrator.');
+        // Force logout if account is inactive and trying to access dashboard
+        setTimeout(async () => {
+          await supabase.auth.signOut();
+          navigate('/login', { replace: true });
+        }, 0);
+        return;
+      }
 
       let targetPath = '/';
       switch (role) {
