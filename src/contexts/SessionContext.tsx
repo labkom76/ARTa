@@ -11,7 +11,7 @@ interface Profile {
   peran: string;
   avatar_url?: string;
   is_active: boolean; // NEW: Add is_active to Profile interface
-  kode_skpd_penagihan?: string | null; // NEW: Add kode_skpd_penagihan
+  master_skpd?: { kode_skpd_penagihan: string | null } | null; // MODIFIED: Nested structure for joined data
 }
 
 interface SessionContextType {
@@ -58,7 +58,7 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
     try {
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
-        .select('nama_lengkap, asal_skpd, peran, avatar_url, is_active, kode_skpd_penagihan') // MODIFIED: Add kode_skpd_penagihan
+        .select('nama_lengkap, asal_skpd, peran, avatar_url, is_active, master_skpd(kode_skpd_penagihan)') // MODIFIED: Use join syntax for kode_skpd_penagihan
         .eq('id', userId)
         .single();
 
