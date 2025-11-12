@@ -137,6 +137,10 @@ const PortalVerifikasi = () => {
 
   const [searchParams, setSearchParams] = useSearchParams(); // Initialize useSearchParams and its setter
 
+  // NEW: Refs for search inputs to manage focus
+  const queueSearchInputRef = useRef<HTMLInputElement>(null);
+  const historySearchInputRef = useRef<HTMLInputElement>(null);
+
   // Fetch unique SKPD names for the queue filter dropdown (MODIFIED)
   useEffect(() => {
     const fetchSkpdOptions = async () => {
@@ -761,6 +765,7 @@ const PortalVerifikasi = () => {
               <div className="relative flex-1 w-full sm:w-auto">
                 <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400" />
                 <Input
+                  ref={queueSearchInputRef} // Attach ref here
                   type="text"
                   placeholder="Cari Nomor SPM atau Nama SKPD..."
                   className="pl-9 w-full"
@@ -768,6 +773,7 @@ const PortalVerifikasi = () => {
                   onChange={(e) => {
                     setQueueSearchQuery(e.target.value);
                     setQueueCurrentPage(1); // Reset page on search
+                    queueSearchInputRef.current?.focus(); // Re-focus after state update
                   }}
                 />
               </div>
@@ -882,6 +888,7 @@ const PortalVerifikasi = () => {
               <div className="relative flex-1 w-full sm:w-auto">
                 <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400" />
                 <Input
+                  ref={historySearchInputRef} // Attach ref here
                   type="text"
                   placeholder="Cari Nomor SPM atau Nama SKPD..."
                   className="pl-9 w-full"
@@ -889,6 +896,7 @@ const PortalVerifikasi = () => {
                   onChange={(e) => {
                     setHistorySearchQuery(e.target.value);
                     setHistoryCurrentPage(1); // Reset page on search
+                    historySearchInputRef.current?.focus(); // Re-focus after state update
                   }}
                 />
               </div>
