@@ -713,8 +713,12 @@ const PortalVerifikasi = () => {
       const tagihan = historyTagihanList.find(t => t.id_tagihan === tagihanToOpenId);
 
       if (tagihan) {
-        // If tagihan is found, open the verification modal
-        handleEditVerificationClick(tagihan); // Use handleEditVerificationClick to open the modal
+        // MODIFIED: Add conditional check for status_tagihan
+        if (tagihan.status_tagihan === 'Menunggu Verifikasi') {
+          handleProcessVerification(tagihan); // Use handleProcessVerification to acquire lock and open modal
+        } else {
+          toast.info('Tagihan ini sudah diproses.');
+        }
       } else {
         toast.info('Tagihan tidak ditemukan di riwayat verifikasi Anda.');
       }
