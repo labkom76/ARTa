@@ -290,15 +290,18 @@ const PortalSKPD = () => {
   // Effect to trigger SPM number generation
   useEffect(() => {
     const updateNomorSpm = async () => {
-      if (jenisTagihanWatch && kodeJadwalWatch && kodeSkpd && kodeWilayah && nomorUrutTagihanWatch !== null && nomorUrutTagihanWatch !== undefined) {
-        const newNomorSpm = await generateNomorSpmCallback(jenisTagihanWatch, kodeJadwalWatch, kodeSkpd, kodeWilayah, nomorUrutTagihanWatch);
-        setGeneratedNomorSpm(newNomorSpm);
+      // Determine which SKPD code to use for preview
+      const skpdCodeForPreview = profile?.kode_skpd_penagihan ? profile.kode_skpd_penagihan : kodeSkpd;
+
+      if (jenisTagihanWatch && kodeJadwalWatch && skpdCodeForPreview && kodeWilayah && nomorUrutTagihanWatch !== null && nomorUrutTagihanWatch !== undefined) {
+        const newNomor = await generateNomorSpmCallback(jenisTagihanWatch, kodeJadwalWatch, skpdCodeForPreview, kodeWilayah, nomorUrutTagihanWatch);
+        setGeneratedNomorSpm(newNomor);
       } else {
         setGeneratedNomorSpm(null);
       }
     };
     updateNomorSpm();
-  }, [jenisTagihanWatch, kodeJadwalWatch, kodeSkpd, kodeWilayah, nomorUrutTagihanWatch, generateNomorSpmCallback]);
+  }, [jenisTagihanWatch, kodeJadwalWatch, kodeSkpd, kodeWilayah, nomorUrutTagihanWatch, generateNomorSpmCallback, profile?.kode_skpd_penagihan]);
 
   // Ref to track previous values for determining pagination-only changes
   const prevSearchQuery = useRef(searchQuery);
@@ -439,51 +442,61 @@ const PortalSKPD = () => {
 
     setIsSubmitting(true); // Set submitting state to true
     try {
-      // Ensure kodeSkpd and kodeWilayah are available for SPM generation
-      if (!kodeSkpd || !kodeWilayah) {
-        toast.error('Kode SKPD atau Kode Wilayah tidak tersedia. Gagal memperbarui Nomor SPM.');
+      if (!kodeWilayah) {
+        toast.error('Kode Wilayah tidak tersedia. Gagal membuat Nomor SPM.');
         setIsSubmitting(false);
         return;
       }
 
-      // Regenerate Nomor SPM based on current form values
-      const newNomorSpm = await generateNomorSpmCallback(
-        values.jenis_tagihan,
-        values.kode_jadwal,
-        kodeSkpd,
-        kodeWilayah,
-        values.nomor_urut_tagihan
-      );
-
-      if (!newNomorSpm) {
-        toast.error('Gagal membuat Nomor SPM baru. Harap periksa input.');
-        setIsSubmitting(false);
-        return;
-      }
-
-      // Check for duplicate nomor_urut if any relevant field has changed
-      const currentYear = format(new Date(), 'yyyy');
-      const hasRelevantFieldsChanged =
-        (editingTagihan && values.nomor_urut_tagihan !== editingTagihan.nomor_urut) ||
-        (editingTagihan && values.kode_jadwal !== editingTagihan.kode_jadwal);
-      
-      if (hasRelevantFieldsChanged || !editingTagihan) { // Always check for new tagihan
-        const isDuplicate = await isNomorSpmDuplicate(
-          values.nomor_urut_tagihan,
-          profile.asal_skpd,
-          values.kode_jadwal,
-          currentYear,
-          editingTagihan?.id_tagihan // Exclude current tagihan from duplicate check if editing
-        );
-
-        if (isDuplicate) {
-          toast.error('Nomor Urut Tagihan ini sudah digunakan untuk SKPD dan Jadwal yang sama di tahun ini. Silakan gunakan nomor lain.');
-          setIsSubmitting(false); // Ensure submitting state is reset
-          return; // Stop the submission process
-        }
-      }
+      let finalNomorSpm: string | null = null;
+      let skpdCodeToUseForSpm: string | null = null;
 
       if (editingTagihan) {
+        // Logic for UPDATE
+        // For existing tagihan, always use the SKPD's primary code (kodeSkpd)
+        if (!kodeSkpd) {
+          toast.error('Kode SKPD tidak tersedia untuk tagihan yang diedit. Gagal memperbarui Nomor SPM.');
+          setIsSubmitting(false);
+          return;
+        }
+        skpdCodeToUseForSpm = kodeSkpd;
+
+        finalNomorSpm = await generateNomorSpmCallback(
+          values.jenis_tagihan,
+          values.kode_jadwal,
+          skpdCodeToUseForSpm,
+          kodeWilayah,
+          values.nomor_urut_tagihan
+        );
+
+        if (!finalNomorSpm) {
+          toast.error('Gagal membuat Nomor SPM baru untuk tagihan yang diedit. Harap periksa input.');
+          setIsSubmitting(false);
+          return;
+        }
+
+        // Duplicate check for UPDATE
+        const currentYear = format(new Date(), 'yyyy');
+        const hasRelevantFieldsChanged =
+          (editingTagihan && values.nomor_urut_tagihan !== editingTagihan.nomor_urut) ||
+          (editingTagihan && values.kode_jadwal !== editingTagihan.kode_jadwal);
+        
+        if (hasRelevantFieldsChanged) {
+          const isDuplicate = await isNomorSpmDuplicate(
+            values.nomor_urut_tagihan,
+            profile.asal_skpd, // Use profile.asal_skpd for duplicate check
+            values.kode_jadwal,
+            currentYear,
+            editingTagihan.id_tagihan
+          );
+
+          if (isDuplicate) {
+            toast.error('Nomor Urut Tagihan ini sudah digunakan untuk SKPD dan Jadwal yang sama di tahun ini. Silakan gunakan nomor lain.');
+            setIsSubmitting(false);
+            return;
+          }
+        }
+
         const updateObject: any = {
           uraian: values.uraian,
           jumlah_kotor: values.jumlah_kotor,
@@ -491,38 +504,33 @@ const PortalSKPD = () => {
           jenis_tagihan: values.jenis_tagihan,
           kode_jadwal: values.kode_jadwal,
           nomor_urut: values.nomor_urut_tagihan,
-          nomor_spm: newNomorSpm,
+          nomor_spm: finalNomorSpm,
           sumber_dana: values.sumber_dana,
-          catatan_registrasi: null, // Clear any previous review notes
-          skpd_can_edit: false, // ALWAYS set to false when SKPD submits an edit
+          catatan_registrasi: null,
+          skpd_can_edit: false,
         };
 
-        // Preserve the original status if it was 'Dikembalikan'
-        // Otherwise, if it was 'Tinjau Kembali' or 'Menunggu Registrasi', set it to 'Menunggu Registrasi'
         if (editingTagihan.status_tagihan === 'Dikembalikan') {
-          updateObject.status_tagihan = 'Menunggu Verifikasi'; // MODIFIED: Change status to 'Menunggu Verifikasi'
-          // skpd_can_edit is already set to false above, which is correct.
-          // tenggat_perbaikan and nomor_verifikasi are not explicitly set here, so they will retain their old values.
-        } else { // This covers 'Tinjau Kembali' and 'Menunggu Registrasi'
+          updateObject.status_tagihan = 'Menunggu Verifikasi';
+        } else {
           updateObject.status_tagihan = 'Menunggu Registrasi';
-          updateObject.tenggat_perbaikan = null; // Clear tenggat_perbaikan for non-Dikembalikan statuses
+          updateObject.tenggat_perbaikan = null;
         }
 
         const { data, error } = await supabase
           .from('database_tagihan')
-          .update(updateObject) // Use the constructed updateObject
+          .update(updateObject)
           .eq('id_tagihan', editingTagihan.id_tagihan)
           .eq('id_pengguna_input', user.id)
-          .select(); // IMPORTANT: Added .select() to get affected rows
+          .select();
 
         if (error) {
           console.error('Supabase update error:', error);
           toast.error('Gagal memperbarui tagihan: ' + error.message);
           setIsSubmitting(false);
-          return; // Stop execution if there's an error
+          return;
         }
 
-        // NEW: Check if any rows were actually updated
         if (!data || data.length === 0) {
           console.warn('Supabase update warning: No rows affected. Possible RLS issue or record not found/editable.');
           toast.error('Gagal memperbarui tagihan: Tidak ada perubahan yang disimpan. Pastikan Anda memiliki izin untuk mengedit tagihan ini.');
@@ -531,18 +539,61 @@ const PortalSKPD = () => {
         }
 
         toast.success('Tagihan berhasil diperbarui!');
+
       } else {
+        // Logic for INSERT (new tagihan)
+        // Determine which SKPD code to use for new SPM generation
+        if (profile.kode_skpd_penagihan) {
+          skpdCodeToUseForSpm = profile.kode_skpd_penagihan;
+        } else if (kodeSkpd) {
+          skpdCodeToUseForSpm = kodeSkpd;
+        } else {
+          toast.error('Kode SKPD tidak tersedia untuk tagihan baru. Gagal membuat Nomor SPM.');
+          setIsSubmitting(false);
+          return;
+        }
+
+        finalNomorSpm = await generateNomorSpmCallback(
+          values.jenis_tagihan,
+          values.kode_jadwal,
+          skpdCodeToUseForSpm, // Use the conditional SKPD code here
+          kodeWilayah,
+          values.nomor_urut_tagihan
+        );
+
+        if (!finalNomorSpm) {
+          toast.error('Gagal membuat Nomor SPM baru. Harap periksa input.');
+          setIsSubmitting(false);
+          return;
+        }
+
+        // Duplicate check for INSERT
+        const currentYear = format(new Date(), 'yyyy');
+        const isDuplicate = await isNomorSpmDuplicate(
+          values.nomor_urut_tagihan,
+          profile.asal_skpd, // Use profile.asal_skpd for duplicate check
+          values.kode_jadwal,
+          currentYear,
+          null // No tagihan to exclude for new insert
+        );
+
+        if (isDuplicate) {
+          toast.error('Nomor Urut Tagihan ini sudah digunakan untuk SKPD dan Jadwal yang sama di tahun ini. Silakan gunakan nomor lain.');
+          setIsSubmitting(false);
+          return;
+        }
+
         const { error } = await supabase.from('database_tagihan').insert({
           id_pengguna_input: user.id,
           nama_skpd: profile.asal_skpd,
-          nomor_spm: newNomorSpm, // Insert generated Nomor SPM
+          nomor_spm: finalNomorSpm, // Insert generated Nomor SPM
           uraian: values.uraian,
           jumlah_kotor: values.jumlah_kotor,
           jenis_spm: values.jenis_spm,
           jenis_tagihan: values.jenis_tagihan,
-          kode_jadwal: values.kode_jadwal, // Insert kode_jadwal
-          nomor_urut: values.nomor_urut_tagihan, // Insert nomor_urut
-          sumber_dana: values.sumber_dana, // Insert sumber_dana
+          kode_jadwal: values.kode_jadwal,
+          nomor_urut: values.nomor_urut_tagihan,
+          sumber_dana: values.sumber_dana,
           status_tagihan: 'Menunggu Registrasi',
         });
 
@@ -550,7 +601,7 @@ const PortalSKPD = () => {
           console.error('Supabase insert error:', error);
           toast.error('Gagal menyimpan tagihan: ' + error.message);
           setIsSubmitting(false);
-          return; // Stop execution if there's an error
+          return;
         }
         toast.success('Tagihan baru berhasil disimpan!');
       }
