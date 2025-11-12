@@ -291,7 +291,7 @@ const PortalSKPD = () => {
   useEffect(() => {
     const updateNomorSpm = async () => {
       // Determine which SKPD code to use for preview
-      const skpdCodeForPreview = profile?.kode_skpd_penagihan ? profile.kode_skpd_penagihan : kodeSkpd;
+      const skpdCodeForPreview = profile?.master_skpd?.kode_skpd_penagihan ? profile.master_skpd.kode_skpd_penagihan : kodeSkpd; // MODIFIED: Access nested property
 
       if (jenisTagihanWatch && kodeJadwalWatch && skpdCodeForPreview && kodeWilayah && nomorUrutTagihanWatch !== null && nomorUrutTagihanWatch !== undefined) {
         const newNomor = await generateNomorSpmCallback(jenisTagihanWatch, kodeJadwalWatch, skpdCodeForPreview, kodeWilayah, nomorUrutTagihanWatch);
@@ -301,7 +301,7 @@ const PortalSKPD = () => {
       }
     };
     updateNomorSpm();
-  }, [jenisTagihanWatch, kodeJadwalWatch, kodeSkpd, kodeWilayah, nomorUrutTagihanWatch, generateNomorSpmCallback, profile?.kode_skpd_penagihan]);
+  }, [jenisTagihanWatch, kodeJadwalWatch, kodeSkpd, kodeWilayah, nomorUrutTagihanWatch, generateNomorSpmCallback, profile?.master_skpd?.kode_skpd_penagihan]); // MODIFIED: Add nested property to dependencies
 
   // Ref to track previous values for determining pagination-only changes
   const prevSearchQuery = useRef(searchQuery);
@@ -543,8 +543,8 @@ const PortalSKPD = () => {
       } else {
         // Logic for INSERT (new tagihan)
         // Determine which SKPD code to use for new SPM generation
-        if (profile.kode_skpd_penagihan) {
-          skpdCodeToUseForSpm = profile.kode_skpd_penagihan;
+        if (profile.master_skpd?.kode_skpd_penagihan) { // MODIFIED: Access nested property
+          skpdCodeToUseForSpm = profile.master_skpd.kode_skpd_penagihan; // MODIFIED: Access nested property
         } else if (kodeSkpd) {
           skpdCodeToUseForSpm = kodeSkpd;
         } else {
