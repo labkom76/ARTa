@@ -11,6 +11,7 @@ interface Profile {
   peran: string;
   avatar_url?: string;
   is_active: boolean; // NEW: Add is_active to Profile interface
+  kode_skpd_penagihan?: string | null; // NEW: Add kode_skpd_penagihan
 }
 
 interface SessionContextType {
@@ -57,7 +58,7 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
     try {
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
-        .select('nama_lengkap, asal_skpd, peran, avatar_url, is_active') // MODIFIED: Add is_active
+        .select('nama_lengkap, asal_skpd, peran, avatar_url, is_active, kode_skpd_penagihan') // MODIFIED: Add kode_skpd_penagihan
         .eq('id', userId)
         .single();
 
