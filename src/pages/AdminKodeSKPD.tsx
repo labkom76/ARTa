@@ -27,12 +27,14 @@ import {
 import { Label } from '@/components/ui/label';
 import useDebounce from '@/hooks/use-debounce';
 import Papa from 'papaparse'; // Import Papa Parse
+import { Combobox } from '@/components/ui/combobox'; // Import Combobox
 
 interface SkpdData {
   id: string;
   nama_skpd: string;
   kode_skpd: string;
   created_at: string;
+  kode_skpd_penagihan?: string | null; // NEW: Add kode_skpd_penagihan
 }
 
 const AdminKodeSKPD = () => {
@@ -62,11 +64,38 @@ const AdminKodeSKPD = () => {
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // NEW: State for SKPD options for the 'Kode SKPD Penagihan' combobox
+  const [skpdOptionsForPenagihan, setSkpdOptionsForPenagihan] = useState<{ value: string; label: string }[]>([]);
+
   useEffect(() => {
     if (!sessionLoading) {
       setLoadingPage(false);
     }
   }, [sessionLoading]);
+
+  // NEW: Fetch SKPD options for the 'Kode SKPD Penagihan' combobox
+  useEffect(() => {
+    const fetchSkpdOptionsForPenagihan = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('master_skpd')
+          .select('kode_skpd, nama_skpd')
+          .order('nama_skpd', { ascending: true });
+
+        if (error) throw error;
+
+        const options = (data || []).map(item => ({
+          value: item.kode_skpd,
+          label: `${item.nama_skpd} (${item.kode_skpd})`,
+        }));
+        setSkpdOptionsForPenagihan(options);
+      } catch (error: any) {
+        console.error('Error fetching SKPD options for penagihan:', error.message);
+        toast.error('Gagal memuat daftar SKPD untuk penagihan: ' + error.message);
+      }
+    };
+    fetchSkpdOptionsForPenagihan();
+  }, []);
 
   const fetchSkpdData = async (isPaginationOnlyChange = false) => {
     if (sessionLoading || profile?.peran !== 'Administrator') {
@@ -83,7 +112,7 @@ const AdminKodeSKPD = () => {
     try {
       let query = supabase
         .from('master_skpd')
-        .select('*', { count: 'exact' });
+        .select('*, kode_skpd_penagihan', { count: 'exact' }); // NEW: Select kode_skpd_penagihan
 
       if (debouncedSearchQuery) {
         query = query.or(
@@ -182,7 +211,7 @@ const AdminKodeSKPD = () => {
     try {
       const { data, error } = await supabase
         .from('master_skpd')
-        .select('nama_skpd, kode_skpd')
+        .select('nama_skpd, kode_skpd, kode_skpd_penagihan') // NEW: Include kode_skpd_penagihan
         .order('kode_skpd', { ascending: true }); // Ensure download is also sorted by kode_skpd
 
       if (error) throw error;
@@ -194,7 +223,7 @@ const AdminKodeSKPD = () => {
 
       const csv = Papa.unparse(data, {
         header: true,
-        columns: ['nama_skpd', 'kode_skpd'],
+        columns: ['nama_skpd', 'kode_skpd', 'kode_skpd_penagihan'], // NEW: Include kode_skpd_penagihan
       });
 
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -236,7 +265,7 @@ const AdminKodeSKPD = () => {
           return;
         }
 
-        const parsedData = results.data as { nama_skpd?: string; kode_skpd?: string }[];
+        const parsedData = results.data as { nama_skpd?: string; kode_skpd?: string; kode_skpd_penagihan?: string }[]; // NEW: Include kode_skpd_penagihan
 
         if (!parsedData || parsedData.length === 0) {
           toast.error('File CSV kosong atau tidak memiliki data yang valid.');
@@ -374,24 +403,24 @@ const AdminKodeSKPD = () => {
 
           <div className="overflow-x-auto">
             <Table><TableHeader><TableRow>
-                  <TableHead>Nama SKPD</TableHead><TableHead>Kode SKPD</TableHead><TableHead className="text-center">Aksi</TableHead>
+                  <TableHead>Nama SKPD</TableHead><TableHead>Kode SKPD</TableHead><TableHead>Kode SKPD Penagihan</TableHead><TableHead className="text-center">Aksi</TableHead>
                 </TableRow></TableHeader><TableBody>
                 {loadingData && !loadingPagination ? (
                   <TableRow>
-                    <TableCell colSpan={3} className="text-center text-muted-foreground py-8">
+                    <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
                       Memuat data SKPD...
                     </TableCell>
                   </TableRow>
                 ) : skpdList.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={3} className="text-center text-muted-foreground py-8">
+                    <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
                       Tidak ada data SKPD ditemukan.
                     </TableCell>
                   </TableRow>
                 ) : (
                   skpdList.map((skpd, index) => (
                     <TableRow key={skpd.id}>
-                      <TableCell className="font-medium">{skpd.nama_skpd}</TableCell><TableCell>{skpd.kode_skpd}</TableCell><TableCell className="text-center">
+                      <TableCell className="font-medium">{skpd.nama_skpd}</TableCell><TableCell>{skpd.kode_skpd}</TableCell><TableCell>{skpd.kode_skpd_penagihan || '-'}</TableCell><TableCell className="text-center">
                         <div className="flex justify-center space-x-2">
                           <Button variant="outline" size="icon" title="Edit SKPD" onClick={() => handleEditClick(skpd)}>
                             <EditIcon className="h-4 w-4" />
@@ -440,6 +469,7 @@ const AdminKodeSKPD = () => {
         onClose={handleCloseEditModal}
         onSkpdUpdated={handleSkpdAddedOrUpdated}
         editingSkpd={editingSkpd}
+        skpdOptionsForPenagihan={skpdOptionsForPenagihan} // NEW: Pass options
       />
 
       <DeleteConfirmationDialog
