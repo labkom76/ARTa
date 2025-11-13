@@ -107,7 +107,7 @@ const PortalVerifikasi = () => {
   // MODIFIED: Changed type to SkpdOption[] and renamed for clarity
   const [skpdOptionsHistory, setSkpdOptionsHistory] = useState<SkpdOption[]>([]); 
   const [selectedHistorySkpd, setSelectedHistorySkpd] = useState<string>('Semua SKPD'); // New state for selected history SKPD
-  const [historyPanelTitle, setHistoryPanelTitle] = useState('Riwayat Verifikasi Hari Ini'); // Dynamic title for history panel
+  const [historyPanelTitle, setHistoryPanelTitle] = useState('Tagihan Yang Diproses'); // Dynamic title for history panel
 
   // State for History Table Pagination (added to resolve ReferenceError)
   const [historyCurrentPage, setHistoryCurrentPage] = useState(1);
@@ -227,7 +227,7 @@ const PortalVerifikasi = () => {
   };
 
   const fetchHistoryTagihan = async (isPaginationOnlyChange = false) => {
-    if (sessionLoading || !user || !profile?.peran) {
+    if (!user || sessionLoading || !profile?.peran) {
       setLoadingHistory(false);
       return;
     }
@@ -244,7 +244,7 @@ const PortalVerifikasi = () => {
       const now = new Date().toISOString(); // Current time for tenggat_perbaikan check
 
       if (profile.peran === 'Staf Verifikator') {
-        setHistoryPanelTitle('Riwayat Verifikasi Hari Ini & Ditahan');
+        setHistoryPanelTitle('Tagihan Yang Diproses');
         
         // Query for Condition A: Status 'Diteruskan' HARI INI
         let queryA = supabase
