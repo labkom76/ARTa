@@ -266,7 +266,6 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
 
     setIsSubmitting(true);
     try {
-      const nomorVerifikasi = await generateNomorVerifikasi();
       const now = new Date();
 
       let tenggatPerbaikan: string | null = null;
@@ -280,6 +279,24 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
         skpdCanEdit = values.allow_skpd_edit || false;
       }
 
+      let nomorVerifikasiToUse: string | undefined = tagihan.nomor_verifikasi; // Default to existing
+      if (values.status_keputusan === 'Diteruskan') {
+        if (!tagihan.nomor_verifikasi) { // Only generate new if it doesn't exist
+          nomorVerifikasiToUse = await generateNomorVerifikasi();
+        }
+      } else if (values.status_keputusan === 'Dikembalikan') {
+        // If status is 'Dikembalikan', and it previously had a verification number,
+        // we should retain it for historical context, but clear correction-related fields.
+        // If it's a fresh 'Dikembalikan' from 'Menunggu Verifikasi' without a prior number,
+        // we might still want to generate one to mark it as 'processed' by verifier.
+        // For now, let's assume if it's being 'Dikembalikan', it should have a verification number.
+        // If it doesn't, generate one.
+        if (!tagihan.nomor_verifikasi) {
+          nomorVerifikasiToUse = await generateNomorVerifikasi();
+        }
+      }
+
+
       const { error } = await supabase
         .from('database_tagihan')
         .update({
@@ -287,7 +304,7 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
           waktu_verifikasi: now.toISOString(),
           nama_verifikator: profile.nama_lengkap,
           detail_verifikasi: values.detail_verifikasi,
-          nomor_verifikasi: nomorVerifikasi,
+          nomor_verifikasi: nomorVerifikasiToUse, // Use the determined number
           locked_by: null,
           locked_at: null,
           nomor_koreksi: null,
