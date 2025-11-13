@@ -846,7 +846,7 @@ const PortalSKPD = () => {
                       // NEW: Conditional rendering for edit button
                       const canEdit = tagihan.status_tagihan === 'Menunggu Registrasi' ||
                                       tagihan.status_tagihan === 'Tinjau Kembali' ||
-                                      (tagihan.status_tagihan === 'Dikembalikan' && tagihan.skpd_can_edit === true);
+                                      (tagihan.status_tagihan === 'Dikembalikan' && tagihan.skpd_can_edit === true && tagihan.tenggat_perbaikan && new Date(tagihan.tenggat_perbaikan) > new Date());
 
                       // Logic for countdown timer
                       const showCountdown = tagihan.status_tagihan === 'Dikembalikan' &&
