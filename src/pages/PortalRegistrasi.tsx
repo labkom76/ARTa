@@ -449,7 +449,7 @@ const PortalRegistrasi = () => {
           // Clear any previous registration info if it was registered before being returned
           nomor_registrasi: null,
           waktu_registrasi: null,
-          nama_registrator: null,
+          nama_registrator: profile?.nama_lengkap, // MODIFIED: Set current user's name
         })
         .eq('id_tagihan', selectedTagihanForTinjau.id_tagihan);
 
