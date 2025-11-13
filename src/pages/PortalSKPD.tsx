@@ -11,7 +11,6 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
@@ -31,11 +30,11 @@ import { toast } from 'sonner';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { PlusCircleIcon, SearchIcon, EditIcon, Trash2Icon, FileDownIcon, ArrowUp, ArrowDown, FilePenLine } from 'lucide-react'; // Import FileDownIcon, ArrowUp, ArrowDown, FilePenLine
+import { PlusCircleIcon, SearchIcon, EditIcon, Trash2Icon, FileDownIcon, ArrowUp, ArrowDown, FilePenLine, EyeIcon } from 'lucide-react'; // Import FileDownIcon, ArrowUp, ArrowDown, FilePenLine, EyeIcon
 import { Textarea } from '@/components/ui/textarea';
 import DeleteConfirmationDialog from '@/components/DeleteConfirmationDialog';
 import TagihanDetailDialog from '@/components/TagihanDetailDialog'; // Import the new detail dialog
-import { format } from 'date-fns'; // Import format from date-fns
+import { format, differenceInDays, parseISO } from 'date-fns'; // Import format, differenceInDays, parseISO
 import { id as localeId } from 'date-fns/locale'; // Import locale for Indonesian date formatting, renamed to localeId
 import { generateNomorSpm, getJenisTagihanCode } from '@/utils/spmGenerator'; // Import utility functions
 import StatusBadge from '@/components/StatusBadge'; // Import StatusBadge
@@ -45,9 +44,11 @@ import {
   TooltipTrigger,
   TooltipProvider, // Import TooltipProvider
 } from "@/components/ui/tooltip"; // Import Tooltip components
-import { useLocation, useNavigate } from 'react-router-dom'; // Import useLocation and useNavigate
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'; // Import useLocation and useNavigate
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'; // Import Card components
 import * as XLSX from 'xlsx'; // Import XLSX library
+import Countdown from 'react-countdown'; // Import Countdown
+import { Label } from '@/components/ui/label'; // Import Label component
 
 // Zod schema for form validation
 const formSchema = z.object({
@@ -103,6 +104,8 @@ interface Tagihan {
   nomor_urut?: number; // Add nomor_urut to Tagihan interface
   sumber_dana?: string; // Add sumber_dana to Tagihan interface
   catatan_registrasi?: string; // NEW: Add catatan_registrasi
+  skpd_can_edit?: boolean; // NEW: Add skpd_can_edit
+  tenggat_perbaikan?: string; // Add tenggat_perbaikan
 }
 
 // --- FUNGSI BARU: isNomorSpmDuplicate (MODIFIED) ---
@@ -157,7 +160,7 @@ const PortalSKPD = () => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [tagihanToDelete, setTagihanToDelete] = useState<{ id: string; nomorSpm: string } | null>(null);
 
-  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [isDetailModalOpen, setIsDetailModal] = useState(false);
   const [selectedTagihanForDetail, setSelectedTagihanForDetail] = useState<Tagihan | null>(null);
 
   const [isAccountVerified, setIsAccountVerified] = useState(true);
@@ -287,15 +290,18 @@ const PortalSKPD = () => {
   // Effect to trigger SPM number generation
   useEffect(() => {
     const updateNomorSpm = async () => {
-      if (jenisTagihanWatch && kodeJadwalWatch && kodeSkpd && kodeWilayah && nomorUrutTagihanWatch !== null && nomorUrutTagihanWatch !== undefined) {
-        const newNomorSpm = await generateNomorSpmCallback(jenisTagihanWatch, kodeJadwalWatch, kodeSkpd, kodeWilayah, nomorUrutTagihanWatch);
-        setGeneratedNomorSpm(newNomorSpm);
+      // Determine which SKPD code to use for preview
+      const skpdCodeForPreview = profile?.master_skpd?.kode_skpd_penagihan ? profile.master_skpd.kode_skpd_penagihan : kodeSkpd; // MODIFIED: Access nested property
+
+      if (jenisTagihanWatch && kodeJadwalWatch && skpdCodeForPreview && kodeWilayah && nomorUrutTagihanWatch !== null && nomorUrutTagihanWatch !== undefined) {
+        const newNomor = await generateNomorSpmCallback(jenisTagihanWatch, kodeJadwalWatch, skpdCodeForPreview, kodeWilayah, nomorUrutTagihanWatch);
+        setGeneratedNomorSpm(newNomor);
       } else {
         setGeneratedNomorSpm(null);
       }
     };
     updateNomorSpm();
-  }, [jenisTagihanWatch, kodeJadwalWatch, kodeSkpd, kodeWilayah, nomorUrutTagihanWatch, generateNomorSpmCallback]);
+  }, [jenisTagihanWatch, kodeJadwalWatch, kodeSkpd, kodeWilayah, nomorUrutTagihanWatch, generateNomorSpmCallback, profile?.master_skpd?.kode_skpd_penagihan]); // MODIFIED: Add nested property to dependencies
 
   // Ref to track previous values for determining pagination-only changes
   const prevSearchQuery = useRef(searchQuery);
@@ -317,7 +323,7 @@ const PortalSKPD = () => {
     try {
       let query = supabase
         .from('database_tagihan')
-        .select('*', { count: 'exact' }) // Select all columns for detail view
+        .select('*, skpd_can_edit, tenggat_perbaikan, waktu_verifikasi', { count: 'exact' }) // Select all columns for detail view, including skpd_can_edit and tenggat_perbaikan
         .eq('id_pengguna_input', user.id);
 
       if (searchQuery) {
@@ -336,7 +342,7 @@ const PortalSKPD = () => {
         query = query.range((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage - 1);
       }
 
-      const { data, error, count } = await query;
+      const { data, error, count } = await query; // MODIFIED: Added 'count' to destructuring
 
       if (error) {
         console.error('Supabase query error:', error); // Log full error object
@@ -436,101 +442,156 @@ const PortalSKPD = () => {
 
     setIsSubmitting(true); // Set submitting state to true
     try {
-      // Ensure kodeSkpd and kodeWilayah are available for SPM generation
-      if (!kodeSkpd || !kodeWilayah) {
-        toast.error('Kode SKPD atau Kode Wilayah tidak tersedia. Gagal memperbarui Nomor SPM.');
+      if (!kodeWilayah) {
+        toast.error('Kode Wilayah tidak tersedia. Gagal membuat Nomor SPM.');
         setIsSubmitting(false);
         return;
       }
 
-      // Regenerate Nomor SPM based on current form values
-      const newNomorSpm = await generateNomorSpmCallback(
-        values.jenis_tagihan,
-        values.kode_jadwal,
-        kodeSkpd,
-        kodeWilayah,
-        values.nomor_urut_tagihan
-      );
+      // Determine which SKPD code to use for SPM generation, prioritizing kode_skpd_penagihan
+      const skpdCodeToUseForSpm = profile.master_skpd?.kode_skpd_penagihan || kodeSkpd;
 
-      if (!newNomorSpm) {
-        toast.error('Gagal membuat Nomor SPM baru. Harap periksa input.');
+      if (!skpdCodeToUseForSpm) {
+        toast.error('Kode SKPD tidak tersedia. Gagal membuat Nomor SPM.');
         setIsSubmitting(false);
         return;
       }
 
-      // Check for duplicate nomor_urut if any relevant field has changed
-      const currentYear = format(new Date(), 'yyyy');
-      const hasRelevantFieldsChanged =
-        (editingTagihan && values.nomor_urut_tagihan !== editingTagihan.nomor_urut) ||
-        (editingTagihan && values.kode_jadwal !== editingTagihan.kode_jadwal);
-      
-      if (hasRelevantFieldsChanged || !editingTagihan) { // Always check for new tagihan
-        const isDuplicate = await isNomorSpmDuplicate(
-          values.nomor_urut_tagihan,
-          profile.asal_skpd,
-          values.kode_jadwal,
-          currentYear,
-          editingTagihan?.id_tagihan // Exclude current tagihan from duplicate check if editing
-        );
-
-        if (isDuplicate) {
-          toast.error('Nomor Urut Tagihan ini sudah digunakan untuk SKPD dan Jadwal yang sama di tahun ini. Silakan gunakan nomor lain.');
-          setIsSubmitting(false); // Ensure submitting state is reset
-          return; // Stop the submission process
-        }
-      }
+      let finalNomorSpm: string | null = null;
 
       if (editingTagihan) {
-        const { error } = await supabase
-          .from('database_tagihan')
-          .update({
-            uraian: values.uraian,
-            jumlah_kotor: values.jumlah_kotor,
-            jenis_spm: values.jenis_spm,
-            jenis_tagihan: values.jenis_tagihan,
-            kode_jadwal: values.kode_jadwal, // Update kode_jadwal
-            nomor_urut: values.nomor_urut_tagihan, // Update nomor_urut
-            nomor_spm: newNomorSpm, // Update with the newly generated SPM
-            sumber_dana: values.sumber_dana, // Update sumber_dana
-            status_tagihan: 'Menunggu Registrasi', // NEW: Reset status to Menunggu Registrasi
-            catatan_registrasi: null, // NEW: Clear catatan_registrasi
-          })
-          .eq('id_tagihan', editingTagihan.id_tagihan)
-          .eq('id_pengguna_input', user.id);
+        // Logic for UPDATE
+        finalNomorSpm = await generateNomorSpmCallback(
+          values.jenis_tagihan,
+          values.kode_jadwal,
+          skpdCodeToUseForSpm, // Use the determined SKPD code
+          kodeWilayah,
+          values.nomor_urut_tagihan
+        );
 
-        if (error) throw error;
-
-        // NEW: Send notification to Registration Staff
-        const { error: notificationError } = await supabase
-          .from('notifications')
-          .insert({
-            user_id: 'staf_registrasi_id_placeholder', // Placeholder: Replace with actual Registration Staff ID(s)
-            message: `Tagihan SPM ${newNomorSpm} dari SKPD ${profile.asal_skpd} telah diperbarui dan siap diregistrasi ulang.`,
-            is_read: false,
-            tagihan_id: editingTagihan.id_tagihan,
-          });
-
-        if (notificationError) {
-          console.error('Error inserting notification for Registration Staff:', notificationError.message);
+        if (!finalNomorSpm) {
+          toast.error('Gagal membuat Nomor SPM baru untuk tagihan yang diedit. Harap periksa input.');
+          setIsSubmitting(false);
+          return;
         }
 
-        toast.success('Tagihan berhasil diperbarui!');
-      } else {
-        const { error } = await supabase.from('database_tagihan').insert({
-          id_pengguna_input: user.id,
-          nama_skpd: profile.asal_skpd,
-          nomor_spm: newNomorSpm, // Insert generated Nomor SPM
+        // Duplicate check for UPDATE
+        const currentYear = format(new Date(), 'yyyy');
+        const hasRelevantFieldsChanged =
+          (editingTagihan && values.nomor_urut_tagihan !== editingTagihan.nomor_urut) ||
+          (editingTagihan && values.kode_jadwal !== editingTagihan.kode_jadwal);
+        
+        if (hasRelevantFieldsChanged) {
+          const isDuplicate = await isNomorSpmDuplicate(
+            values.nomor_urut_tagihan,
+            profile.asal_skpd, // Use profile.asal_skpd for duplicate check
+            values.kode_jadwal,
+            currentYear,
+            editingTagihan.id_tagihan
+          );
+
+          if (isDuplicate) {
+            toast.error('Nomor Urut Tagihan ini sudah digunakan untuk SKPD dan Jadwal yang sama di tahun ini. Silakan gunakan nomor lain.');
+            setIsSubmitting(false);
+            return;
+          }
+        }
+
+        const updateObject: any = {
           uraian: values.uraian,
           jumlah_kotor: values.jumlah_kotor,
           jenis_spm: values.jenis_spm,
           jenis_tagihan: values.jenis_tagihan,
-          kode_jadwal: values.kode_jadwal, // Insert kode_jadwal
-          nomor_urut: values.nomor_urut_tagihan, // Insert nomor_urut
-          sumber_dana: values.sumber_dana, // Insert sumber_dana
+          kode_jadwal: values.kode_jadwal,
+          nomor_urut: values.nomor_urut_tagihan,
+          nomor_spm: finalNomorSpm,
+          sumber_dana: values.sumber_dana,
+          catatan_registrasi: null,
+          skpd_can_edit: false,
+        };
+
+        if (editingTagihan.status_tagihan === 'Dikembalikan') {
+          updateObject.status_tagihan = 'Menunggu Verifikasi';
+        } else {
+          updateObject.status_tagihan = 'Menunggu Registrasi';
+          updateObject.tenggat_perbaikan = null;
+        }
+
+        const { data, error } = await supabase
+          .from('database_tagihan')
+          .update(updateObject)
+          .eq('id_tagihan', editingTagihan.id_tagihan)
+          .eq('id_pengguna_input', user.id)
+          .select();
+
+        if (error) {
+          console.error('Supabase update error:', error);
+          toast.error('Gagal memperbarui tagihan: ' + error.message);
+          setIsSubmitting(false);
+          return;
+        }
+
+        if (!data || data.length === 0) {
+          console.warn('Supabase update warning: No rows affected. Possible RLS issue or record not found/editable.');
+          toast.error('Gagal memperbarui tagihan: Tidak ada perubahan yang disimpan. Pastikan Anda memiliki izin untuk mengedit tagihan ini.');
+          setIsSubmitting(false);
+          return;
+        }
+
+        toast.success('Tagihan berhasil diperbarui!');
+
+      } else {
+        // Logic for INSERT (new tagihan)
+        finalNomorSpm = await generateNomorSpmCallback(
+          values.jenis_tagihan,
+          values.kode_jadwal,
+          skpdCodeToUseForSpm, // Use the determined SKPD code here
+          kodeWilayah,
+          values.nomor_urut_tagihan
+        );
+
+        if (!finalNomorSpm) {
+          toast.error('Gagal membuat Nomor SPM baru. Harap periksa input.');
+          setIsSubmitting(false);
+          return;
+        }
+
+        // Duplicate check for INSERT
+        const currentYear = format(new Date(), 'yyyy');
+        const isDuplicate = await isNomorSpmDuplicate(
+          values.nomor_urut_tagihan,
+          profile.asal_skpd, // Use profile.asal_skpd for duplicate check
+          values.kode_jadwal,
+          currentYear,
+          null // No tagihan to exclude for new insert
+        );
+
+        if (isDuplicate) {
+          toast.error('Nomor Urut Tagihan ini sudah digunakan untuk SKPD dan Jadwal yang sama di tahun ini. Silakan gunakan nomor lain.');
+          setIsSubmitting(false);
+          return;
+        }
+
+        const { error } = await supabase.from('database_tagihan').insert({
+          id_pengguna_input: user.id,
+          nama_skpd: profile.asal_skpd,
+          nomor_spm: finalNomorSpm, // Insert generated Nomor SPM
+          uraian: values.uraian,
+          jumlah_kotor: values.jumlah_kotor,
+          jenis_spm: values.jenis_spm,
+          jenis_tagihan: values.jenis_tagihan,
+          kode_jadwal: values.kode_jadwal,
+          nomor_urut: values.nomor_urut_tagihan,
+          sumber_dana: values.sumber_dana,
           status_tagihan: 'Menunggu Registrasi',
         });
 
-        if (error) throw error;
+        if (error) {
+          console.error('Supabase insert error:', error);
+          toast.error('Gagal menyimpan tagihan: ' + error.message);
+          setIsSubmitting(false);
+          return;
+        }
         toast.success('Tagihan baru berhasil disimpan!');
       }
 
@@ -592,7 +653,7 @@ const PortalSKPD = () => {
 
   const handleDetailClick = (tagihan: Tagihan) => {
     setSelectedTagihanForDetail(tagihan);
-    setIsDetailModalOpen(true);
+    setIsDetailModal(true);
   };
 
   const handleExportToXLSX = () => {
@@ -639,6 +700,21 @@ const PortalSKPD = () => {
   };
 
   const totalPages = itemsPerPage === -1 ? 1 : Math.ceil(totalItems / itemsPerPage);
+
+  // Renderer for Countdown component
+  const renderer = ({ days, hours, minutes, seconds, completed }: any) => {
+    if (completed) {
+      // Render a completed state
+      return <span className="text-xs text-red-500">Waktu Habis!</span>;
+    } else {
+      // Render a countdown
+      return (
+        <span className="text-xs text-muted-foreground mt-1">
+          Selesaikan sebelum: {days > 0 && `${days} hari `}{hours.toString().padStart(2, '0')}:{minutes.toString().padStart(2, '0')}:{seconds.toString().padStart(2, '0')}
+        </span>
+      );
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -767,6 +843,17 @@ const PortalSKPD = () => {
                   </TableHeader>
                   <TableBody>
                     {tagihanList.map((tagihan, index) => {
+                      // NEW: Conditional rendering for edit button
+                      const canEdit = tagihan.status_tagihan === 'Menunggu Registrasi' ||
+                                      tagihan.status_tagihan === 'Tinjau Kembali' ||
+                                      (tagihan.status_tagihan === 'Dikembalikan' && tagihan.skpd_can_edit === true && tagihan.tenggat_perbaikan && new Date(tagihan.tenggat_perbaikan) > new Date());
+
+                      // Logic for countdown timer
+                      const showCountdown = tagihan.status_tagihan === 'Dikembalikan' &&
+                                            tagihan.tenggat_perbaikan &&
+                                            tagihan.waktu_verifikasi &&
+                                            differenceInDays(parseISO(tagihan.tenggat_perbaikan), parseISO(tagihan.waktu_verifikasi)) > 1;
+
                       return (
                         <TooltipProvider key={tagihan.id_tagihan + "-row-tooltip"}>
                           <Tooltip>
@@ -782,10 +869,23 @@ const PortalSKPD = () => {
                                 <TableCell>{tagihan.jenis_tagihan}</TableCell>
                                 <TableCell>{tagihan.sumber_dana || '-'}</TableCell>
                                 <TableCell>Rp{tagihan.jumlah_kotor.toLocaleString('id-ID')}</TableCell>
-                                <TableCell><StatusBadge status={tagihan.status_tagihan} /></TableCell>
+                                <TableCell>
+                                  <StatusBadge status={tagihan.status_tagihan} />
+                                  {showCountdown && (
+                                    <Countdown date={new Date(tagihan.tenggat_perbaikan!)} renderer={renderer} />
+                                  )}
+                                </TableCell>
                                 <TableCell className="text-center w-[100px]"> {/* MODIFIED: Set fixed width for Aksi */}
-                                  {(tagihan.status_tagihan === 'Menunggu Registrasi' || tagihan.status_tagihan === 'Tinjau Kembali') ? (
-                                    <div className="flex justify-center space-x-2">
+                                  <div className="flex justify-center space-x-2">
+                                    {/* Always show Detail button for 'Dikembalikan' status */}
+                                    {tagihan.status_tagihan === 'Dikembalikan' && (
+                                      <Button variant="outline" size="icon" title="Lihat Detail" onClick={() => handleDetailClick(tagihan)}>
+                                        <EyeIcon className="h-4 w-4" />
+                                      </Button>
+                                    )}
+
+                                    {/* Show Edit button if canEdit is true */}
+                                    {canEdit && (
                                       <Button
                                         variant="outline"
                                         size="icon"
@@ -795,23 +895,28 @@ const PortalSKPD = () => {
                                       >
                                         <FilePenLine className="h-4 w-4" />
                                       </Button>
-                                      {tagihan.status_tagihan === 'Menunggu Registrasi' && ( // Only show delete for 'Menunggu Registrasi'
-                                        <Button
-                                          variant="destructive"
-                                          size="icon"
-                                          onClick={() => handleDeleteClick(tagihan.id_tagihan, tagihan.nomor_spm)}
-                                          title="Hapus Tagihan"
-                                          disabled={!isAccountVerified || !profile?.is_active}
-                                        >
-                                          <Trash2Icon className="h-4 w-4" />
-                                        </Button>
-                                      )}
-                                    </div>
-                                  ) : (
-                                    <Button variant="outline" size="sm" onClick={() => handleDetailClick(tagihan)}>
-                                      Detail
-                                    </Button>
-                                  )}
+                                    )}
+
+                                    {/* Show Delete button only for 'Menunggu Registrasi' */}
+                                    {tagihan.status_tagihan === 'Menunggu Registrasi' && (
+                                      <Button
+                                        variant="destructive"
+                                        size="icon"
+                                        onClick={() => handleDeleteClick(tagihan.id_tagihan, tagihan.nomor_spm)}
+                                        title="Hapus Tagihan"
+                                        disabled={!isAccountVerified || !profile?.is_active}
+                                      >
+                                        <Trash2Icon className="h-4 w-4" />
+                                      </Button>
+                                    )}
+
+                                    {/* If not editable AND not 'Dikembalikan', show only Detail button */}
+                                    {!canEdit && tagihan.status_tagihan !== 'Dikembalikan' && (
+                                      <Button variant="outline" size="icon" title="Lihat Detail" onClick={() => handleDetailClick(tagihan)}>
+                                        <EyeIcon className="h-4 w-4" />
+                                      </Button>
+                                    )}
+                                  </div>
                                 </TableCell>
                               </TableRow>
                             </TooltipTrigger>
@@ -1047,7 +1152,7 @@ const PortalSKPD = () => {
 
       <TagihanDetailDialog
         isOpen={isDetailModalOpen}
-        onClose={() => setIsDetailModalOpen(false)}
+        onClose={() => setIsDetailModal(false)}
         tagihan={selectedTagihanForDetail}
       />
     </div>

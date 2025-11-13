@@ -3,7 +3,7 @@ import { useSession } from '@/contexts/SessionContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { EyeIcon, SearchIcon, EditIcon, Trash2Icon } from 'lucide-react'; // Import EditIcon and Trash2Icon
+import { EyeIcon, SearchIcon, EditIcon, Trash2Icon } from 'lucide-react';
 import { toast } from 'sonner';
 import { format, parseISO, startOfDay, endOfDay } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import useDebounce from '@/hooks/use-debounce';
 import {
-  Select,
+  Select, // Keep Select import as it's used for itemsPerPage
   SelectContent,
   SelectItem,
   SelectTrigger,
@@ -30,9 +30,10 @@ import {
 } from '@/components/ui/pagination';
 import { Label } from '@/components/ui/label';
 import TagihanDetailDialog from '@/components/TagihanDetailDialog';
-import EditTagihanDialog from '@/components/EditTagihanDialog'; // Import EditTagihanDialog
-import DeleteConfirmationDialog from '@/components/DeleteConfirmationDialog'; // Import DeleteConfirmationDialog
-import StatusBadge from '@/components/StatusBadge'; // Import StatusBadge
+import EditTagihanDialog from '@/components/EditTagihanDialog';
+import DeleteConfirmationDialog from '@/components/DeleteConfirmationDialog';
+import StatusBadge from '@/components/StatusBadge';
+import { Combobox } from '@/components/ui/combobox'; // Import Combobox
 
 interface VerificationItem {
   item: string;
@@ -65,17 +66,22 @@ interface Tagihan {
   catatan_koreksi?: string;
 }
 
+interface SkpdOption { // Define interface for SKPD options
+  value: string;
+  label: string;
+}
+
 const AdminTagihan = () => {
   const { profile, loading: sessionLoading } = useSession();
   const [loadingPage, setLoadingPage] = useState(true);
   const [tagihanList, setTagihanList] = useState<Tagihan[]>([]);
   const [loadingData, setLoadingData] = useState(true);
-  const [loadingPagination, setLoadingPagination] = useState(false); // New state for pagination loading
+  const [loadingPagination, setLoadingPagination] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const debouncedSearchQuery = useDebounce(searchQuery, 500);
   const [selectedStatus, setSelectedStatus] = useState<string>('Semua Status');
-  const [skpdOptions, setSkpdOptions] = useState<string[]>([]);
-  const [selectedSkpd, setSelectedSkpd] = useState<string>('Semua SKPD');
+  const [skpdOptions, setSkpdOptions] = useState<SkpdOption[]>([]); // MODIFIED: Change type to SkpdOption[]
+  const [selectedSkpd, setSelectedSkpd] = useState<string>('Semua SKPD'); // MODIFIED: Default value
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
 
   // Pagination states
@@ -109,20 +115,22 @@ const AdminTagihan = () => {
     }
   }, [sessionLoading]);
 
-  // Fetch unique SKPD names for the dropdown
+  // Fetch unique SKPD names for the dropdown (MODIFIED)
   useEffect(() => {
     const fetchSkpdOptions = async () => {
       try {
         const { data, error } = await supabase
-          .from('database_tagihan')
-          .select('nama_skpd');
+          .from('master_skpd') // Fetch from master_skpd
+          .select('nama_skpd')
+          .order('nama_skpd', { ascending: true });
 
         if (error) throw error;
 
-        const uniqueSkpd = Array.from(new Set(data.map(item => item.nama_skpd)))
-          .filter((skpd): skpd is string => skpd !== null && skpd.trim() !== '');
+        const uniqueSkpd: SkpdOption[] = Array.from(new Set(data.map(item => item.nama_skpd)))
+          .filter((skpd): skpd is string => skpd !== null && skpd.trim() !== '')
+          .map(skpd => ({ value: skpd, label: skpd })); // Map to { value, label } format
 
-        setSkpdOptions(['Semua SKPD', ...uniqueSkpd.sort()]);
+        setSkpdOptions([{ value: 'Semua SKPD', label: 'Semua SKPD' }, ...uniqueSkpd]); // Add 'Semua SKPD' option
       } catch (error: any) {
         console.error('Error fetching SKPD options:', error.message);
         toast.error('Gagal memuat daftar SKPD: ' + error.message);
@@ -160,8 +168,8 @@ const AdminTagihan = () => {
         query = query.eq('status_tagihan', selectedStatus);
       }
 
-      // Apply SKPD filter if not 'Semua SKPD'
-      if (selectedSkpd !== 'Semua SKPD') {
+      // Apply SKPD filter if not 'Semua SKPD' (NO CHANGE TO LOGIC, ONLY UI)
+      if (selectedSkpd !== 'Semua SKPD') { // MODIFIED: Apply conditional filter
         query = query.eq('nama_skpd', selectedSkpd);
       }
 
@@ -221,7 +229,7 @@ const AdminTagihan = () => {
     prevItemsPerPage.current = itemsPerPage;
     prevCurrentPage.current = currentPage;
 
-  }, [sessionLoading, profile, debouncedSearchQuery, selectedStatus, selectedSkpd, dateRange, currentPage, itemsPerPage]); // Add pagination states to dependencies
+  }, [sessionLoading, profile, debouncedSearchQuery, selectedStatus, selectedSkpd, dateRange, currentPage, itemsPerPage]); // MODIFIED: Add selectedSkpd to dependencies
 
   const formatDate = (dateString: string | undefined) => {
     if (!dateString) return '-';
@@ -335,18 +343,17 @@ const AdminTagihan = () => {
                 <SelectItem value="Dikembalikan">Dikembalikan</SelectItem>
               </SelectContent>
             </Select>
-            <Select onValueChange={(value) => { setSelectedSkpd(value); setCurrentPage(1); }} value={selectedSkpd}>
-              <SelectTrigger className="w-full sm:w-[200px]">
-                <SelectValue placeholder="Filter SKPD" />
-              </SelectTrigger>
-              <SelectContent>
-                {skpdOptions.map((skpd) => (
-                  <SelectItem key={skpd} value={skpd}>
-                    {skpd}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {/* MODIFIED: Replaced Select with Combobox */}
+            <Combobox
+              options={skpdOptions}
+              value={selectedSkpd}
+              onValueChange={(value) => {
+                setSelectedSkpd(value);
+                setCurrentPage(1); // Reset to first page on SKPD change
+              }}
+              placeholder="Filter SKPD"
+              className="w-full sm:w-[200px]"
+            />
             <DateRangePickerWithPresets
               date={dateRange}
               onDateChange={(newDateRange) => {
@@ -388,25 +395,41 @@ const AdminTagihan = () => {
           </div>
 
           <div className="overflow-x-auto">
-            <Table><TableHeader><TableRow>
-                  <TableHead>Waktu Input</TableHead><TableHead>Nomor SPM</TableHead><TableHead>Nama SKPD</TableHead><TableHead>Jumlah Kotor</TableHead><TableHead className="min-w-[280px]">Uraian</TableHead><TableHead>Status</TableHead><TableHead>Diperiksa oleh</TableHead><TableHead className="text-center">Aksi</TableHead>
-                </TableRow></TableHeader><TableBody>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Waktu Input</TableHead>
+                  <TableHead>Nomor SPM</TableHead>
+                  <TableHead>Nama SKPD</TableHead>
+                  <TableHead>Jumlah Kotor</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Diperiksa oleh</TableHead>
+                  <TableHead className="text-center">Aksi</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {loadingData && !loadingPagination ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                    <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                       Memuat data tagihan...
                     </TableCell>
                   </TableRow>
                 ) : tagihanList.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                    <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                       Tidak ada data tagihan.
                     </TableCell>
                   </TableRow>
                 ) : (
                   tagihanList.map((tagihan) => (
                     <TableRow key={tagihan.id_tagihan}>
-                      <TableCell>{formatDate(tagihan.waktu_input)}</TableCell><TableCell className="font-medium">{tagihan.nomor_spm}</TableCell><TableCell>{tagihan.nama_skpd}</TableCell><TableCell>Rp{tagihan.jumlah_kotor.toLocaleString('id-ID')}</TableCell><TableCell className="min-w-[280px]">{tagihan.uraian}</TableCell><TableCell><StatusBadge status={tagihan.status_tagihan} /></TableCell><TableCell>{tagihan.nama_verifikator || tagihan.nama_registrator || tagihan.id_korektor ? (tagihan.nama_verifikator || tagihan.nama_registrator || 'Staf Koreksi') : '-'}</TableCell><TableCell className="text-center">
+                      <TableCell>{formatDate(tagihan.waktu_input)}</TableCell>
+                      <TableCell className="font-medium">{tagihan.nomor_spm}</TableCell>
+                      <TableCell>{tagihan.nama_skpd}</TableCell>
+                      <TableCell>Rp{tagihan.jumlah_kotor.toLocaleString('id-ID')}</TableCell>
+                      <TableCell><StatusBadge status={tagihan.status_tagihan} /></TableCell>
+                      <TableCell>{tagihan.nama_verifikator || tagihan.nama_registrator || tagihan.id_korektor ? (tagihan.nama_verifikator || tagihan.nama_registrator || 'Staf Koreksi') : '-'}</TableCell>
+                      <TableCell className="text-center">
                         <div className="flex justify-center space-x-2">
                           <Button variant="outline" size="icon" title="Lihat Detail" onClick={() => handleDetailClick(tagihan)}>
                             <EyeIcon className="h-4 w-4" />
@@ -422,7 +445,8 @@ const AdminTagihan = () => {
                     </TableRow>
                   ))
                 )}
-              </TableBody></Table>
+              </TableBody>
+            </Table>
           </div>
 
           {/* Pagination Controls */}

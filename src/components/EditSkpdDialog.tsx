@@ -11,16 +11,18 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form'; // Import Controller
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { supabase } from '@/integrations/supabase/client';
+import { Combobox } from '@/components/ui/combobox'; // NEW: Import Combobox
 
 interface SkpdData {
   id: string;
   nama_skpd: string;
   kode_skpd: string;
   created_at: string;
+  kode_skpd_penagihan?: string | null; // NEW: Add kode_skpd_penagihan
 }
 
 interface EditSkpdDialogProps {
@@ -28,16 +30,18 @@ interface EditSkpdDialogProps {
   onClose: () => void;
   onSkpdUpdated: () => void;
   editingSkpd: SkpdData | null;
+  skpdOptionsForPenagihan: { value: string; label: string }[]; // NEW: Add options for combobox
 }
 
 const formSchema = z.object({
   nama_skpd: z.string().min(1, { message: 'Nama SKPD wajib diisi.' }),
   kode_skpd: z.string().min(1, { message: 'Kode SKPD wajib diisi.' }),
+  kode_skpd_penagihan: z.string().optional().nullable(), // NEW: Add kode_skpd_penagihan, optional and nullable
 });
 
 type EditSkpdFormValues = z.infer<typeof formSchema>;
 
-const EditSkpdDialog: React.FC<EditSkpdDialogProps> = ({ isOpen, onClose, onSkpdUpdated, editingSkpd }) => {
+const EditSkpdDialog: React.FC<EditSkpdDialogProps> = ({ isOpen, onClose, onSkpdUpdated, editingSkpd, skpdOptionsForPenagihan }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm<EditSkpdFormValues>({
@@ -45,6 +49,7 @@ const EditSkpdDialog: React.FC<EditSkpdDialogProps> = ({ isOpen, onClose, onSkpd
     defaultValues: {
       nama_skpd: '',
       kode_skpd: '',
+      kode_skpd_penagihan: null, // NEW: Default to null
     },
   });
 
@@ -53,6 +58,7 @@ const EditSkpdDialog: React.FC<EditSkpdDialogProps> = ({ isOpen, onClose, onSkpd
       form.reset({
         nama_skpd: editingSkpd.nama_skpd,
         kode_skpd: editingSkpd.kode_skpd,
+        kode_skpd_penagihan: editingSkpd.kode_skpd_penagihan || null, // NEW: Set existing value or null
       });
     } else if (isOpen && !editingSkpd) {
       form.reset(); // Reset form if no editingSkpd (shouldn't happen for this dialog)
@@ -69,6 +75,7 @@ const EditSkpdDialog: React.FC<EditSkpdDialogProps> = ({ isOpen, onClose, onSkpd
         .update({
           nama_skpd: values.nama_skpd,
           kode_skpd: values.kode_skpd,
+          kode_skpd_penagihan: values.kode_skpd_penagihan, // NEW: Include kode_skpd_penagihan
         })
         .eq('id', editingSkpd.id);
 
@@ -130,6 +137,32 @@ const EditSkpdDialog: React.FC<EditSkpdDialogProps> = ({ isOpen, onClose, onSkpd
             {form.formState.errors.kode_skpd && (
               <p className="col-span-4 text-right text-red-500 text-sm">
                 {form.formState.errors.kode_skpd.message}
+              </p>
+            )}
+          </div>
+          {/* NEW: Kode SKPD Penagihan Combobox */}
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="kode_skpd_penagihan" className="text-right">
+              Kode SKPD Penagihan (Opsional)
+            </Label>
+            <Controller
+              name="kode_skpd_penagihan"
+              control={form.control}
+              render={({ field }) => (
+                <Combobox
+                  options={skpdOptionsForPenagihan}
+                  value={field.value || ''}
+                  onValueChange={(value) => field.onChange(value === '' ? null : value)} // Handle clearing selection
+                  placeholder="Pilih Kode SKPD Penagihan"
+                  disabled={isSubmitting}
+                  className="col-span-3"
+                  clearable // Add clearable prop to Combobox
+                />
+              )}
+            />
+            {form.formState.errors.kode_skpd_penagihan && (
+              <p className="col-span-4 text-right text-red-500 text-sm">
+                {form.formState.errors.kode_skpd_penagihan.message}
               </p>
             )}
           </div>

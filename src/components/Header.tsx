@@ -15,9 +15,15 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { formatDistanceToNow, parseISO } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
-import TagihanDetailDialog from './TagihanDetailDialog'; // Import TagihanDetailDialog
 import { cn } from '@/lib/utils'; // Import cn for class merging
 import { ThemeToggle } from "@/components/ThemeToggle"; // Import ThemeToggle
+import { useNavigate } from 'react-router-dom'; // Import useNavigate
+import TagihanDetailDialog from '@/components/TagihanDetailDialog'; // Re-import TagihanDetailDialog
+
+// Re-define Tagihan interface or import it from a shared location
+// For now, I'll define a minimal one here, but ideally it would be imported.
+// Given the context, I'll import from PortalSKPD for consistency.
+import { Tagihan } from '@/pages/PortalSKPD'; 
 
 interface HeaderProps {
   toggleSidebar: () => void;
@@ -32,39 +38,13 @@ interface Notification {
   tagihan_id?: string;
 }
 
-// Define Tagihan interface for the detail dialog
-interface Tagihan {
-  id_tagihan: string;
-  nama_skpd: string;
-  nomor_spm: string;
-  jenis_spm: string;
-  jenis_tagihan: string;
-  uraian: string;
-  jumlah_kotor: number;
-  status_tagihan: string;
-  waktu_input: string;
-  id_pengguna_input: string;
-  catatan_verifikator?: string;
-  nomor_registrasi?: string;
-  waktu_registrasi?: string;
-  nama_registrator?: string;
-  waktu_verifikasi?: string;
-  detail_verifikasi?: { item: string; memenuhi_syarat: boolean; keterangan: string }[];
-  nomor_verifikasi?: string;
-  nama_verifikator?: string;
-  nomor_koreksi?: string;
-  id_korektor?: string;
-  waktu_koreksi?: string;
-  catatan_koreksi?: string;
-  sumber_dana?: string;
-}
-
 const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
   const { profile, user } = useSession();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const navigate = useNavigate(); // Initialize useNavigate
 
-  // State for Tagihan Detail Dialog
+  // State for TagihanDetailDialog
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [selectedTagihanForDetail, setSelectedTagihanForDetail] = useState<Tagihan | null>(null);
 
@@ -163,6 +143,10 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
   };
 
   const handleNotificationClick = async (notification: Notification) => {
+    if (!user || !profile) {
+      toast.error('Informasi pengguna tidak lengkap.');
+      return;
+    }
     if (!notification.tagihan_id) {
       toast.info('Detail tagihan tidak tersedia untuk notifikasi ini.');
       return;
@@ -173,22 +157,30 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
       await markNotificationAsRead(notification.id);
     }
 
-    // Fetch tagihan details
-    try {
-      const { data, error } = await supabase
-        .from('database_tagihan')
-        .select('*')
-        .eq('id_tagihan', notification.tagihan_id)
-        .single();
+    if (profile.peran === 'Staf Registrasi') {
+      navigate(`/portal-registrasi?open_tagihan=${notification.tagihan_id}`);
+    } else if (profile.peran === 'Staf Verifikator') { // NEW: Logic for Staf Verifikator
+      navigate(`/portal-verifikasi?open_verifikasi=${notification.tagihan_id}`);
+    } else if (profile.peran === 'SKPD') {
+      try {
+        // Fetch tagihan details for SKPD user
+        const { data: tagihanData, error: tagihanError } = await supabase
+          .from('database_tagihan')
+          .select('*')
+          .eq('id_tagihan', notification.tagihan_id)
+          .single();
 
-      if (error) throw error;
-      if (!data) throw new Error('Tagihan tidak ditemukan.');
+        if (tagihanError) throw tagihanError;
+        if (!tagihanData) throw new Error('Tagihan tidak ditemukan.');
 
-      setSelectedTagihanForDetail(data as Tagihan);
-      setIsDetailModalOpen(true);
-    } catch (error: any) {
-      console.error('Error fetching tagihan details:', error.message);
-      toast.error('Gagal memuat detail tagihan: ' + error.message);
+        setSelectedTagihanForDetail(tagihanData as Tagihan);
+        setIsDetailModalOpen(true);
+      } catch (error: any) {
+        console.error('Error fetching tagihan details for SKPD:', error.message);
+        toast.error('Gagal memuat detail tagihan: ' + error.message);
+      }
+    } else {
+      toast.info('Aksi tidak tersedia untuk peran Anda.');
     }
   };
 

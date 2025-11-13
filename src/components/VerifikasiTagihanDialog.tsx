@@ -27,7 +27,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { format, parseISO, startOfMonth, endOfMonth } from 'date-fns';
+import { format, parseISO, startOfMonth, endOfMonth, addDays, differenceInDays } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -63,7 +63,9 @@ interface Tagihan {
   nama_verifikator?: string;
   locked_by?: string;
   locked_at?: string;
-  sumber_dana?: string; // Add sumber_dana
+  sumber_dana?: string;
+  skpd_can_edit?: boolean;
+  tenggat_perbaikan?: string;
 }
 
 interface VerifikasiTagihanDialogProps {
@@ -95,6 +97,20 @@ const verificationFormSchema = z.object({
       keterangan: z.string().optional(),
     })
   ).min(1, { message: 'Checklist verifikasi tidak boleh kosong.' }),
+  durasi_penahanan: z.preprocess(
+    (val) => Number(val),
+    z.number().int().min(1).max(3, { message: 'Durasi penahanan harus antara 1 hingga 3 hari.' }).optional()
+  ),
+  allow_skpd_edit: z.boolean().optional(),
+}).superRefine((data, ctx) => {
+  // Conditional validation for durasi_penahanan
+  if (data.status_keputusan === 'Dikembalikan' && (!data.durasi_penahanan || data.durasi_penahanan < 1 || data.durasi_penahanan > 3)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'Durasi Penahanan wajib dipilih jika status dikembalikan.',
+      path: ['durasi_penahanan'],
+    });
+  }
 });
 
 type VerificationFormValues = z.infer<typeof verificationFormSchema>;
@@ -110,15 +126,18 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
       status_keputusan: undefined,
       detail_verifikasi: checklistItems.map(item => ({
         item,
-        memenuhi_syarat: true, // Default to true
+        memenuhi_syarat: true,
         keterangan: '',
       })),
+      durasi_penahanan: 1,
+      allow_skpd_edit: false,
     },
   });
 
-  // Watch for changes in detail_verifikasi and status_keputusan
+  // Watch for changes in detail_verifikasi, status_keputusan, and durasi_penahanan
   const detailVerifikasiWatch = form.watch('detail_verifikasi');
   const statusKeputusanWatch = form.watch('status_keputusan');
+  const durasiPenahananWatch = form.watch('durasi_penahanan');
 
   // Determine if all checklist items meet requirements
   const allChecklistItemsMet = detailVerifikasiWatch.every(item => item.memenuhi_syarat === true);
@@ -127,39 +146,54 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
   useEffect(() => {
     if (allChecklistItemsMet) {
       setAvailableStatusOptions(['Diteruskan']);
-      // If current selection is not 'Diteruskan', reset it
       if (statusKeputusanWatch !== 'Diteruskan') {
         form.setValue('status_keputusan', 'Diteruskan');
       }
     } else {
-      setAvailableStatusOptions(['Dikembalikan']); // Only 'Dikembalikan' if not all items met
-      // If current selection is not 'Dikembalikan', set it to 'Dikembalikan'
+      setAvailableStatusOptions(['Dikembalikan']);
       if (statusKeputusanWatch !== 'Dikembalikan') {
         form.setValue('status_keputusan', 'Dikembalikan');
       }
     }
   }, [allChecklistItemsMet, form, statusKeputusanWatch]);
 
-
   useEffect(() => {
     if (isOpen && tagihan) {
-      let initialStatusKeputusan: VerificationFormValues['status_keputusan'] | undefined;
-      if (tagihan.status_tagihan === 'Dikembalikan') {
-        initialStatusKeputusan = 'Dikembalikan';
-      } else {
-        initialStatusKeputusan = undefined; // For 'Menunggu Verifikasi'
-      }
+      const defaultDetailVerifikasi = checklistItems.map(item => ({
+        item,
+        memenuhi_syarat: true,
+        keterangan: '',
+      }));
 
-      form.reset({
-        status_keputusan: initialStatusKeputusan,
+      let initialValues: VerificationFormValues = {
+        status_keputusan: undefined,
         detail_verifikasi: tagihan.detail_verifikasi && tagihan.detail_verifikasi.length > 0
           ? tagihan.detail_verifikasi
-          : checklistItems.map(item => ({
-              item,
-              memenuhi_syarat: true,
-              keterangan: '',
-            })),
-      });
+          : defaultDetailVerifikasi,
+        durasi_penahanan: 1,
+        allow_skpd_edit: false,
+      };
+
+      if (tagihan.status_tagihan === 'Dikembalikan') {
+        initialValues.status_keputusan = 'Dikembalikan';
+        initialValues.allow_skpd_edit = tagihan.skpd_can_edit || false;
+
+        if (tagihan.tenggat_perbaikan && tagihan.waktu_verifikasi) {
+          const deadlineDate = parseISO(tagihan.tenggat_perbaikan);
+          const verificationDate = parseISO(tagihan.waktu_verifikasi);
+          const diffDays = differenceInDays(deadlineDate, verificationDate);
+
+          if (diffDays >= 1 && diffDays <= 3) {
+            initialValues.durasi_penahanan = diffDays;
+          } else {
+            initialValues.durasi_penahanan = 1;
+          }
+        } else {
+          initialValues.durasi_penahanan = 1;
+        }
+      }
+
+      form.reset(initialValues);
     }
   }, [isOpen, tagihan, form]);
 
@@ -218,14 +252,12 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
       return;
     }
 
-    // Additional check for 'Diteruskan' decision
     if (values.status_keputusan === 'Diteruskan' && !allChecklistItemsMet) {
       toast.error('Tidak dapat meneruskan tagihan. Semua item checklist harus memenuhi syarat.');
       setIsSubmitting(false);
       return;
     }
 
-    // Additional check for 'Dikembalikan' decision
     if (values.status_keputusan === 'Dikembalikan' && allChecklistItemsMet) {
       toast.error('Tidak dapat mengembalikan tagihan. Semua item checklist sudah memenuhi syarat.');
       setIsSubmitting(false);
@@ -234,23 +266,53 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
 
     setIsSubmitting(true);
     try {
-      const nomorVerifikasi = await generateNomorVerifikasi();
+      const now = new Date();
+
+      let tenggatPerbaikan: string | null = null;
+      let skpdCanEdit: boolean = false;
+
+      if (values.status_keputusan === 'Dikembalikan') {
+        if (values.durasi_penahanan) {
+          const tenggat = addDays(now, values.durasi_penahanan);
+          tenggatPerbaikan = tenggat.toISOString();
+        }
+        skpdCanEdit = values.allow_skpd_edit || false;
+      }
+
+      let nomorVerifikasiToUse: string | undefined = tagihan.nomor_verifikasi; // Default to existing
+      if (values.status_keputusan === 'Diteruskan') {
+        if (!tagihan.nomor_verifikasi) { // Only generate new if it doesn't exist
+          nomorVerifikasiToUse = await generateNomorVerifikasi();
+        }
+      } else if (values.status_keputusan === 'Dikembalikan') {
+        // If status is 'Dikembalikan', and it previously had a verification number,
+        // we should retain it for historical context, but clear correction-related fields.
+        // If it's a fresh 'Dikembalikan' from 'Menunggu Verifikasi' without a prior number,
+        // we might still want to generate one to mark it as 'processed' by verifier.
+        // For now, let's assume if it's being 'Dikembalikan', it should have a verification number.
+        // If it doesn't, generate one.
+        if (!tagihan.nomor_verifikasi) {
+          nomorVerifikasiToUse = await generateNomorVerifikasi();
+        }
+      }
+
 
       const { error } = await supabase
         .from('database_tagihan')
         .update({
           status_tagihan: values.status_keputusan,
-          waktu_verifikasi: new Date().toISOString(),
+          waktu_verifikasi: now.toISOString(),
           nama_verifikator: profile.nama_lengkap,
           detail_verifikasi: values.detail_verifikasi,
-          nomor_verifikasi: nomorVerifikasi,
+          nomor_verifikasi: nomorVerifikasiToUse, // Use the determined number
           locked_by: null,
           locked_at: null,
-          // Clear correction-related fields if it was previously 'Dikembalikan'
           nomor_koreksi: null,
           id_korektor: null,
           waktu_koreksi: null,
           catatan_koreksi: null,
+          tenggat_perbaikan: tenggatPerbaikan,
+          skpd_can_edit: skpdCanEdit,
         })
         .eq('id_tagihan', tagihan.id_tagihan);
 
@@ -259,30 +321,32 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
         throw error;
       }
 
-      // --- START NEW NOTIFICATION LOGIC ---
       let notificationMessage = '';
       if (values.status_keputusan === 'Diteruskan') {
         notificationMessage = `Selamat! Tagihan SPM ${tagihan.nomor_spm} Anda telah DITERUSKAN.`;
       } else if (values.status_keputusan === 'Dikembalikan') {
-        notificationMessage = `Perhatian! Tagihan SPM ${tagihan.nomor_spm} DIKEMBALIKAN. Silakan periksa detailnya.`;
+        notificationMessage = `Perhatian! Tagihan SPM ${tagihan.nomor_spm} DIKEMBALIKAN.`;
+        if (tenggatPerbaikan && values.durasi_penahanan && values.durasi_penahanan > 1) {
+          const formattedTenggat = format(parseISO(tenggatPerbaikan), 'dd MMMM yyyy', { locale: localeId });
+          notificationMessage += ` Harap perbaiki sebelum ${formattedTenggat}.`;
+        }
       }
 
       if (notificationMessage) {
         const { error: notificationError } = await supabase
           .from('notifications')
           .insert({
-            user_id: tagihan.id_pengguna_input, // ID pengguna SKPD
+            user_id: tagihan.id_pengguna_input,
             message: notificationMessage,
             is_read: false,
-            tagihan_id: tagihan.id_tagihan, // Include tagihan_id
+            tagihan_id: tagihan.id_tagihan,
+            tenggat_perbaikan: tenggatPerbaikan,
           });
 
         if (notificationError) {
           console.error('Error inserting notification:', notificationError.message);
-          // Don't throw error here, as tagihan update is more critical
         }
       }
-      // --- END NEW NOTIFICATION LOGIC ---
 
       toast.success(`Tagihan ${tagihan.nomor_spm} berhasil ${values.status_keputusan.toLowerCase()}!`);
       onVerificationSuccess();
@@ -301,7 +365,6 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
     return 'secondary';
   };
 
-  // Determine if the submit button should be disabled
   const isSubmitButtonDisabled = isSubmitting || !statusKeputusanWatch ||
     (statusKeputusanWatch === 'Diteruskan' && !allChecklistItemsMet) ||
     (statusKeputusanWatch === 'Dikembalikan' && allChecklistItemsMet);
@@ -316,7 +379,6 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
           </DialogDescription>
         </DialogHeader>
 
-        {/* Scrollable content area */}
         <div className="flex-1 overflow-y-auto pr-4 -mr-4">
           <form id="verification-form" onSubmit={form.handleSubmit(onSubmit)} className="grid gap-6 py-4">
             {/* Detail Tagihan */}
@@ -335,7 +397,6 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
                   <Label className="text-muted-foreground">Nama SKPD</Label>
                   <p className="font-medium">{tagihan.nama_skpd}</p>
                 </div>
-                {/* Removed duplicated Nomor SPM */}
                 <div>
                   <Label className="text-muted-foreground">Jenis SPM</Label>
                   <p className="font-medium">{tagihan.jenis_spm}</p>
@@ -344,7 +405,6 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
                   <Label className="text-muted-foreground">Jenis Tagihan</Label>
                   <p className="font-medium">{tagihan.jenis_tagihan}</p>
                 </div>
-                {/* New: Sumber Dana */}
                 <div>
                   <Label className="text-muted-foreground">Sumber Dana</Label>
                   <p className="font-medium">{tagihan.sumber_dana || '-'}</p>
@@ -368,7 +428,7 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
                   <TableRow>
                     <TableHead className="w-[250px]">Uraian</TableHead>
                     <TableHead className="w-[120px] text-center">Memenuhi Syarat</TableHead>
-                    <TableHead></TableHead> {/* Empty header for the new row's content */}
+                    <TableHead></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -383,15 +443,20 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
                             render={({ field }) => (
                               <Checkbox
                                 checked={field.value}
-                                onCheckedChange={field.onChange}
+                                onCheckedChange={(checked) => {
+                                  field.onChange(checked);
+                                  if (checked) {
+                                    form.setValue(`detail_verifikasi.${index}.keterangan`, '');
+                                  }
+                                }}
                               />
                             )}
                           />
                         </TableCell>
-                        <TableCell></TableCell> {/* Empty cell for alignment */}
+                        <TableCell></TableCell>
                       </TableRow>
                       <TableRow>
-                        <TableCell colSpan={3}> {/* Span across all columns */}
+                        <TableCell colSpan={3}>
                           <Controller
                             name={`detail_verifikasi.${index}.keterangan`}
                             control={form.control}
@@ -444,13 +509,62 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
                 </p>
               )}
             </div>
+
+            {/* Durasi Penahanan (Conditional) */}
+            {statusKeputusanWatch === 'Dikembalikan' && (
+              <>
+                <div className="grid gap-2 mt-4">
+                  <Label htmlFor="durasi_penahanan" className="text-lg font-semibold">Durasi Penahanan</Label>
+                  <Controller
+                    name="durasi_penahanan"
+                    control={form.control}
+                    render={({ field }) => (
+                      <Select onValueChange={field.onChange} value={field.value?.toString()}>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Pilih Durasi" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="1">Default (Final)</SelectItem>
+                          <SelectItem value="2">2 Hari</SelectItem>
+                          <SelectItem value="3">3 Hari</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                  {form.formState.errors.durasi_penahanan && (
+                    <p className="text-red-500 text-sm">
+                      {form.formState.errors.durasi_penahanan.message}
+                    </p>
+                  )}
+                </div>
+                {/* Checkbox "Izinkan SKPD mengedit?" - Only show if durasi is 2 or 3 days */}
+                {(Number(durasiPenahananWatch) === 2 || Number(durasiPenahananWatch) === 3) && (
+                  <div className="flex items-center space-x-2 mt-4">
+                    <Controller
+                      name="allow_skpd_edit"
+                      control={form.control}
+                      render={({ field }) => (
+                        <Checkbox
+                          id="allow-skpd-edit"
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      )}
+                    />
+                    <Label htmlFor="allow-skpd-edit" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                      Izinkan SKPD mengedit?
+                    </Label>
+                  </div>
+                )}
+              </>
+            )}
           </form>
         </div>
 
         <DialogFooter>
           <Button
             type="submit"
-            form="verification-form" // Link button to the form by its ID
+            form="verification-form"
             className="w-full"
             variant={getButtonVariant(statusKeputusanWatch)}
             disabled={isSubmitButtonDisabled}

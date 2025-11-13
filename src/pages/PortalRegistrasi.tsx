@@ -51,6 +51,7 @@ import {
 } from "@/components/ui/tooltip"; // Import Tooltip components
 import { Textarea } from '@/components/ui/textarea'; // Import Textarea
 import { Combobox } from '@/components/ui/combobox'; // Import Combobox
+import { useSearchParams } from 'react-router-dom'; // Import useSearchParams
 
 interface VerificationItem {
   item: string;
@@ -135,6 +136,7 @@ const PortalRegistrasi = () => {
   const prevHistoryCurrentPage = useRef(historyCurrentPage);
   const prevHistoryItemsPerPage = useRef(historyItemsPerPage);
 
+  const [searchParams, setSearchParams] = useSearchParams(); // Initialize useSearchParams and its setter
 
   // Effect untuk memfokuskan kembali input pencarian setelah data dimuat
   useEffect(() => {
@@ -447,7 +449,7 @@ const PortalRegistrasi = () => {
           // Clear any previous registration info if it was registered before being returned
           nomor_registrasi: null,
           waktu_registrasi: null,
-          nama_registrator: null,
+          nama_registrator: profile?.nama_lengkap, // MODIFIED: Set current user's name
         })
         .eq('id_tagihan', selectedTagihanForTinjau.id_tagihan);
 
@@ -493,6 +495,42 @@ const PortalRegistrasi = () => {
       return dateString; // Fallback to raw string if formatting fails
     }
   };
+
+  // NEW: useEffect to handle URL parameter for opening modal
+  useEffect(() => {
+    const tagihanToOpenId = searchParams.get('open_tagihan');
+    if (tagihanToOpenId && user && profile?.peran === 'Staf Registrasi') {
+      const fetchAndOpenModal = async () => {
+        setLoadingQueue(true); // Show loading while fetching
+        try {
+          const { data, error } = await supabase
+            .from('database_tagihan')
+            .select('*')
+            .eq('id_tagihan', tagihanToOpenId)
+            .eq('status_tagihan', 'Menunggu Registrasi') // Only open if it's in the queue
+            .single();
+
+          if (error) {
+            if (error.code === 'PGRST116') { // No rows found
+              toast.info('Tagihan tidak ditemukan di antrian atau sudah diproses.');
+            } else {
+              throw error;
+            }
+          } else if (data) {
+            await handleRegistrasiClick(data as Tagihan); // Use existing handler to open modal and generate number
+          }
+        } catch (error: any) {
+          console.error('Error fetching tagihan from URL param:', error.message);
+          toast.error('Gagal memuat tagihan dari URL: ' + error.message);
+        } finally {
+          setLoadingQueue(false); // Hide loading
+          // Clear the URL parameter to prevent re-opening on refresh
+          setSearchParams({}, { replace: true }); // Use setSearchParams to clear the URL param
+        }
+      };
+      fetchAndOpenModal();
+    }
+  }, [searchParams, user, profile, setSearchParams]); // Depend on searchParams, user, and profile
 
   if (sessionLoading || loadingQueue || loadingHistory) {
     return (
