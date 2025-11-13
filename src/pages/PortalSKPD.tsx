@@ -11,7 +11,6 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
@@ -448,23 +447,23 @@ const PortalSKPD = () => {
         return;
       }
 
+      // Determine which SKPD code to use for SPM generation, prioritizing kode_skpd_penagihan
+      const skpdCodeToUseForSpm = profile.master_skpd?.kode_skpd_penagihan || kodeSkpd;
+
+      if (!skpdCodeToUseForSpm) {
+        toast.error('Kode SKPD tidak tersedia. Gagal membuat Nomor SPM.');
+        setIsSubmitting(false);
+        return;
+      }
+
       let finalNomorSpm: string | null = null;
-      let skpdCodeToUseForSpm: string | null = null;
 
       if (editingTagihan) {
         // Logic for UPDATE
-        // For existing tagihan, always use the SKPD's primary code (kodeSkpd)
-        if (!kodeSkpd) {
-          toast.error('Kode SKPD tidak tersedia untuk tagihan yang diedit. Gagal memperbarui Nomor SPM.');
-          setIsSubmitting(false);
-          return;
-        }
-        skpdCodeToUseForSpm = kodeSkpd;
-
         finalNomorSpm = await generateNomorSpmCallback(
           values.jenis_tagihan,
           values.kode_jadwal,
-          skpdCodeToUseForSpm,
+          skpdCodeToUseForSpm, // Use the determined SKPD code
           kodeWilayah,
           values.nomor_urut_tagihan
         );
@@ -542,21 +541,10 @@ const PortalSKPD = () => {
 
       } else {
         // Logic for INSERT (new tagihan)
-        // Determine which SKPD code to use for new SPM generation
-        if (profile.master_skpd?.kode_skpd_penagihan) { // MODIFIED: Access nested property
-          skpdCodeToUseForSpm = profile.master_skpd.kode_skpd_penagihan; // MODIFIED: Access nested property
-        } else if (kodeSkpd) {
-          skpdCodeToUseForSpm = kodeSkpd;
-        } else {
-          toast.error('Kode SKPD tidak tersedia untuk tagihan baru. Gagal membuat Nomor SPM.');
-          setIsSubmitting(false);
-          return;
-        }
-
         finalNomorSpm = await generateNomorSpmCallback(
           values.jenis_tagihan,
           values.kode_jadwal,
-          skpdCodeToUseForSpm, // Use the conditional SKPD code here
+          skpdCodeToUseForSpm, // Use the determined SKPD code here
           kodeWilayah,
           values.nomor_urut_tagihan
         );
