@@ -23,6 +23,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"; // Import Tooltip components
+import { CheckIcon, XIcon } from 'lucide-react'; // Import CheckIcon and XIcon
 
 interface VerificationItem {
   item: string;
@@ -76,7 +77,10 @@ const checklistItems = [
 const TagihanDetailDialog: React.FC<TagihanDetailDialogProps> = ({ isOpen, onClose, tagihan }) => {
   if (!tagihan) return null;
 
-  const showVerifikatorSection = tagihan.status_tagihan === 'Diteruskan' || tagihan.status_tagihan === 'Dikembalikan';
+  // Determine if verifikator section should be shown based on status
+  const showVerifikatorSection = tagihan.status_tagihan === 'Diteruskan' || 
+                                 tagihan.status_tagihan === 'Dikembalikan' ||
+                                 tagihan.status_tagihan === 'Menunggu Verifikasi'; // Also show if it's been registered and is awaiting verification
 
   const formatDate = (dateString: string | undefined) => {
     if (!dateString) return '-';
@@ -166,7 +170,7 @@ const TagihanDetailDialog: React.FC<TagihanDetailDialogProps> = ({ isOpen, onClo
           </div>
 
           {/* Bagian 2 - Hasil Pemeriksaan Verifikator */}
-          {showVerifikatorSection && (
+          {showVerifikatorSection && (tagihan.detail_verifikasi || tagihan.catatan_koreksi) && (
             <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
               <h3 className="text-lg font-semibold mb-2">Hasil Pemeriksaan Verifikator</h3>
               <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm mb-4">
@@ -197,31 +201,48 @@ const TagihanDetailDialog: React.FC<TagihanDetailDialogProps> = ({ isOpen, onClo
               <h4 className="text-md font-medium mb-2">Checklist Verifikasi</h4>
               {tagihan.id_korektor ? (
                 // Simplified table for Staf Koreksi
-                <Table><TableHeader><TableRow>
-                      <TableHead>Uraian</TableHead><TableHead className="w-[150px] text-center">Memenuhi Syarat</TableHead><TableHead>Keterangan</TableHead>
-                    </TableRow></TableHeader><TableBody>
+                <Table>
+                  <TableHeader>
                     <TableRow>
-                      <TableCell>Tidak dapat diterbitkan SP2D</TableCell><TableCell className="text-center">Tidak</TableCell><TableCell>{tagihan.catatan_koreksi || '-'}</TableCell>
+                      <TableHead>Uraian</TableHead>
+                      <TableHead className="w-[150px] text-center">Memenuhi Syarat</TableHead>
+                      <TableHead>Keterangan</TableHead>
                     </TableRow>
-                  </TableBody></Table>
+                  </TableHeader>
+                  <TableBody>
+                    <TableRow>
+                      <TableCell>Tidak dapat diterbitkan SP2D</TableCell>
+                      <TableCell className="text-center">Tidak</TableCell>
+                      <TableCell>{tagihan.catatan_koreksi || '-'}</TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
               ) : (
                 // Existing detailed table for Staf Verifikasi
-                <Table><TableHeader><TableRow>
-                      <TableHead>Uraian</TableHead><TableHead className="w-[150px] text-center">Memenuhi Syarat</TableHead><TableHead>Keterangan</TableHead>
-                    </TableRow></TableHeader><TableBody>
-                    {checklistItems.map((item, index) => {
-                      const verificationDetail = tagihan.detail_verifikasi?.find(
-                        (detail) => detail.item === item
-                      );
-                      return (
-                        <TableRow key={index}>
-                          <TableCell>{item}</TableCell><TableCell className="text-center">
-                            {verificationDetail ? (verificationDetail.memenuhi_syarat ? 'Ya' : 'Tidak') : '-'}
-                          </TableCell><TableCell>{verificationDetail?.keterangan || '-'}</TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody></Table>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Uraian</TableHead>
+                      <TableHead className="w-[150px] text-center">Memenuhi Syarat</TableHead>
+                      <TableHead>Keterangan</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {tagihan.detail_verifikasi?.map((detail, index) => (
+                      <TableRow key={index}>
+                        <TableCell>{detail.item}</TableCell>
+                        <TableCell className="text-center">
+                          {detail.memenuhi_syarat ? (
+                            <CheckIcon className="h-4 w-4 mx-auto text-green-600" />
+                          ) : (
+                            <XIcon className="h-4 w-4 mx-auto text-red-600" />
+                          )}
+                        </TableCell>
+                        <TableCell>{detail.keterangan || '-'}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               )}
             </div>
           )}
