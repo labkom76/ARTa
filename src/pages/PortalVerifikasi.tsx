@@ -273,7 +273,7 @@ const PortalVerifikasi = () => {
         let queryB = supabase
           .from('database_tagihan')
           .select('*', { count: 'exact' })
-          .eq('nama_verifikator', profile.nama_lengkap)
+          // REMOVED: .eq('nama_verifikator', profile.nama_lengkap)
           .is('id_korektor', null)
           .eq('status_tagihan', 'Dikembalikan')
           .gte('tenggat_perbaikan', now); // tenggat_perbaikan masih di masa depan
@@ -523,7 +523,7 @@ const PortalVerifikasi = () => {
                                  parseISO(newTagihan.waktu_verifikasi).toISOString() <= todayEnd;
 
             const isConditionB = newTagihan.status_tagihan === 'Dikembalikan' &&
-                                 newTagihan.nama_verifikator === profile?.nama_lengkap &&
+                                 // REMOVED: newTagihan.nama_verifikator === profile?.nama_lengkap &&
                                  newTagihan.id_korektor === null &&
                                  newTagihan.tenggat_perbaikan &&
                                  parseISO(newTagihan.tenggat_perbaikan).getTime() >= now.getTime();
