@@ -40,6 +40,7 @@ import StatusBadge from '@/components/StatusBadge'; // Import StatusBadge
 import { Combobox } from '@/components/ui/combobox'; // Import Combobox
 import Countdown from 'react-countdown'; // Import Countdown
 import { useSearchParams } from 'react-router-dom'; // Import useSearchParams
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'; // Import Tabs components
 
 interface VerificationItem {
   item: string;
@@ -750,254 +751,263 @@ const PortalVerifikasi = () => {
     <div className="space-y-6"> {/* Main container for spacing between sections */}
       <h1 className="text-3xl font-bold text-gray-800 dark:text-white mb-6">Portal Verifikasi Tagihan</h1>
 
-      {/* Antrian Verifikasi Panel */}
-      <Card className="shadow-sm rounded-lg">
-        <CardHeader>
-          <CardTitle className="text-2xl font-semibold text-gray-800 dark:text-white">Antrian Verifikasi</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col sm:flex-row items-center justify-between space-y-2 sm:space-y-0 sm:space-x-2 mb-4">
-            <div className="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-2 w-full sm:w-auto">
-              <div className="relative flex-1 w-full sm:w-auto">
-                <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400" />
-                <Input
-                  type="text"
-                  placeholder="Cari Nomor SPM atau Nama SKPD..."
-                  className="pl-9 w-full"
-                  value={queueSearchQuery}
-                  onChange={(e) => {
-                    setQueueSearchQuery(e.target.value);
-                    setQueueCurrentPage(1); // Reset page on search
-                  }}
-                />
+      <Tabs defaultValue="antrian" className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="antrian">Antrian Verifikasi</TabsTrigger>
+          <TabsTrigger value="diproses">Tagihan Yang Diproses</TabsTrigger>
+        </TabsList>
+        <TabsContent value="antrian">
+          {/* Antrian Verifikasi Panel */}
+          <Card className="shadow-sm rounded-lg mt-4">
+            <CardHeader>
+              <CardTitle className="text-2xl font-semibold text-gray-800 dark:text-white">Antrian Verifikasi</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col sm:flex-row items-center justify-between space-y-2 sm:space-y-0 sm:space-x-2 mb-4">
+                <div className="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-2 w-full sm:w-auto">
+                  <div className="relative flex-1 w-full sm:w-auto">
+                    <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400" />
+                    <Input
+                      type="text"
+                      placeholder="Cari Nomor SPM atau Nama SKPD..."
+                      className="pl-9 w-full"
+                      value={queueSearchQuery}
+                      onChange={(e) => {
+                        setQueueSearchQuery(e.target.value);
+                        setQueueCurrentPage(1); // Reset page on search
+                      }}
+                    />
+                  </div>
+                  {/* MODIFIED: Replaced Select with Combobox */}
+                  <Combobox
+                    options={skpdOptionsAntrian}
+                    value={selectedSkpdAntrian}
+                    onValueChange={(value) => {
+                      setSelectedSkpdAntrian(value);
+                      setQueueCurrentPage(1); // Reset page on SKPD change
+                    }}
+                    placeholder="Filter SKPD"
+                    className="w-full sm:w-[180px]"
+                  />
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Label htmlFor="queue-items-per-page" className="whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">Baris per halaman:</Label>
+                  <Select
+                    value={queueItemsPerPage.toString()}
+                    onValueChange={(value) => {
+                      setQueueItemsPerPage(Number(value));
+                      setQueueCurrentPage(1);
+                    }}
+                  >
+                    <SelectTrigger className="w-[100px]">
+                      <SelectValue placeholder="10" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="10">10</SelectItem>
+                      <SelectItem value="25">25</SelectItem>
+                      <SelectItem value="50">50</SelectItem>
+                      <SelectItem value="100">100</SelectItem>
+                      <SelectItem value="-1">Semua</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-              {/* MODIFIED: Replaced Select with Combobox */}
-              <Combobox
-                options={skpdOptionsAntrian}
-                value={selectedSkpdAntrian}
-                onValueChange={(value) => {
-                  setSelectedSkpdAntrian(value);
-                  setQueueCurrentPage(1); // Reset page on SKPD change
-                }}
-                placeholder="Filter SKPD"
-                className="w-full sm:w-[180px]"
-              />
-            </div>
-            <div className="flex items-center space-x-2">
-              <Label htmlFor="queue-items-per-page" className="whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">Baris per halaman:</Label>
-              <Select
-                value={queueItemsPerPage.toString()}
-                onValueChange={(value) => {
-                  setQueueItemsPerPage(Number(value));
-                  setQueueCurrentPage(1);
-                }}
-              >
-                <SelectTrigger className="w-[100px]">
-                  <SelectValue placeholder="10" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="10">10</SelectItem>
-                  <SelectItem value="25">25</SelectItem>
-                  <SelectItem value="50">50</SelectItem>
-                  <SelectItem value="100">100</SelectItem>
-                  <SelectItem value="-1">Semua</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
 
-          {loadingQueue && !loadingQueuePagination ? (
-            <p className="text-center text-gray-600 dark:text-gray-400">Memuat antrian...</p>
-          ) : queueTagihanList.length === 0 ? (
-            <p className="text-center text-gray-600 dark:text-gray-400">Tidak ada tagihan di antrian verifikasi.</p>
-          ) : (
-            <>
-              <div className="overflow-x-auto">
-                <Table><TableHeader><TableRow>
-                      <TableHead className="w-[50px]">No.</TableHead><TableHead>Nomor Registrasi</TableHead><TableHead>Waktu Registrasi</TableHead><TableHead>Nomor SPM</TableHead><TableHead>Nama SKPD</TableHead><TableHead>Jumlah Kotor</TableHead><TableHead className="text-center">Aksi</TableHead>
-                    </TableRow></TableHeader><TableBody>
-                    {queueTagihanList.map((tagihan, index) => {
-                      const isLockedByOther = tagihan.locked_by && tagihan.locked_by !== user?.id;
-                      const isStaleLock = tagihan.locked_at && (new Date().getTime() - parseISO(tagihan.locked_at).getTime()) > LOCK_TIMEOUT_MINUTES * 60 * 1000;
+              {loadingQueue && !loadingQueuePagination ? (
+                <p className="text-center text-gray-600 dark:text-gray-400">Memuat antrian...</p>
+              ) : queueTagihanList.length === 0 ? (
+                <p className="text-center text-gray-600 dark:text-gray-400">Tidak ada tagihan di antrian verifikasi.</p>
+              ) : (
+                <>
+                  <div className="overflow-x-auto">
+                    <Table><TableHeader><TableRow>
+                          <TableHead className="w-[50px]">No.</TableHead><TableHead>Nomor Registrasi</TableHead><TableHead>Waktu Registrasi</TableHead><TableHead>Nomor SPM</TableHead><TableHead>Nama SKPD</TableHead><TableHead>Jumlah Kotor</TableHead><TableHead className="text-center">Aksi</TableHead>
+                        </TableRow></TableHeader><TableBody>
+                        {queueTagihanList.map((tagihan, index) => {
+                          const isLockedByOther = tagihan.locked_by && tagihan.locked_by !== user?.id;
+                          const isStaleLock = tagihan.locked_at && (new Date().getTime() - parseISO(tagihan.locked_at).getTime()) > LOCK_TIMEOUT_MINUTES * 60 * 1000;
 
-                      const isDisabled = isLockedByOther && !isStaleLock;
+                          const isDisabled = isLockedByOther && !isStaleLock;
 
-                      return (
-                        <TableRow key={tagihan.id_tagihan}>
-                          <TableCell>{(queueCurrentPage - 1) * queueItemsPerPage + index + 1}</TableCell><TableCell className="font-medium">{tagihan.nomor_registrasi || '-'}</TableCell><TableCell>
-                            {tagihan.waktu_registrasi ? format(parseISO(tagihan.waktu_registrasi), 'dd MMMM yyyy HH:mm', { locale: localeId }) : '-'}
-                          </TableCell><TableCell>{tagihan.nomor_spm}</TableCell><TableCell>{tagihan.nama_skpd}</TableCell><TableCell>Rp{tagihan.jumlah_kotor.toLocaleString('id-ID')}</TableCell><TableCell className="text-center">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              title={isDisabled ? "Tagihan ini sedang diproses oleh verifikator lain" : "Proses Verifikasi"}
-                              onClick={() => handleActionButtonClick(tagihan)} // Use the new handler
-                              disabled={isDisabled}
-                            >
-                              {isDisabled ? (
-                                <LockIcon className="h-5 w-5 text-gray-400" />
-                              ) : (
-                                <FileCheckIcon className="h-5 w-5 text-blue-500" />
+                          return (
+                            <TableRow key={tagihan.id_tagihan}>
+                              <TableCell>{(queueCurrentPage - 1) * queueItemsPerPage + index + 1}</TableCell><TableCell className="font-medium">{tagihan.nomor_registrasi || '-'}</TableCell><TableCell>
+                                {tagihan.waktu_registrasi ? format(parseISO(tagihan.waktu_registrasi), 'dd MMMM yyyy HH:mm', { locale: localeId }) : '-'}
+                              </TableCell><TableCell>{tagihan.nomor_spm}</TableCell><TableCell>{tagihan.nama_skpd}</TableCell><TableCell>Rp{tagihan.jumlah_kotor.toLocaleString('id-ID')}</TableCell><TableCell className="text-center">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  title={isDisabled ? "Tagihan ini sedang diproses oleh verifikator lain" : "Proses Verifikasi"}
+                                  onClick={() => handleActionButtonClick(tagihan)} // Use the new handler
+                                  disabled={isDisabled}
+                                >
+                                  {isDisabled ? (
+                                    <LockIcon className="h-5 w-5 text-gray-400" />
+                                  ) : (
+                                    <FileCheckIcon className="h-5 w-5 text-blue-500" />
+                                  )}
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody></Table>
+                  </div>
+                  {/* Pagination Controls */}
+                  <div className="mt-6 flex items-center justify-end space-x-4">
+                    <div className="text-sm text-muted-foreground">
+                      Halaman {queueTotalItems === 0 ? 0 : queueCurrentPage} dari {queueTotalPages} ({queueTotalItems} total item)
+                    </div>
+                    <Button
+                      variant="outline"
+                      onClick={() => setQueueCurrentPage((prev) => Math.max(1, prev - 1))}
+                      disabled={queueCurrentPage === 1 || queueItemsPerPage === -1 || loadingQueuePagination}
+                    >
+                      Sebelumnya
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => setQueueCurrentPage((prev) => Math.min(queueTotalPages, prev + 1))}
+                      disabled={queueCurrentPage === queueTotalPages || queueItemsPerPage === -1 || loadingQueuePagination}
+                    >
+                      Berikutnya
+                    </Button>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+        <TabsContent value="diproses">
+          {/* Riwayat Verifikasi Hari Ini Panel */}
+          <Card className="shadow-sm rounded-lg mt-4">
+            <CardHeader>
+              <CardTitle className="text-2xl font-semibold text-gray-800 dark:text-white">{historyPanelTitle}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col sm:flex-row items-center justify-between space-y-2 sm:space-y-0 sm:space-x-2 mb-4">
+                <div className="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-2 w-full sm:w-auto">
+                  <div className="relative flex-1 w-full sm:w-auto">
+                    <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400" />
+                    <Input
+                      type="text"
+                      placeholder="Cari Nomor SPM atau Nama SKPD..."
+                      className="pl-9 w-full"
+                      value={historySearchQuery}
+                      onChange={(e) => {
+                        setHistorySearchQuery(e.target.value);
+                        setHistoryCurrentPage(1); // Reset page on search
+                      }}
+                    />
+                  </div>
+                  {/* MODIFIED: Replaced Select with Combobox */}
+                  <Combobox
+                    options={skpdOptionsHistory}
+                    value={selectedHistorySkpd}
+                    onValueChange={(value) => {
+                      setSelectedHistorySkpd(value);
+                      setHistoryCurrentPage(1); // Reset page on SKPD change
+                    }}
+                    placeholder="Filter SKPD"
+                    className="w-full sm:w-[180px]"
+                  />
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Label htmlFor="history-items-per-page" className="whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">Baris per halaman:</Label>
+                  <Select
+                    value={historyItemsPerPage.toString()}
+                    onValueChange={(value) => {
+                      setHistoryItemsPerPage(Number(value));
+                      setHistoryCurrentPage(1);
+                    }}
+                  >
+                    <SelectTrigger className="w-[100px]">
+                      <SelectValue placeholder="10" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="10">10</SelectItem>
+                      <SelectItem value="25">25</SelectItem>
+                      <SelectItem value="50">50</SelectItem>
+                      <SelectItem value="100">100</SelectItem>
+                      <SelectItem value="-1">Semua</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {loadingHistory && !loadingHistoryPagination ? (
+                <p className="text-center text-gray-600 dark:text-gray-400">Memuat riwayat verifikasi...</p>
+              ) : historyTagihanList.length === 0 ? (
+                <p className="text-center text-gray-600 dark:text-gray-400">Tidak ada riwayat verifikasi hari ini.</p>
+              ) : (
+                <>
+                  <div className="overflow-x-auto">
+                    <Table><TableHeader><TableRow>
+                          <TableHead className="w-[50px]">No.</TableHead><TableHead>{profile?.peran === 'Staf Koreksi' ? 'Waktu Koreksi' : 'Waktu Verifikasi'}</TableHead><TableHead>{profile?.peran === 'Staf Koreksi' ? 'Nomor Koreksi' : 'Nomor Verifikasi'}</TableHead><TableHead>Nama SKPD</TableHead><TableHead>Nomor SPM</TableHead><TableHead>Status Tagihan</TableHead><TableHead className="text-center">Aksi</TableHead>
+                        </TableRow></TableHeader><TableBody>
+                        {historyTagihanList.map((tagihan, index) => (
+                          <TableRow key={tagihan.id_tagihan}>
+                            <TableCell>{(historyCurrentPage - 1) * historyItemsPerPage + index + 1}</TableCell><TableCell>
+                              {profile?.peran === 'Staf Koreksi'
+                                ? (tagihan.waktu_koreksi ? format(parseISO(tagihan.waktu_koreksi), 'dd MMMM yyyy HH:mm', { locale: localeId }) : '-')
+                                : (tagihan.waktu_verifikasi ? format(parseISO(tagihan.waktu_verifikasi), 'dd MMMM yyyy HH:mm', { locale: localeId }) : '-')}
+                            </TableCell><TableCell className="font-medium">
+                              {profile?.peran === 'Staf Koreksi' ? (tagihan.nomor_koreksi || '-') : (tagihan.nomor_verifikasi || '-')}
+                            </TableCell><TableCell>{tagihan.nama_skpd}</TableCell><TableCell>{tagihan.nomor_spm}</TableCell><TableCell>
+                              <StatusBadge status={tagihan.status_tagihan} />
+                              {tagihan.status_tagihan === 'Dikembalikan' && tagihan.tenggat_perbaikan && (
+                                <Countdown date={new Date(tagihan.tenggat_perbaikan)} renderer={renderer} />
                               )}
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody></Table>
-              </div>
-              {/* Pagination Controls */}
-              <div className="mt-6 flex items-center justify-end space-x-4">
-                <div className="text-sm text-muted-foreground">
-                  Halaman {queueTotalItems === 0 ? 0 : queueCurrentPage} dari {queueTotalPages} ({queueTotalItems} total item)
-                </div>
-                <Button
-                  variant="outline"
-                  onClick={() => setQueueCurrentPage((prev) => Math.max(1, prev - 1))}
-                  disabled={queueCurrentPage === 1 || queueItemsPerPage === -1 || loadingQueuePagination}
-                >
-                  Sebelumnya
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => setQueueCurrentPage((prev) => Math.min(queueTotalPages, prev + 1))}
-                  disabled={queueCurrentPage === queueTotalPages || queueItemsPerPage === -1 || loadingQueuePagination}
-                >
-                  Berikutnya
-                </Button>
-              </div>
-            </>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Riwayat Verifikasi Hari Ini Panel */}
-      <Card className="shadow-sm rounded-lg">
-        <CardHeader>
-          <CardTitle className="text-2xl font-semibold text-gray-800 dark:text-white">{historyPanelTitle}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col sm:flex-row items-center justify-between space-y-2 sm:space-y-0 sm:space-x-2 mb-4">
-            <div className="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-2 w-full sm:w-auto">
-              <div className="relative flex-1 w-full sm:w-auto">
-                <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400" />
-                <Input
-                  type="text"
-                  placeholder="Cari Nomor SPM atau Nama SKPD..."
-                  className="pl-9 w-full"
-                  value={historySearchQuery}
-                  onChange={(e) => {
-                    setHistorySearchQuery(e.target.value);
-                    setHistoryCurrentPage(1); // Reset page on search
-                  }}
-                />
-              </div>
-              {/* MODIFIED: Replaced Select with Combobox */}
-              <Combobox
-                options={skpdOptionsHistory}
-                value={selectedHistorySkpd}
-                onValueChange={(value) => {
-                  setSelectedHistorySkpd(value);
-                  setHistoryCurrentPage(1); // Reset page on SKPD change
-                }}
-                placeholder="Filter SKPD"
-                className="w-full sm:w-[180px]"
-              />
-            </div>
-            <div className="flex items-center space-x-2">
-              <Label htmlFor="history-items-per-page" className="whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">Baris per halaman:</Label>
-              <Select
-                value={historyItemsPerPage.toString()}
-                onValueChange={(value) => {
-                  setHistoryItemsPerPage(Number(value));
-                  setHistoryCurrentPage(1);
-                }}
-              >
-                <SelectTrigger className="w-[100px]">
-                  <SelectValue placeholder="10" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="10">10</SelectItem>
-                  <SelectItem value="25">25</SelectItem>
-                  <SelectItem value="50">50</SelectItem>
-                  <SelectItem value="100">100</SelectItem>
-                  <SelectItem value="-1">Semua</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          {loadingHistory && !loadingHistoryPagination ? (
-            <p className="text-center text-gray-600 dark:text-gray-400">Memuat riwayat verifikasi...</p>
-          ) : historyTagihanList.length === 0 ? (
-            <p className="text-center text-gray-600 dark:text-gray-400">Tidak ada riwayat verifikasi hari ini.</p>
-          ) : (
-            <>
-              <div className="overflow-x-auto">
-                <Table><TableHeader><TableRow>
-                      <TableHead className="w-[50px]">No.</TableHead><TableHead>{profile?.peran === 'Staf Koreksi' ? 'Waktu Koreksi' : 'Waktu Verifikasi'}</TableHead><TableHead>{profile?.peran === 'Staf Koreksi' ? 'Nomor Koreksi' : 'Nomor Verifikasi'}</TableHead><TableHead>Nama SKPD</TableHead><TableHead>Nomor SPM</TableHead><TableHead>Status Tagihan</TableHead><TableHead className="text-center">Aksi</TableHead>
-                    </TableRow></TableHeader><TableBody>
-                    {historyTagihanList.map((tagihan, index) => (
-                      <TableRow key={tagihan.id_tagihan}>
-                        <TableCell>{(historyCurrentPage - 1) * historyItemsPerPage + index + 1}</TableCell><TableCell>
-                          {profile?.peran === 'Staf Koreksi'
-                            ? (tagihan.waktu_koreksi ? format(parseISO(tagihan.waktu_koreksi), 'dd MMMM yyyy HH:mm', { locale: localeId }) : '-')
-                            : (tagihan.waktu_verifikasi ? format(parseISO(tagihan.waktu_verifikasi), 'dd MMMM yyyy HH:mm', { locale: localeId }) : '-')}
-                        </TableCell><TableCell className="font-medium">
-                          {profile?.peran === 'Staf Koreksi' ? (tagihan.nomor_koreksi || '-') : (tagihan.nomor_verifikasi || '-')}
-                        </TableCell><TableCell>{tagihan.nama_skpd}</TableCell><TableCell>{tagihan.nomor_spm}</TableCell><TableCell>
-                          <StatusBadge status={tagihan.status_tagihan} />
-                          {tagihan.status_tagihan === 'Dikembalikan' && tagihan.tenggat_perbaikan && (
-                            <Countdown date={new Date(tagihan.tenggat_perbaikan)} renderer={renderer} />
-                          )}
-                        </TableCell><TableCell className="text-center">
-                          <div className="flex justify-center space-x-2">
-                            <Button variant="outline" size="icon" title="Lihat Detail" onClick={() => handleDetailClick(tagihan)}>
-                              <EyeIcon className="h-4 w-4" />
-                            </Button>
-                            <Button variant="outline" size="icon" title="Cetak" onClick={() => handlePrintClick(tagihan.id_tagihan)}>
-                              <PrinterIcon className="h-4 w-4" />
-                            </Button>
-                            {tagihan.status_tagihan === 'Dikembalikan' && (
-                              <Button variant="outline" size="icon" title="Edit (Verifikasi Ulang)" onClick={() => handleEditVerificationClick(tagihan)}>
-                                <FilePenLine className="h-4 w-4" />
-                              </Button>
-                            )}
-                            {/* NEW: Tombol "Periksa" untuk status "Menunggu Verifikasi" */}
-                            {tagihan.status_tagihan === 'Menunggu Verifikasi' && (
-                              <Button variant="outline" size="icon" title="Periksa Tagihan" onClick={() => handleProcessVerification(tagihan)}>
-                                <RotateCcw className="h-4 w-4" />
-                              </Button>
-                            )}
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody></Table>
-              </div>
-              <div className="mt-6 flex items-center justify-end space-x-4">
-                <div className="text-sm text-muted-foreground">
-                  Halaman {historyTotalItems === 0 ? 0 : historyCurrentPage} dari {historyTotalPages} ({historyTotalItems} total item)
-                </div>
-                <Button
-                  variant="outline"
-                  onClick={() => setHistoryCurrentPage((prev) => Math.max(1, prev - 1))}
-                  disabled={historyCurrentPage === 1 || historyItemsPerPage === -1 || loadingHistoryPagination}
-                >
-                  Sebelumnya
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => setHistoryCurrentPage((prev) => Math.min(historyTotalPages, prev + 1))}
-                  disabled={historyCurrentPage === historyTotalPages || historyItemsPerPage === -1 || loadingHistoryPagination}
-                >
-                  Berikutnya
-                </Button>
-              </div>
-            </>
-          )}
-        </CardContent>
-      </Card>
+                            </TableCell><TableCell className="text-center">
+                              <div className="flex justify-center space-x-2">
+                                <Button variant="outline" size="icon" title="Lihat Detail" onClick={() => handleDetailClick(tagihan)}>
+                                  <EyeIcon className="h-4 w-4" />
+                                </Button>
+                                <Button variant="outline" size="icon" title="Cetak" onClick={() => handlePrintClick(tagihan.id_tagihan)}>
+                                  <PrinterIcon className="h-4 w-4" />
+                                </Button>
+                                {tagihan.status_tagihan === 'Dikembalikan' && (
+                                  <Button variant="outline" size="icon" title="Edit (Verifikasi Ulang)" onClick={() => handleEditVerificationClick(tagihan)}>
+                                    <FilePenLine className="h-4 w-4" />
+                                  </Button>
+                                )}
+                                {/* NEW: Tombol "Periksa" untuk status "Menunggu Verifikasi" */}
+                                {tagihan.status_tagihan === 'Menunggu Verifikasi' && (
+                                  <Button variant="outline" size="icon" title="Periksa Tagihan" onClick={() => handleProcessVerification(tagihan)}>
+                                    <RotateCcw className="h-4 w-4" />
+                                  </Button>
+                                )}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody></Table>
+                  </div>
+                  <div className="mt-6 flex items-center justify-end space-x-4">
+                    <div className="text-sm text-muted-foreground">
+                      Halaman {historyTotalItems === 0 ? 0 : historyCurrentPage} dari {historyTotalPages} ({historyTotalItems} total item)
+                    </div>
+                    <Button
+                      variant="outline"
+                      onClick={() => setHistoryCurrentPage((prev) => Math.max(1, prev - 1))}
+                      disabled={historyCurrentPage === 1 || historyItemsPerPage === -1 || loadingHistoryPagination}
+                    >
+                      Sebelumnya
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => setHistoryCurrentPage((prev) => Math.min(historyTotalPages, prev + 1))}
+                      disabled={historyCurrentPage === historyTotalPages || historyItemsPerPage === -1 || loadingHistoryPagination}
+                    >
+                      Berikutnya
+                    </Button>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
       <VerifikasiTagihanDialog
         isOpen={isVerifikasiModalOpen}
