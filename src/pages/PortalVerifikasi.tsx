@@ -250,7 +250,7 @@ const PortalVerifikasi = () => {
         // Query for Condition A: Status 'Diteruskan' HARI INI
         let queryA = supabase
           .from('database_tagihan')
-          .select('*', { count: 'exact' })
+          .select('*, nama_verifikator', { count: 'exact' }) // MODIFIED: Added nama_verifikator
           .eq('nama_verifikator', profile.nama_lengkap)
           .is('id_korektor', null)
           .eq('status_tagihan', 'Diteruskan')
@@ -272,7 +272,7 @@ const PortalVerifikasi = () => {
         // Query for Condition B: Status 'Dikembalikan' DAN tenggat belum lewat
         let queryB = supabase
           .from('database_tagihan')
-          .select('*', { count: 'exact' })
+          .select('*, nama_verifikator', { count: 'exact' }) // MODIFIED: Added nama_verifikator
           .is('id_korektor', null)
           .eq('status_tagihan', 'Dikembalikan')
           .gte('tenggat_perbaikan', now); // tenggat_perbaikan masih di masa depan
@@ -292,7 +292,7 @@ const PortalVerifikasi = () => {
         // Query for Condition C: Status 'Menunggu Verifikasi' DAN nomor_verifikasi TIDAK KOSONG
         let queryC = supabase
           .from('database_tagihan')
-          .select('*', { count: 'exact' })
+          .select('*, nama_verifikator', { count: 'exact' }) // MODIFIED: Added nama_verifikator
           .eq('nama_verifikator', profile.nama_lengkap)
           .is('id_korektor', null)
           .eq('status_tagihan', 'Menunggu Verifikasi')
@@ -333,7 +333,7 @@ const PortalVerifikasi = () => {
         setHistoryPanelTitle('Pengembalian Terakhir Anda');
         let query = supabase
           .from('database_tagihan')
-          .select('*', { count: 'exact' })
+          .select('*, nama_verifikator', { count: 'exact' }) // MODIFIED: Added nama_verifikator
           .eq('status_tagihan', 'Dikembalikan')
           .eq('id_korektor', user.id)
           .gte('waktu_koreksi', todayStart)
@@ -370,7 +370,7 @@ const PortalVerifikasi = () => {
         setHistoryPanelTitle('Riwayat Verifikasi Hari Ini');
         let query = supabase
           .from('database_tagihan')
-          .select('*', { count: 'exact' })
+          .select('*, nama_verifikator', { count: 'exact' }) // MODIFIED: Added nama_verifikator
           .in('status_tagihan', ['Diteruskan', 'Dikembalikan'])
           .gte('waktu_verifikasi', todayStart)
           .lte('waktu_verifikasi', todayEnd);
