@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { format, parseISO, startOfDay, endOfDay, isSameDay, formatDistanceToNow } from 'date-fns'; // Import formatDistanceToNow
 import { id as localeId } from 'date-fns/locale';
-import { FileCheckIcon, LockIcon, EyeIcon, PrinterIcon, SearchIcon, FilePenLine, RotateCcw } from 'lucide-react'; // Import RotateCcw icon
+import { FileCheckIcon, LockIcon, EyeIcon, PrinterIcon, SearchIcon, FilePenLine, RotateCcw, ListOrderedIcon, HistoryIcon } from 'lucide-react'; // Import RotateCcw, ListOrderedIcon, HistoryIcon
 import VerifikasiTagihanDialog from '@/components/VerifikasiTagihanDialog';
 import {
   Pagination,
@@ -751,8 +751,12 @@ const PortalVerifikasi = () => {
 
       <Tabs defaultValue="antrian" className="w-full">
         <TabsList className="grid w-full grid-cols-2 bg-muted p-1 rounded-lg">
-          <TabsTrigger value="antrian" className="data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm">Antrian Verifikasi</TabsTrigger>
-          <TabsTrigger value="diproses" className="data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm">Tagihan Yang Diproses</TabsTrigger>
+          <TabsTrigger value="antrian" className="data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm flex items-center gap-2">
+            <ListOrderedIcon className="h-4 w-4" /> Antrian Verifikasi
+          </TabsTrigger>
+          <TabsTrigger value="diproses" className="data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm flex items-center gap-2">
+            <HistoryIcon className="h-4 w-4" /> Tagihan Yang Diproses
+          </TabsTrigger>
         </TabsList>
         <TabsContent value="antrian">
           {/* Antrian Verifikasi Panel */}
