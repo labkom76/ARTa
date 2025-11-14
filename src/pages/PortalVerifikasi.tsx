@@ -273,7 +273,6 @@ const PortalVerifikasi = () => {
         let queryB = supabase
           .from('database_tagihan')
           .select('*', { count: 'exact' })
-          // REMOVED: .eq('nama_verifikator', profile.nama_lengkap)
           .is('id_korektor', null)
           .eq('status_tagihan', 'Dikembalikan')
           .gte('tenggat_perbaikan', now); // tenggat_perbaikan masih di masa depan
@@ -523,7 +522,6 @@ const PortalVerifikasi = () => {
                                  parseISO(newTagihan.waktu_verifikasi).toISOString() <= todayEnd;
 
             const isConditionB = newTagihan.status_tagihan === 'Dikembalikan' &&
-                                 // REMOVED: newTagihan.nama_verifikator === profile?.nama_lengkap &&
                                  newTagihan.id_korektor === null &&
                                  newTagihan.tenggat_perbaikan &&
                                  parseISO(newTagihan.tenggat_perbaikan).getTime() >= now.getTime();
@@ -752,9 +750,9 @@ const PortalVerifikasi = () => {
       <h1 className="text-3xl font-bold text-gray-800 dark:text-white mb-6">Portal Verifikasi Tagihan</h1>
 
       <Tabs defaultValue="antrian" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="antrian">Antrian Verifikasi</TabsTrigger>
-          <TabsTrigger value="diproses">Tagihan Yang Diproses</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-2 bg-muted p-1 rounded-lg">
+          <TabsTrigger value="antrian" className="data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm">Antrian Verifikasi</TabsTrigger>
+          <TabsTrigger value="diproses" className="data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm">Tagihan Yang Diproses</TabsTrigger>
         </TabsList>
         <TabsContent value="antrian">
           {/* Antrian Verifikasi Panel */}
