@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { format, parseISO, startOfDay, endOfDay, isSameDay, formatDistanceToNow } from 'date-fns'; // Import formatDistanceToNow
 import { id as localeId } from 'date-fns/locale';
-import { FileCheckIcon, LockIcon, EyeIcon, PrinterIcon, SearchIcon, FilePenLine, RotateCcw, ListOrderedIcon, HistoryIcon } from 'lucide-react'; // Import RotateCcw, ListOrderedIcon, HistoryIcon
+import { FileCheckIcon, LockIcon, EyeIcon, PrinterIcon, SearchIcon, FilePenLine, RotateCcw, ListOrderedIcon, HistoryIcon } from 'lucide-react'; // Import RotateCcw icon
 import VerifikasiTagihanDialog from '@/components/VerifikasiTagihanDialog';
 import {
   Pagination,
@@ -31,7 +31,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import TagihanDetailDialog from '@/components/TagihanDetailDialog';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } => '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import useDebounce from '@/hooks/use-debounce';
@@ -751,10 +751,18 @@ const PortalVerifikasi = () => {
 
       <Tabs defaultValue="antrian" className="w-full">
         <TabsList className="grid w-full grid-cols-2 bg-muted p-1 rounded-lg">
-          <TabsTrigger value="antrian" className="data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm flex items-center gap-2">
+          <TabsTrigger 
+            value="antrian" 
+            className="data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm 
+                       flex items-center gap-2 hover:bg-accent hover:text-accent-foreground"
+          >
             <ListOrderedIcon className="h-4 w-4" /> Antrian Verifikasi
           </TabsTrigger>
-          <TabsTrigger value="diproses" className="data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm flex items-center gap-2">
+          <TabsTrigger 
+            value="diproses" 
+            className="data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm 
+                       flex items-center gap-2 hover:bg-accent hover:text-accent-foreground"
+          >
             <HistoryIcon className="h-4 w-4" /> Tagihan Yang Diproses
           </TabsTrigger>
         </TabsList>
