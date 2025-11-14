@@ -953,7 +953,7 @@ const PortalVerifikasi = () => {
                 <>
                   <div className="overflow-x-auto">
                     <Table><TableHeader><TableRow>
-                          <TableHead className="w-[50px]">No.</TableHead><TableHead>{profile?.peran === 'Staf Koreksi' ? 'Waktu Koreksi' : 'Waktu Verifikasi'}</TableHead><TableHead>{profile?.peran === 'Staf Koreksi' ? 'Nomor Koreksi' : 'Nomor Verifikasi'}</TableHead><TableHead>Nama SKPD</TableHead><TableHead>Nomor SPM</TableHead><TableHead>Status Tagihan</TableHead><TableHead className="text-center">Aksi</TableHead>
+                          <TableHead className="w-[50px]">No.</TableHead><TableHead>{profile?.peran === 'Staf Koreksi' ? 'Waktu Koreksi' : 'Waktu Verifikasi'}</TableHead><TableHead>{profile?.peran === 'Staf Koreksi' ? 'Nomor Koreksi' : 'Nomor Verifikasi'}</TableHead><TableHead>Nama SKPD</TableHead><TableHead>Nomor SPM</TableHead><TableHead>Nama Verifikator</TableHead><TableHead>Status Tagihan</TableHead><TableHead className="text-center">Aksi</TableHead>
                         </TableRow></TableHeader><TableBody>
                         {historyTagihanList.map((tagihan, index) => (
                           <TableRow key={tagihan.id_tagihan}>
@@ -963,7 +963,7 @@ const PortalVerifikasi = () => {
                                 : (tagihan.waktu_verifikasi ? format(parseISO(tagihan.waktu_verifikasi), 'dd MMMM yyyy HH:mm', { locale: localeId }) : '-')}
                             </TableCell><TableCell className="font-medium">
                               {profile?.peran === 'Staf Koreksi' ? (tagihan.nomor_koreksi || '-') : (tagihan.nomor_verifikasi || '-')}
-                            </TableCell><TableCell>{tagihan.nama_skpd}</TableCell><TableCell>{tagihan.nomor_spm}</TableCell><TableCell>
+                            </TableCell><TableCell>{tagihan.nama_skpd}</TableCell><TableCell>{tagihan.nomor_spm}</TableCell><TableCell>{tagihan.nama_verifikator || '-'}</TableCell><TableCell>
                               <StatusBadge status={tagihan.status_tagihan} />
                               {tagihan.status_tagihan === 'Dikembalikan' && tagihan.tenggat_perbaikan && (
                                 <Countdown date={new Date(tagihan.tenggat_perbaikan)} renderer={renderer} />
