@@ -286,7 +286,6 @@ const PortalVerifikasi = () => {
         let queryA = supabase
           .from('database_tagihan')
           .select('*, nama_verifikator', { count: 'exact' }) // MODIFIED: Added nama_verifikator
-          .eq('nama_verifikator', profile.nama_lengkap)
           .is('id_korektor', null)
           .eq('status_tagihan', 'Diteruskan')
           .gte('waktu_verifikasi', todayStart)
@@ -307,6 +306,9 @@ const PortalVerifikasi = () => {
         // Apply history Verifier filter to queryA
         if (selectedVerifierHistory !== 'Semua Verifikator') {
           queryA = queryA.eq('nama_verifikator', selectedVerifierHistory);
+        } else {
+          // If 'Semua Verifikator' is selected, filter by current user's name
+          queryA = queryA.eq('nama_verifikator', profile.nama_lengkap);
         }
 
         // Query for Condition B: Status 'Dikembalikan' DAN tenggat belum lewat
@@ -329,7 +331,7 @@ const PortalVerifikasi = () => {
           queryB = queryB.eq('nama_skpd', selectedHistorySkpd);
         }
 
-        // Apply history Verifier filter to queryB
+        // Apply history Verifier filter to queryB (only if a specific verifier is selected)
         if (selectedVerifierHistory !== 'Semua Verifikator') {
           queryB = queryB.eq('nama_verifikator', selectedVerifierHistory);
         }
@@ -338,7 +340,6 @@ const PortalVerifikasi = () => {
         let queryC = supabase
           .from('database_tagihan')
           .select('*, nama_verifikator', { count: 'exact' }) // MODIFIED: Added nama_verifikator
-          .eq('nama_verifikator', profile.nama_lengkap)
           .is('id_korektor', null)
           .eq('status_tagihan', 'Menunggu Verifikasi')
           .not('nomor_verifikasi', 'is', null);
@@ -358,6 +359,9 @@ const PortalVerifikasi = () => {
         // Apply history Verifier filter to queryC
         if (selectedVerifierHistory !== 'Semua Verifikator') {
           queryC = queryC.eq('nama_verifikator', selectedVerifierHistory);
+        } else {
+          // If 'Semua Verifikator' is selected, filter by current user's name
+          queryC = queryC.eq('nama_verifikator', profile.nama_lengkap);
         }
 
         const { data: dataA, error: errorA, count: countA } = await queryA;
