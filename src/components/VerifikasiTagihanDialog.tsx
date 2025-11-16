@@ -153,6 +153,107 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
   // Determine if all checklist items meet requirements
   const allChecklistItemsMet = detailVerifikasiWatch.every(item => item.memenuhi_syarat === true);
 
+  // NEW: Extracted core submission logic (moved to top level)
+  const handleExecuteSubmit = useCallback(async (values: VerificationFormValues) => {
+    if (!user || !profile?.nama_lengkap) {
+      toast.error('Informasi pengguna tidak lengkap. Harap login ulang.');
+      return;
+    }
+    // Ensure tagihan is not null before proceeding
+    if (!tagihan) {
+      toast.error('Data tagihan tidak tersedia.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const now = new Date();
+
+      let tenggatPerbaikan: string | null = null;
+      let skpdCanEdit: boolean = false;
+
+      if (values.status_keputusan === 'Dikembalikan') {
+        if (values.durasi_penahanan) {
+          const tenggat = addDays(now, values.durasi_penahanan);
+          tenggatPerbaikan = tenggat.toISOString();
+        }
+        skpdCanEdit = values.allow_skpd_edit || false;
+      }
+
+      let nomorVerifikasiToUse: string | undefined = tagihan.nomor_verifikasi; // Default to existing
+      if (values.status_keputusan === 'Diteruskan') {
+        if (!tagihan.nomor_verifikasi) { // Only generate new if it doesn't exist
+          nomorVerifikasiToUse = await generateNomorVerifikasi();
+        }
+      } else if (values.status_keputusan === 'Dikembalikan') {
+        if (!tagihan.nomor_verifikasi) {
+          nomorVerifikasiToUse = await generateNomorVerifikasi();
+        }
+      }
+
+      const { error } = await supabase
+        .from('database_tagihan')
+        .update({
+          status_tagihan: values.status_keputusan,
+          waktu_verifikasi: now.toISOString(),
+          nama_verifikator: profile.nama_lengkap,
+          detail_verifikasi: values.detail_verifikasi,
+          nomor_verifikasi: nomorVerifikasiToUse, // Use the determined number
+          locked_by: null,
+          locked_at: null,
+          nomor_koreksi: null,
+          id_korektor: null,
+          waktu_koreksi: null,
+          catatan_koreksi: null,
+          tenggat_perbaikan: tenggatPerbaikan,
+          skpd_can_edit: skpdCanEdit,
+        })
+        .eq('id_tagihan', tagihan.id_tagihan);
+
+      if (error) {
+        console.error('Supabase update error:', error);
+        throw error;
+      }
+
+      let notificationMessage = '';
+      if (values.status_keputusan === 'Diteruskan') {
+        notificationMessage = `Selamat! Tagihan SPM ${tagihan.nomor_spm} Anda telah DITERUSKAN.`;
+      } else if (values.status_keputusan === 'Dikembalikan') {
+        notificationMessage = `Perhatian! Tagihan SPM ${tagihan.nomor_spm} DIKEMBALIKAN.`;
+        if (tenggatPerbaikan && values.durasi_penahanan && values.durasi_penahanan > 1) {
+          const formattedTenggat = format(parseISO(tenggatPerbaikan), 'dd MMMM yyyy', { locale: localeId });
+          notificationMessage += ` Harap perbaiki sebelum ${formattedTenggat}.`;
+        }
+      }
+
+      if (notificationMessage) {
+        const { error: notificationError } = await supabase
+          .from('notifications')
+          .insert({
+            user_id: tagihan.id_pengguna_input,
+            message: notificationMessage,
+            is_read: false,
+            tagihan_id: tagihan.id_tagihan,
+            tenggat_perbaikan: tenggatPerbaikan,
+          });
+
+        if (notificationError) {
+          console.error('Error inserting notification:', notificationError.message);
+        }
+      }
+
+      toast.success(`Tagihan ${tagihan.nomor_spm} berhasil ${values.status_keputusan.toLowerCase()}!`);
+      onVerificationSuccess();
+      onClose();
+    } catch (error: any) {
+      console.error('Error processing verifikasi:', error.message);
+      toast.error('Gagal memproses verifikasi: ' + error.message);
+    } finally {
+      setIsSubmitting(false);
+      setIsConfirmDefaultOpen(false); // Close alert dialog if open
+    }
+  }, [user, profile, tagihan, onVerificationSuccess, onClose]); // Added tagihan to dependencies
+
   // Effect to dynamically set available status options
   useEffect(() => {
     if (allChecklistItemsMet) {
@@ -256,102 +357,6 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
     const formattedSequence = String(nextSequence).padStart(4, '0');
     return `VER-${yearMonthDay}-${formattedSequence}`;
   };
-
-  // NEW: Extracted core submission logic
-  const handleExecuteSubmit = useCallback(async (values: VerificationFormValues) => {
-    if (!user || !profile?.nama_lengkap) {
-      toast.error('Informasi pengguna tidak lengkap. Harap login ulang.');
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      const now = new Date();
-
-      let tenggatPerbaikan: string | null = null;
-      let skpdCanEdit: boolean = false;
-
-      if (values.status_keputusan === 'Dikembalikan') {
-        if (values.durasi_penahanan) {
-          const tenggat = addDays(now, values.durasi_penahanan);
-          tenggatPerbaikan = tenggat.toISOString();
-        }
-        skpdCanEdit = values.allow_skpd_edit || false;
-      }
-
-      let nomorVerifikasiToUse: string | undefined = tagihan.nomor_verifikasi; // Default to existing
-      if (values.status_keputusan === 'Diteruskan') {
-        if (!tagihan.nomor_verifikasi) { // Only generate new if it doesn't exist
-          nomorVerifikasiToUse = await generateNomorVerifikasi();
-        }
-      } else if (values.status_keputusan === 'Dikembalikan') {
-        if (!tagihan.nomor_verifikasi) {
-          nomorVerifikasiToUse = await generateNomorVerifikasi();
-        }
-      }
-
-      const { error } = await supabase
-        .from('database_tagihan')
-        .update({
-          status_tagihan: values.status_keputusan,
-          waktu_verifikasi: now.toISOString(),
-          nama_verifikator: profile.nama_lengkap,
-          detail_verifikasi: values.detail_verifikasi,
-          nomor_verifikasi: nomorVerifikasiToUse, // Use the determined number
-          locked_by: null,
-          locked_at: null,
-          nomor_koreksi: null,
-          id_korektor: null,
-          waktu_koreksi: null,
-          catatan_koreksi: null,
-          tenggat_perbaikan: tenggatPerbaikan,
-          skpd_can_edit: skpdCanEdit,
-        })
-        .eq('id_tagihan', tagihan.id_tagihan);
-
-      if (error) {
-        console.error('Supabase update error:', error);
-        throw error;
-      }
-
-      let notificationMessage = '';
-      if (values.status_keputusan === 'Diteruskan') {
-        notificationMessage = `Selamat! Tagihan SPM ${tagihan.nomor_spm} Anda telah DITERUSKAN.`;
-      } else if (values.status_keputusan === 'Dikembalikan') {
-        notificationMessage = `Perhatian! Tagihan SPM ${tagihan.nomor_spm} DIKEMBALIKAN.`;
-        if (tenggatPerbaikan && values.durasi_penahanan && values.durasi_penahanan > 1) {
-          const formattedTenggat = format(parseISO(tenggatPerbaikan), 'dd MMMM yyyy', { locale: localeId });
-          notificationMessage += ` Harap perbaiki sebelum ${formattedTenggat}.`;
-        }
-      }
-
-      if (notificationMessage) {
-        const { error: notificationError } = await supabase
-          .from('notifications')
-          .insert({
-            user_id: tagihan.id_pengguna_input,
-            message: notificationMessage,
-            is_read: false,
-            tagihan_id: tagihan.id_tagihan,
-            tenggat_perbaikan: tenggatPerbaikan,
-          });
-
-        if (notificationError) {
-          console.error('Error inserting notification:', notificationError.message);
-        }
-      }
-
-      toast.success(`Tagihan ${tagihan.nomor_spm} berhasil ${values.status_keputusan.toLowerCase()}!`);
-      onVerificationSuccess();
-      onClose();
-    } catch (error: any) {
-      console.error('Error processing verifikasi:', error.message);
-      toast.error('Gagal memproses verifikasi: ' + error.message);
-    } finally {
-      setIsSubmitting(false);
-      setIsConfirmDefaultOpen(false); // Close alert dialog if open
-    }
-  }, [user, profile, tagihan, onVerificationSuccess, onClose]);
 
   // MODIFIED: Main onSubmit handler
   const onSubmit = async (values: VerificationFormValues) => {
