@@ -389,7 +389,7 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
   const isSubmitButtonDisabled = isSubmitting || !statusKeputusanWatch ||
     (statusKeputusanWatch === 'Diteruskan' && !allChecklistItemsMet) ||
     (statusKeputusanWatch === 'Dikembalikan' && allChecklistItemsMet);
-
+  
   return (
     <div>
       <Dialog open={isOpen} onOpenChange={onClose}>
