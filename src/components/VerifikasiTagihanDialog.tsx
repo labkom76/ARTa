@@ -591,7 +591,7 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
                 Anda yakin? Tindakan ini <b>Final</b>. Tagihan ini <b>tidak akan muncul opsi edit oleh SKPD</b> dan akan <b>hilang</b> dari panel ini setelah 24 jam.
               </p>
               <p className="mt-2">
-                Jika tagihan ini masih perlu diperbaiki SKPD, pilih 'Batal' lalu pilih durasi 2 atau 3 hari. Lanjutkan?
+                Jika tagihan ini masih perlu diperbaiki SKPD, pilih 'Batal' lalu pilih durasi 2 atau 3 hari. <b>Lanjutkan?</b>
               </p>
             </AlertDialogDescription>
           </AlertDialogHeader>
