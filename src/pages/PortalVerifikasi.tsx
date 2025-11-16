@@ -839,7 +839,7 @@ const PortalVerifikasi = () => {
               <CardTitle className="text-2xl font-semibold text-gray-800 dark:text-white">Antrian Verifikasi</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex flex-col sm:flex-row items-center justify-between space-y-2 sm:space-y-0 sm:space-x-2 mb-4">
+              <form onSubmit={(e) => e.preventDefault()} className="flex flex-col sm:flex-row items-center justify-between space-y-2 sm:space-y-0 sm:space-x-2 mb-4">
                 <div className="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-2 w-full sm:w-auto">
                   <div className="relative flex-1 w-full sm:w-auto">
                     <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400" />
@@ -887,7 +887,7 @@ const PortalVerifikasi = () => {
                     </SelectContent>
                   </Select>
                 </div>
-              </div>
+              </form>
 
               {loadingQueue && !loadingQueuePagination ? (
                 <p className="text-center text-gray-600 dark:text-gray-400">Memuat antrian...</p>
@@ -961,7 +961,7 @@ const PortalVerifikasi = () => {
               <CardTitle className="text-2xl font-semibold text-gray-800 dark:text-white">{historyPanelTitle}</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex flex-col sm:flex-row items-center justify-between space-y-2 sm:space-y-0 sm:space-x-2 mb-4">
+              <form onSubmit={(e) => e.preventDefault()} className="flex flex-col sm:flex-row items-center justify-between space-y-2 sm:space-y-0 sm:space-x-2 mb-4">
                 <div className="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-2 w-full sm:w-auto">
                   <div className="relative flex-1 w-full sm:w-auto">
                     <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400" />
@@ -1020,7 +1020,7 @@ const PortalVerifikasi = () => {
                     </SelectContent>
                   </Select>
                 </div>
-              </div>
+              </form>
 
               {loadingHistory && !loadingHistoryPagination ? (
                 <p className="text-center text-gray-600 dark:text-gray-400">Memuat riwayat verifikasi...</p>
