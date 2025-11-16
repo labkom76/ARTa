@@ -125,6 +125,45 @@ const verificationFormSchema = z.object({
 
 type VerificationFormValues = z.infer<typeof verificationFormSchema>;
 
+// Moved outside the component
+const generateNomorVerifikasi = async (): Promise<string> => {
+  const now = new Date();
+  const yearMonthDay = format(now, 'yyyyMMdd');
+  const startOfCurrentMonth = startOfMonth(now).toISOString();
+  const endOfCurrentMonth = now.toISOString(); // Use current time as end of month for sequence generation
+
+  const { data, error } = await supabase
+    .from('database_tagihan')
+    .select('nomor_verifikasi')
+    .not('nomor_verifikasi', 'is', null)
+    .gte('waktu_verifikasi', startOfCurrentMonth)
+    .lte('waktu_verifikasi', endOfCurrentMonth)
+    .order('nomor_verifikasi', { ascending: false })
+    .limit(1);
+
+  if (error) {
+    console.error('Error fetching last verification number:', error.message);
+    throw new Error('Gagal membuat nomor verifikasi.');
+  }
+
+  let nextSequence = 1;
+  if (data && data.length > 0 && data[0].nomor_verifikasi) {
+    const lastNomor = data[0].nomor_verifikasi;
+    const parts = lastNomor.split('-');
+    if (parts.length === 3) {
+      const lastSequenceStr = parts[2];
+      const lastSequenceNum = parseInt(lastSequenceStr, 10);
+      if (!isNaN(lastSequenceNum)) {
+        nextSequence = lastSequenceNum + 1;
+      }
+    }
+  }
+
+  const formattedSequence = String(nextSequence).padStart(4, '0');
+  return `VER-${yearMonthDay}-${formattedSequence}`;
+};
+
+
 const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpen, onClose, onVerificationSuccess, tagihan }) => {
   const { user, profile } = useSession();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -144,14 +183,6 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
       allow_skpd_edit: false,
     },
   });
-
-  // Watch for changes in detail_verifikasi, status_keputusan, and durasi_penahanan
-  const detailVerifikasiWatch = form.watch('detail_verifikasi');
-  const statusKeputusanWatch = form.watch('status_keputusan');
-  const durasiPenahananWatch = form.watch('durasi_penahanan');
-
-  // Determine if all checklist items meet requirements
-  const allChecklistItemsMet = detailVerifikasiWatch.every(item => item.memenuhi_syarat === true);
 
   // NEW: Extracted core submission logic (moved to top level)
   const handleExecuteSubmit = useCallback(async (values: VerificationFormValues) => {
@@ -254,6 +285,14 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
     }
   }, [user, profile, tagihan, onVerificationSuccess, onClose]); // Added tagihan to dependencies
 
+  // Watch for changes in detail_verifikasi, status_keputusan, and durasi_penahanan
+  const detailVerifikasiWatch = form.watch('detail_verifikasi');
+  const statusKeputusanWatch = form.watch('status_keputusan');
+  const durasiPenahananWatch = form.watch('durasi_penahanan');
+
+  // Determine if all checklist items meet requirements
+  const allChecklistItemsMet = detailVerifikasiWatch.every(item => item.memenuhi_syarat === true);
+
   // Effect to dynamically set available status options
   useEffect(() => {
     if (allChecklistItemsMet) {
@@ -321,43 +360,6 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
     }
   };
 
-  const generateNomorVerifikasi = async (): Promise<string> => {
-    const now = new Date();
-    const yearMonthDay = format(now, 'yyyyMMdd');
-    const startOfCurrentMonth = startOfMonth(now).toISOString();
-    const endOfCurrentMonth = endOfMonth(now).toISOString();
-
-    const { data, error } = await supabase
-      .from('database_tagihan')
-      .select('nomor_verifikasi')
-      .not('nomor_verifikasi', 'is', null)
-      .gte('waktu_verifikasi', startOfCurrentMonth)
-      .lte('waktu_verifikasi', endOfCurrentMonth)
-      .order('nomor_verifikasi', { ascending: false })
-      .limit(1);
-
-    if (error) {
-      console.error('Error fetching last verification number:', error.message);
-      throw new Error('Gagal membuat nomor verifikasi.');
-    }
-
-    let nextSequence = 1;
-    if (data && data.length > 0 && data[0].nomor_verifikasi) {
-      const lastNomor = data[0].nomor_verifikasi;
-      const parts = lastNomor.split('-');
-      if (parts.length === 3) {
-        const lastSequenceStr = parts[2];
-        const lastSequenceNum = parseInt(lastSequenceStr, 10);
-        if (!isNaN(lastSequenceNum)) {
-          nextSequence = lastSequenceNum + 1;
-        }
-      }
-    }
-
-    const formattedSequence = String(nextSequence).padStart(4, '0');
-    return `VER-${yearMonthDay}-${formattedSequence}`;
-  };
-
   // MODIFIED: Main onSubmit handler
   const onSubmit = async (values: VerificationFormValues) => {
     if (values.status_keputusan === 'Diteruskan' && !allChecklistItemsMet) {
@@ -389,7 +391,7 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
     (statusKeputusanWatch === 'Dikembalikan' && allChecklistItemsMet);
 
   return (
-    <>
+    <div>
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className="sm:max-w-[600px] max-h-[90vh] flex flex-col">
           <DialogHeader>
@@ -601,7 +603,15 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
           <AlertDialogHeader>
             <AlertDialogTitle>Konfirmasi Keputusan Final</AlertDialogTitle>
             <AlertDialogDescription>
-              Anda yakin? Tindakan ini Final. Tagihan ini tidak akan muncul opsi edit oleh SKPD dan akan hilang dari panel ini setelah 24 jam. Lanjutkan?
+              <p>
+                Anda yakin? Tindakan ini <b>Final</b>. Tagihan ini <b>tidak akan muncul opsi edit oleh SKPD</b> dan akan <b>hilang</b> dari panel ini setelah 24 jam.
+              </p>
+              <p className="mt-2">
+                Jika tagihan ini masih perlu diperbaiki SKPD, pilih 'Batal' lalu pilih durasi 2 atau 3 hari.
+              </p>
+              <p className="mt-2">
+                Lanjutkan?
+              </p>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -613,10 +623,10 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
                 Ya, Proses (Final)
               </Button>
             </AlertDialogAction>
-          </AlertDialogFooter>
+          </DialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </>
+    </div>
   );
 };
 
