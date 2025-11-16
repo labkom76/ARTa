@@ -148,6 +148,9 @@ const PortalVerifikasi = () => {
 
   const [searchParams, setSearchParams] = useSearchParams(); // Initialize useSearchParams and its setter
 
+  // NEW: State for active tab
+  const [activeTab, setActiveTab] = useState('antrian');
+
   // Fetch unique SKPD names for the queue filter dropdown (MODIFIED)
   useEffect(() => {
     const fetchSkpdOptions = async () => {
@@ -815,7 +818,7 @@ const PortalVerifikasi = () => {
     <div className="space-y-6"> {/* Main container for spacing between sections */}
       <h1 className="text-3xl font-bold text-gray-800 dark:text-white mb-6">Portal Verifikasi Tagihan</h1>
 
-      <Tabs defaultValue="antrian" className="w-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-2 bg-muted p-1 rounded-lg">
           <TabsTrigger 
             value="antrian" 
