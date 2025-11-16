@@ -81,6 +81,11 @@ interface SkpdOption { // Define interface for SKPD options
   label: string;
 }
 
+interface VerifierOption { // NEW: Define interface for Verifier options
+  value: string;
+  label: string;
+}
+
 const LOCK_TIMEOUT_MINUTES = 30; // Define lock timeout: 30 minutes
 
 const PortalVerifikasi = () => {
@@ -110,6 +115,10 @@ const PortalVerifikasi = () => {
   const [selectedHistorySkpd, setSelectedHistorySkpd] = useState<string>('Semua SKPD'); // New state for selected history SKPD
   const [historyPanelTitle, setHistoryPanelTitle] = useState('Tagihan Yang Diproses'); // Dynamic title for history panel
 
+  // NEW: State for Verifier filter in History tab
+  const [verifierOptionsHistory, setVerifierOptionsHistory] = useState<VerifierOption[]>([]);
+  const [selectedVerifierHistory, setSelectedVerifierHistory] = useState<string>('Semua Verifikator');
+
   // State for History Table Pagination (added to resolve ReferenceError)
   const [historyCurrentPage, setHistoryCurrentPage] = useState(1);
   const [historyItemsPerPage, setHistoryItemsPerPage] = useState(10);
@@ -133,6 +142,7 @@ const PortalVerifikasi = () => {
 
   const prevHistorySearchQueryRef = useRef(historySearchQuery);
   const prevSelectedHistorySkpdRef = useRef(selectedHistorySkpd);
+  const prevSelectedVerifierHistoryRef = useRef(selectedVerifierHistory); // NEW: Ref for verifier filter
   const prevHistoryItemsPerPageRef = useRef(historyItemsPerPage);
   const prevHistoryCurrentPageRef = useRef(historyCurrentPage);
 
@@ -161,6 +171,31 @@ const PortalVerifikasi = () => {
       }
     };
     fetchSkpdOptions();
+  }, []);
+
+  // NEW: Fetch verifier options for the history filter dropdown
+  useEffect(() => {
+    const fetchVerifierOptions = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('nama_lengkap')
+          .eq('peran', 'Staf Verifikator')
+          .order('nama_lengkap', { ascending: true });
+
+        if (error) throw error;
+
+        const uniqueVerifiers: VerifierOption[] = Array.from(new Set(data.map(item => item.nama_lengkap)))
+          .filter((name): name is string => name !== null && name.trim() !== '')
+          .map(name => ({ value: name, label: name }));
+
+        setVerifierOptionsHistory([{ value: 'Semua Verifikator', label: 'Semua Verifikator' }, ...uniqueVerifiers]);
+      } catch (error: any) {
+        console.error('Error fetching verifier options:', error.message);
+        toast.error('Gagal memuat daftar verifikator: ' + error.message);
+      }
+    };
+    fetchVerifierOptions();
   }, []);
 
   // Removed redundant fetchHistorySkpdOptions useEffect as it's now combined with fetchSkpdOptions
@@ -269,6 +304,11 @@ const PortalVerifikasi = () => {
           queryA = queryA.eq('nama_skpd', selectedHistorySkpd);
         }
 
+        // Apply history Verifier filter to queryA
+        if (selectedVerifierHistory !== 'Semua Verifikator') {
+          queryA = queryA.eq('nama_verifikator', selectedVerifierHistory);
+        }
+
         // Query for Condition B: Status 'Dikembalikan' DAN tenggat belum lewat
         let queryB = supabase
           .from('database_tagihan')
@@ -287,6 +327,11 @@ const PortalVerifikasi = () => {
         // Apply history SKPD filter to queryB
         if (selectedHistorySkpd !== 'Semua SKPD') {
           queryB = queryB.eq('nama_skpd', selectedHistorySkpd);
+        }
+
+        // Apply history Verifier filter to queryB
+        if (selectedVerifierHistory !== 'Semua Verifikator') {
+          queryB = queryB.eq('nama_verifikator', selectedVerifierHistory);
         }
 
         // Query for Condition C: Status 'Menunggu Verifikasi' DAN nomor_verifikasi TIDAK KOSONG
@@ -308,6 +353,11 @@ const PortalVerifikasi = () => {
         // Apply history SKPD filter to queryC
         if (selectedHistorySkpd !== 'Semua SKPD') {
           queryC = queryC.eq('nama_skpd', selectedHistorySkpd);
+        }
+
+        // Apply history Verifier filter to queryC
+        if (selectedVerifierHistory !== 'Semua Verifikator') {
+          queryC = queryC.eq('nama_verifikator', selectedVerifierHistory);
         }
 
         const { data: dataA, error: errorA, count: countA } = await queryA;
@@ -352,6 +402,11 @@ const PortalVerifikasi = () => {
           query = query.eq('nama_skpd', selectedHistorySkpd);
         }
 
+        // NEW: Apply history Verifier filter (for Koreksi, this would filter by the original verifier if needed)
+        if (selectedVerifierHistory !== 'Semua Verifikator') {
+          query = query.eq('nama_verifikator', selectedVerifierHistory);
+        }
+
         if (historyItemsPerPage !== -1) {
           query = query.range(
             (historyCurrentPage - 1) * historyItemsPerPage,
@@ -386,6 +441,11 @@ const PortalVerifikasi = () => {
         // NEW: Apply history SKPD filter
         if (selectedHistorySkpd !== 'Semua SKPD') {
           query = query.eq('nama_skpd', selectedHistorySkpd);
+        }
+
+        // NEW: Apply history Verifier filter
+        if (selectedVerifierHistory !== 'Semua Verifikator') {
+          query = query.eq('nama_verifikator', selectedVerifierHistory);
         }
 
         if (historyItemsPerPage !== -1) {
@@ -446,6 +506,7 @@ const PortalVerifikasi = () => {
       prevHistoryCurrentPageRef.current !== historyCurrentPage &&
       prevHistorySearchQueryRef.current === debouncedHistorySearchQuery &&
       prevSelectedHistorySkpdRef.current === selectedHistorySkpd &&
+      prevSelectedVerifierHistoryRef.current === selectedVerifierHistory && // NEW: Include verifier filter ref
       prevHistoryItemsPerPageRef.current === historyItemsPerPage
     ) {
       isPaginationOnlyChange = true;
@@ -455,9 +516,10 @@ const PortalVerifikasi = () => {
 
     prevHistorySearchQueryRef.current = debouncedHistorySearchQuery;
     prevSelectedHistorySkpdRef.current = selectedHistorySkpd;
+    prevSelectedVerifierHistoryRef.current = selectedVerifierHistory; // NEW: Update verifier filter ref
     prevHistoryItemsPerPageRef.current = historyItemsPerPage;
     prevHistoryCurrentPageRef.current = historyCurrentPage;
-  }, [user, sessionLoading, profile, debouncedHistorySearchQuery, selectedHistorySkpd, historyCurrentPage, historyItemsPerPage]);
+  }, [user, sessionLoading, profile, debouncedHistorySearchQuery, selectedHistorySkpd, selectedVerifierHistory, historyCurrentPage, historyItemsPerPage]); // NEW: Add selectedVerifierHistory to dependencies
 
   useEffect(() => {
     const channel = supabase
@@ -919,6 +981,17 @@ const PortalVerifikasi = () => {
                       setHistoryCurrentPage(1); // Reset page on SKPD change
                     }}
                     placeholder="Filter SKPD"
+                    className="w-full sm:w-[180px]"
+                  />
+                  {/* NEW: Combobox for Verifier Filter */}
+                  <Combobox
+                    options={verifierOptionsHistory}
+                    value={selectedVerifierHistory}
+                    onValueChange={(value) => {
+                      setSelectedVerifierHistory(value);
+                      setHistoryCurrentPage(1); // Reset page on verifier change
+                    }}
+                    placeholder="Filter Verifikator"
                     className="w-full sm:w-[180px]"
                   />
                 </div>
