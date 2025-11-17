@@ -7,10 +7,12 @@ import { toast } from 'sonner';
 interface Profile {
   id: string;
   nama_lengkap: string;
-  asal_skpd: string;
+  asal_skpd: string; // This is the name of the SKPD
   peran: string;
   avatar_url?: string;
-  is_active: boolean; // NEW: Add is_active to Profile interface
+  is_active: boolean;
+  // The nested structure for master_skpd data
+  master_skpd?: { kode_skpd_penagihan: string | null } | null;
 }
 
 interface SessionContextType {
@@ -55,43 +57,58 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
     isFetchingProfile.current = true;
     
     try {
-      const { data: profileData, error: profileError } = await supabase
+      // Step 1: Fetch the user's profile data
+      const { data: profileDataRaw, error: profileError } = await supabase
         .from('profiles')
-        .select('nama_lengkap, asal_skpd, peran, avatar_url, is_active') // MODIFIED: Add is_active
+        .select('id, nama_lengkap, asal_skpd, peran, avatar_url, is_active') // Select direct columns from profiles
         .eq('id', userId)
         .single();
 
       if (profileError) {
+        console.error('Error fetching profile (step 1):', profileError.message);
         lastFetchedUserId.current = userId;
-        
         if (!hasInitialized.current) {
           toast.error('Gagal memuat profil pengguna.');
         }
         setProfile(null);
         setRole(null);
         return false;
-      } else if (profileData) {
-        // Cek apakah profil belum lengkap
-        if (!profileData.nama_lengkap && currentPath !== '/lengkapi-profil') {
-          setProfile(profileData as Profile);
-          setRole(profileData.peran);
-          lastFetchedUserId.current = userId;
-          navigate('/lengkapi-profil', { replace: true });
-          toast.info('Harap lengkapi profil Anda untuk melanjutkan.');
-          return true;
-        } else {
-          setProfile(profileData as Profile);
-          setRole(profileData.peran);
-          lastFetchedUserId.current = userId;
-          return true;
-        }
-      } else {
-        lastFetchedUserId.current = userId;
-        setProfile(null);
-        setRole(null);
-        return false;
       }
-    } catch (error) {
+
+      let finalProfile: Profile = profileDataRaw as Profile;
+
+      // Step 2: If asal_skpd exists, fetch kode_skpd_penagihan from master_skpd
+      if (profileDataRaw.asal_skpd) {
+        const { data: skpdData, error: skpdError } = await supabase
+          .from('master_skpd')
+          .select('kode_skpd_penagihan')
+          .eq('nama_skpd', profileDataRaw.asal_skpd) // Join condition: profiles.asal_skpd = master_skpd.nama_skpd
+          .single();
+
+        if (skpdError && skpdError.code !== 'PGRST116') { // PGRST116 means no rows found, which is fine
+          console.warn('Error fetching kode_skpd_penagihan for SKPD:', skpdError.message);
+          // Don't block, just log and proceed without kode_skpd_penagihan
+        } else if (skpdData) {
+          finalProfile = { ...finalProfile, master_skpd: { kode_skpd_penagihan: skpdData.kode_skpd_penagihan } };
+        }
+      }
+
+      // Check if profile is incomplete (nama_lengkap is null/empty)
+      if (!finalProfile.nama_lengkap && currentPath !== '/lengkapi-profil') {
+        setProfile(finalProfile);
+        setRole(finalProfile.peran);
+        lastFetchedUserId.current = userId;
+        navigate('/lengkapi-profil', { replace: true });
+        toast.info('Harap lengkapi profil Anda untuk melanjutkan.');
+        return true;
+      } else {
+        setProfile(finalProfile);
+        setRole(finalProfile.peran);
+        lastFetchedUserId.current = userId;
+        return true;
+      }
+    } catch (error: any) {
+      console.error('Unhandled error in fetchProfile:', error.message);
       lastFetchedUserId.current = userId;
       setProfile(null);
       setRole(null);
