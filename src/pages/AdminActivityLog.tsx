@@ -22,6 +22,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog';
+import { Badge } from '@/components/ui/badge'; // Import Badge component
 
 interface ActivityLogItem {
   id: string;
@@ -112,8 +113,7 @@ const AdminActivityLog = () => {
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-[180px]">Waktu</TableHead>
-                  <TableHead className="w-[150px]">Peran User</TableHead>
-                  <TableHead className="w-[200px]">User ID</TableHead>
+                  <TableHead className="w-[250px]">Pengguna</TableHead> {/* MODIFIED: Combined User ID and Role */}
                   <TableHead className="w-[180px]">Aksi</TableHead>
                   <TableHead className="w-[200px]">Tagihan Terkait</TableHead>
                   <TableHead className="text-center">Detail Perubahan</TableHead>
@@ -122,7 +122,7 @@ const AdminActivityLog = () => {
               <TableBody>
                 {logData.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                    <TableCell colSpan={5} className="text-center text-muted-foreground py-8"> {/* MODIFIED: Colspan to 5 */}
                       Tidak ada log aktivitas ditemukan.
                     </TableCell>
                   </TableRow>
@@ -130,8 +130,19 @@ const AdminActivityLog = () => {
                   logData.map((log) => (
                     <TableRow key={log.id}>
                       <TableCell>{format(new Date(log.created_at), 'dd MMM yyyy HH:mm:ss', { locale: localeId })}</TableCell>
-                      <TableCell>{log.user_role || '-'}</TableCell>
-                      <TableCell className="font-mono text-xs">{log.user_id || '-'}</TableCell>
+                      <TableCell> {/* MODIFIED: Smart User Column */}
+                        {log.profiles?.nama_lengkap ? (
+                          <>
+                            <p className="font-medium">{log.profiles.nama_lengkap}</p>
+                            <Badge variant="secondary" className="mt-1">{log.user_role || '-'}</Badge>
+                            {log.user_role === 'SKPD' && log.profiles.asal_skpd && (
+                              <p className="text-xs text-muted-foreground mt-1">{log.profiles.asal_skpd}</p>
+                            )}
+                          </>
+                        ) : (
+                          <p className="text-sm text-muted-foreground">User ID: {log.user_id || 'Tidak Ditemukan'}</p>
+                        )}
+                      </TableCell>
                       <TableCell>{log.action}</TableCell>
                       <TableCell className="font-mono text-xs">{log.tagihan_terkait || '-'}</TableCell>
                       <TableCell className="text-center">
