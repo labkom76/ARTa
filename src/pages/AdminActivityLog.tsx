@@ -31,6 +31,10 @@ interface ActivityLogItem {
   action: string;
   details: Record<string, any> | null; // JSONB type
   tagihan_terkait: string | null;
+  profiles: { // Add profiles data structure
+    nama_lengkap: string | null;
+    asal_skpd: string | null;
+  } | null;
 }
 
 const AdminActivityLog = () => {
@@ -50,7 +54,7 @@ const AdminActivityLog = () => {
     try {
       const { data, error } = await supabase
         .from('activity_log')
-        .select('*')
+        .select('*, profiles(nama_lengkap, asal_skpd)') // MODIFIED: Join with profiles table
         .order('created_at', { ascending: false })
         .limit(50); // Limit to 50 most recent logs
 
