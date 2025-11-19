@@ -23,9 +23,16 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { DateRangePickerWithPresets } from '@/components/DateRangePickerWithPresets'; // Import DateRangePickerWithPresets
-import { DateRange } from 'react-day-picker'; // Import DateRange type
-import { Label } from '@/components/ui/label'; // Import Label
+import { DateRangePickerWithPresets } from '@/components/DateRangePickerWithPresets';
+import { DateRange } from 'react-day-picker';
+import { Label } from '@/components/ui/label';
+import {
+  Select, // NEW: Import Select components
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 interface ActivityLogItem {
   id: string;
@@ -41,6 +48,22 @@ interface ActivityLogItem {
   } | null;
 }
 
+const actionOptions = [
+  'Semua Aksi',
+  'TAGIHAN_CREATED',
+  'STATUS_CHANGED',
+  'PROFILE_UPDATED',
+  'USER_DELETED', // Example action
+  'SKPD_ADDED',
+  'SKPD_UPDATED',
+  'SKPD_DELETED',
+  'SCHEDULE_ADDED',
+  'SCHEDULE_UPDATED',
+  'SCHEDULE_DELETED',
+  'SCHEDULE_ACTIVATED',
+  'APP_SETTING_UPDATED',
+];
+
 const AdminActivityLog = () => {
   const { profile, loading: sessionLoading } = useSession();
   const [logData, setLogData] = useState<ActivityLogItem[]>([]);
@@ -50,6 +73,8 @@ const AdminActivityLog = () => {
 
   // State for date range filter
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+  // NEW: State for action type filter
+  const [selectedAction, setSelectedAction] = useState<string>('Semua Aksi');
 
   // Handler for date range change
   const handleDateRangeChange = (range: DateRange | undefined) => {
@@ -78,6 +103,11 @@ const AdminActivityLog = () => {
         query = query.lte('created_at', endOfDay(dateRange.to).toISOString());
       }
 
+      // NEW: Apply action type filter
+      if (selectedAction !== 'Semua Aksi') {
+        query = query.eq('action', selectedAction);
+      }
+
       const { data, error } = await query;
 
       if (error) throw error;
@@ -92,7 +122,7 @@ const AdminActivityLog = () => {
 
   useEffect(() => {
     fetchLogs();
-  }, [sessionLoading, profile, dateRange]);
+  }, [sessionLoading, profile, dateRange, selectedAction]); // NEW: Add selectedAction to dependencies
 
   const handleViewDetails = (details: Record<string, any> | null) => {
     setSelectedLogDetails(details);
@@ -137,6 +167,22 @@ const AdminActivityLog = () => {
                 onDateChange={handleDateRangeChange}
                 className="w-full"
               />
+            </div>
+            {/* NEW: Action Type Filter */}
+            <div className="grid gap-2 flex-1 w-full sm:w-auto">
+              <Label htmlFor="action-type">Jenis Aksi</Label>
+              <Select onValueChange={setSelectedAction} value={selectedAction}>
+                <SelectTrigger id="action-type" className="w-full">
+                  <SelectValue placeholder="Pilih Jenis Aksi" />
+                </SelectTrigger>
+                <SelectContent>
+                  {actionOptions.map((action) => (
+                    <SelectItem key={action} value={action}>
+                      {action}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </CardContent>
