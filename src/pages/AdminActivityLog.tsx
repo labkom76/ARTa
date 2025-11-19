@@ -33,6 +33,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Pagination, // NEW: Import Pagination components
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '@/components/ui/pagination';
 
 interface ActivityLogItem {
   id: string;
@@ -173,6 +181,8 @@ const AdminActivityLog = () => {
     setIsDetailModalOpen(true);
   };
 
+  const totalPages = itemsPerPage === -1 ? 1 : Math.ceil(totalItems / itemsPerPage);
+
   if (sessionLoading || isLoading) {
     return (
       <div className="p-6 bg-white rounded-lg shadow-sm border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
@@ -253,6 +263,26 @@ const AdminActivityLog = () => {
           <CardTitle className="text-xl font-semibold">Daftar Log Aktivitas</CardTitle>
         </CardHeader>
         <CardContent>
+          {/* NEW: Items per page selector */}
+          <div className="mb-4 flex justify-end items-center space-x-2">
+            <Label htmlFor="items-per-page" className="whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">Baris per halaman:</Label>
+            <Select
+              value={itemsPerPage.toString()}
+              onValueChange={handleItemsPerPageChange}
+            >
+              <SelectTrigger className="w-[100px]">
+                <SelectValue placeholder="10" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="10">10</SelectItem>
+                <SelectItem value="20">20</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+                <SelectItem value="100">100</SelectItem>
+                <SelectItem value="-1">Semua</SelectItem> {/* Using -1 for 'All' */}
+              </SelectContent>
+            </Select>
+          </div>
+
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
@@ -304,6 +334,27 @@ const AdminActivityLog = () => {
                 )}
               </TableBody>
             </Table>
+          </div>
+
+          {/* NEW: Pagination Controls */}
+          <div className="mt-6 flex items-center justify-end space-x-4">
+            <div className="text-sm text-muted-foreground">
+              Halaman {totalItems === 0 ? 0 : currentPage} dari {totalPages} ({totalItems} total item)
+            </div>
+            <Button
+              variant="outline"
+              onClick={goToPrevPage}
+              disabled={currentPage === 1 || itemsPerPage === -1}
+            >
+              Sebelumnya
+            </Button>
+            <Button
+              variant="outline"
+              onClick={goToNextPage}
+              disabled={currentPage === totalPages || itemsPerPage === -1}
+            >
+              Berikutnya
+            </Button>
           </div>
         </CardContent>
       </Card>
