@@ -64,7 +64,6 @@ const actionOptions = [
   'APP_SETTING_UPDATED',
 ];
 
-// NEW: Options for role filter
 const roleOptions = [
   'Semua Peran',
   'Administrator',
@@ -81,16 +80,39 @@ const AdminActivityLog = () => {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [selectedLogDetails, setSelectedLogDetails] = useState<Record<string, any> | null>(null);
 
-  // State for date range filter
+  // State for filters
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
-  // State for action type filter
   const [selectedAction, setSelectedAction] = useState<string>('Semua Aksi');
-  // NEW: State for role filter
   const [selectedRole, setSelectedRole] = useState<string>('Semua Peran');
 
-  // Handler for date range change
+  // State for pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [totalItems, setTotalItems] = useState(0);
+
+  // Handlers for filters
   const handleDateRangeChange = (range: DateRange | undefined) => {
     setDateRange(range);
+    setCurrentPage(1); // Reset to first page on filter change
+  };
+
+  // Handlers for pagination
+  const goToNextPage = () => {
+    const totalPages = Math.ceil(totalItems / itemsPerPage);
+    if (currentPage < totalPages) {
+      setCurrentPage(prev => prev + 1);
+    }
+  };
+
+  const goToPrevPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(prev => prev - 1);
+    }
+  };
+
+  const handleItemsPerPageChange = (value: string) => {
+    setItemsPerPage(Number(value));
+    setCurrentPage(1); // Reset to first page when items per page changes
   };
 
   const fetchLogs = async () => {
@@ -103,9 +125,8 @@ const AdminActivityLog = () => {
     try {
       let query = supabase
         .from('activity_log')
-        .select('*, profiles(nama_lengkap, asal_skpd)')
-        .order('created_at', { ascending: false })
-        .limit(50);
+        .select('*, profiles(nama_lengkap, asal_skpd)', { count: 'exact' }) // Include count for pagination
+        .order('created_at', { ascending: false });
 
       // Apply date range filter
       if (dateRange?.from) {
@@ -120,15 +141,21 @@ const AdminActivityLog = () => {
         query = query.eq('action', selectedAction);
       }
 
-      // NEW: Apply role filter
+      // Apply role filter
       if (selectedRole !== 'Semua Peran') {
         query = query.eq('user_role', selectedRole);
       }
 
-      const { data, error } = await query;
+      // Apply pagination range
+      const from = (currentPage - 1) * itemsPerPage;
+      const to = from + itemsPerPage - 1;
+      query = query.range(from, to);
+
+      const { data, error, count } = await query;
 
       if (error) throw error;
       setLogData(data as ActivityLogItem[]);
+      setTotalItems(count || 0); // Set total items for pagination
     } catch (error: any) {
       console.error('Error fetching activity logs:', error.message);
       toast.error('Gagal memuat log aktivitas: ' + error.message);
@@ -139,7 +166,7 @@ const AdminActivityLog = () => {
 
   useEffect(() => {
     fetchLogs();
-  }, [sessionLoading, profile, dateRange, selectedAction, selectedRole]); // NEW: Add selectedRole to dependencies
+  }, [sessionLoading, profile, dateRange, selectedAction, selectedRole, currentPage, itemsPerPage]); // Add pagination states to dependencies
 
   const handleViewDetails = (details: Record<string, any> | null) => {
     setSelectedLogDetails(details);
@@ -188,7 +215,7 @@ const AdminActivityLog = () => {
             {/* Action Type Filter */}
             <div className="grid gap-2 flex-1 w-full sm:w-auto">
               <Label htmlFor="action-type">Jenis Aksi</Label>
-              <Select onValueChange={setSelectedAction} value={selectedAction}>
+              <Select onValueChange={(value) => { setSelectedAction(value); setCurrentPage(1); }} value={selectedAction}>
                 <SelectTrigger id="action-type" className="w-full">
                   <SelectValue placeholder="Pilih Jenis Aksi" />
                 </SelectTrigger>
@@ -201,10 +228,10 @@ const AdminActivityLog = () => {
                 </SelectContent>
               </Select>
             </div>
-            {/* NEW: Role Filter */}
+            {/* Role Filter */}
             <div className="grid gap-2 flex-1 w-full sm:w-auto">
               <Label htmlFor="role-filter">Peran Pengguna</Label>
-              <Select onValueChange={setSelectedRole} value={selectedRole}>
+              <Select onValueChange={(value) => { setSelectedRole(value); setCurrentPage(1); }} value={selectedRole}>
                 <SelectTrigger id="role-filter" className="w-full">
                   <SelectValue placeholder="Pilih Peran" />
                 </SelectTrigger>
