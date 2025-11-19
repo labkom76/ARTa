@@ -11,7 +11,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { format, startOfDay, endOfDay } from 'date-fns'; // Import startOfDay, endOfDay, format
+import { format, startOfDay, endOfDay } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { EyeIcon, HistoryIcon } from 'lucide-react';
@@ -22,7 +22,10 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog';
-import { Badge } from '@/components/ui/badge'; // Import Badge component
+import { Badge } from '@/components/ui/badge';
+import { DateRangePickerWithPresets } from '@/components/DateRangePickerWithPresets'; // Import DateRangePickerWithPresets
+import { DateRange } from 'react-day-picker'; // Import DateRange type
+import { Label } from '@/components/ui/label'; // Import Label
 
 interface ActivityLogItem {
   id: string;
@@ -30,9 +33,9 @@ interface ActivityLogItem {
   user_id: string | null;
   user_role: string | null;
   action: string;
-  details: Record<string, any> | null; // JSONB type
+  details: Record<string, any> | null;
   tagihan_terkait: string | null;
-  profiles: { // Add profiles data structure
+  profiles: {
     nama_lengkap: string | null;
     asal_skpd: string | null;
   } | null;
@@ -45,14 +48,12 @@ const AdminActivityLog = () => {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [selectedLogDetails, setSelectedLogDetails] = useState<Record<string, any> | null>(null);
 
-  // NEW: State for date range filter
-  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
-  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
+  // State for date range filter
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
 
-  // NEW: Handler for date range change
-  const handleDateRangeChange = (range: { from?: Date; to?: Date } | undefined) => {
-    setStartDate(range?.from);
-    setEndDate(range?.to);
+  // Handler for date range change
+  const handleDateRangeChange = (range: DateRange | undefined) => {
+    setDateRange(range);
   };
 
   const fetchLogs = async () => {
@@ -65,16 +66,16 @@ const AdminActivityLog = () => {
     try {
       let query = supabase
         .from('activity_log')
-        .select('*, profiles(nama_lengkap, asal_skpd)') // MODIFIED: Join with profiles table
+        .select('*, profiles(nama_lengkap, asal_skpd)')
         .order('created_at', { ascending: false })
-        .limit(50); // Limit to 50 most recent logs
+        .limit(50);
 
-      // NEW: Apply date range filter
-      if (startDate) {
-        query = query.gte('created_at', startOfDay(startDate).toISOString());
+      // Apply date range filter
+      if (dateRange?.from) {
+        query = query.gte('created_at', startOfDay(dateRange.from).toISOString());
       }
-      if (endDate) {
-        query = query.lte('created_at', endOfDay(endDate).toISOString());
+      if (dateRange?.to) {
+        query = query.lte('created_at', endOfDay(dateRange.to).toISOString());
       }
 
       const { data, error } = await query;
@@ -91,7 +92,7 @@ const AdminActivityLog = () => {
 
   useEffect(() => {
     fetchLogs();
-  }, [sessionLoading, profile, startDate, endDate]); // NEW: Add startDate and endDate to dependencies
+  }, [sessionLoading, profile, dateRange]);
 
   const handleViewDetails = (details: Record<string, any> | null) => {
     setSelectedLogDetails(details);
@@ -125,6 +126,24 @@ const AdminActivityLog = () => {
 
       <Card className="shadow-sm rounded-lg">
         <CardHeader>
+          <CardTitle className="text-xl font-semibold">Filter Log Aktivitas</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-2">
+            <div className="grid gap-2 flex-1 w-full sm:w-auto">
+              <Label htmlFor="date-range">Rentang Tanggal</Label>
+              <DateRangePickerWithPresets
+                date={dateRange}
+                onDateChange={handleDateRangeChange}
+                className="w-full"
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="shadow-sm rounded-lg">
+        <CardHeader>
           <CardTitle className="text-xl font-semibold">Daftar Log Aktivitas</CardTitle>
         </CardHeader>
         <CardContent>
@@ -133,7 +152,7 @@ const AdminActivityLog = () => {
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-[180px]">Waktu</TableHead>
-                  <TableHead className="w-[250px]">Pengguna</TableHead> {/* MODIFIED: Combined User ID and Role */}
+                  <TableHead className="w-[250px]">Pengguna</TableHead>
                   <TableHead className="w-[180px]">Aksi</TableHead>
                   <TableHead className="w-[200px]">Tagihan Terkait</TableHead>
                   <TableHead className="text-center">Detail Perubahan</TableHead>
@@ -142,7 +161,7 @@ const AdminActivityLog = () => {
               <TableBody>
                 {logData.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center text-muted-foreground py-8"> {/* MODIFIED: Colspan to 5 */}
+                    <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
                       Tidak ada log aktivitas ditemukan.
                     </TableCell>
                   </TableRow>
@@ -150,7 +169,7 @@ const AdminActivityLog = () => {
                   logData.map((log) => (
                     <TableRow key={log.id}>
                       <TableCell>{format(new Date(log.created_at), 'dd MMM yyyy HH:mm:ss', { locale: localeId })}</TableCell>
-                      <TableCell> {/* MODIFIED: Smart User Column */}
+                      <TableCell>
                         {log.profiles?.nama_lengkap ? (
                           <>
                             <p className="font-medium">{log.profiles.nama_lengkap}</p>
