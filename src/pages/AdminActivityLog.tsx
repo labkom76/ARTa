@@ -27,7 +27,7 @@ import { DateRangePickerWithPresets } from '@/components/DateRangePickerWithPres
 import { DateRange } from 'react-day-picker';
 import { Label } from '@/components/ui/label';
 import {
-  Select, // NEW: Import Select components
+  Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
@@ -64,6 +64,16 @@ const actionOptions = [
   'APP_SETTING_UPDATED',
 ];
 
+// NEW: Options for role filter
+const roleOptions = [
+  'Semua Peran',
+  'Administrator',
+  'SKPD',
+  'Staf Registrasi',
+  'Staf Verifikator',
+  'Staf Koreksi',
+];
+
 const AdminActivityLog = () => {
   const { profile, loading: sessionLoading } = useSession();
   const [logData, setLogData] = useState<ActivityLogItem[]>([]);
@@ -73,8 +83,10 @@ const AdminActivityLog = () => {
 
   // State for date range filter
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
-  // NEW: State for action type filter
+  // State for action type filter
   const [selectedAction, setSelectedAction] = useState<string>('Semua Aksi');
+  // NEW: State for role filter
+  const [selectedRole, setSelectedRole] = useState<string>('Semua Peran');
 
   // Handler for date range change
   const handleDateRangeChange = (range: DateRange | undefined) => {
@@ -103,9 +115,14 @@ const AdminActivityLog = () => {
         query = query.lte('created_at', endOfDay(dateRange.to).toISOString());
       }
 
-      // NEW: Apply action type filter
+      // Apply action type filter
       if (selectedAction !== 'Semua Aksi') {
         query = query.eq('action', selectedAction);
+      }
+
+      // NEW: Apply role filter
+      if (selectedRole !== 'Semua Peran') {
+        query = query.eq('user_role', selectedRole);
       }
 
       const { data, error } = await query;
@@ -122,7 +139,7 @@ const AdminActivityLog = () => {
 
   useEffect(() => {
     fetchLogs();
-  }, [sessionLoading, profile, dateRange, selectedAction]); // NEW: Add selectedAction to dependencies
+  }, [sessionLoading, profile, dateRange, selectedAction, selectedRole]); // NEW: Add selectedRole to dependencies
 
   const handleViewDetails = (details: Record<string, any> | null) => {
     setSelectedLogDetails(details);
@@ -168,7 +185,7 @@ const AdminActivityLog = () => {
                 className="w-full"
               />
             </div>
-            {/* NEW: Action Type Filter */}
+            {/* Action Type Filter */}
             <div className="grid gap-2 flex-1 w-full sm:w-auto">
               <Label htmlFor="action-type">Jenis Aksi</Label>
               <Select onValueChange={setSelectedAction} value={selectedAction}>
@@ -179,6 +196,22 @@ const AdminActivityLog = () => {
                   {actionOptions.map((action) => (
                     <SelectItem key={action} value={action}>
                       {action}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {/* NEW: Role Filter */}
+            <div className="grid gap-2 flex-1 w-full sm:w-auto">
+              <Label htmlFor="role-filter">Peran Pengguna</Label>
+              <Select onValueChange={setSelectedRole} value={selectedRole}>
+                <SelectTrigger id="role-filter" className="w-full">
+                  <SelectValue placeholder="Pilih Peran" />
+                </SelectTrigger>
+                <SelectContent>
+                  {roleOptions.map((role) => (
+                    <SelectItem key={role} value={role}>
+                      {role}
                     </SelectItem>
                   ))}
                 </SelectContent>
