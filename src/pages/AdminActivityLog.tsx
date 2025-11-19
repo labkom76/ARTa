@@ -11,7 +11,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { format } from 'date-fns';
+import { format, startOfDay, endOfDay } from 'date-fns'; // Import startOfDay, endOfDay, format
 import { id as localeId } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { EyeIcon, HistoryIcon } from 'lucide-react';
@@ -45,6 +45,16 @@ const AdminActivityLog = () => {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [selectedLogDetails, setSelectedLogDetails] = useState<Record<string, any> | null>(null);
 
+  // NEW: State for date range filter
+  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
+  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
+
+  // NEW: Handler for date range change
+  const handleDateRangeChange = (range: { from?: Date; to?: Date } | undefined) => {
+    setStartDate(range?.from);
+    setEndDate(range?.to);
+  };
+
   const fetchLogs = async () => {
     if (sessionLoading || profile?.peran !== 'Administrator') {
       setIsLoading(false);
@@ -53,11 +63,21 @@ const AdminActivityLog = () => {
 
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('activity_log')
         .select('*, profiles(nama_lengkap, asal_skpd)') // MODIFIED: Join with profiles table
         .order('created_at', { ascending: false })
         .limit(50); // Limit to 50 most recent logs
+
+      // NEW: Apply date range filter
+      if (startDate) {
+        query = query.gte('created_at', startOfDay(startDate).toISOString());
+      }
+      if (endDate) {
+        query = query.lte('created_at', endOfDay(endDate).toISOString());
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
       setLogData(data as ActivityLogItem[]);
@@ -71,7 +91,7 @@ const AdminActivityLog = () => {
 
   useEffect(() => {
     fetchLogs();
-  }, [sessionLoading, profile]);
+  }, [sessionLoading, profile, startDate, endDate]); // NEW: Add startDate and endDate to dependencies
 
   const handleViewDetails = (details: Record<string, any> | null) => {
     setSelectedLogDetails(details);
