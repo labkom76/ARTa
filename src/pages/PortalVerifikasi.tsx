@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { format, parseISO, startOfDay, endOfDay, isSameDay, formatDistanceToNow } from 'date-fns'; // Import formatDistanceToNow
 import { id as localeId } from 'date-fns/locale';
-import { FileCheckIcon, LockIcon, EyeIcon, PrinterIcon, SearchIcon, FilePenLine, RotateCcw } from 'lucide-react'; // Import RotateCcw icon
+import { FileCheckIcon, LockIcon, EyeIcon, PrinterIcon, SearchIcon, FilePenLine, RotateCcw, ListOrderedIcon, HistoryIcon } from 'lucide-react'; // Import RotateCcw icon
 import VerifikasiTagihanDialog from '@/components/VerifikasiTagihanDialog';
 import {
   Pagination,
@@ -40,6 +40,7 @@ import StatusBadge from '@/components/StatusBadge'; // Import StatusBadge
 import { Combobox } from '@/components/ui/combobox'; // Import Combobox
 import Countdown from 'react-countdown'; // Import Countdown
 import { useSearchParams } from 'react-router-dom'; // Import useSearchParams
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'; // Import Tabs components
 
 interface VerificationItem {
   item: string;
@@ -80,6 +81,11 @@ interface SkpdOption { // Define interface for SKPD options
   label: string;
 }
 
+interface VerifierOption { // NEW: Define interface for Verifier options
+  value: string;
+  label: string;
+}
+
 const LOCK_TIMEOUT_MINUTES = 30; // Define lock timeout: 30 minutes
 
 const PortalVerifikasi = () => {
@@ -109,6 +115,10 @@ const PortalVerifikasi = () => {
   const [selectedHistorySkpd, setSelectedHistorySkpd] = useState<string>('Semua SKPD'); // New state for selected history SKPD
   const [historyPanelTitle, setHistoryPanelTitle] = useState('Tagihan Yang Diproses'); // Dynamic title for history panel
 
+  // NEW: State for Verifier filter in History tab
+  const [verifierOptionsHistory, setVerifierOptionsHistory] = useState<VerifierOption[]>([]);
+  const [selectedVerifierHistory, setSelectedVerifierHistory] = useState<string>('Semua Verifikator');
+
   // State for History Table Pagination (added to resolve ReferenceError)
   const [historyCurrentPage, setHistoryCurrentPage] = useState(1);
   const [historyItemsPerPage, setHistoryItemsPerPage] = useState(10);
@@ -132,10 +142,14 @@ const PortalVerifikasi = () => {
 
   const prevHistorySearchQueryRef = useRef(historySearchQuery);
   const prevSelectedHistorySkpdRef = useRef(selectedHistorySkpd);
+  const prevSelectedVerifierHistoryRef = useRef(selectedVerifierHistory); // NEW: Ref for verifier filter
   const prevHistoryItemsPerPageRef = useRef(historyItemsPerPage);
   const prevHistoryCurrentPageRef = useRef(historyCurrentPage);
 
   const [searchParams, setSearchParams] = useSearchParams(); // Initialize useSearchParams and its setter
+
+  // NEW: State for active tab
+  const [activeTab, setActiveTab] = useState('antrian');
 
   // Fetch unique SKPD names for the queue filter dropdown (MODIFIED)
   useEffect(() => {
@@ -160,6 +174,31 @@ const PortalVerifikasi = () => {
       }
     };
     fetchSkpdOptions();
+  }, []);
+
+  // NEW: Fetch verifier options for the history filter dropdown
+  useEffect(() => {
+    const fetchVerifierOptions = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('nama_lengkap')
+          .eq('peran', 'Staf Verifikator')
+          .order('nama_lengkap', { ascending: true });
+
+        if (error) throw error;
+
+        const uniqueVerifiers: VerifierOption[] = Array.from(new Set(data.map(item => item.nama_lengkap)))
+          .filter((name): name is string => name !== null && name.trim() !== '')
+          .map(name => ({ value: name, label: name }));
+
+        setVerifierOptionsHistory([{ value: 'Semua Verifikator', label: 'Semua Verifikator' }, ...uniqueVerifiers]);
+      } catch (error: any) {
+        console.error('Error fetching verifier options:', error.message);
+        toast.error('Gagal memuat daftar verifikator: ' + error.message);
+      }
+    };
+    fetchVerifierOptions();
   }, []);
 
   // Removed redundant fetchHistorySkpdOptions useEffect as it's now combined with fetchSkpdOptions
@@ -249,8 +288,7 @@ const PortalVerifikasi = () => {
         // Query for Condition A: Status 'Diteruskan' HARI INI
         let queryA = supabase
           .from('database_tagihan')
-          .select('*', { count: 'exact' })
-          .eq('nama_verifikator', profile.nama_lengkap)
+          .select('*, nama_verifikator', { count: 'exact' }) // MODIFIED: Added nama_verifikator
           .is('id_korektor', null)
           .eq('status_tagihan', 'Diteruskan')
           .gte('waktu_verifikasi', todayStart)
@@ -268,11 +306,18 @@ const PortalVerifikasi = () => {
           queryA = queryA.eq('nama_skpd', selectedHistorySkpd);
         }
 
+        // Apply history Verifier filter to queryA
+        if (selectedVerifierHistory !== 'Semua Verifikator') {
+          queryA = queryA.eq('nama_verifikator', selectedVerifierHistory);
+        } else {
+          // If 'Semua Verifikator' is selected, filter by current user's name
+          queryA = queryA.eq('nama_verifikator', profile.nama_lengkap);
+        }
+
         // Query for Condition B: Status 'Dikembalikan' DAN tenggat belum lewat
         let queryB = supabase
           .from('database_tagihan')
-          .select('*', { count: 'exact' })
-          .eq('nama_verifikator', profile.nama_lengkap)
+          .select('*, nama_verifikator', { count: 'exact' }) // MODIFIED: Added nama_verifikator
           .is('id_korektor', null)
           .eq('status_tagihan', 'Dikembalikan')
           .gte('tenggat_perbaikan', now); // tenggat_perbaikan masih di masa depan
@@ -289,11 +334,15 @@ const PortalVerifikasi = () => {
           queryB = queryB.eq('nama_skpd', selectedHistorySkpd);
         }
 
+        // Apply history Verifier filter to queryB (only if a specific verifier is selected)
+        if (selectedVerifierHistory !== 'Semua Verifikator') {
+          queryB = queryB.eq('nama_verifikator', selectedVerifierHistory);
+        }
+
         // Query for Condition C: Status 'Menunggu Verifikasi' DAN nomor_verifikasi TIDAK KOSONG
         let queryC = supabase
           .from('database_tagihan')
-          .select('*', { count: 'exact' })
-          .eq('nama_verifikator', profile.nama_lengkap)
+          .select('*, nama_verifikator', { count: 'exact' }) // MODIFIED: Added nama_verifikator
           .is('id_korektor', null)
           .eq('status_tagihan', 'Menunggu Verifikasi')
           .not('nomor_verifikasi', 'is', null);
@@ -308,6 +357,14 @@ const PortalVerifikasi = () => {
         // Apply history SKPD filter to queryC
         if (selectedHistorySkpd !== 'Semua SKPD') {
           queryC = queryC.eq('nama_skpd', selectedHistorySkpd);
+        }
+
+        // Apply history Verifier filter to queryC
+        if (selectedVerifierHistory !== 'Semua Verifikator') {
+          queryC = queryC.eq('nama_verifikator', selectedVerifierHistory);
+        } else {
+          // If 'Semua Verifikator' is selected, filter by current user's name
+          queryC = queryC.eq('nama_verifikator', profile.nama_lengkap);
         }
 
         const { data: dataA, error: errorA, count: countA } = await queryA;
@@ -333,7 +390,7 @@ const PortalVerifikasi = () => {
         setHistoryPanelTitle('Pengembalian Terakhir Anda');
         let query = supabase
           .from('database_tagihan')
-          .select('*', { count: 'exact' })
+          .select('*, nama_verifikator', { count: 'exact' }) // MODIFIED: Added nama_verifikator
           .eq('status_tagihan', 'Dikembalikan')
           .eq('id_korektor', user.id)
           .gte('waktu_koreksi', todayStart)
@@ -350,6 +407,11 @@ const PortalVerifikasi = () => {
         // NEW: Apply history SKPD filter
         if (selectedHistorySkpd !== 'Semua SKPD') {
           query = query.eq('nama_skpd', selectedHistorySkpd);
+        }
+
+        // NEW: Apply history Verifier filter (for Koreksi, this would filter by the original verifier if needed)
+        if (selectedVerifierHistory !== 'Semua Verifikator') {
+          query = query.eq('nama_verifikator', selectedVerifierHistory);
         }
 
         if (historyItemsPerPage !== -1) {
@@ -370,7 +432,7 @@ const PortalVerifikasi = () => {
         setHistoryPanelTitle('Riwayat Verifikasi Hari Ini');
         let query = supabase
           .from('database_tagihan')
-          .select('*', { count: 'exact' })
+          .select('*, nama_verifikator', { count: 'exact' }) // MODIFIED: Added nama_verifikator
           .in('status_tagihan', ['Diteruskan', 'Dikembalikan'])
           .gte('waktu_verifikasi', todayStart)
           .lte('waktu_verifikasi', todayEnd);
@@ -386,6 +448,11 @@ const PortalVerifikasi = () => {
         // NEW: Apply history SKPD filter
         if (selectedHistorySkpd !== 'Semua SKPD') {
           query = query.eq('nama_skpd', selectedHistorySkpd);
+        }
+
+        // NEW: Apply history Verifier filter
+        if (selectedVerifierHistory !== 'Semua Verifikator') {
+          query = query.eq('nama_verifikator', selectedVerifierHistory);
         }
 
         if (historyItemsPerPage !== -1) {
@@ -446,6 +513,7 @@ const PortalVerifikasi = () => {
       prevHistoryCurrentPageRef.current !== historyCurrentPage &&
       prevHistorySearchQueryRef.current === debouncedHistorySearchQuery &&
       prevSelectedHistorySkpdRef.current === selectedHistorySkpd &&
+      prevSelectedVerifierHistoryRef.current === selectedVerifierHistory && // NEW: Include verifier filter ref
       prevHistoryItemsPerPageRef.current === historyItemsPerPage
     ) {
       isPaginationOnlyChange = true;
@@ -455,9 +523,10 @@ const PortalVerifikasi = () => {
 
     prevHistorySearchQueryRef.current = debouncedHistorySearchQuery;
     prevSelectedHistorySkpdRef.current = selectedHistorySkpd;
+    prevSelectedVerifierHistoryRef.current = selectedVerifierHistory; // NEW: Update verifier filter ref
     prevHistoryItemsPerPageRef.current = historyItemsPerPage;
     prevHistoryCurrentPageRef.current = historyCurrentPage;
-  }, [user, sessionLoading, profile, debouncedHistorySearchQuery, selectedHistorySkpd, historyCurrentPage, historyItemsPerPage]);
+  }, [user, sessionLoading, profile, debouncedHistorySearchQuery, selectedHistorySkpd, selectedVerifierHistory, historyCurrentPage, historyItemsPerPage]); // NEW: Add selectedVerifierHistory to dependencies
 
   useEffect(() => {
     const channel = supabase
@@ -522,7 +591,6 @@ const PortalVerifikasi = () => {
                                  parseISO(newTagihan.waktu_verifikasi).toISOString() <= todayEnd;
 
             const isConditionB = newTagihan.status_tagihan === 'Dikembalikan' &&
-                                 newTagihan.nama_verifikator === profile?.nama_lengkap &&
                                  newTagihan.id_korektor === null &&
                                  newTagihan.tenggat_perbaikan &&
                                  parseISO(newTagihan.tenggat_perbaikan).getTime() >= now.getTime();
@@ -750,254 +818,286 @@ const PortalVerifikasi = () => {
     <div className="space-y-6"> {/* Main container for spacing between sections */}
       <h1 className="text-3xl font-bold text-gray-800 dark:text-white mb-6">Portal Verifikasi Tagihan</h1>
 
-      {/* Antrian Verifikasi Panel */}
-      <Card className="shadow-sm rounded-lg">
-        <CardHeader>
-          <CardTitle className="text-2xl font-semibold text-gray-800 dark:text-white">Antrian Verifikasi</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col sm:flex-row items-center justify-between space-y-2 sm:space-y-0 sm:space-x-2 mb-4">
-            <div className="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-2 w-full sm:w-auto">
-              <div className="relative flex-1 w-full sm:w-auto">
-                <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400" />
-                <Input
-                  type="text"
-                  placeholder="Cari Nomor SPM atau Nama SKPD..."
-                  className="pl-9 w-full"
-                  value={queueSearchQuery}
-                  onChange={(e) => {
-                    setQueueSearchQuery(e.target.value);
-                    setQueueCurrentPage(1); // Reset page on search
-                  }}
-                />
-              </div>
-              {/* MODIFIED: Replaced Select with Combobox */}
-              <Combobox
-                options={skpdOptionsAntrian}
-                value={selectedSkpdAntrian}
-                onValueChange={(value) => {
-                  setSelectedSkpdAntrian(value);
-                  setQueueCurrentPage(1); // Reset page on SKPD change
-                }}
-                placeholder="Filter SKPD"
-                className="w-full sm:w-[180px]"
-              />
-            </div>
-            <div className="flex items-center space-x-2">
-              <Label htmlFor="queue-items-per-page" className="whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">Baris per halaman:</Label>
-              <Select
-                value={queueItemsPerPage.toString()}
-                onValueChange={(value) => {
-                  setQueueItemsPerPage(Number(value));
-                  setQueueCurrentPage(1);
-                }}
-              >
-                <SelectTrigger className="w-[100px]">
-                  <SelectValue placeholder="10" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="10">10</SelectItem>
-                  <SelectItem value="25">25</SelectItem>
-                  <SelectItem value="50">50</SelectItem>
-                  <SelectItem value="100">100</SelectItem>
-                  <SelectItem value="-1">Semua</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-2 bg-muted p-1 rounded-lg">
+          <TabsTrigger 
+            value="antrian" 
+            className="data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm 
+                       flex items-center gap-2 hover:bg-accent hover:text-accent-foreground"
+          >
+            <ListOrderedIcon className="h-4 w-4" /> Antrian Verifikasi
+          </TabsTrigger>
+          <TabsTrigger 
+            value="diproses" 
+            className="data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm 
+                       flex items-center gap-2 hover:bg-accent hover:text-accent-foreground"
+          >
+            <HistoryIcon className="h-4 w-4" /> Tagihan Yang Diproses
+          </TabsTrigger>
+        </TabsList>
+        <TabsContent value="antrian">
+          {/* Antrian Verifikasi Panel */}
+          <Card className="shadow-sm rounded-lg mt-4">
+            <CardHeader>
+              <CardTitle className="text-2xl font-semibold text-gray-800 dark:text-white">Antrian Verifikasi</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={(e) => e.preventDefault()} className="flex flex-col sm:flex-row items-center justify-between space-y-2 sm:space-y-0 sm:space-x-2 mb-4">
+                <div className="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-2 w-full sm:w-auto">
+                  <div className="relative flex-1 w-full sm:w-auto">
+                    <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400" />
+                    <Input
+                      type="text"
+                      placeholder="Cari Nomor SPM atau Nama SKPD..."
+                      className="pl-9 w-full"
+                      value={queueSearchQuery}
+                      onChange={(e) => {
+                        setQueueSearchQuery(e.target.value);
+                        setQueueCurrentPage(1); // Reset page on search
+                      }}
+                    />
+                  </div>
+                  {/* MODIFIED: Replaced Select with Combobox */}
+                  <Combobox
+                    options={skpdOptionsAntrian}
+                    value={selectedSkpdAntrian}
+                    onValueChange={(value) => {
+                      setSelectedSkpdAntrian(value);
+                      setQueueCurrentPage(1); // Reset page on SKPD change
+                    }}
+                    placeholder="Filter SKPD"
+                    className="w-full sm:w-[180px]"
+                  />
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Label htmlFor="queue-items-per-page" className="whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">Baris per halaman:</Label>
+                  <Select
+                    value={queueItemsPerPage.toString()}
+                    onValueChange={(value) => {
+                      setQueueItemsPerPage(Number(value));
+                      setQueueCurrentPage(1);
+                    }}
+                  >
+                    <SelectTrigger className="w-[100px]">
+                      <SelectValue placeholder="10" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="10">10</SelectItem>
+                      <SelectItem value="25">25</SelectItem>
+                      <SelectItem value="50">50</SelectItem>
+                      <SelectItem value="100">100</SelectItem>
+                      <SelectItem value="-1">Semua</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </form>
 
-          {loadingQueue && !loadingQueuePagination ? (
-            <p className="text-center text-gray-600 dark:text-gray-400">Memuat antrian...</p>
-          ) : queueTagihanList.length === 0 ? (
-            <p className="text-center text-gray-600 dark:text-gray-400">Tidak ada tagihan di antrian verifikasi.</p>
-          ) : (
-            <>
-              <div className="overflow-x-auto">
-                <Table><TableHeader><TableRow>
-                      <TableHead className="w-[50px]">No.</TableHead><TableHead>Nomor Registrasi</TableHead><TableHead>Waktu Registrasi</TableHead><TableHead>Nomor SPM</TableHead><TableHead>Nama SKPD</TableHead><TableHead>Jumlah Kotor</TableHead><TableHead className="text-center">Aksi</TableHead>
-                    </TableRow></TableHeader><TableBody>
-                    {queueTagihanList.map((tagihan, index) => {
-                      const isLockedByOther = tagihan.locked_by && tagihan.locked_by !== user?.id;
-                      const isStaleLock = tagihan.locked_at && (new Date().getTime() - parseISO(tagihan.locked_at).getTime()) > LOCK_TIMEOUT_MINUTES * 60 * 1000;
+              {loadingQueue && !loadingQueuePagination ? (
+                <p className="text-center text-gray-600 dark:text-gray-400">Memuat antrian...</p>
+              ) : queueTagihanList.length === 0 ? (
+                <p className="text-center text-gray-600 dark:text-gray-400">Tidak ada tagihan di antrian verifikasi.</p>
+              ) : (
+                <>
+                  <div className="overflow-x-auto">
+                    <Table><TableHeader><TableRow>
+                          <TableHead className="w-[50px]">No.</TableHead><TableHead>Nomor Registrasi</TableHead><TableHead>Waktu Registrasi</TableHead><TableHead>Nomor SPM</TableHead><TableHead>Nama SKPD</TableHead><TableHead>Jumlah Kotor</TableHead><TableHead className="text-center">Aksi</TableHead>
+                        </TableRow></TableHeader><TableBody>
+                        {queueTagihanList.map((tagihan, index) => {
+                          const isLockedByOther = tagihan.locked_by && tagihan.locked_by !== user?.id;
+                          const isStaleLock = tagihan.locked_at && (new Date().getTime() - parseISO(tagihan.locked_at).getTime()) > LOCK_TIMEOUT_MINUTES * 60 * 1000;
 
-                      const isDisabled = isLockedByOther && !isStaleLock;
+                          const isDisabled = isLockedByOther && !isStaleLock;
 
-                      return (
-                        <TableRow key={tagihan.id_tagihan}>
-                          <TableCell>{(queueCurrentPage - 1) * queueItemsPerPage + index + 1}</TableCell><TableCell className="font-medium">{tagihan.nomor_registrasi || '-'}</TableCell><TableCell>
-                            {tagihan.waktu_registrasi ? format(parseISO(tagihan.waktu_registrasi), 'dd MMMM yyyy HH:mm', { locale: localeId }) : '-'}
-                          </TableCell><TableCell>{tagihan.nomor_spm}</TableCell><TableCell>{tagihan.nama_skpd}</TableCell><TableCell>Rp{tagihan.jumlah_kotor.toLocaleString('id-ID')}</TableCell><TableCell className="text-center">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              title={isDisabled ? "Tagihan ini sedang diproses oleh verifikator lain" : "Proses Verifikasi"}
-                              onClick={() => handleActionButtonClick(tagihan)} // Use the new handler
-                              disabled={isDisabled}
-                            >
-                              {isDisabled ? (
-                                <LockIcon className="h-5 w-5 text-gray-400" />
-                              ) : (
-                                <FileCheckIcon className="h-5 w-5 text-blue-500" />
+                          return (
+                            <TableRow key={tagihan.id_tagihan}>
+                              <TableCell>{(queueCurrentPage - 1) * queueItemsPerPage + index + 1}</TableCell><TableCell className="font-medium">{tagihan.nomor_registrasi || '-'}</TableCell><TableCell>
+                                {tagihan.waktu_registrasi ? format(parseISO(tagihan.waktu_registrasi), 'dd MMMM yyyy HH:mm', { locale: localeId }) : '-'}
+                              </TableCell><TableCell>{tagihan.nomor_spm}</TableCell><TableCell>{tagihan.nama_skpd}</TableCell><TableCell>Rp{tagihan.jumlah_kotor.toLocaleString('id-ID')}</TableCell><TableCell className="text-center">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  title={isDisabled ? "Tagihan ini sedang diproses oleh verifikator lain" : "Proses Verifikasi"}
+                                  onClick={() => handleActionButtonClick(tagihan)} // Use the new handler
+                                  disabled={isDisabled}
+                                >
+                                  {isDisabled ? (
+                                    <LockIcon className="h-5 w-5 text-gray-400" />
+                                  ) : (
+                                    <FileCheckIcon className="h-5 w-5 text-blue-500" />
+                                  )}
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody></Table>
+                  </div>
+                  {/* Pagination Controls */}
+                  <div className="mt-6 flex items-center justify-end space-x-4">
+                    <div className="text-sm text-muted-foreground">
+                      Halaman {queueTotalItems === 0 ? 0 : queueCurrentPage} dari {queueTotalPages} ({queueTotalItems} total item)
+                    </div>
+                    <Button
+                      variant="outline"
+                      onClick={() => setQueueCurrentPage((prev) => Math.max(1, prev - 1))}
+                      disabled={queueCurrentPage === 1 || queueItemsPerPage === -1 || loadingQueuePagination}
+                    >
+                      Sebelumnya
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => setQueueCurrentPage((prev) => Math.min(queueTotalPages, prev + 1))}
+                      disabled={queueCurrentPage === queueTotalPages || queueItemsPerPage === -1 || loadingQueuePagination}
+                    >
+                      Berikutnya
+                    </Button>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+        <TabsContent value="diproses">
+          {/* Riwayat Verifikasi Hari Ini Panel */}
+          <Card className="shadow-sm rounded-lg mt-4">
+            <CardHeader>
+              <CardTitle className="text-2xl font-semibold text-gray-800 dark:text-white">{historyPanelTitle}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={(e) => e.preventDefault()} className="flex flex-col sm:flex-row items-center justify-between space-y-2 sm:space-y-0 sm:space-x-2 mb-4">
+                <div className="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-2 w-full sm:w-auto">
+                  <div className="relative flex-1 w-full sm:w-auto">
+                    <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400" />
+                    <Input
+                      type="text"
+                      placeholder="Cari Nomor SPM atau Nama SKPD..."
+                      className="pl-9 w-full"
+                      value={historySearchQuery}
+                      onChange={(e) => {
+                        setHistorySearchQuery(e.target.value);
+                        setHistoryCurrentPage(1); // Reset page on search
+                      }}
+                    />
+                  </div>
+                  {/* MODIFIED: Replaced Select with Combobox */}
+                  <Combobox
+                    options={skpdOptionsHistory}
+                    value={selectedHistorySkpd}
+                    onValueChange={(value) => {
+                      setSelectedHistorySkpd(value);
+                      setHistoryCurrentPage(1); // Reset page on SKPD change
+                    }}
+                    placeholder="Filter SKPD"
+                    className="w-full sm:w-[180px]"
+                  />
+                  {/* NEW: Combobox for Verifier Filter */}
+                  <Combobox
+                    options={verifierOptionsHistory}
+                    value={selectedVerifierHistory}
+                    onValueChange={(value) => {
+                      setSelectedVerifierHistory(value);
+                      setHistoryCurrentPage(1); // Reset page on verifier change
+                    }}
+                    placeholder="Filter Verifikator"
+                    className="w-full sm:w-[180px]"
+                  />
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Label htmlFor="history-items-per-page" className="whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">Baris per halaman:</Label>
+                  <Select
+                    value={historyItemsPerPage.toString()}
+                    onValueChange={(value) => {
+                      setHistoryItemsPerPage(Number(value));
+                      setHistoryCurrentPage(1);
+                    }}
+                  >
+                    <SelectTrigger className="w-[100px]">
+                      <SelectValue placeholder="10" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="10">10</SelectItem>
+                      <SelectItem value="25">25</SelectItem>
+                      <SelectItem value="50">50</SelectItem>
+                      <SelectItem value="100">100</SelectItem>
+                      <SelectItem value="-1">Semua</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </form>
+
+              {loadingHistory && !loadingHistoryPagination ? (
+                <p className="text-center text-gray-600 dark:text-gray-400">Memuat riwayat verifikasi...</p>
+              ) : historyTagihanList.length === 0 ? (
+                <p className="text-center text-gray-600 dark:text-gray-400">Tidak ada riwayat verifikasi hari ini.</p>
+              ) : (
+                <>
+                  <div className="overflow-x-auto">
+                    <Table><TableHeader><TableRow>
+                          <TableHead className="w-[50px]">No.</TableHead><TableHead>{profile?.peran === 'Staf Koreksi' ? 'Waktu Koreksi' : 'Waktu Verifikasi'}</TableHead><TableHead>{profile?.peran === 'Staf Koreksi' ? 'Nomor Koreksi' : 'Nomor Verifikasi'}</TableHead><TableHead>Nama SKPD</TableHead><TableHead>Nomor SPM</TableHead><TableHead>Nama Verifikator</TableHead><TableHead>Status Tagihan</TableHead><TableHead className="text-center">Aksi</TableHead>
+                        </TableRow></TableHeader><TableBody>
+                        {historyTagihanList.map((tagihan, index) => (
+                          <TableRow key={tagihan.id_tagihan}>
+                            <TableCell>{(historyCurrentPage - 1) * historyItemsPerPage + index + 1}</TableCell><TableCell>
+                              {profile?.peran === 'Staf Koreksi'
+                                ? (tagihan.waktu_koreksi ? format(parseISO(tagihan.waktu_koreksi), 'dd MMMM yyyy HH:mm', { locale: localeId }) : '-')
+                                : (tagihan.waktu_verifikasi ? format(parseISO(tagihan.waktu_verifikasi), 'dd MMMM yyyy HH:mm', { locale: localeId }) : '-')}
+                            </TableCell><TableCell className="font-medium">
+                              {profile?.peran === 'Staf Koreksi' ? (tagihan.nomor_koreksi || '-') : (tagihan.nomor_verifikasi || '-')}
+                            </TableCell><TableCell>{tagihan.nama_skpd}</TableCell><TableCell>{tagihan.nomor_spm}</TableCell><TableCell>{tagihan.nama_verifikator || '-'}</TableCell><TableCell>
+                              <StatusBadge status={tagihan.status_tagihan} />
+                              {tagihan.status_tagihan === 'Dikembalikan' && tagihan.tenggat_perbaikan && (
+                                <Countdown date={new Date(tagihan.tenggat_perbaikan)} renderer={renderer} />
                               )}
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody></Table>
-              </div>
-              {/* Pagination Controls */}
-              <div className="mt-6 flex items-center justify-end space-x-4">
-                <div className="text-sm text-muted-foreground">
-                  Halaman {queueTotalItems === 0 ? 0 : queueCurrentPage} dari {queueTotalPages} ({queueTotalItems} total item)
-                </div>
-                <Button
-                  variant="outline"
-                  onClick={() => setQueueCurrentPage((prev) => Math.max(1, prev - 1))}
-                  disabled={queueCurrentPage === 1 || queueItemsPerPage === -1 || loadingQueuePagination}
-                >
-                  Sebelumnya
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => setQueueCurrentPage((prev) => Math.min(queueTotalPages, prev + 1))}
-                  disabled={queueCurrentPage === queueTotalPages || queueItemsPerPage === -1 || loadingQueuePagination}
-                >
-                  Berikutnya
-                </Button>
-              </div>
-            </>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Riwayat Verifikasi Hari Ini Panel */}
-      <Card className="shadow-sm rounded-lg">
-        <CardHeader>
-          <CardTitle className="text-2xl font-semibold text-gray-800 dark:text-white">{historyPanelTitle}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col sm:flex-row items-center justify-between space-y-2 sm:space-y-0 sm:space-x-2 mb-4">
-            <div className="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-2 w-full sm:w-auto">
-              <div className="relative flex-1 w-full sm:w-auto">
-                <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400" />
-                <Input
-                  type="text"
-                  placeholder="Cari Nomor SPM atau Nama SKPD..."
-                  className="pl-9 w-full"
-                  value={historySearchQuery}
-                  onChange={(e) => {
-                    setHistorySearchQuery(e.target.value);
-                    setHistoryCurrentPage(1); // Reset page on search
-                  }}
-                />
-              </div>
-              {/* MODIFIED: Replaced Select with Combobox */}
-              <Combobox
-                options={skpdOptionsHistory}
-                value={selectedHistorySkpd}
-                onValueChange={(value) => {
-                  setSelectedHistorySkpd(value);
-                  setHistoryCurrentPage(1); // Reset page on SKPD change
-                }}
-                placeholder="Filter SKPD"
-                className="w-full sm:w-[180px]"
-              />
-            </div>
-            <div className="flex items-center space-x-2">
-              <Label htmlFor="history-items-per-page" className="whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">Baris per halaman:</Label>
-              <Select
-                value={historyItemsPerPage.toString()}
-                onValueChange={(value) => {
-                  setHistoryItemsPerPage(Number(value));
-                  setHistoryCurrentPage(1);
-                }}
-              >
-                <SelectTrigger className="w-[100px]">
-                  <SelectValue placeholder="10" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="10">10</SelectItem>
-                  <SelectItem value="25">25</SelectItem>
-                  <SelectItem value="50">50</SelectItem>
-                  <SelectItem value="100">100</SelectItem>
-                  <SelectItem value="-1">Semua</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          {loadingHistory && !loadingHistoryPagination ? (
-            <p className="text-center text-gray-600 dark:text-gray-400">Memuat riwayat verifikasi...</p>
-          ) : historyTagihanList.length === 0 ? (
-            <p className="text-center text-gray-600 dark:text-gray-400">Tidak ada riwayat verifikasi hari ini.</p>
-          ) : (
-            <>
-              <div className="overflow-x-auto">
-                <Table><TableHeader><TableRow>
-                      <TableHead className="w-[50px]">No.</TableHead><TableHead>{profile?.peran === 'Staf Koreksi' ? 'Waktu Koreksi' : 'Waktu Verifikasi'}</TableHead><TableHead>{profile?.peran === 'Staf Koreksi' ? 'Nomor Koreksi' : 'Nomor Verifikasi'}</TableHead><TableHead>Nama SKPD</TableHead><TableHead>Nomor SPM</TableHead><TableHead>Status Tagihan</TableHead><TableHead className="text-center">Aksi</TableHead>
-                    </TableRow></TableHeader><TableBody>
-                    {historyTagihanList.map((tagihan, index) => (
-                      <TableRow key={tagihan.id_tagihan}>
-                        <TableCell>{(historyCurrentPage - 1) * historyItemsPerPage + index + 1}</TableCell><TableCell>
-                          {profile?.peran === 'Staf Koreksi'
-                            ? (tagihan.waktu_koreksi ? format(parseISO(tagihan.waktu_koreksi), 'dd MMMM yyyy HH:mm', { locale: localeId }) : '-')
-                            : (tagihan.waktu_verifikasi ? format(parseISO(tagihan.waktu_verifikasi), 'dd MMMM yyyy HH:mm', { locale: localeId }) : '-')}
-                        </TableCell><TableCell className="font-medium">
-                          {profile?.peran === 'Staf Koreksi' ? (tagihan.nomor_koreksi || '-') : (tagihan.nomor_verifikasi || '-')}
-                        </TableCell><TableCell>{tagihan.nama_skpd}</TableCell><TableCell>{tagihan.nomor_spm}</TableCell><TableCell>
-                          <StatusBadge status={tagihan.status_tagihan} />
-                          {tagihan.status_tagihan === 'Dikembalikan' && tagihan.tenggat_perbaikan && (
-                            <Countdown date={new Date(tagihan.tenggat_perbaikan)} renderer={renderer} />
-                          )}
-                        </TableCell><TableCell className="text-center">
-                          <div className="flex justify-center space-x-2">
-                            <Button variant="outline" size="icon" title="Lihat Detail" onClick={() => handleDetailClick(tagihan)}>
-                              <EyeIcon className="h-4 w-4" />
-                            </Button>
-                            <Button variant="outline" size="icon" title="Cetak" onClick={() => handlePrintClick(tagihan.id_tagihan)}>
-                              <PrinterIcon className="h-4 w-4" />
-                            </Button>
-                            {tagihan.status_tagihan === 'Dikembalikan' && (
-                              <Button variant="outline" size="icon" title="Edit (Verifikasi Ulang)" onClick={() => handleEditVerificationClick(tagihan)}>
-                                <FilePenLine className="h-4 w-4" />
-                              </Button>
-                            )}
-                            {/* NEW: Tombol "Periksa" untuk status "Menunggu Verifikasi" */}
-                            {tagihan.status_tagihan === 'Menunggu Verifikasi' && (
-                              <Button variant="outline" size="icon" title="Periksa Tagihan" onClick={() => handleProcessVerification(tagihan)}>
-                                <RotateCcw className="h-4 w-4" />
-                              </Button>
-                            )}
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody></Table>
-              </div>
-              <div className="mt-6 flex items-center justify-end space-x-4">
-                <div className="text-sm text-muted-foreground">
-                  Halaman {historyTotalItems === 0 ? 0 : historyCurrentPage} dari {historyTotalPages} ({historyTotalItems} total item)
-                </div>
-                <Button
-                  variant="outline"
-                  onClick={() => setHistoryCurrentPage((prev) => Math.max(1, prev - 1))}
-                  disabled={historyCurrentPage === 1 || historyItemsPerPage === -1 || loadingHistoryPagination}
-                >
-                  Sebelumnya
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => setHistoryCurrentPage((prev) => Math.min(historyTotalPages, prev + 1))}
-                  disabled={historyCurrentPage === historyTotalPages || historyItemsPerPage === -1 || loadingHistoryPagination}
-                >
-                  Berikutnya
-                </Button>
-              </div>
-            </>
-          )}
-        </CardContent>
-      </Card>
+                            </TableCell><TableCell className="text-center">
+                              <div className="flex justify-center space-x-2">
+                                <Button variant="outline" size="icon" title="Lihat Detail" onClick={() => handleDetailClick(tagihan)}>
+                                  <EyeIcon className="h-4 w-4" />
+                                </Button>
+                                <Button variant="outline" size="icon" title="Cetak" onClick={() => handlePrintClick(tagihan.id_tagihan)}>
+                                  <PrinterIcon className="h-4 w-4" />
+                                </Button>
+                                {tagihan.status_tagihan === 'Dikembalikan' && (
+                                  <Button variant="outline" size="icon" title="Edit (Verifikasi Ulang)" onClick={() => handleEditVerificationClick(tagihan)}>
+                                    <FilePenLine className="h-4 w-4" />
+                                  </Button>
+                                )}
+                                {/* NEW: Tombol "Periksa" untuk status "Menunggu Verifikasi" */}
+                                {tagihan.status_tagihan === 'Menunggu Verifikasi' && (
+                                  <Button variant="outline" size="icon" title="Periksa Tagihan" onClick={() => handleProcessVerification(tagihan)}>
+                                    <RotateCcw className="h-4 w-4" />
+                                  </Button>
+                                )}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody></Table>
+                  </div>
+                  <div className="mt-6 flex items-center justify-end space-x-4">
+                    <div className="text-sm text-muted-foreground">
+                      Halaman {historyTotalItems === 0 ? 0 : historyCurrentPage} dari {historyTotalPages} ({historyTotalItems} total item)
+                    </div>
+                    <Button
+                      variant="outline"
+                      onClick={() => setHistoryCurrentPage((prev) => Math.max(1, prev - 1))}
+                      disabled={historyCurrentPage === 1 || historyItemsPerPage === -1 || loadingHistoryPagination}
+                    >
+                      Sebelumnya
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => setHistoryCurrentPage((prev) => Math.min(historyTotalPages, prev + 1))}
+                      disabled={historyCurrentPage === historyTotalPages || historyItemsPerPage === -1 || loadingHistoryPagination}
+                    >
+                      Berikutnya
+                    </Button>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
       <VerifikasiTagihanDialog
         isOpen={isVerifikasiModalOpen}
