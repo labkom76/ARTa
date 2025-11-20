@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { HomeIcon, LayoutDashboardIcon, FileTextIcon, HistoryIcon, ListFilterIcon, UsersIcon, PaletteIcon } from 'lucide-react';
+import { HomeIcon, LayoutDashboardIcon, FileTextIcon, HistoryIcon, ListFilterIcon, UsersIcon, PaletteIcon, ClipboardListIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSession } from '@/contexts/SessionContext';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -105,7 +105,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onLinkClick }) => {
   } else if (role === 'Administrator') {
     navItems.push(
       { to: '/admin/dashboard', icon: LayoutDashboardIcon, label: 'Dashboard Admin' },
-      { to: '/admin/tagihan', icon: FileTextIcon, label: 'Manajemen Tagihan' },
+      { to: '/admin/tagihan', icon: ClipboardListIcon, label: 'Manajemen Tagihan' },
       {
         type: 'collapsible',
         label: 'Manajemen',
