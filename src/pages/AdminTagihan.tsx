@@ -64,6 +64,7 @@ interface Tagihan {
   id_korektor?: string;
   waktu_koreksi?: string;
   catatan_koreksi?: string;
+  sumber_dana?: string; // Add this line
 }
 
 interface SkpdOption { // Define interface for SKPD options
