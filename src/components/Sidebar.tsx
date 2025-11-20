@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { HomeIcon, LayoutDashboardIcon, FileTextIcon, HistoryIcon, ListFilterIcon, UsersIcon, PaletteIcon, ClipboardListIcon, MapPinIcon, ListChecksIcon } from 'lucide-react';
+import { HomeIcon, LayoutDashboardIcon, FileTextIcon, HistoryIcon, ListFilterIcon, UsersIcon, PaletteIcon, ClipboardListIcon, MapPinIcon, ListChecksIcon, CalendarCheckIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSession } from '@/contexts/SessionContext';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -122,7 +122,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onLinkClick }) => {
         children: [
           { to: '/admin/kode-wilayah', icon: MapPinIcon, label: 'Kode Wilayah' }, // New item
           { to: '/admin/kode-skpd', icon: ListChecksIcon, label: 'Kode SKPD' },
-          { to: '/admin/jadwal-penganggaran', icon: HistoryIcon, label: 'Jadwal Penganggaran' },
+          { to: '/admin/jadwal-penganggaran', icon: CalendarCheckIcon, label: 'Jadwal Penganggaran' },
         ]
       },
       { to: '/admin/laporan', icon: HistoryIcon, label: 'Laporan' }, // New "Laporan" menu item
