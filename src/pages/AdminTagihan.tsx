@@ -72,6 +72,11 @@ interface SkpdOption { // Define interface for SKPD options
   label: string;
 }
 
+interface VerifierOption { // NEW: Define interface for Verifier options
+  value: string;
+  label: string;
+}
+
 const AdminTagihan = () => {
   const { profile, loading: sessionLoading } = useSession();
   const [loadingPage, setLoadingPage] = useState(true);
@@ -84,6 +89,10 @@ const AdminTagihan = () => {
   const [skpdOptions, setSkpdOptions] = useState<SkpdOption[]>([]); // MODIFIED: Change type to SkpdOption[]
   const [selectedSkpd, setSelectedSkpd] = useState<string>('Semua SKPD'); // MODIFIED: Default value
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+
+  // NEW: State for Verifier filter
+  const [verifierOptions, setVerifierOptions] = useState<VerifierOption[]>([]);
+  const [selectedVerifier, setSelectedVerifier] = useState<string>('Semua Verifikator');
 
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
@@ -109,6 +118,7 @@ const AdminTagihan = () => {
   const prevDateRange = useRef(dateRange);
   const prevItemsPerPage = useRef(itemsPerPage);
   const prevCurrentPage = useRef(currentPage);
+  const prevSelectedVerifier = useRef(selectedVerifier); // NEW: Ref for verifier filter
 
   useEffect(() => {
     if (!sessionLoading) {
@@ -138,6 +148,32 @@ const AdminTagihan = () => {
       }
     };
     fetchSkpdOptions();
+  }, []);
+
+  // NEW: Fetch active 'Staf Verifikator' for the dropdown
+  useEffect(() => {
+    const fetchVerificatorList = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('id, nama_lengkap')
+          .eq('peran', 'Staf Verifikator')
+          .eq('is_active', true)
+          .order('nama_lengkap', { ascending: true });
+
+        if (error) throw error;
+
+        const options: VerifierOption[] = [
+          { value: 'Semua Verifikator', label: 'Semua Verifikator' },
+          ...(data || []).map(p => ({ value: p.id, label: p.nama_lengkap || 'Nama Tidak Diketahui' }))
+        ];
+        setVerifierOptions(options);
+      } catch (error: any) {
+        console.error('Error fetching verifier list:', error.message);
+        toast.error('Gagal memuat daftar verifikator: ' + error.message);
+      }
+    };
+    fetchVerificatorList();
   }, []);
 
   const fetchTagihan = async (isPaginationOnlyChange = false) => {
@@ -172,6 +208,14 @@ const AdminTagihan = () => {
       // Apply SKPD filter if not 'Semua SKPD' (NO CHANGE TO LOGIC, ONLY UI)
       if (selectedSkpd !== 'Semua SKPD') { // MODIFIED: Apply conditional filter
         query = query.eq('nama_skpd', selectedSkpd);
+      }
+
+      // NEW: Apply Verifier filter
+      if (selectedVerifier !== 'Semua Verifikator') {
+        const verifierName = verifierOptions.find(opt => opt.value === selectedVerifier)?.label;
+        if (verifierName) {
+          query = query.eq('nama_verifikator', verifierName);
+        }
       }
 
       // Apply date range filter
@@ -215,7 +259,8 @@ const AdminTagihan = () => {
       prevSelectedStatus.current === selectedStatus &&
       prevSelectedSkpd.current === selectedSkpd &&
       prevDateRange.current === dateRange &&
-      prevItemsPerPage.current === itemsPerPage
+      prevItemsPerPage.current === itemsPerPage &&
+      prevSelectedVerifier.current === selectedVerifier // NEW: Include verifier filter ref
     ) {
       isPaginationOnlyChange = true;
     }
@@ -229,8 +274,9 @@ const AdminTagihan = () => {
     prevDateRange.current = dateRange;
     prevItemsPerPage.current = itemsPerPage;
     prevCurrentPage.current = currentPage;
+    prevSelectedVerifier.current = selectedVerifier; // NEW: Update verifier filter ref
 
-  }, [sessionLoading, profile, debouncedSearchQuery, selectedStatus, selectedSkpd, dateRange, currentPage, itemsPerPage]); // MODIFIED: Add selectedSkpd to dependencies
+  }, [sessionLoading, profile, debouncedSearchQuery, selectedStatus, selectedSkpd, dateRange, currentPage, itemsPerPage, selectedVerifier]); // MODIFIED: Add selectedVerifier to dependencies
 
   const formatDate = (dateString: string | undefined) => {
     if (!dateString) return '-';
@@ -353,6 +399,17 @@ const AdminTagihan = () => {
                 setCurrentPage(1); // Reset to first page on SKPD change
               }}
               placeholder="Filter SKPD"
+              className="w-full sm:w-[200px]"
+            />
+            {/* NEW: Combobox for Verifier Filter */}
+            <Combobox
+              options={verifierOptions}
+              value={selectedVerifier}
+              onValueChange={(value) => {
+                setSelectedVerifier(value);
+                setCurrentPage(1); // Reset to first page on verifier change
+              }}
+              placeholder="Filter Verifikator"
               className="w-full sm:w-[200px]"
             />
             <DateRangePickerWithPresets
