@@ -72,6 +72,11 @@ interface SkpdOption { // Define interface for SKPD options
   label: string;
 }
 
+interface VerifierOption {
+  value: string;
+  label: string;
+}
+
 const AdminTagihan = () => {
   const { profile, loading: sessionLoading } = useSession();
   const [loadingPage, setLoadingPage] = useState(true);
@@ -84,6 +89,7 @@ const AdminTagihan = () => {
   const [skpdOptions, setSkpdOptions] = useState<SkpdOption[]>([]); // MODIFIED: Change type to SkpdOption[]
   const [selectedSkpd, setSelectedSkpd] = useState<string>('Semua SKPD'); // MODIFIED: Default value
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+  const [verifierOptions, setVerifierOptions] = useState<VerifierOption[]>([]);
 
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
@@ -138,6 +144,35 @@ const AdminTagihan = () => {
       }
     };
     fetchSkpdOptions();
+  }, []);
+
+  // Fetch active Staf Verifikator for transfer feature
+  useEffect(() => {
+    const fetchVerificatorList = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('id, nama_lengkap')
+          .eq('peran', 'Staf Verifikator')
+          .eq('is_active', true)
+          .order('nama_lengkap', { ascending: true });
+
+        if (error) throw error;
+
+        const formattedVerifiers: VerifierOption[] = (data || [])
+          .filter(verifier => verifier.nama_lengkap && verifier.id)
+          .map(verifier => ({
+            value: verifier.id,
+            label: verifier.nama_lengkap
+          }));
+
+        setVerifierOptions(formattedVerifiers);
+      } catch (error: any) {
+        console.error('Error fetching verifier list:', error.message);
+        toast.error('Gagal memuat daftar verifikator: ' + error.message);
+      }
+    };
+    fetchVerificatorList();
   }, []);
 
   const fetchTagihan = async (isPaginationOnlyChange = false) => {
@@ -484,6 +519,7 @@ const AdminTagihan = () => {
         onClose={handleCloseEditModal}
         onTagihanUpdated={fetchTagihan}
         editingTagihan={editingTagihan}
+        verifierOptions={verifierOptions}
       />
 
       <DeleteConfirmationDialog

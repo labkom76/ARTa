@@ -26,6 +26,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useSession } from '@/contexts/SessionContext'; // Import useSession
 import { format } from 'date-fns'; // Import format for current year
 import { generateNomorSpm, getJenisTagihanCode } from '@/utils/spmGenerator'; // Import utility functions
+import { Combobox } from '@/components/ui/combobox'; // Import Combobox
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'; // Import Tabs
 
 interface VerificationItem {
   item: string;
@@ -72,6 +74,7 @@ interface EditTagihanDialogProps {
   onClose: () => void;
   onTagihanUpdated: () => void;
   editingTagihan: Tagihan | null;
+  verifierOptions: { value: string; label: string }[];
 }
 
 const formSchema = z.object({
@@ -97,13 +100,14 @@ const formSchema = z.object({
 
 type EditTagihanFormValues = z.infer<typeof formSchema>;
 
-const EditTagihanDialog: React.FC<EditTagihanDialogProps> = ({ isOpen, onClose, onTagihanUpdated, editingTagihan }) => {
+const EditTagihanDialog: React.FC<EditTagihanDialogProps> = ({ isOpen, onClose, onTagihanUpdated, editingTagihan, verifierOptions }) => {
   const { profile } = useSession(); // Use session to get current user's SKPD
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [scheduleOptions, setScheduleOptions] = useState<ScheduleOption[]>([]);
   const [kodeWilayah, setKodeWilayah] = useState<string | null>(null);
   const [kodeSkpd, setKodeSkpd] = useState<string | null>(null);
   const [generatedNomorSpmPreview, setGeneratedNomorSpmPreview] = useState<string | null>(null);
+  const [selectedVerifier, setSelectedVerifier] = useState<string>('');
 
   const form = useForm<EditTagihanFormValues>({
     resolver: zodResolver(formSchema),
@@ -255,6 +259,41 @@ const EditTagihanDialog: React.FC<EditTagihanDialogProps> = ({ isOpen, onClose, 
   }, []);
   // --- AKHIR FUNGSI BARU ---
 
+  const handleTransferVerifikator = async () => {
+    if (!editingTagihan || !selectedVerifier) {
+      toast.error('Pilih verifikator tujuan terlebih dahulu');
+      return;
+    }
+
+    try {
+      const selectedVerifierData = verifierOptions.find(v => v.value === selectedVerifier);
+
+      if (!selectedVerifierData) {
+        toast.error('Verifikator tidak ditemukan');
+        return;
+      }
+
+      const { error } = await supabase
+        .from('database_tagihan')
+        .update({
+          nama_verifikator: selectedVerifierData.label,
+          locked_by: null,
+          locked_at: null,
+        })
+        .eq('id_tagihan', editingTagihan.id_tagihan);
+
+      if (error) throw error;
+
+      toast.success(`Tagihan berhasil dipindahkan ke ${selectedVerifierData.label}`);
+      setSelectedVerifier('');
+      onTagihanUpdated();
+      onClose();
+    } catch (error: any) {
+      console.error('Error transferring tagihan:', error.message);
+      toast.error('Gagal memindahkan tagihan: ' + error.message);
+    }
+  };
+
   const onSubmit = async (values: EditTagihanFormValues) => {
     if (!editingTagihan) return;
 
@@ -333,246 +372,299 @@ const EditTagihanDialog: React.FC<EditTagihanDialogProps> = ({ isOpen, onClose, 
     }
   };
 
+  const showTransferTab = editingTagihan?.status_tagihan === 'Menunggu Verifikasi' && editingTagihan?.nomor_verifikasi;
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Edit Tagihan (Admin Override)</DialogTitle>
           <DialogDescription>
-            Perbarui detail tagihan ini. Semua field dapat diedit.
+            Kelola data tagihan atau transfer tugas verifikasi.
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4">
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="nama_skpd" className="text-right">
-              Nama SKPD
-            </Label>
-            <Input
-              id="nama_skpd"
-              {...form.register('nama_skpd')}
-              className="col-span-3"
-              disabled={isSubmitting}
-            />
-            {form.formState.errors.nama_skpd && (
-              <p className="col-span-4 text-right text-red-500 text-sm">
-                {form.formState.errors.nama_skpd.message}
-              </p>
+
+        <Tabs defaultValue="data" className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="data">Data Tagihan</TabsTrigger>
+            <TabsTrigger value="transfer" disabled={!showTransferTab}>Transfer Verifikator</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="data">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="nama_skpd" className="text-right">
+                  Nama SKPD
+                </Label>
+                <Input
+                  id="nama_skpd"
+                  {...form.register('nama_skpd')}
+                  className="col-span-3"
+                  disabled={isSubmitting}
+                />
+                {form.formState.errors.nama_skpd && (
+                  <p className="col-span-4 text-right text-red-500 text-sm">
+                    {form.formState.errors.nama_skpd.message}
+                  </p>
+                )}
+              </div>
+              {/* Pratinjau Nomor SPM Otomatis */}
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="nomor_spm_otomatis" className="text-right">
+                  Nomor SPM (Otomatis)
+                </Label>
+                <Input
+                  id="nomor_spm_otomatis"
+                  value={generatedNomorSpmPreview || 'Membuat Nomor SPM...'}
+                  readOnly
+                  className="col-span-3 font-mono text-sm"
+                  disabled={true} // Always disabled as it's a preview
+                />
+              </div>
+              {/* Input Nomor Urut Tagihan */}
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="nomor_urut_tagihan" className="text-right">
+                  Nomor Urut Tagihan
+                </Label>
+                <Input
+                  id="nomor_urut_tagihan"
+                  type="number"
+                  {...form.register('nomor_urut_tagihan', { valueAsNumber: true })}
+                  className="col-span-3"
+                  disabled={isSubmitting}
+                />
+                {form.formState.errors.nomor_urut_tagihan && (
+                  <p className="col-span-4 text-right text-red-500 text-sm">
+                    {form.formState.errors.nomor_urut_tagihan.message}
+                  </p>
+                )}
+              </div>
+              {/* Jadwal Penganggaran */}
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="kode_jadwal" className="text-right">
+                  Jadwal Penganggaran
+                </Label>
+                <Controller
+                  name="kode_jadwal"
+                  control={form.control}
+                  render={({ field }) => (
+                    <Select onValueChange={field.onChange} value={field.value} disabled={isSubmitting}>
+                      <SelectTrigger className="col-span-3">
+                        <SelectValue placeholder="Pilih Jadwal" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {scheduleOptions.map((schedule) => (
+                          <SelectItem key={schedule.id} value={schedule.kode_jadwal}>
+                            {schedule.deskripsi_jadwal} ({schedule.kode_jadwal})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+                {form.formState.errors.kode_jadwal && (
+                  <p className="col-span-4 text-right text-red-500 text-sm">
+                    {form.formState.errors.kode_jadwal.message}
+                  </p>
+                )}
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="jenis_spm" className="text-right">
+                  Jenis SPM
+                </Label>
+                <Controller
+                  name="jenis_spm"
+                  control={form.control}
+                  render={({ field }) => (
+                    <Select onValueChange={field.onChange} value={field.value} disabled={isSubmitting}>
+                      <SelectTrigger className="col-span-3">
+                        <SelectValue placeholder="Pilih Jenis SPM" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Belanja Pegawai">Belanja Pegawai</SelectItem>
+                        <SelectItem value="Belanja Barang dan Jasa">Belanja Barang dan Jasa</SelectItem>
+                        <SelectItem value="Belanja Modal">Belanja Modal</SelectItem>
+                        <SelectItem value="Lainnya">Lainnya</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+                {form.formState.errors.jenis_spm && (
+                  <p className="col-span-4 text-right text-red-500 text-sm">
+                    {form.formState.errors.jenis_spm.message}
+                  </p>
+                )}
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="jenis_tagihan" className="text-right">
+                  Jenis Tagihan
+                </Label>
+                <Controller
+                  name="jenis_tagihan"
+                  control={form.control}
+                  render={({ field }) => (
+                    <Select onValueChange={field.onChange} value={field.value} disabled={isSubmitting}>
+                      <SelectTrigger className="col-span-3">
+                        <SelectValue placeholder="Pilih Jenis Tagihan" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Uang Persediaan (UP)">Uang Persediaan (UP)</SelectItem>
+                        <SelectItem value="Ganti Uang Persediaan (GU)">Ganti Uang Persediaan (GU)</SelectItem>
+                        <SelectItem value="Langsung (LS)">Langsung (LS)</SelectItem>
+                        <SelectItem value="Tambah Uang Persediaan (TU)">Tambah Uang Persediaan (TU)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+                {form.formState.errors.jenis_tagihan && (
+                  <p className="col-span-4 text-right text-red-500 text-sm">
+                    {form.formState.errors.jenis_tagihan.message}
+                  </p>
+                )}
+              </div>
+              {/* New: Sumber Dana Dropdown */}
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="sumber_dana" className="text-right">
+                  Sumber Dana
+                </Label>
+                <Controller
+                  name="sumber_dana"
+                  control={form.control}
+                  render={({ field }) => (
+                    <Select onValueChange={field.onChange} value={field.value} disabled={isSubmitting}>
+                      <SelectTrigger className="col-span-3">
+                        <SelectValue placeholder="Pilih Sumber Dana" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Pendapatan Asli Daerah">Pendapatan Asli Daerah</SelectItem>
+                        <SelectItem value="Dana Bagi Hasil">Dana Bagi Hasil</SelectItem>
+                        <SelectItem value="DAU - BG">DAU - BG</SelectItem>
+                        <SelectItem value="DAU - SG">DAU - SG</SelectItem>
+                        <SelectItem value="DAK - Fisik">DAK - Fisik</SelectItem>
+                        <SelectItem value="DAK - Non Fisik">DAK - Non Fisik</SelectItem>
+                        <SelectItem value="Dana Desa">Dana Desa</SelectItem>
+                        <SelectItem value="Insentif Fiskal">Insentif Fiskal</SelectItem>
+                        <SelectItem value="Pendapatan Transfer Antar Daerah">Pendapatan Transfer Antar Daerah</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+                {form.formState.errors.sumber_dana && (
+                  <p className="col-span-4 text-right text-red-500 text-sm">
+                    {form.formState.errors.sumber_dana.message}
+                  </p>
+                )}
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="uraian" className="text-right">
+                  Uraian
+                </Label>
+                <Textarea
+                  id="uraian"
+                  {...form.register('uraian')}
+                  className="col-span-3"
+                  rows={3}
+                  disabled={isSubmitting}
+                />
+                {form.formState.errors.uraian && (
+                  <p className="col-span-4 text-right text-red-500 text-sm">
+                    {form.formState.errors.uraian.message}
+                  </p>
+                )}
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="jumlah_kotor" className="text-right">
+                  Jumlah Kotor
+                </Label>
+                <Input
+                  id="jumlah_kotor"
+                  type="number"
+                  {...form.register('jumlah_kotor')}
+                  className="col-span-3"
+                  disabled={isSubmitting}
+                />
+                {form.formState.errors.jumlah_kotor && (
+                  <p className="col-span-4 text-right text-red-500 text-sm">
+                    {form.formState.errors.jumlah_kotor.message}
+                  </p>
+                )}
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="status_tagihan" className="text-right">
+                  Status Tagihan
+                </Label>
+                <Controller
+                  name="status_tagihan"
+                  control={form.control}
+                  render={({ field }) => (
+                    <Select onValueChange={field.onChange} value={field.value} disabled={isSubmitting}>
+                      <SelectTrigger className="col-span-3">
+                        <SelectValue placeholder="Pilih Status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Menunggu Registrasi">Menunggu Registrasi</SelectItem>
+                        <SelectItem value="Menunggu Verifikasi">Menunggu Verifikasi</SelectItem>
+                        <SelectItem value="Diteruskan">Diteruskan</SelectItem>
+                        <SelectItem value="Dikembalikan">Dikembalikan</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+                {form.formState.errors.status_tagihan && (
+                  <p className="col-span-4 text-right text-red-500 text-sm">
+                    {form.formState.errors.status_tagihan.message}
+                  </p>
+                )}
+              </div>
+
+              <DialogFooter>
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? 'Menyimpan Perubahan...' : 'Simpan Perubahan'}
+                </Button>
+              </DialogFooter>
+            </form>
+          </TabsContent>
+
+          <TabsContent value="transfer">
+            {showTransferTab ? (
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label>Verifikator Saat Ini</Label>
+                  <Input
+                    value={editingTagihan.nama_verifikator || '-'}
+                    disabled
+                    className="bg-gray-100"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="new-verifier">Pindahkan ke Verifikator Baru</Label>
+                  <Combobox
+                    options={verifierOptions}
+                    value={selectedVerifier}
+                    onValueChange={setSelectedVerifier}
+                    placeholder="Pilih Staf Verifikator"
+                    className="w-full"
+                  />
+                </div>
+
+                <Button
+                  onClick={(e) => { e.preventDefault(); handleTransferVerifikator(); }}
+                  disabled={!selectedVerifier || selectedVerifier === editingTagihan.nama_verifikator}
+                  className="w-full"
+                  variant="secondary"
+                  type="button"
+                >
+                  Transfer Tagihan
+                </Button>
+              </div>
+            ) : (
+              <div className="py-8 text-center text-muted-foreground">
+                Fitur transfer hanya tersedia untuk tagihan yang sedang menunggu verifikasi.
+              </div>
             )}
-          </div>
-          {/* Pratinjau Nomor SPM Otomatis */}
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="nomor_spm_otomatis" className="text-right">
-              Nomor SPM (Otomatis)
-            </Label>
-            <Input
-              id="nomor_spm_otomatis"
-              value={generatedNomorSpmPreview || 'Membuat Nomor SPM...'}
-              readOnly
-              className="col-span-3 font-mono text-sm"
-              disabled={true} // Always disabled as it's a preview
-            />
-          </div>
-          {/* Input Nomor Urut Tagihan */}
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="nomor_urut_tagihan" className="text-right">
-              Nomor Urut Tagihan
-            </Label>
-            <Input
-              id="nomor_urut_tagihan"
-              type="number"
-              {...form.register('nomor_urut_tagihan', { valueAsNumber: true })}
-              className="col-span-3"
-              disabled={isSubmitting}
-            />
-            {form.formState.errors.nomor_urut_tagihan && (
-              <p className="col-span-4 text-right text-red-500 text-sm">
-                {form.formState.errors.nomor_urut_tagihan.message}
-              </p>
-            )}
-          </div>
-          {/* Jadwal Penganggaran */}
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="kode_jadwal" className="text-right">
-              Jadwal Penganggaran
-            </Label>
-            <Controller
-              name="kode_jadwal"
-              control={form.control}
-              render={({ field }) => (
-                <Select onValueChange={field.onChange} value={field.value} disabled={isSubmitting}>
-                  <SelectTrigger className="col-span-3">
-                    <SelectValue placeholder="Pilih Jadwal" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {scheduleOptions.map((schedule) => (
-                      <SelectItem key={schedule.id} value={schedule.kode_jadwal}>
-                        {schedule.deskripsi_jadwal} ({schedule.kode_jadwal})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-            />
-            {form.formState.errors.kode_jadwal && (
-              <p className="col-span-4 text-right text-red-500 text-sm">
-                {form.formState.errors.kode_jadwal.message}
-              </p>
-            )}
-          </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="jenis_spm" className="text-right">
-              Jenis SPM
-            </Label>
-            <Controller
-              name="jenis_spm"
-              control={form.control}
-              render={({ field }) => (
-                <Select onValueChange={field.onChange} value={field.value} disabled={isSubmitting}>
-                  <SelectTrigger className="col-span-3">
-                    <SelectValue placeholder="Pilih Jenis SPM" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Belanja Pegawai">Belanja Pegawai</SelectItem>
-                    <SelectItem value="Belanja Barang dan Jasa">Belanja Barang dan Jasa</SelectItem>
-                    <SelectItem value="Belanja Modal">Belanja Modal</SelectItem>
-                    <SelectItem value="Lainnya">Lainnya</SelectItem>
-                  </SelectContent>
-                </Select>
-              )}
-            />
-            {form.formState.errors.jenis_spm && (
-              <p className="col-span-4 text-right text-red-500 text-sm">
-                {form.formState.errors.jenis_spm.message}
-              </p>
-            )}
-          </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="jenis_tagihan" className="text-right">
-              Jenis Tagihan
-            </Label>
-            <Controller
-              name="jenis_tagihan"
-              control={form.control}
-              render={({ field }) => (
-                <Select onValueChange={field.onChange} value={field.value} disabled={isSubmitting}>
-                  <SelectTrigger className="col-span-3">
-                    <SelectValue placeholder="Pilih Jenis Tagihan" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Uang Persediaan (UP)">Uang Persediaan (UP)</SelectItem>
-                    <SelectItem value="Ganti Uang Persediaan (GU)">Ganti Uang Persediaan (GU)</SelectItem>
-                    <SelectItem value="Langsung (LS)">Langsung (LS)</SelectItem>
-                    <SelectItem value="Tambah Uang Persediaan (TU)">Tambah Uang Persediaan (TU)</SelectItem>
-                  </SelectContent>
-                </Select>
-              )}
-            />
-            {form.formState.errors.jenis_tagihan && (
-              <p className="col-span-4 text-right text-red-500 text-sm">
-                {form.formState.errors.jenis_tagihan.message}
-              </p>
-            )}
-          </div>
-          {/* New: Sumber Dana Dropdown */}
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="sumber_dana" className="text-right">
-              Sumber Dana
-            </Label>
-            <Controller
-              name="sumber_dana"
-              control={form.control}
-              render={({ field }) => (
-                <Select onValueChange={field.onChange} value={field.value} disabled={isSubmitting}>
-                  <SelectTrigger className="col-span-3">
-                    <SelectValue placeholder="Pilih Sumber Dana" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Pendapatan Asli Daerah">Pendapatan Asli Daerah</SelectItem>
-                    <SelectItem value="Dana Bagi Hasil">Dana Bagi Hasil</SelectItem>
-                    <SelectItem value="DAU - BG">DAU - BG</SelectItem>
-                    <SelectItem value="DAU - SG">DAU - SG</SelectItem>
-                    <SelectItem value="DAK - Fisik">DAK - Fisik</SelectItem>
-                    <SelectItem value="DAK - Non Fisik">DAK - Non Fisik</SelectItem>
-                    <SelectItem value="Dana Desa">Dana Desa</SelectItem>
-                    <SelectItem value="Insentif Fiskal">Insentif Fiskal</SelectItem>
-                    <SelectItem value="Pendapatan Transfer Antar Daerah">Pendapatan Transfer Antar Daerah</SelectItem>
-                  </SelectContent>
-                </Select>
-              )}
-            />
-            {form.formState.errors.sumber_dana && (
-              <p className="col-span-4 text-right text-red-500 text-sm">
-                {form.formState.errors.sumber_dana.message}
-              </p>
-            )}
-          </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="uraian" className="text-right">
-              Uraian
-            </Label>
-            <Textarea
-              id="uraian"
-              {...form.register('uraian')}
-              className="col-span-3"
-              rows={3}
-              disabled={isSubmitting}
-            />
-            {form.formState.errors.uraian && (
-              <p className="col-span-4 text-right text-red-500 text-sm">
-                {form.formState.errors.uraian.message}
-              </p>
-            )}
-          </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="jumlah_kotor" className="text-right">
-              Jumlah Kotor
-            </Label>
-            <Input
-              id="jumlah_kotor"
-              type="number"
-              {...form.register('jumlah_kotor')}
-              className="col-span-3"
-              disabled={isSubmitting}
-            />
-            {form.formState.errors.jumlah_kotor && (
-              <p className="col-span-4 text-right text-red-500 text-sm">
-                {form.formState.errors.jumlah_kotor.message}
-              </p>
-            )}
-          </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="status_tagihan" className="text-right">
-              Status Tagihan
-            </Label>
-            <Controller
-              name="status_tagihan"
-              control={form.control}
-              render={({ field }) => (
-                <Select onValueChange={field.onChange} value={field.value} disabled={isSubmitting}>
-                  <SelectTrigger className="col-span-3">
-                    <SelectValue placeholder="Pilih Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Menunggu Registrasi">Menunggu Registrasi</SelectItem>
-                    <SelectItem value="Menunggu Verifikasi">Menunggu Verifikasi</SelectItem>
-                    <SelectItem value="Diteruskan">Diteruskan</SelectItem>
-                    <SelectItem value="Dikembalikan">Dikembalikan</SelectItem>
-                  </SelectContent>
-                </Select>
-              )}
-            />
-            {form.formState.errors.status_tagihan && (
-              <p className="col-span-4 text-right text-red-500 text-sm">
-                {form.formState.errors.status_tagihan.message}
-              </p>
-            )}
-          </div>
-          <DialogFooter>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? 'Menyimpan Perubahan...' : 'Simpan Perubahan'}
-            </Button>
-          </DialogFooter>
-        </form>
+          </TabsContent>
+        </Tabs>
       </DialogContent>
     </Dialog>
   );
