@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useSession } from '@/contexts/SessionContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,6 +13,7 @@ import {
   PieChartIcon,
   ListOrderedIcon,
   HourglassIcon,
+  Sparkles,
 } from 'lucide-react';
 import {
   BarChart,
@@ -84,6 +86,7 @@ const STATUS_COLORS: { [key: string]: string } = {
 };
 
 const DashboardRegistrasi = () => {
+  const navigate = useNavigate();
   const { user, profile, loading: sessionLoading } = useSession();
   const [kpiData, setKpiData] = useState<KPIData | null>(null);
   const [barChartData, setBarChartData] = useState<BarChartDataItem[]>([]);
@@ -315,85 +318,106 @@ const DashboardRegistrasi = () => {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-gray-800 dark:text-white mb-2">
-        Selamat Datang, {profile?.nama_lengkap || 'Staf'}!
-      </h1>
-      <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
-        Saat ini Anda masuk sebagai Staf Registrasi. Siap memproses tagihan hari ini?
-      </p>
+      <div className="mb-8">
+        <h1 className="text-4xl font-bold bg-gradient-to-r from-emerald-600 to-emerald-400 bg-clip-text text-transparent mb-2">
+          Selamat Datang, {profile?.nama_lengkap || 'Staf'}!
+        </h1>
+        <p className="text-slate-600 dark:text-slate-400 flex items-center gap-2">
+          <Sparkles className="h-4 w-4 text-emerald-500" />
+          Saat ini Anda masuk sebagai Staf Registrasi. Siap memproses tagihan hari ini?
+        </p>
+      </div>
 
       {/* KPI Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="shadow-sm rounded-lg">
+        <Card
+          className="shadow-md hover:shadow-lg transition-all duration-300 border-l-4 border-l-yellow-500 bg-gradient-to-br from-white to-yellow-50/30 dark:from-slate-900 dark:to-yellow-950/20 cursor-pointer"
+          onClick={() => navigate('/portal-registrasi')}
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Antrian Saat Ini</CardTitle>
-            <HourglassIcon className="h-4 w-4 text-yellow-500 dark:text-yellow-400" />
+            <CardTitle className="text-sm font-semibold text-slate-700 dark:text-slate-300">Antrian Saat Ini</CardTitle>
+            <div className="p-2 bg-yellow-100 dark:bg-yellow-950/50 rounded-lg">
+              <HourglassIcon className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{kpiData?.antrianSaatIni}</div>
-            <p className="text-xs text-muted-foreground">Tagihan menunggu registrasi</p>
+            <div className="text-3xl font-bold text-yellow-700 dark:text-yellow-400">{kpiData?.antrianSaatIni}</div>
+            <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">Tagihan menunggu registrasi</p>
           </CardContent>
         </Card>
 
-        <Card className="shadow-sm rounded-lg">
+        <Card
+          className="shadow-md hover:shadow-lg transition-all duration-300 border-l-4 border-l-emerald-500 bg-gradient-to-br from-white to-emerald-50/30 dark:from-slate-900 dark:to-emerald-950/20 cursor-pointer"
+          onClick={() => navigate('/portal-registrasi')}
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Diregistrasi Hari Ini</CardTitle>
-            <CheckCircleIcon className="h-4 w-4 text-green-500 dark:text-green-400" />
+            <CardTitle className="text-sm font-semibold text-slate-700 dark:text-slate-300">Diregistrasi Hari Ini</CardTitle>
+            <div className="p-2 bg-emerald-100 dark:bg-emerald-950/50 rounded-lg">
+              <CheckCircleIcon className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{kpiData?.diregistrasiHariIni}</div>
-            <p className="text-xs text-muted-foreground">Tagihan berhasil diregistrasi</p>
+            <div className="text-3xl font-bold text-emerald-700 dark:text-emerald-400">{kpiData?.diregistrasiHariIni}</div>
+            <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">Tagihan berhasil diregistrasi</p>
           </CardContent>
         </Card>
 
-        <Card className="shadow-sm rounded-lg">
+        <Card className="shadow-md hover:shadow-lg transition-all duration-300 border-l-4 border-l-red-500 bg-gradient-to-br from-white to-red-50/30 dark:from-slate-900 dark:to-red-950/20">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Dikembalikan Hari Ini</CardTitle>
-            <ArrowLeftCircleIcon className="h-4 w-4 text-red-500 dark:text-red-400" />
+            <CardTitle className="text-sm font-semibold text-slate-700 dark:text-slate-300">Dikembalikan Hari Ini</CardTitle>
+            <div className="p-2 bg-red-100 dark:bg-red-950/50 rounded-lg">
+              <ArrowLeftCircleIcon className="h-5 w-5 text-red-600 dark:text-red-400" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{kpiData?.dikembalikanHariIni}</div>
-            <p className="text-xs text-muted-foreground">Tagihan dikembalikan verifikator</p>
+            <div className="text-3xl font-bold text-red-700 dark:text-red-400">{kpiData?.dikembalikanHariIni}</div>
+            <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">Tagihan dikembalikan verifikator</p>
           </CardContent>
         </Card>
 
-        <Card className="shadow-sm rounded-lg">
+        <Card className="shadow-md hover:shadow-lg transition-all duration-300 border-l-4 border-l-blue-500 bg-gradient-to-br from-white to-blue-50/30 dark:from-slate-900 dark:to-blue-950/20">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Waktu Proses Rata-rata</CardTitle>
-            <TimerIcon className="h-4 w-4 text-blue-500 dark:text-blue-400" />
+            <CardTitle className="text-sm font-semibold text-slate-700 dark:text-slate-300">Waktu Proses Rata-rata</CardTitle>
+            <div className="p-2 bg-blue-100 dark:bg-blue-950/50 rounded-lg">
+              <TimerIcon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{kpiData?.waktuProsesRataRata}</div>
-            <p className="text-xs text-muted-foreground">Waktu dari input hingga registrasi</p>
+            <div className="text-3xl font-bold text-blue-700 dark:text-blue-400">{kpiData?.waktuProsesRataRata}</div>
+            <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">Waktu dari input hingga registrasi</p>
           </CardContent>
         </Card>
       </div>
 
       {/* Charts */}
       <div className="grid gap-6 lg:grid-cols-2">
-        <Card className="shadow-sm rounded-lg">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-              <BarChart3Icon className="h-5 w-5 text-gray-600 dark:text-gray-300" />
+        <Card className="shadow-md hover:shadow-lg transition-all duration-300 bg-gradient-to-br from-white to-emerald-50/20 dark:from-slate-900 dark:to-emerald-950/10 border-emerald-200 dark:border-emerald-900/30">
+          <CardHeader className="border-b border-emerald-100 dark:border-emerald-900/30 pb-4">
+            <CardTitle className="flex items-center gap-2 text-lg font-bold text-slate-900 dark:text-white">
+              <div className="p-2 bg-emerald-100 dark:bg-emerald-950/50 rounded-lg">
+                <BarChart3Icon className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+              </div>
               Tren Tagihan Masuk (7 Hari Terakhir)
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-6">
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={barChartData}>
                 <XAxis dataKey="date" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
                 <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
                 <Tooltip cursor={{ fill: 'transparent' }} />
-                <Bar dataKey="count" fill="#8884d8" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="count" fill="#10b981" radius={[8, 8, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
 
-        <Card className="shadow-sm rounded-lg">
-          <CardHeader className="flex flex-row items-center justify-between"> {/* Added flex for alignment */}
-            <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-              <PieChartIcon className="h-5 w-5 text-gray-600 dark:text-gray-300" />
+        <Card className="shadow-md hover:shadow-lg transition-all duration-300 bg-gradient-to-br from-white to-slate-50/30 dark:from-slate-900 dark:to-slate-800/30 border-slate-200 dark:border-slate-700">
+          <CardHeader className="flex flex-row items-center justify-between border-b border-slate-200 dark:border-slate-700 pb-4">
+            <CardTitle className="flex items-center gap-2 text-lg font-bold text-slate-900 dark:text-white">
+              <div className="p-2 bg-slate-100 dark:bg-slate-800 rounded-lg">
+                <PieChartIcon className="h-5 w-5 text-slate-600 dark:text-slate-400" />
+              </div>
               Status Tagihan SKPD
             </CardTitle>
             <div className="flex items-center space-x-2"> {/* Container for multiple selects */}
@@ -423,7 +447,7 @@ const DashboardRegistrasi = () => {
               </Select>
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-6">
             <ResponsiveContainer width="100%" height={300}>
               <PieChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}> {/* Added margin to PieChart */}
                 <Pie
@@ -451,14 +475,16 @@ const DashboardRegistrasi = () => {
       </div>
 
       {/* Quick Access Table */}
-      <Card className="shadow-sm rounded-lg">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-            <ListOrderedIcon className="h-5 w-5 text-gray-600 dark:text-gray-300" />
+      <Card className="shadow-md hover:shadow-lg transition-all duration-300 bg-gradient-to-br from-white to-slate-50/30 dark:from-slate-900 dark:to-slate-800/30">
+        <CardHeader className="border-b border-slate-200 dark:border-slate-700 pb-4">
+          <CardTitle className="flex items-center gap-2 text-lg font-bold text-slate-900 dark:text-white">
+            <div className="p-2 bg-emerald-100 dark:bg-emerald-950/50 rounded-lg">
+              <ListOrderedIcon className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+            </div>
             5 Tagihan Terlama di Antrian
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-6">
           {oldestTagihan.length === 0 ? (
             <p className="text-center text-gray-600 dark:text-gray-400">Tidak ada tagihan di antrian.</p>
           ) : (
@@ -471,7 +497,7 @@ const DashboardRegistrasi = () => {
                 </TableHeader>
                 <TableBody>
                   {oldestTagihan.map((tagihan) => (
-                    <TableRow key={tagihan.id_tagihan}>
+                    <TableRow key={tagihan.id_tagihan} className="hover:bg-emerald-50 dark:hover:bg-emerald-950/20 transition-colors">
                       <TableCell className="font-medium">{tagihan.nomor_spm}</TableCell><TableCell>{tagihan.nama_skpd}</TableCell><TableCell className="min-w-[280px]">{tagihan.uraian}</TableCell><TableCell>{format(parseISO(tagihan.waktu_input), 'dd MMMM yyyy HH:mm', { locale: id })}</TableCell>
                     </TableRow>
                   ))}

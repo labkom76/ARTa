@@ -4,7 +4,7 @@ import { useSession } from '@/contexts/SessionContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { ReceiptTextIcon, HourglassIcon, FileCheckIcon, SendIcon, RotateCcwIcon } from 'lucide-react';
+import { ReceiptTextIcon, HourglassIcon, FileCheckIcon, SendIcon, RotateCcwIcon, Sparkles } from 'lucide-react';
 import { parseISO, formatDistanceToNow } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
 
@@ -155,87 +155,100 @@ const DashboardSKPD = () => {
     }
 
     return (
-        <div className="p-6 bg-white dark:bg-slate-900 rounded-lg shadow-md border border-gray-200 dark:border-slate-800 transition-colors duration-200">
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-slate-100 mb-2">
-                Selamat Datang, {profile?.nama_lengkap || user?.email}!
-            </h1>
-            <p className="text-sm text-gray-600 dark:text-slate-400 mb-6">
-                Saat ini Anda masuk sebagai {profile?.peran || 'Pengguna'} pada {profile?.asal_skpd || 'Tidak Diketahui'}.
-            </p>
+        <div className="space-y-6">
+            <div className="mb-8">
+                <h1 className="text-4xl font-bold bg-gradient-to-r from-emerald-600 to-emerald-400 bg-clip-text text-transparent mb-2">
+                    Selamat Datang, {profile?.nama_lengkap || user?.email}!
+                </h1>
+                <p className="text-slate-600 dark:text-slate-400 flex items-center gap-2">
+                    <Sparkles className="h-4 w-4 text-emerald-500" />
+                    Saat ini Anda masuk sebagai {profile?.peran || 'Pengguna'} pada {profile?.asal_skpd || 'Tidak Diketahui'}.
+                </p>
+            </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mb-6">
                 <Card
-                    className="shadow-md hover:shadow-lg transition-all duration-200 rounded-lg border-gray-200 dark:border-slate-800 hover:scale-105 cursor-pointer"
+                    className="shadow-md hover:shadow-lg transition-all duration-300 border-l-4 border-l-emerald-500 bg-gradient-to-br from-white to-emerald-50/30 dark:from-slate-900 dark:to-emerald-950/20 cursor-pointer"
                     onClick={() => navigate('/portal-skpd?status=Semua Status')}
                 >
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium text-gray-700 dark:text-slate-300">Total Tagihan</CardTitle>
-                        <ReceiptTextIcon className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                        <CardTitle className="text-sm font-semibold text-slate-700 dark:text-slate-300">Total Tagihan</CardTitle>
+                        <div className="p-2 bg-emerald-100 dark:bg-emerald-950/50 rounded-lg">
+                            <ReceiptTextIcon className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                        </div>
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold text-gray-900 dark:text-slate-100">{counts?.total}</div>
+                        <div className="text-3xl font-bold text-emerald-700 dark:text-emerald-400">{counts?.total}</div>
                     </CardContent>
                 </Card>
 
                 <Card
-                    className="shadow-md hover:shadow-lg transition-all duration-200 rounded-lg border-gray-200 dark:border-slate-800 hover:scale-105 cursor-pointer"
+                    className="shadow-md hover:shadow-lg transition-all duration-300 border-l-4 border-l-yellow-500 bg-gradient-to-br from-white to-yellow-50/30 dark:from-slate-900 dark:to-yellow-950/20 cursor-pointer"
                     onClick={() => navigate('/portal-skpd?status=Menunggu Registrasi')}
                 >
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium text-gray-700 dark:text-slate-300">Menunggu Registrasi</CardTitle>
-                        <HourglassIcon className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                        <CardTitle className="text-sm font-semibold text-slate-700 dark:text-slate-300">Menunggu Registrasi</CardTitle>
+                        <div className="p-2 bg-yellow-100 dark:bg-yellow-950/50 rounded-lg">
+                            <HourglassIcon className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
+                        </div>
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold text-gray-900 dark:text-slate-100">{counts?.menungguRegistrasi}</div>
+                        <div className="text-3xl font-bold text-yellow-700 dark:text-yellow-400">{counts?.menungguRegistrasi}</div>
                     </CardContent>
                 </Card>
 
                 <Card
-                    className="shadow-md hover:shadow-lg transition-all duration-200 rounded-lg border-gray-200 dark:border-slate-800 hover:scale-105 cursor-pointer"
+                    className="shadow-md hover:shadow-lg transition-all duration-300 border-l-4 border-l-blue-500 bg-gradient-to-br from-white to-blue-50/30 dark:from-slate-900 dark:to-blue-950/20 cursor-pointer"
                     onClick={() => navigate('/portal-skpd?status=Menunggu Verifikasi')}
                 >
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium text-gray-700 dark:text-slate-300">Menunggu Verifikasi</CardTitle>
-                        <FileCheckIcon className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+                        <CardTitle className="text-sm font-semibold text-slate-700 dark:text-slate-300">Menunggu Verifikasi</CardTitle>
+                        <div className="p-2 bg-blue-100 dark:bg-blue-950/50 rounded-lg">
+                            <FileCheckIcon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                        </div>
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold text-gray-900 dark:text-slate-100">{counts?.menungguVerifikasi}</div>
+                        <div className="text-3xl font-bold text-blue-700 dark:text-blue-400">{counts?.menungguVerifikasi}</div>
                     </CardContent>
                 </Card>
 
                 <Card
-                    className="shadow-md hover:shadow-lg transition-all duration-200 rounded-lg border-gray-200 dark:border-slate-800 hover:scale-105 cursor-pointer"
+                    className="shadow-md hover:shadow-lg transition-all duration-300 border-l-4 border-l-emerald-500 bg-gradient-to-br from-white to-emerald-50/30 dark:from-slate-900 dark:to-emerald-950/20 cursor-pointer"
                     onClick={() => navigate('/portal-skpd?status=Diteruskan')}
                 >
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium text-gray-700 dark:text-slate-300">Diteruskan</CardTitle>
-                        <SendIcon className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                        <CardTitle className="text-sm font-semibold text-slate-700 dark:text-slate-300">Diteruskan</CardTitle>
+                        <div className="p-2 bg-emerald-100 dark:bg-emerald-950/50 rounded-lg">
+                            <SendIcon className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                        </div>
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold text-gray-900 dark:text-slate-100">{counts?.diteruskan}</div>
+                        <div className="text-3xl font-bold text-emerald-700 dark:text-emerald-400">{counts?.diteruskan}</div>
                     </CardContent>
                 </Card>
 
                 <Card
-                    className="shadow-md hover:shadow-lg transition-all duration-200 rounded-lg border-gray-200 dark:border-slate-800 hover:scale-105 cursor-pointer"
+                    className="shadow-md hover:shadow-lg transition-all duration-300 border-l-4 border-l-red-500 bg-gradient-to-br from-white to-red-50/30 dark:from-slate-900 dark:to-red-950/20 cursor-pointer"
                     onClick={() => navigate('/portal-skpd?status=Dikembalikan')}
                 >
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium text-gray-700 dark:text-slate-300">Dikembalikan</CardTitle>
-                        <RotateCcwIcon className="h-4 w-4 text-rose-600 dark:text-rose-400" />
+                        <CardTitle className="text-sm font-semibold text-slate-700 dark:text-slate-300">Dikembalikan</CardTitle>
+                        <div className="p-2 bg-red-100 dark:bg-red-950/50 rounded-lg">
+                            <RotateCcwIcon className="h-5 w-5 text-red-600 dark:text-red-400" />
+                        </div>
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold text-gray-900 dark:text-slate-100">{counts?.dikembalikan}</div>
+                        <div className="text-3xl font-bold text-red-700 dark:text-red-400">{counts?.dikembalikan}</div>
                     </CardContent>
                 </Card>
             </div>
 
             {/* Timeline Activities */}
-            <Card className="shadow-md hover:shadow-lg transition-all duration-200 rounded-lg border-gray-200 dark:border-slate-800">
-                <CardHeader>
-                    <CardTitle className="text-xl font-semibold text-gray-900 dark:text-slate-100">Linimasa Aktivitas Terbaru</CardTitle>
+            <Card className="shadow-md hover:shadow-lg transition-all duration-300 bg-gradient-to-br from-white to-slate-50/30 dark:from-slate-900 dark:to-slate-800/30">
+                <CardHeader className="border-b border-slate-200 dark:border-slate-700 pb-4">
+                    <CardTitle className="text-lg font-bold text-slate-900 dark:text-white">Linimasa Aktivitas Terbaru</CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="pt-6">
                     {timelineActivities.length === 0 ? (
                         <p className="text-center text-gray-600 dark:text-slate-400 py-4">Tidak ada aktivitas tagihan terbaru.</p>
                     ) : (
