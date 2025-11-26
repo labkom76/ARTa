@@ -23,10 +23,11 @@ import TagihanDetailDialog from '@/components/TagihanDetailDialog'; // Re-import
 // Re-define Tagihan interface or import it from a shared location
 // For now, I'll define a minimal one here, but ideally it would be imported.
 // Given the context, I'll import from PortalSKPD for consistency.
-import { Tagihan } from '@/pages/PortalSKPD'; 
+import { Tagihan } from '@/pages/PortalSKPD';
 
 interface HeaderProps {
   toggleSidebar: () => void;
+  isCollapsed?: boolean;
 }
 
 interface Notification {
@@ -38,7 +39,7 @@ interface Notification {
   tagihan_id?: string;
 }
 
-const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
+const Header: React.FC<HeaderProps> = ({ toggleSidebar, isCollapsed = false }) => {
   const { profile, user } = useSession();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -194,10 +195,29 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
   };
 
   return (
-    <header className="sticky top-0 z-40 flex items-center justify-between h-16 px-4 bg-white border-b border-gray-200 shadow-sm dark:bg-gray-800 dark:border-gray-700">
+    <header className="sticky top-0 z-40 flex items-center justify-between h-16 px-4 bg-gradient-to-r from-white via-emerald-50/30 to-white dark:from-slate-950 dark:via-emerald-950/20 dark:to-slate-950 border-b border-gray-200 dark:border-slate-800 shadow-md hover:shadow-lg transition-all duration-300">
       <div className="flex items-center">
-        <Button variant="ghost" size="icon" onClick={toggleSidebar} className="mr-2">
-          <MenuIcon className="h-5 w-5 text-gray-600 dark:text-gray-300" />
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={toggleSidebar}
+          className="mr-2 hover:bg-emerald-50 dark:hover:bg-slate-900 hover:text-emerald-600 dark:hover:text-emerald-400 hover:scale-110 transition-all duration-200 hover:shadow-md relative"
+        >
+          {/* Custom Animated Hamburger Menu */}
+          <div className="w-5 h-5 flex flex-col justify-center items-center gap-1">
+            <div className={cn(
+              "w-5 h-0.5 bg-gray-700 dark:bg-slate-400 rounded-full transition-all duration-300 origin-center",
+              isCollapsed && "rotate-45 translate-y-1.5"
+            )} />
+            <div className={cn(
+              "w-5 h-0.5 bg-gray-700 dark:bg-slate-400 rounded-full transition-all duration-300",
+              isCollapsed && "opacity-0 scale-0"
+            )} />
+            <div className={cn(
+              "w-5 h-0.5 bg-gray-700 dark:bg-slate-400 rounded-full transition-all duration-300 origin-center",
+              isCollapsed && "-rotate-45 -translate-y-1.5"
+            )} />
+          </div>
         </Button>
       </div>
       <div className="flex items-center space-x-4">
@@ -208,10 +228,10 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
           }
         }}>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="relative text-gray-600 dark:text-gray-300">
+            <Button variant="ghost" size="icon" className="relative text-gray-700 dark:text-slate-400 hover:bg-emerald-50 dark:hover:bg-slate-900 hover:text-emerald-600 dark:hover:text-emerald-400 hover:scale-110 transition-all duration-200 hover:shadow-md">
               <BellIcon className="h-5 w-5" />
               {unreadCount > 0 && (
-                <span className="absolute top-1 right-1 block h-2 w-2 rounded-full bg-red-500 ring-2 ring-white dark:ring-gray-800" />
+                <span className="absolute top-1 right-1 block h-2 w-2 rounded-full bg-emerald-500 dark:bg-emerald-400 ring-2 ring-white dark:ring-slate-950 animate-pulse" />
               )}
             </Button>
           </DropdownMenuTrigger>
@@ -228,13 +248,13 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
                 notifications.map((notification) => (
                   <DropdownMenuItem
                     key={notification.id}
-                    className={`flex flex-col items-start space-y-1 py-2 px-3 rounded-md cursor-pointer ${!notification.is_read ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}
+                    className={`flex flex-col items-start space-y-1 py-2 px-3 rounded-md cursor-pointer transition-colors ${!notification.is_read ? 'bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/30' : 'hover:bg-gray-100 dark:hover:bg-slate-900'}`}
                     onClick={() => handleNotificationClick(notification)}
                   >
                     {/* Teks notifikasi dengan word-break */}
                     <p className={cn(
                       `text-sm break-words whitespace-normal`, // Added whitespace-normal and break-words
-                      !notification.is_read ? 'font-medium text-blue-700 dark:text-blue-300' : 'text-gray-800 dark:text-gray-200'
+                      !notification.is_read ? 'font-medium text-emerald-700 dark:text-emerald-300' : 'text-gray-800 dark:text-gray-200'
                     )}>
                       {notification.message}
                     </p>
@@ -248,7 +268,7 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
             {notifications.length > 0 && (
               <DropdownMenuSeparator />
             )}
-            <DropdownMenuItem className="text-center text-sm text-blue-600 hover:text-blue-700 cursor-pointer" disabled>
+            <DropdownMenuItem className="text-center text-sm text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 cursor-pointer" disabled>
               Tandai semua sudah dibaca
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -259,14 +279,14 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
         {user && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+              <Button variant="ghost" className="relative h-8 w-8 rounded-full hover:scale-110 hover:shadow-lg transition-all duration-200">
                 <Avatar>
                   <AvatarImage src={profile?.avatar_url || undefined} alt={profile?.nama_lengkap || user.email || "User"} />
-                  <AvatarFallback className="bg-blue-500 text-white">
+                  <AvatarFallback className="bg-gradient-to-br from-emerald-600 to-emerald-500 dark:from-emerald-500 dark:to-emerald-400 text-white font-semibold">
                     {getInitials(profile?.nama_lengkap || user.email)}
                   </AvatarFallback>
                 </Avatar>
-            </Button>
+              </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-56" align="end" forceMount>
               <DropdownMenuLabel className="font-normal">
@@ -304,7 +324,7 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
           </DropdownMenu>
         )}
         {!user && (
-          <Button variant="ghost" size="icon" onClick={handleLogout} className="text-gray-600 hover:text-red-500 dark:text-gray-300 dark:hover:text-red-400">
+          <Button variant="ghost" size="icon" onClick={handleLogout} className="text-gray-700 dark:text-slate-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 transition-colors">
             <LogOutIcon className="h-5 w-5" />
           </Button>
         )}

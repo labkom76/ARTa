@@ -62,7 +62,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onLinkClick }) => {
   if (loading || loadingBranding) {
     return (
       <aside className={cn(
-        "fixed inset-y-0 left-0 z-50 flex flex-col h-full bg-white dark:bg-slate-950 border-r border-gray-200 dark:border-slate-800 transition-all duration-300",
+        "fixed inset-y-0 left-0 z-50 flex flex-col h-full bg-white dark:bg-slate-950 border-r border-gray-200 dark:border-slate-800 transition-all duration-500 ease-in-out",
         isCollapsed ? "w-16" : "w-64"
       )}>
         <div className="flex items-center justify-center h-16 border-b border-gray-200 dark:border-slate-800">
@@ -137,7 +137,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onLinkClick }) => {
 
   return (
     <aside className={cn(
-      "fixed inset-y-0 left-0 z-50 flex flex-col h-full bg-white dark:bg-slate-950 border-r border-gray-200 dark:border-slate-800 transition-all duration-300",
+      "fixed inset-y-0 left-0 z-50 flex flex-col h-full bg-white dark:bg-slate-950 border-r border-gray-200 dark:border-slate-800 transition-all duration-500 ease-in-out",
       isCollapsed ? "w-16" : "w-64"
     )}>
       <div className="flex items-center justify-start h-16 border-b border-gray-200 dark:border-slate-800 px-4">
