@@ -16,7 +16,7 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-    SelectValue,
+  SelectValue,
 } from '@/components/ui/select';
 import {
   Table,
@@ -184,7 +184,7 @@ const PortalSKPD = () => {
       uraian: '',
       jumlah_kotor: 0,
       jenis_spm: '',
-            jenis_tagihan: '',
+      jenis_tagihan: '',
       kode_jadwal: '', // Default value for new field
       nomor_urut_tagihan: 1, // Default value for new field
       sumber_dana: '', // Default value for new field
@@ -480,7 +480,7 @@ const PortalSKPD = () => {
         const hasRelevantFieldsChanged =
           (editingTagihan && values.nomor_urut_tagihan !== editingTagihan.nomor_urut) ||
           (editingTagihan && values.kode_jadwal !== editingTagihan.kode_jadwal);
-        
+
         if (hasRelevantFieldsChanged) {
           const isDuplicate = await isNomorSpmDuplicate(
             values.nomor_urut_tagihan,
@@ -719,22 +719,22 @@ const PortalSKPD = () => {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-gray-800 dark:text-white">Portal SKPD</h1>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-slate-100">Portal SKPD</h1>
         <div className="flex space-x-2">
-          <Button variant="outline" className="flex items-center gap-2" onClick={handleExportToXLSX} disabled={!isAccountVerified || tagihanList.length === 0}>
+          <Button variant="outline" className="flex items-center gap-2 hover:bg-emerald-50 hover:text-emerald-600 dark:hover:bg-slate-800 dark:hover:text-emerald-400 transition-colors" onClick={handleExportToXLSX} disabled={!isAccountVerified || tagihanList.length === 0}>
             <FileDownIcon className="h-4 w-4" /> Export ke XLSX
           </Button>
-          <Button onClick={() => { setEditingTagihan(null); setIsModalOpen(true); }} className="flex items-center gap-2" disabled={!isAccountVerified || !profile?.is_active}>
+          <Button onClick={() => { setEditingTagihan(null); setIsModalOpen(true); }} className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white dark:bg-emerald-600 dark:hover:bg-emerald-500 transition-all shadow-sm hover:shadow-md" disabled={!isAccountVerified || !profile?.is_active}>
             <PlusCircleIcon className="h-4 w-4" /> Input Tagihan Baru
           </Button>
         </div>
       </div>
 
       {/* Card for Table (now includes filters) */}
-      <Card className="shadow-sm rounded-lg">
+      <Card className="shadow-md rounded-lg border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 transition-colors duration-200">
         <CardHeader>
-          <CardTitle className="text-xl font-semibold">Daftar Tagihan</CardTitle>
-          <p className="text-sm text-muted-foreground">Kelola dan input tagihan baru Anda di sini.</p>
+          <CardTitle className="text-xl font-semibold text-gray-900 dark:text-slate-100">Daftar Tagihan</CardTitle>
+          <p className="text-sm text-gray-500 dark:text-slate-400">Kelola dan input tagihan baru Anda di sini.</p>
         </CardHeader>
         <CardContent>
           {/* Filter controls moved here */}
@@ -749,11 +749,11 @@ const PortalSKPD = () => {
                   setSearchQuery(e.target.value);
                   setCurrentPage(1);
                 }}
-                className="pl-9 w-full"
+                className="pl-9 w-full focus-visible:ring-emerald-500"
               />
             </div>
             <Select onValueChange={(value) => { setSelectedStatus(value); setCurrentPage(1); }} value={selectedStatus}>
-              <SelectTrigger className="w-full sm:w-[200px]">
+              <SelectTrigger className="w-full sm:w-[200px] focus:ring-emerald-500">
                 <SelectValue placeholder="Filter berdasarkan Status" />
               </SelectTrigger>
               <SelectContent>
@@ -774,7 +774,7 @@ const PortalSKPD = () => {
                   setCurrentPage(1);
                 }}
               >
-                <SelectTrigger className="w-[100px]">
+                <SelectTrigger className="w-[100px] focus:ring-emerald-500">
                   <SelectValue placeholder="10" />
                 </SelectTrigger>
                 <SelectContent>
@@ -796,79 +796,88 @@ const PortalSKPD = () => {
             <>
               <div className="overflow-x-auto">
                 <Table key={`${selectedStatus}-${currentPage}`}>
-                  <TableHeader>
-                    <TableRow><TableHead className="w-[50px]">No.</TableHead><TableHead className="w-[180px]"> {/* MODIFIED: Set fixed width for Nomor SPM */}
-                        <Button variant="ghost" onClick={() => handleSort('nomor_spm')} className="p-0 h-auto">
+                  <TableHeader className="bg-gray-50 dark:bg-slate-800">
+                    <TableRow>
+                      <TableHead className="w-[50px] text-gray-700 dark:text-slate-300">No.</TableHead>
+                      <TableHead className="w-[180px]"> {/* MODIFIED: Set fixed width for Nomor SPM */}
+                        <Button variant="ghost" onClick={() => handleSort('nomor_spm')} className={`p-0 h-auto hover:text-emerald-600 dark:hover:text-emerald-400 ${sortColumn === 'nomor_spm' ? 'text-emerald-600 dark:text-emerald-400 font-bold' : 'text-gray-700 dark:text-slate-300'}`}>
                           Nomor SPM
                           {sortColumn === 'nomor_spm' && (
                             sortDirection === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />
                           )}
                         </Button>
-                      </TableHead><TableHead>
-                        <Button variant="ghost" onClick={() => handleSort('jenis_spm')} className="p-0 h-auto">
+                      </TableHead>
+                      <TableHead>
+                        <Button variant="ghost" onClick={() => handleSort('jenis_spm')} className={`p-0 h-auto hover:text-emerald-600 dark:hover:text-emerald-400 ${sortColumn === 'jenis_spm' ? 'text-emerald-600 dark:text-emerald-400 font-bold' : 'text-gray-700 dark:text-slate-300'}`}>
                           Jenis SPM
                           {sortColumn === 'jenis_spm' && (
                             sortDirection === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />
                           )}
                         </Button>
-                      </TableHead><TableHead>
-                        <Button variant="ghost" onClick={() => handleSort('jenis_tagihan')} className="p-0 h-auto">
+                      </TableHead>
+                      <TableHead>
+                        <Button variant="ghost" onClick={() => handleSort('jenis_tagihan')} className={`p-0 h-auto hover:text-emerald-600 dark:hover:text-emerald-400 ${sortColumn === 'jenis_tagihan' ? 'text-emerald-600 dark:text-emerald-400 font-bold' : 'text-gray-700 dark:text-slate-300'}`}>
                           Jenis Tagihan
                           {sortColumn === 'jenis_tagihan' && (
                             sortDirection === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />
                           )}
                         </Button>
-                      </TableHead><TableHead>
-                        <Button variant="ghost" onClick={() => handleSort('sumber_dana')} className="p-0 h-auto">
+                      </TableHead>
+                      <TableHead>
+                        <Button variant="ghost" onClick={() => handleSort('sumber_dana')} className={`p-0 h-auto hover:text-emerald-600 dark:hover:text-emerald-400 ${sortColumn === 'sumber_dana' ? 'text-emerald-600 dark:text-emerald-400 font-bold' : 'text-gray-700 dark:text-slate-300'}`}>
                           Sumber Dana
                           {sortColumn === 'sumber_dana' && (
                             sortDirection === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />
                           )}
                         </Button>
-                      </TableHead><TableHead>
-                        <Button variant="ghost" onClick={() => handleSort('jumlah_kotor')} className="p-0 h-auto">
+                      </TableHead>
+                      <TableHead>
+                        <Button variant="ghost" onClick={() => handleSort('jumlah_kotor')} className={`p-0 h-auto hover:text-emerald-600 dark:hover:text-emerald-400 ${sortColumn === 'jumlah_kotor' ? 'text-emerald-600 dark:text-emerald-400 font-bold' : 'text-gray-700 dark:text-slate-300'}`}>
                           Jumlah Kotor
                           {sortColumn === 'jumlah_kotor' && (
                             sortDirection === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />
                           )}
                         </Button>
-                      </TableHead><TableHead>
-                        <Button variant="ghost" onClick={() => handleSort('status_tagihan')} className="p-0 h-auto">
+                      </TableHead>
+                      <TableHead>
+                        <Button variant="ghost" onClick={() => handleSort('status_tagihan')} className={`p-0 h-auto hover:text-emerald-600 dark:hover:text-emerald-400 ${sortColumn === 'status_tagihan' ? 'text-emerald-600 dark:text-emerald-400 font-bold' : 'text-gray-700 dark:text-slate-300'}`}>
                           Status
                           {sortColumn === 'status_tagihan' && (
                             sortDirection === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />
                           )}
                         </Button>
-                      </TableHead><TableHead className="text-center w-[100px]">Aksi</TableHead></TableRow>
+                      </TableHead>
+                      <TableHead className="text-center w-[100px] text-gray-700 dark:text-slate-300">Aksi</TableHead>
+                    </TableRow>
                   </TableHeader>
                   <TableBody>
                     {tagihanList.map((tagihan, index) => {
                       // NEW: Conditional rendering for edit button
                       const canEdit = tagihan.status_tagihan === 'Menunggu Registrasi' ||
-                                      tagihan.status_tagihan === 'Tinjau Kembali' ||
-                                      (tagihan.status_tagihan === 'Dikembalikan' && tagihan.skpd_can_edit === true && tagihan.tenggat_perbaikan && new Date(tagihan.tenggat_perbaikan) > new Date());
+                        tagihan.status_tagihan === 'Tinjau Kembali' ||
+                        (tagihan.status_tagihan === 'Dikembalikan' && tagihan.skpd_can_edit === true && tagihan.tenggat_perbaikan && new Date(tagihan.tenggat_perbaikan) > new Date());
 
                       // Logic for countdown timer
                       const showCountdown = tagihan.status_tagihan === 'Dikembalikan' &&
-                                            tagihan.tenggat_perbaikan &&
-                                            tagihan.waktu_verifikasi &&
-                                            differenceInDays(parseISO(tagihan.tenggat_perbaikan), parseISO(tagihan.waktu_verifikasi)) > 1;
+                        tagihan.tenggat_perbaikan &&
+                        tagihan.waktu_verifikasi &&
+                        differenceInDays(parseISO(tagihan.tenggat_perbaikan), parseISO(tagihan.waktu_verifikasi)) > 1;
 
                       return (
                         <TooltipProvider key={tagihan.id_tagihan + "-row-tooltip"}>
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <TableRow>
-                                <TableCell>{(currentPage - 1) * itemsPerPage + index + 1}</TableCell>
-                                <TableCell className="font-medium w-[180px] overflow-hidden"> {/* MODIFIED: Set fixed width and overflow */}
+                              <TableRow className="hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors">
+                                <TableCell className="text-gray-600 dark:text-slate-300">{(currentPage - 1) * itemsPerPage + index + 1}</TableCell>
+                                <TableCell className="font-medium w-[180px] overflow-hidden text-gray-900 dark:text-slate-200"> {/* MODIFIED: Set fixed width and overflow */}
                                   <span className="block max-w-full truncate whitespace-nowrap overflow-hidden text-ellipsis">
                                     {tagihan.nomor_spm}
                                   </span>
                                 </TableCell>
-                                <TableCell>{tagihan.jenis_spm}</TableCell>
-                                <TableCell>{tagihan.jenis_tagihan}</TableCell>
-                                <TableCell>{tagihan.sumber_dana || '-'}</TableCell>
-                                <TableCell>Rp{tagihan.jumlah_kotor.toLocaleString('id-ID')}</TableCell>
+                                <TableCell className="text-gray-600 dark:text-slate-300">{tagihan.jenis_spm}</TableCell>
+                                <TableCell className="text-gray-600 dark:text-slate-300">{tagihan.jenis_tagihan}</TableCell>
+                                <TableCell className="text-gray-600 dark:text-slate-300">{tagihan.sumber_dana || '-'}</TableCell>
+                                <TableCell className="text-gray-600 dark:text-slate-300">Rp{tagihan.jumlah_kotor.toLocaleString('id-ID')}</TableCell>
                                 <TableCell>
                                   <StatusBadge status={tagihan.status_tagihan} />
                                   {showCountdown && (
@@ -879,7 +888,7 @@ const PortalSKPD = () => {
                                   <div className="flex justify-center space-x-2">
                                     {/* Always show Detail button for 'Dikembalikan' status */}
                                     {tagihan.status_tagihan === 'Dikembalikan' && (
-                                      <Button variant="outline" size="icon" title="Lihat Detail" onClick={() => handleDetailClick(tagihan)}>
+                                      <Button variant="outline" size="icon" title="Lihat Detail" onClick={() => handleDetailClick(tagihan)} className="hover:bg-emerald-50 hover:text-emerald-600 dark:hover:bg-slate-800 dark:hover:text-emerald-400">
                                         <EyeIcon className="h-4 w-4" />
                                       </Button>
                                     )}
@@ -892,6 +901,7 @@ const PortalSKPD = () => {
                                         onClick={() => handleEdit(tagihan)}
                                         title="Edit Tagihan"
                                         disabled={!isAccountVerified || !profile?.is_active}
+                                        className="hover:bg-emerald-50 hover:text-emerald-600 dark:hover:bg-slate-800 dark:hover:text-emerald-400"
                                       >
                                         <FilePenLine className="h-4 w-4" />
                                       </Button>
@@ -912,7 +922,7 @@ const PortalSKPD = () => {
 
                                     {/* If not editable AND not 'Dikembalikan', show only Detail button */}
                                     {!canEdit && tagihan.status_tagihan !== 'Dikembalikan' && (
-                                      <Button variant="outline" size="icon" title="Lihat Detail" onClick={() => handleDetailClick(tagihan)}>
+                                      <Button variant="outline" size="icon" title="Lihat Detail" onClick={() => handleDetailClick(tagihan)} className="hover:bg-emerald-50 hover:text-emerald-600 dark:hover:bg-slate-800 dark:hover:text-emerald-400">
                                         <EyeIcon className="h-4 w-4" />
                                       </Button>
                                     )}
@@ -938,6 +948,7 @@ const PortalSKPD = () => {
                   variant="outline"
                   onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
                   disabled={currentPage === 1 || itemsPerPage === -1 || loadingPagination}
+                  className="hover:bg-emerald-50 hover:text-emerald-600 dark:hover:bg-slate-800 dark:hover:text-emerald-400 transition-colors"
                 >
                   Sebelumnya
                 </Button>
@@ -945,6 +956,7 @@ const PortalSKPD = () => {
                   variant="outline"
                   onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
                   disabled={currentPage === totalPages || itemsPerPage === -1 || loadingPagination}
+                  className="hover:bg-emerald-50 hover:text-emerald-600 dark:hover:bg-slate-800 dark:hover:text-emerald-400 transition-colors"
                 >
                   Berikutnya
                 </Button>
@@ -952,7 +964,7 @@ const PortalSKPD = () => {
             </>
           )}
         </CardContent>
-      </Card>
+      </Card >
 
       <Dialog open={isModalOpen} onOpenChange={(open) => { setIsModalOpen(open); if (!open) setEditingTagihan(null); }}>
         <DialogContent className="sm:max-w-[425px]">
@@ -1155,7 +1167,7 @@ const PortalSKPD = () => {
         onClose={() => setIsDetailModal(false)}
         tagihan={selectedTagihanForDetail}
       />
-    </div>
+    </div >
   );
 };
 
