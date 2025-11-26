@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useSession } from '@/contexts/SessionContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -26,6 +27,7 @@ interface TimelineActivity {
 }
 
 const DashboardSKPD = () => {
+    const navigate = useNavigate();
     const { user, profile, loading: sessionLoading } = useSession();
     const [counts, setCounts] = useState<TagihanCounts | null>(null);
     const [timelineActivities, setTimelineActivities] = useState<TimelineActivity[]>([]);
@@ -162,7 +164,10 @@ const DashboardSKPD = () => {
             </p>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mb-6">
-                <Card className="shadow-md hover:shadow-lg transition-all duration-200 rounded-lg border-gray-200 dark:border-slate-800 hover:scale-105">
+                <Card
+                    className="shadow-md hover:shadow-lg transition-all duration-200 rounded-lg border-gray-200 dark:border-slate-800 hover:scale-105 cursor-pointer"
+                    onClick={() => navigate('/portal-skpd?status=Semua Status')}
+                >
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium text-gray-700 dark:text-slate-300">Total Tagihan</CardTitle>
                         <ReceiptTextIcon className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
@@ -172,7 +177,10 @@ const DashboardSKPD = () => {
                     </CardContent>
                 </Card>
 
-                <Card className="shadow-md hover:shadow-lg transition-all duration-200 rounded-lg border-gray-200 dark:border-slate-800 hover:scale-105">
+                <Card
+                    className="shadow-md hover:shadow-lg transition-all duration-200 rounded-lg border-gray-200 dark:border-slate-800 hover:scale-105 cursor-pointer"
+                    onClick={() => navigate('/portal-skpd?status=Menunggu Registrasi')}
+                >
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium text-gray-700 dark:text-slate-300">Menunggu Registrasi</CardTitle>
                         <HourglassIcon className="h-4 w-4 text-amber-600 dark:text-amber-400" />
@@ -182,7 +190,10 @@ const DashboardSKPD = () => {
                     </CardContent>
                 </Card>
 
-                <Card className="shadow-md hover:shadow-lg transition-all duration-200 rounded-lg border-gray-200 dark:border-slate-800 hover:scale-105">
+                <Card
+                    className="shadow-md hover:shadow-lg transition-all duration-200 rounded-lg border-gray-200 dark:border-slate-800 hover:scale-105 cursor-pointer"
+                    onClick={() => navigate('/portal-skpd?status=Menunggu Verifikasi')}
+                >
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium text-gray-700 dark:text-slate-300">Menunggu Verifikasi</CardTitle>
                         <FileCheckIcon className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
@@ -192,7 +203,10 @@ const DashboardSKPD = () => {
                     </CardContent>
                 </Card>
 
-                <Card className="shadow-md hover:shadow-lg transition-all duration-200 rounded-lg border-gray-200 dark:border-slate-800 hover:scale-105">
+                <Card
+                    className="shadow-md hover:shadow-lg transition-all duration-200 rounded-lg border-gray-200 dark:border-slate-800 hover:scale-105 cursor-pointer"
+                    onClick={() => navigate('/portal-skpd?status=Diteruskan')}
+                >
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium text-gray-700 dark:text-slate-300">Diteruskan</CardTitle>
                         <SendIcon className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
@@ -202,7 +216,10 @@ const DashboardSKPD = () => {
                     </CardContent>
                 </Card>
 
-                <Card className="shadow-md hover:shadow-lg transition-all duration-200 rounded-lg border-gray-200 dark:border-slate-800 hover:scale-105">
+                <Card
+                    className="shadow-md hover:shadow-lg transition-all duration-200 rounded-lg border-gray-200 dark:border-slate-800 hover:scale-105 cursor-pointer"
+                    onClick={() => navigate('/portal-skpd?status=Dikembalikan')}
+                >
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium text-gray-700 dark:text-slate-300">Dikembalikan</CardTitle>
                         <RotateCcwIcon className="h-4 w-4 text-rose-600 dark:text-rose-400" />
