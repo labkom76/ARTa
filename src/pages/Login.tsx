@@ -207,49 +207,51 @@ const Login = () => {
     <div className="min-h-screen w-full flex flex-col lg:flex-row bg-white dark:bg-slate-950 overflow-hidden font-sans text-slate-900 dark:text-white">
 
       {/* LEFT SIDE: HERO SECTION */}
-      <div className="relative w-full lg:w-[55%] h-[40vh] lg:h-screen bg-slate-900 overflow-hidden order-1 lg:order-1">
-        {/* Background Image */}
-        <div
-          className="absolute inset-0 bg-cover bg-center transition-all duration-1000 ease-in-out"
-          style={{
-            backgroundImage: `url(${currentBackground || 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80'})`,
-            filter: 'brightness(0.7)'
-          }}
-        />
+      <div className="relative w-full lg:w-[55%] h-[40vh] lg:h-screen flex items-center justify-center lg:p-[0.4rem] order-1 lg:order-1">
+        <div className="relative w-full h-full bg-slate-900 overflow-hidden lg:rounded-3xl lg:border-2 lg:border-white dark:lg:border-slate-700">
+          {/* Background Image */}
+          <div
+            className="absolute inset-0 bg-cover bg-center transition-all duration-1000 ease-in-out"
+            style={{
+              backgroundImage: `url(${currentBackground || 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80'})`,
+              filter: 'brightness(0.7)'
+            }}
+          />
 
-        {/* Overlay Gradient */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
+          {/* Overlay Gradient */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
 
-        {/* Content Content */}
-        <div className="absolute inset-0 flex flex-col justify-end p-8 lg:p-16 text-white z-10">
-          <div className="max-w-xl">
-            <Quote className="h-10 w-10 text-emerald-400 mb-6 opacity-80" />
+          {/* Content Content */}
+          <div className="absolute inset-0 flex flex-col justify-end p-8 lg:p-16 text-white z-10">
+            <div className="max-w-xl">
+              <Quote className="h-10 w-10 text-emerald-400 mb-6 opacity-80" />
 
-            <div className="min-h-[120px]">
-              <h2 className="text-2xl lg:text-3xl font-medium leading-tight mb-6 tracking-tight">
-                "{TESTIMONIALS[currentTestimonialIndex].quote}"
-              </h2>
-            </div>
-
-            <div className="flex items-center justify-between mt-4">
-              <div>
-                <p className="font-semibold text-lg">{TESTIMONIALS[currentTestimonialIndex].author}</p>
-                <p className="text-slate-300 text-sm">{TESTIMONIALS[currentTestimonialIndex].role}</p>
+              <div className="min-h-[120px]">
+                <h2 className="text-2xl lg:text-3xl font-medium leading-tight mb-6 tracking-tight">
+                  "{TESTIMONIALS[currentTestimonialIndex].quote}"
+                </h2>
               </div>
 
-              <div className="flex gap-3">
-                <button
-                  onClick={prevTestimonial}
-                  className="p-2 rounded-full border border-white/20 hover:bg-white/10 transition-colors"
-                >
-                  <ChevronLeft className="h-5 w-5" />
-                </button>
-                <button
-                  onClick={nextTestimonial}
-                  className="p-2 rounded-full border border-white/20 hover:bg-white/10 transition-colors"
-                >
-                  <ChevronRight className="h-5 w-5" />
-                </button>
+              <div className="flex items-center justify-between mt-4">
+                <div>
+                  <p className="font-semibold text-lg">{TESTIMONIALS[currentTestimonialIndex].author}</p>
+                  <p className="text-slate-300 text-sm">{TESTIMONIALS[currentTestimonialIndex].role}</p>
+                </div>
+
+                <div className="flex gap-3">
+                  <button
+                    onClick={prevTestimonial}
+                    className="p-2 rounded-full border border-white/20 hover:bg-white/10 transition-colors"
+                  >
+                    <ChevronLeft className="h-5 w-5" />
+                  </button>
+                  <button
+                    onClick={nextTestimonial}
+                    className="p-2 rounded-full border border-white/20 hover:bg-white/10 transition-colors"
+                  >
+                    <ChevronRight className="h-5 w-5" />
+                  </button>
+                </div>
               </div>
             </div>
           </div>
