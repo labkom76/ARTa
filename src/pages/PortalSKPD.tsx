@@ -30,7 +30,7 @@ import { toast } from 'sonner';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { PlusCircleIcon, SearchIcon, EditIcon, Trash2Icon, FileDownIcon, ArrowUp, ArrowDown, FilePenLine, EyeIcon, ClipboardListIcon, Sparkles } from 'lucide-react';
+import { PlusCircleIcon, SearchIcon, EditIcon, Trash2Icon, FileDownIcon, ArrowUp, ArrowDown, FilePenLine, EyeIcon, ClipboardListIcon, Sparkles, Undo2 } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import DeleteConfirmationDialog from '@/components/DeleteConfirmationDialog';
 import TagihanDetailDialog from '@/components/TagihanDetailDialog'; // Import the new detail dialog
@@ -981,19 +981,37 @@ const PortalSKPD = () => {
       </Card >
 
       <Dialog open={isModalOpen} onOpenChange={(open) => { setIsModalOpen(open); if (!open) setEditingTagihan(null); }}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editingTagihan ? 'Edit Tagihan' : 'Input Tagihan Baru'}</DialogTitle>
-            <DialogDescription>
-              {editingTagihan ? 'Perbarui detail tagihan Anda.' : 'Masukkan detail tagihan baru Anda di sini.'} Klik simpan setelah selesai.
-            </DialogDescription>
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-emerald-100 dark:bg-emerald-950/50 rounded-lg">
+                {editingTagihan ? (
+                  <EditIcon className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                ) : (
+                  <PlusCircleIcon className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                )}
+              </div>
+              <div>
+                <DialogTitle>{editingTagihan ? 'Edit Tagihan' : 'Input Tagihan Baru'}</DialogTitle>
+                <DialogDescription>
+                  {editingTagihan ? 'Perbarui detail tagihan Anda.' : 'Masukkan detail tagihan baru Anda di sini.'} Klik simpan setelah selesai.
+                </DialogDescription>
+              </div>
+            </div>
           </DialogHeader>
           <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4">
             {/* NEW: Display catatan_registrasi if status is 'Tinjau Kembali' */}
             {editingTagihan && editingTagihan.status_tagihan === 'Tinjau Kembali' && editingTagihan.catatan_registrasi && (
-              <div className="grid gap-2 p-4 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-700 rounded-md mb-4">
-                <Label className="text-red-700 dark:text-red-300 font-semibold">Catatan Peninjauan Kembali dari Staf Registrasi:</Label>
-                <p className="text-sm text-red-600 dark:text-red-400">{editingTagihan.catatan_registrasi}</p>
+              <div className="grid gap-2 p-4 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-700 rounded-md mb-4">
+                <div className="flex items-center gap-2">
+                  <Undo2 className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                  <Label className="text-amber-700 dark:text-amber-300 font-semibold">Catatan Peninjauan Kembali dari Staf Registrasi:</Label>
+                </div>
+                <div className="text-sm text-amber-600 dark:text-amber-400 space-y-1">
+                  {editingTagihan.catatan_registrasi.split('\n').map((line, index) => (
+                    <div key={index}>{line}</div>
+                  ))}
+                </div>
               </div>
             )}
 
@@ -1006,7 +1024,7 @@ const PortalSKPD = () => {
                 id="nomor_spm_otomatis"
                 value={generatedNomorSpm || 'Membuat Nomor SPM...'}
                 readOnly
-                className="col-span-3 font-mono text-sm"
+                className="col-span-3 font-mono text-sm focus-visible:ring-emerald-500"
                 disabled={true} // Always disabled as it's a preview
               />
             </div>
@@ -1019,7 +1037,7 @@ const PortalSKPD = () => {
                 id="nomor_urut_tagihan"
                 type="number"
                 {...form.register('nomor_urut_tagihan', { valueAsNumber: true })}
-                className="col-span-3"
+                className="col-span-3 focus-visible:ring-emerald-500"
                 disabled={!isAccountVerified || !profile?.is_active} // MODIFIED: Removed || !!editingTagihan
               />
               {form.formState.errors.nomor_urut_tagihan && (
@@ -1034,7 +1052,7 @@ const PortalSKPD = () => {
                 Jadwal Penganggaran
               </Label>
               <Select onValueChange={(value) => form.setValue('kode_jadwal', value)} value={form.watch('kode_jadwal')} disabled={!isAccountVerified || !profile?.is_active}>
-                <SelectTrigger className="col-span-3">
+                <SelectTrigger className="col-span-3 focus-visible:ring-emerald-500">
                   <SelectValue placeholder="Pilih Jadwal" />
                 </SelectTrigger>
                 <SelectContent>
@@ -1056,7 +1074,7 @@ const PortalSKPD = () => {
                 Jenis SPM
               </Label>
               <Select onValueChange={(value) => form.setValue('jenis_spm', value)} value={form.watch('jenis_spm')} disabled={!isAccountVerified || !profile?.is_active}>
-                <SelectTrigger className="col-span-3">
+                <SelectTrigger className="col-span-3 focus-visible:ring-emerald-500">
                   <SelectValue placeholder="Pilih Jenis SPM" />
                 </SelectTrigger>
                 <SelectContent>
@@ -1077,7 +1095,7 @@ const PortalSKPD = () => {
                 Jenis Tagihan
               </Label>
               <Select onValueChange={(value) => form.setValue('jenis_tagihan', value)} value={form.watch('jenis_tagihan')} disabled={!isAccountVerified || !profile?.is_active}>
-                <SelectTrigger className="col-span-3">
+                <SelectTrigger className="col-span-3 focus-visible:ring-emerald-500">
                   <SelectValue placeholder="Pilih Jenis Tagihan" />
                 </SelectTrigger>
                 <SelectContent>
@@ -1099,7 +1117,7 @@ const PortalSKPD = () => {
                 Sumber Dana
               </Label>
               <Select onValueChange={(value) => form.setValue('sumber_dana', value)} value={form.watch('sumber_dana')} disabled={!isAccountVerified || !profile?.is_active}>
-                <SelectTrigger className="col-span-3">
+                <SelectTrigger className="col-span-3 focus-visible:ring-emerald-500">
                   <SelectValue placeholder="Pilih Sumber Dana" />
                 </SelectTrigger>
                 <SelectContent>
@@ -1127,7 +1145,7 @@ const PortalSKPD = () => {
               <Textarea
                 id="uraian"
                 {...form.register('uraian')}
-                className="col-span-3"
+                className="col-span-3 focus-visible:ring-emerald-500"
                 rows={3}
                 maxLength={250} // Added maxLength attribute
                 disabled={!isAccountVerified || !profile?.is_active}
@@ -1150,7 +1168,7 @@ const PortalSKPD = () => {
                 id="jumlah_kotor"
                 type="number"
                 {...form.register('jumlah_kotor')}
-                className="col-span-3"
+                className="col-span-3 focus-visible:ring-emerald-500"
                 disabled={!isAccountVerified || !profile?.is_active}
               />
               {form.formState.errors.jumlah_kotor && (
@@ -1160,8 +1178,8 @@ const PortalSKPD = () => {
               )}
             </div>
             <DialogFooter>
-              <Button type="submit" disabled={isSubmitting || !isAccountVerified || !profile?.is_active}>
-                {isSubmitting ? (editingTagihan ? 'Memperbarui...' : 'Menyimpan...') : 'Simpan'}
+              <Button type="submit" className="bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-500" disabled={isSubmitting || !isAccountVerified || !profile?.is_active}>
+                {isSubmitting ? (editingTagihan ? 'Memperbarui...' : 'Menyimpan...') : (editingTagihan ? 'Update' : 'Simpan')}
               </Button>
             </DialogFooter>
           </form>

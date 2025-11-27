@@ -231,7 +231,15 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar, isCollapsed = false }) =
             <Button variant="ghost" size="icon" className="relative text-gray-700 dark:text-slate-400 hover:bg-emerald-50 dark:hover:bg-slate-900 hover:text-emerald-600 dark:hover:text-emerald-400 hover:scale-110 transition-all duration-200 hover:shadow-md">
               <BellIcon className="h-5 w-5" />
               {unreadCount > 0 && (
-                <span className="absolute top-1 right-1 block h-2 w-2 rounded-full bg-emerald-500 dark:bg-emerald-400 ring-2 ring-white dark:ring-slate-950 animate-pulse" />
+                <>
+                  {/* Outer pulsing ring */}
+                  <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-4 w-4 bg-red-500 items-center justify-center ring-2 ring-white dark:ring-slate-950">
+                      <span className="text-[9px] font-bold text-white leading-none">{unreadCount > 9 ? '9+' : unreadCount}</span>
+                    </span>
+                  </span>
+                </>
               )}
             </Button>
           </DropdownMenuTrigger>
