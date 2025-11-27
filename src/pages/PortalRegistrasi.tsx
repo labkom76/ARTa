@@ -34,7 +34,15 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from '@/components/ui/pagination';
-import { SearchIcon, CheckCircleIcon, EyeIcon, Undo2Icon } from 'lucide-react'; // Import Undo2Icon
+import {
+  SearchIcon,
+  CheckCircleIcon,
+  EyeIcon,
+  Undo2Icon,
+  HourglassIcon,
+  ClockIcon,
+  ClipboardCheckIcon,
+} from 'lucide-react'; // Import Undo2Icon
 import { format, parseISO, startOfMonth, endOfMonth } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -552,11 +560,24 @@ const PortalRegistrasi = () => {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-gray-800 dark:text-white mb-6">Portal Registrasi</h1>
+      <div className="mb-8">
+        <h1 className="text-4xl font-bold bg-gradient-to-r from-emerald-600 to-emerald-400 bg-clip-text text-transparent mb-2 pb-1 inline-flex items-center gap-3">
+          <ClipboardCheckIcon className="h-10 w-10 text-emerald-600 dark:text-emerald-400" />
+          Portal Registrasi
+        </h1>
+        <p className="text-slate-600 dark:text-slate-400">
+          Kelola antrian dan riwayat registrasi tagihan
+        </p>
+      </div>
 
       {/* Antrian Registrasi Panel */}
-      <div className="p-6 bg-white rounded-lg shadow-sm border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
-        <h2 className="text-2xl font-semibold text-gray-800 dark:text-white mb-4">Antrian Registrasi</h2>
+      <div className="p-6 bg-gradient-to-br from-white to-emerald-50/20 dark:from-slate-900 dark:to-emerald-950/10 rounded-lg shadow-md hover:shadow-lg transition-all duration-300 border border-emerald-200 dark:border-emerald-900/30">
+        <div className="flex items-center gap-3 mb-6 pb-4 border-b border-emerald-200 dark:border-emerald-900/30">
+          <div className="p-2 bg-emerald-100 dark:bg-emerald-950/50 rounded-lg">
+            <HourglassIcon className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+          </div>
+          <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Antrian Registrasi</h2>
+        </div>
 
         <div className="flex flex-col sm:flex-row items-center justify-between space-y-2 sm:space-y-0 sm:space-x-2 mb-4">
           <div className="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-2 w-full sm:w-auto">
@@ -626,7 +647,7 @@ const PortalRegistrasi = () => {
                 </TableHeader>
                 <TableBody>
                   {queueTagihanList.map((tagihan, index) => (
-                    <TableRow key={tagihan.id_tagihan}>
+                    <TableRow key={tagihan.id_tagihan} className="hover:bg-emerald-50 dark:hover:bg-emerald-950/20 transition-colors">
                       <TableCell>{(queueCurrentPage - 1) * queueItemsPerPage + index + 1}</TableCell>
                       <TableCell>{format(parseISO(tagihan.waktu_input), 'dd MMMM yyyy HH:mm', { locale: localeId })}</TableCell>
                       <TableCell className="font-medium">{tagihan.nama_skpd}</TableCell>
@@ -706,8 +727,13 @@ const PortalRegistrasi = () => {
       </div>
 
       {/* Riwayat Registrasi Panel */}
-      <div className="p-6 bg-white rounded-lg shadow-sm border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
-        <h2 className="text-2xl font-semibold text-gray-800 dark:text-white mb-4">Riwayat Registrasi (24 Jam Terakhir)</h2>
+      <div className="p-6 bg-gradient-to-br from-white to-slate-50/30 dark:from-slate-900 dark:to-slate-800/30 rounded-lg shadow-md hover:shadow-lg transition-all duration-300 border border-slate-200 dark:border-slate-700">
+        <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-200 dark:border-slate-700">
+          <div className="p-2 bg-slate-100 dark:bg-slate-800 rounded-lg">
+            <ClockIcon className="h-6 w-6 text-slate-600 dark:text-slate-400" />
+          </div>
+          <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Riwayat Registrasi (24 Jam Terakhir)</h2>
+        </div>
 
         <div className="mb-4 flex justify-end items-center space-x-2">
           <label htmlFor="history-items-per-page" className="whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">Per halaman:</label>
@@ -752,7 +778,7 @@ const PortalRegistrasi = () => {
                 </TableHeader>
                 <TableBody>
                   {historyTagihanList.map((tagihan, index) => (
-                    <TableRow key={tagihan.id_tagihan}>
+                    <TableRow key={tagihan.id_tagihan} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
                       <TableCell>{(historyCurrentPage - 1) * historyItemsPerPage + index + 1}</TableCell>
                       <TableCell>{format(parseISO(tagihan.waktu_registrasi!), 'dd MMMM yyyy HH:mm', { locale: localeId })}</TableCell>
                       <TableCell className="font-medium">{tagihan.nomor_registrasi}</TableCell>
@@ -815,62 +841,79 @@ const PortalRegistrasi = () => {
 
       {/* NEW: Modal for Tinjau Kembali */}
       <Dialog open={isTinjauModalOpen} onOpenChange={setIsTinjauModalOpen}>
-        <DialogContent className="sm:max-w-[425px] max-h-[90vh] flex flex-col"> {/* Added max-h and flex-col */}
+        <DialogContent className="sm:max-w-[550px] max-h-[90vh] flex flex-col">
           <DialogHeader>
-            <DialogTitle>Tinjau Kembali Tagihan</DialogTitle>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="p-2 bg-amber-100 dark:bg-amber-950/50 rounded-lg">
+                <Undo2Icon className="h-6 w-6 text-amber-600 dark:text-amber-400" />
+              </div>
+              <DialogTitle className="text-2xl">Tinjau Kembali Tagihan</DialogTitle>
+            </div>
           </DialogHeader>
-          {/* Scrollable content area, taking remaining space */}
-          <div className="flex-1 overflow-y-auto pr-4 -mr-4"> {/* Scrollable content wrapper */}
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-3 items-center gap-4">
-                <Label className="text-right">Nomor SPM</Label>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger className="col-span-2 max-w-[250px] whitespace-nowrap overflow-hidden text-ellipsis block font-medium">
-                      {selectedTagihanForTinjau?.nomor_spm || '-'}
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>{selectedTagihanForTinjau?.nomor_spm || '-'}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+
+          {/* Scrollable content area */}
+          <div className="flex-1 overflow-y-auto pr-4 -mr-4">
+            <div className="space-y-4 py-4">
+              {/* Detail Tagihan */}
+              <div className="space-y-3">
+                <div className="flex items-start gap-3">
+                  <Label className="text-sm text-slate-600 dark:text-slate-400 w-32 pt-1 shrink-0">Nomor SPM:</Label>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger className="flex-1 text-left max-w-[300px] whitespace-nowrap overflow-hidden text-ellipsis font-medium text-slate-900 dark:text-white">
+                        {selectedTagihanForTinjau?.nomor_spm || '-'}
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>{selectedTagihanForTinjau?.nomor_spm || '-'}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <Label className="text-sm text-slate-600 dark:text-slate-400 w-32 pt-1 shrink-0">Nama SKPD:</Label>
+                  <p className="flex-1 text-slate-900 dark:text-white">{selectedTagihanForTinjau?.nama_skpd || '-'}</p>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <Label className="text-sm text-slate-600 dark:text-slate-400 w-32 pt-1 shrink-0">Nomor Registrasi:</Label>
+                  <p className="flex-1 font-medium text-emerald-600 dark:text-emerald-400">{selectedTagihanForTinjau?.nomor_registrasi || '-'}</p>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <Label className="text-sm text-slate-600 dark:text-slate-400 w-32 pt-1 shrink-0">Jenis SPM:</Label>
+                  <p className="flex-1 text-slate-900 dark:text-white">{selectedTagihanForTinjau?.jenis_spm || '-'}</p>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <Label className="text-sm text-slate-600 dark:text-slate-400 w-32 pt-1 shrink-0">Jenis Tagihan:</Label>
+                  <p className="flex-1 text-slate-900 dark:text-white">{selectedTagihanForTinjau?.jenis_tagihan || '-'}</p>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <Label className="text-sm text-slate-600 dark:text-slate-400 w-32 pt-1 shrink-0">Sumber Dana:</Label>
+                  <p className="flex-1 text-slate-900 dark:text-white">{selectedTagihanForTinjau?.sumber_dana || '-'}</p>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <Label className="text-sm text-slate-600 dark:text-slate-400 w-32 pt-1 shrink-0">Uraian:</Label>
+                  <p className="flex-1 text-slate-900 dark:text-white">{selectedTagihanForTinjau?.uraian || '-'}</p>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <Label className="text-sm text-slate-600 dark:text-slate-400 w-32 pt-1 shrink-0">Jumlah Kotor:</Label>
+                  <p className="flex-1 font-semibold text-slate-900 dark:text-white">Rp{selectedTagihanForTinjau?.jumlah_kotor?.toLocaleString('id-ID') || '0'}</p>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <Label className="text-sm text-slate-600 dark:text-slate-400 w-32 pt-1 shrink-0">Waktu Input:</Label>
+                  <p className="flex-1 text-slate-900 dark:text-white">{formatDate(selectedTagihanForTinjau?.waktu_input)}</p>
+                </div>
               </div>
-              <div className="grid grid-cols-3 items-center gap-4">
-                <Label className="text-right">Nama SKPD</Label>
-                <p className="col-span-2 font-medium">{selectedTagihanForTinjau?.nama_skpd || '-'}</p>
-              </div>
-              {/* NEW: Added full tagihan details */}
-              <div className="grid grid-cols-3 items-center gap-4">
-                <Label className="text-right">Nomor Registrasi</Label>
-                <p className="col-span-2 font-medium">{selectedTagihanForTinjau?.nomor_registrasi || '-'}</p>
-              </div>
-              <div className="grid grid-cols-3 items-center gap-4">
-                <Label className="text-right">Jenis SPM</Label>
-                <p className="col-span-2 font-medium">{selectedTagihanForTinjau?.jenis_spm || '-'}</p>
-              </div>
-              <div className="grid grid-cols-3 items-center gap-4">
-                <Label className="text-right">Jenis Tagihan</Label>
-                <p className="col-span-2 font-medium">{selectedTagihanForTinjau?.jenis_tagihan || '-'}</p>
-              </div>
-              <div className="grid grid-cols-3 items-center gap-4">
-                <Label className="text-right">Sumber Dana</Label>
-                <p className="col-span-2 font-medium">{selectedTagihanForTinjau?.sumber_dana || '-'}</p>
-              </div>
-              <div className="grid grid-cols-3 items-center gap-4">
-                <Label className="text-right">Uraian</Label>
-                <p className="col-span-2 font-medium">{selectedTagihanForTinjau?.uraian || '-'}</p>
-              </div>
-              <div className="grid grid-cols-3 items-center gap-4">
-                <Label className="text-right">Jumlah Kotor</Label>
-                <p className="col-span-2 font-medium">Rp{selectedTagihanForTinjau?.jumlah_kotor?.toLocaleString('id-ID') || '0'}</p>
-              </div>
-              <div className="grid grid-cols-3 items-center gap-4">
-                <Label className="text-right">Waktu Input</Label>
-                <p className="col-span-2 font-medium">{formatDate(selectedTagihanForTinjau?.waktu_input)}</p>
-              </div>
-              {/* END NEW: Added full tagihan details */}
-              <div className="grid gap-2">
-                <Label htmlFor="catatan-tinjau">Catatan Tinjau Kembali</Label>
+
+              {/* Catatan Tinjau Kembali */}
+              <div className="space-y-2 pt-2">
+                <Label htmlFor="catatan-tinjau" className="text-sm font-medium">Catatan Tinjau Kembali</Label>
                 <Textarea
                   id="catatan-tinjau"
                   placeholder="Wajib diisi: Jelaskan alasan peninjauan kembali..."
@@ -878,18 +921,24 @@ const PortalRegistrasi = () => {
                   onChange={(e) => setCatatanTinjau(e.target.value)}
                   rows={4}
                   disabled={isSubmittingTinjau}
+                  className="focus-visible:ring-amber-500"
                 />
                 {!catatanTinjau.trim() && (
-                  <p className="text-red-500 text-sm mt-1">Catatan wajib diisi.</p>
+                  <p className="text-red-500 text-sm">Catatan wajib diisi.</p>
                 )}
               </div>
             </div>
           </div>
-          <DialogFooter>
+
+          <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setIsTinjauModalOpen(false)} disabled={isSubmittingTinjau}>
               Batal
             </Button>
-            <Button onClick={handleSubmitTinjauKembali} disabled={isSubmittingTinjau || !catatanTinjau.trim()}>
+            <Button
+              onClick={handleSubmitTinjauKembali}
+              disabled={isSubmittingTinjau || !catatanTinjau.trim()}
+              className="bg-amber-600 hover:bg-amber-700 text-white dark:bg-amber-600 dark:hover:bg-amber-500"
+            >
               {isSubmittingTinjau ? 'Memproses...' : 'Submit Tinjau Kembali'}
             </Button>
           </DialogFooter>

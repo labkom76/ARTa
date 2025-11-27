@@ -157,7 +157,7 @@ const DashboardSKPD = () => {
     return (
         <div className="space-y-6">
             <div className="mb-8">
-                <h1 className="text-4xl font-bold bg-gradient-to-r from-emerald-600 to-emerald-400 bg-clip-text text-transparent mb-2">
+                <h1 className="text-4xl font-bold bg-gradient-to-r from-emerald-600 to-emerald-400 bg-clip-text text-transparent mb-2 pb-1 inline-block">
                     Selamat Datang, {profile?.nama_lengkap || user?.email}!
                 </h1>
                 <p className="text-slate-600 dark:text-slate-400 flex items-center gap-2">

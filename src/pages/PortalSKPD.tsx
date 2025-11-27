@@ -30,7 +30,7 @@ import { toast } from 'sonner';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { PlusCircleIcon, SearchIcon, EditIcon, Trash2Icon, FileDownIcon, ArrowUp, ArrowDown, FilePenLine, EyeIcon } from 'lucide-react'; // Import FileDownIcon, ArrowUp, ArrowDown, FilePenLine, EyeIcon
+import { PlusCircleIcon, SearchIcon, EditIcon, Trash2Icon, FileDownIcon, ArrowUp, ArrowDown, FilePenLine, EyeIcon, ClipboardListIcon, Sparkles } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import DeleteConfirmationDialog from '@/components/DeleteConfirmationDialog';
 import TagihanDetailDialog from '@/components/TagihanDetailDialog'; // Import the new detail dialog
@@ -718,8 +718,18 @@ const PortalSKPD = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-slate-100">Portal SKPD</h1>
+      <div className="mb-8">
+        <h1 className="text-4xl font-bold bg-gradient-to-r from-emerald-600 to-emerald-400 bg-clip-text text-transparent mb-2 pb-1 inline-flex items-center gap-3">
+          <ClipboardListIcon className="h-10 w-10 text-emerald-600 dark:text-emerald-400" />
+          Portal SKPD
+        </h1>
+        <p className="text-slate-600 dark:text-slate-400 flex items-center gap-2">
+          <Sparkles className="h-4 w-4 text-emerald-500" />
+          Kelola dan input tagihan baru Anda di sini
+        </p>
+      </div>
+
+      <div className="flex justify-end items-center mb-6">
         <div className="flex space-x-2">
           <Button variant="outline" className="flex items-center gap-2 hover:bg-emerald-50 hover:text-emerald-600 dark:hover:bg-slate-800 dark:hover:text-emerald-400 transition-colors" onClick={handleExportToXLSX} disabled={!isAccountVerified || tagihanList.length === 0}>
             <FileDownIcon className="h-4 w-4" /> Export ke XLSX
@@ -731,10 +741,14 @@ const PortalSKPD = () => {
       </div>
 
       {/* Card for Table (now includes filters) */}
-      <Card className="shadow-md rounded-lg border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 transition-colors duration-200">
-        <CardHeader>
-          <CardTitle className="text-xl font-semibold text-gray-900 dark:text-slate-100">Daftar Tagihan</CardTitle>
-          <p className="text-sm text-gray-500 dark:text-slate-400">Kelola dan input tagihan baru Anda di sini.</p>
+      <Card className="shadow-md hover:shadow-lg transition-all duration-300 rounded-lg border-emerald-200 dark:border-emerald-900/30 bg-gradient-to-br from-white to-emerald-50/20 dark:from-slate-900 dark:to-emerald-950/10">
+        <CardHeader className="pb-4">
+          <div className="flex items-center gap-3 mb-6 pb-4 border-b border-emerald-200 dark:border-emerald-900/30">
+            <div className="p-2 bg-emerald-100 dark:bg-emerald-950/50 rounded-lg">
+              <ClipboardListIcon className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+            </div>
+            <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Daftar Tagihan</h2>
+          </div>
         </CardHeader>
         <CardContent>
           {/* Filter controls moved here */}
