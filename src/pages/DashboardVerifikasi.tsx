@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useSession } from '@/contexts/SessionContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -28,6 +28,7 @@ import {
 } from 'recharts';
 import { format, subDays, startOfDay, endOfDay, startOfMonth, endOfMonth, parseISO, differenceInMinutes } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
+import { useTypingAnimation } from '@/hooks/use-typing-animation';
 
 // NEW IMPORTS FOR SWIPER
 import { Swiper, SwiperSlide } from 'swiper/react';
@@ -62,6 +63,23 @@ const DashboardVerifikasi = () => {
 
   // Define colors for the Pie Chart
   const PIE_COLORS = ['#EF4444', '#F97316', '#F59E0B', '#EAB308', '#84CC16', '#3B82F6', '#6366F1'];
+
+  // Get greeting based on time
+  const greeting = useMemo(() => {
+    const hour = new Date().getHours();
+    if (hour >= 5 && hour < 11) return 'Selamat Pagi';
+    if (hour >= 11 && hour < 15) return 'Selamat Siang';
+    if (hour >= 15 && hour < 18) return 'Selamat Sore';
+    return 'Selamat Malam';
+  }, []);
+
+  // Typing animation texts
+  const typingTexts = useMemo(() => [
+    `Selamat datang ${profile?.nama_lengkap || 'yudistira'}! Siap memverifikasi tagihan hari ini?`,
+    `${greeting}, tetap semangat yaa!!`
+  ], [greeting, profile?.nama_lengkap]);
+
+  const animatedText = useTypingAnimation(typingTexts, 80, 40, 3000);
 
 
   useEffect(() => {
@@ -210,7 +228,10 @@ const DashboardVerifikasi = () => {
         </h1>
         <p className="text-slate-600 dark:text-slate-400 flex items-center gap-2">
           <Sparkles className="h-4 w-4 text-emerald-500" />
-          Selamat datang, {profile?.nama_lengkap}! Siap memverifikasi tagihan hari ini?
+          <span className="inline-flex items-center">
+            {animatedText}
+            <span className="inline-block w-0.5 h-5 bg-emerald-500 ml-1 animate-pulse"></span>
+          </span>
         </p>
       </div>
 
