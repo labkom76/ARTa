@@ -10,7 +10,9 @@ import {
   TimerIcon,
   BarChart3Icon,
   BarChartIcon,
-  PieChartIcon, // Import PieChartIcon
+  PieChartIcon,
+  ClipboardCheckIcon,
+  Sparkles,
 } from 'lucide-react';
 import {
   BarChart,
@@ -183,73 +185,85 @@ const DashboardVerifikasi = () => {
 
   if (sessionLoading || loading) {
     return (
-      <div className="p-6 bg-white rounded-lg shadow-sm border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
-        <h1 className="text-3xl font-bold text-gray-800 dark:text-white mb-4">Memuat Dashboard Verifikasi...</h1>
-        <p className="text-gray-600 dark:text-gray-400">Sedang mengambil data untuk Anda.</p>
+      <div className="p-6 bg-gradient-to-br from-white to-emerald-50/20 dark:from-slate-900 dark:to-emerald-950/10 rounded-lg shadow-md border border-emerald-200 dark:border-emerald-900/30">
+        <h1 className="text-3xl font-bold text-emerald-700 dark:text-emerald-400 mb-4">Memuat Dashboard Verifikasi...</h1>
+        <p className="text-slate-600 dark:text-slate-400">Sedang mengambil data untuk Anda.</p>
       </div>
     );
   }
 
   if (profile?.peran !== 'Staf Verifikator') {
     return (
-      <div className="p-6 bg-white rounded-lg shadow-sm border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
+      <div className="p-6 bg-gradient-to-br from-white to-red-50/20 dark:from-slate-900 dark:to-red-950/10 rounded-lg shadow-md border border-red-200 dark:border-red-900/30">
         <h1 className="text-3xl font-bold text-red-600 dark:text-red-400 mb-4">Akses Ditolak</h1>
-        <p className="text-gray-600 dark:text-gray-400">Anda tidak memiliki izin untuk mengakses halaman ini.</p>
+        <p className="text-slate-600 dark:text-slate-400">Anda tidak memiliki izin untuk mengakses halaman ini.</p>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-gray-800 dark:text-white">
-        Selamat Datang, {profile?.nama_lengkap || 'Staf'}!
-      </h1>
-      <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
-        Saat ini Anda masuk sebagai Staf Verifikasi. Siap memverifikasi tagihan hari ini?
-      </p>
+      <div className="mb-8">
+        <h1 className="text-4xl font-bold bg-gradient-to-r from-emerald-600 to-emerald-400 bg-clip-text text-transparent mb-2 pb-1 inline-flex items-center gap-3">
+          <ClipboardCheckIcon className="h-10 w-10 text-emerald-600 dark:text-emerald-400" />
+          Dashboard Verifikasi
+        </h1>
+        <p className="text-slate-600 dark:text-slate-400 flex items-center gap-2">
+          <Sparkles className="h-4 w-4 text-emerald-500" />
+          Selamat datang, {profile?.nama_lengkap}! Siap memverifikasi tagihan hari ini?
+        </p>
+      </div>
 
       {/* KPI Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="shadow-sm rounded-lg">
+        <Card className="shadow-md hover:shadow-lg transition-all duration-300 border-l-4 border-l-amber-500 bg-gradient-to-br from-white to-amber-50/30 dark:from-slate-900 dark:to-amber-950/20">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Antrian Verifikasi</CardTitle>
-            <HourglassIcon className="h-4 w-4 text-yellow-500 dark:text-yellow-400" />
+            <CardTitle className="text-sm font-semibold text-slate-700 dark:text-slate-300">Antrian Verifikasi</CardTitle>
+            <div className="p-2 bg-amber-100 dark:bg-amber-950/50 rounded-lg">
+              <HourglassIcon className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{kpiData?.antrianVerifikasi}</div>
+            <div className="text-3xl font-bold text-amber-700 dark:text-amber-400">{kpiData?.antrianVerifikasi}</div>
             <p className="text-xs text-muted-foreground">Tagihan menunggu verifikasi</p>
           </CardContent>
         </Card>
 
-        <Card className="shadow-sm rounded-lg">
+        <Card className="shadow-md hover:shadow-lg transition-all duration-300 border-l-4 border-l-emerald-500 bg-gradient-to-br from-white to-emerald-50/30 dark:from-slate-900 dark:to-emerald-950/20">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Diproses (Bulan Ini)</CardTitle> {/* MODIFIED Title */}
-            <CheckCircleIcon className="h-4 w-4 text-green-500 dark:text-green-400" />
+            <CardTitle className="text-sm font-semibold text-slate-700 dark:text-slate-300">Total Diproses (Bulan Ini)</CardTitle>
+            <div className="p-2 bg-emerald-100 dark:bg-emerald-950/50 rounded-lg">
+              <CheckCircleIcon className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{kpiData?.totalDiprosesBulanIni}</div> {/* MODIFIED Value */}
-            <p className="text-xs text-muted-foreground">Total tagihan diproses bulan ini</p> {/* MODIFIED Description */}
+            <div className="text-3xl font-bold text-emerald-700 dark:text-emerald-400">{kpiData?.totalDiprosesBulanIni}</div>
+            <p className="text-xs text-muted-foreground">Total tagihan diproses bulan ini</p>
           </CardContent>
         </Card>
 
-        <Card className="shadow-sm rounded-lg">
+        <Card className="shadow-md hover:shadow-lg transition-all duration-300 border-l-4 border-l-emerald-500 bg-gradient-to-br from-white to-emerald-50/30 dark:from-slate-900 dark:to-emerald-950/20">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Diteruskan Hari Ini</CardTitle>
-            <CheckCircleIcon className="h-4 w-4 text-green-500 dark:text-green-400" />
+            <CardTitle className="text-sm font-semibold text-slate-700 dark:text-slate-300">Diteruskan Hari Ini</CardTitle>
+            <div className="p-2 bg-emerald-100 dark:bg-emerald-950/50 rounded-lg">
+              <CheckCircleIcon className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{kpiData?.diteruskanHariIni}</div>
+            <div className="text-3xl font-bold text-emerald-700 dark:text-emerald-400">{kpiData?.diteruskanHariIni}</div>
             <p className="text-xs text-muted-foreground">Tagihan diteruskan hari ini</p>
           </CardContent>
         </Card>
 
-        <Card className="shadow-sm rounded-lg">
+        <Card className="shadow-md hover:shadow-lg transition-all duration-300 border-l-4 border-l-red-500 bg-gradient-to-br from-white to-red-50/30 dark:from-slate-900 dark:to-red-950/20">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Dikembalikan Hari Ini</CardTitle>
-            <RotateCcwIcon className="h-4 w-4 text-red-500 dark:text-red-400" />
+            <CardTitle className="text-sm font-semibold text-slate-700 dark:text-slate-300">Dikembalikan Hari Ini</CardTitle>
+            <div className="p-2 bg-red-100 dark:bg-red-950/50 rounded-lg">
+              <RotateCcwIcon className="h-5 w-5 text-red-600 dark:text-red-400" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{kpiData?.dikembalikanHariIni}</div>
+            <div className="text-3xl font-bold text-red-700 dark:text-red-400">{kpiData?.dikembalikanHariIni}</div>
             <p className="text-xs text-muted-foreground">Tagihan dikembalikan hari ini</p>
           </CardContent>
         </Card>
@@ -257,12 +271,14 @@ const DashboardVerifikasi = () => {
 
       {/* Charts */}
       <div className="grid gap-6 lg:grid-cols-2">
-        <Card className="shadow-sm rounded-lg">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-              <BarChart3Icon className="h-5 w-5 text-gray-600 dark:text-gray-300" />
-              Hasil Verifikasi (30 Hari Terakhir)
-            </CardTitle>
+        <Card className="shadow-md hover:shadow-lg transition-all duration-300 rounded-lg border-emerald-200 dark:border-emerald-900/30 bg-gradient-to-br from-white to-emerald-50/20 dark:from-slate-900 dark:to-emerald-950/10">
+          <CardHeader className="pb-4">
+            <div className="flex items-center gap-3 mb-2 pb-2 border-b border-emerald-200 dark:border-emerald-900/30">
+              <div className="p-2 bg-emerald-100 dark:bg-emerald-950/50 rounded-lg">
+                <BarChart3Icon className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+              </div>
+              <CardTitle className="text-xl font-bold text-slate-900 dark:text-white">Hasil Verifikasi (30 Hari Terakhir)</CardTitle>
+            </div>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
@@ -278,12 +294,14 @@ const DashboardVerifikasi = () => {
           </CardContent>
         </Card>
 
-        <Card className="shadow-sm rounded-lg">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-              <PieChartIcon className="h-5 w-5 text-gray-600 dark:text-gray-300" /> {/* Changed icon to PieChartIcon */}
-              Tagihan yang dikembalikan (PerSKPD) {/* Changed title */}
-            </CardTitle>
+        <Card className="shadow-md hover:shadow-lg transition-all duration-300 rounded-lg border-emerald-200 dark:border-emerald-900/30 bg-gradient-to-br from-white to-emerald-50/20 dark:from-slate-900 dark:to-emerald-950/10">
+          <CardHeader className="pb-4">
+            <div className="flex items-center gap-3 mb-2 pb-2 border-b border-emerald-200 dark:border-emerald-900/30">
+              <div className="p-2 bg-emerald-100 dark:bg-emerald-950/50 rounded-lg">
+                <PieChartIcon className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+              </div>
+              <CardTitle className="text-xl font-bold text-slate-900 dark:text-white">Tagihan yang Dikembalikan (Per SKPD)</CardTitle>
+            </div>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
