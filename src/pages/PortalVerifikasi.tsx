@@ -38,6 +38,7 @@ import useDebounce from '@/hooks/use-debounce';
 import KoreksiTagihanSidePanel from '@/components/KoreksiTagihanSidePanel'; // Import the new component
 import StatusBadge from '@/components/StatusBadge'; // Import StatusBadge
 import { Combobox } from '@/components/ui/combobox'; // Import Combobox
+import { SearchInput } from '@/components/ui/search-input'; //import search-input
 import Countdown from 'react-countdown'; // Import Countdown
 import { useSearchParams } from 'react-router-dom'; // Import useSearchParams
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'; // Import Tabs components
@@ -145,7 +146,9 @@ const PortalVerifikasi = () => {
   const prevSelectedVerifierHistoryRef = useRef(selectedVerifierHistory); // NEW: Ref for verifier filter
   const prevHistoryItemsPerPageRef = useRef(historyItemsPerPage);
   const prevHistoryCurrentPageRef = useRef(historyCurrentPage);
-
+  // NEW: Refs untuk input search agar bisa refocus
+  const queueSearchInputRef = useRef<HTMLInputElement>(null);
+  const historySearchInputRef = useRef<HTMLInputElement>(null);
   const [searchParams, setSearchParams] = useSearchParams(); // Initialize useSearchParams and its setter
 
   // NEW: State for active tab
@@ -176,6 +179,28 @@ const PortalVerifikasi = () => {
     fetchSkpdOptions();
   }, []);
 
+  // useCallback handlers untuk search input agar tidak re-create setiap render
+  const handleQueueSearchChange = React.useCallback((value: string) => {
+    setQueueSearchQuery(value);
+    setQueueCurrentPage(1);
+  }, []);
+
+  const handleHistorySearchChange = React.useCallback((value: string) => {
+    setHistorySearchQuery(value);
+    setHistoryCurrentPage(1);
+  }, []);
+  // NEW: Effect untuk refocus input search setelah data dimuat
+  useEffect(() => {
+    if (!loadingQueue && debouncedQueueSearchQuery && queueSearchInputRef.current) {
+      queueSearchInputRef.current.focus();
+    }
+  }, [loadingQueue, debouncedQueueSearchQuery]);
+
+  useEffect(() => {
+    if (!loadingHistory && debouncedHistorySearchQuery && historySearchInputRef.current) {
+      historySearchInputRef.current.focus();
+    }
+  }, [loadingHistory, debouncedHistorySearchQuery]);
   // NEW: Fetch verifier options for the history filter dropdown
   useEffect(() => {
     const fetchVerifierOptions = async () => {
@@ -859,19 +884,12 @@ const PortalVerifikasi = () => {
             <CardContent>
               <form onSubmit={(e) => e.preventDefault()} className="flex flex-col sm:flex-row items-center justify-between space-y-2 sm:space-y-0 sm:space-x-2 mb-4">
                 <div className="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-2 w-full sm:w-auto">
-                  <div className="relative flex-1 w-full sm:w-auto">
-                    <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400" />
-                    <Input
-                      type="text"
-                      placeholder="Cari Nomor SPM atau Nama SKPD..."
-                      className="pl-9 w-full"
-                      value={queueSearchQuery}
-                      onChange={(e) => {
-                        setQueueSearchQuery(e.target.value);
-                        setQueueCurrentPage(1); // Reset page on search
-                      }}
-                    />
-                  </div>
+                  <SearchInput
+                    value={queueSearchQuery}
+                    onChange={handleQueueSearchChange}
+                    placeholder="Cari Nomor SPM atau Nama SKPD..."
+                    inputRef={queueSearchInputRef}
+                  />
                   {/* MODIFIED: Replaced Select with Combobox */}
                   <Combobox
                     options={skpdOptionsAntrian}
@@ -987,19 +1005,12 @@ const PortalVerifikasi = () => {
             <CardContent>
               <form onSubmit={(e) => e.preventDefault()} className="flex flex-col sm:flex-row items-center justify-between space-y-2 sm:space-y-0 sm:space-x-2 mb-4">
                 <div className="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-2 w-full sm:w-auto">
-                  <div className="relative flex-1 w-full sm:w-auto">
-                    <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400" />
-                    <Input
-                      type="text"
-                      placeholder="Cari Nomor SPM atau Nama SKPD..."
-                      className="pl-9 w-full"
-                      value={historySearchQuery}
-                      onChange={(e) => {
-                        setHistorySearchQuery(e.target.value);
-                        setHistoryCurrentPage(1); // Reset page on search
-                      }}
-                    />
-                  </div>
+                  <SearchInput
+                    value={historySearchQuery}
+                    onChange={handleHistorySearchChange}
+                    placeholder="Cari Nomor SPM atau Nama SKPD..."
+                    inputRef={historySearchInputRef}
+                  />
                   {/* MODIFIED: Replaced Select with Combobox */}
                   <Combobox
                     options={skpdOptionsHistory}
