@@ -337,17 +337,17 @@ const RiwayatRegistrasi = () => {
 
         <div className="overflow-x-auto">
           <Table><TableHeader><TableRow>
-            <TableHead className="w-[50px]">No.</TableHead><TableHead>Waktu Registrasi</TableHead><TableHead>Nomor Registrasi</TableHead><TableHead>Nomor SPM</TableHead><TableHead>Nama SKPD</TableHead><TableHead className="min-w-[280px]">Uraian</TableHead><TableHead>Jumlah Kotor</TableHead><TableHead>Status Tagihan</TableHead><TableHead className="text-center">Aksi</TableHead>
+            <TableHead className="w-[50px]">No.</TableHead><TableHead>Waktu Registrasi</TableHead><TableHead>Nomor Registrasi</TableHead><TableHead>Nomor SPM</TableHead><TableHead>Nama SKPD</TableHead><TableHead>Jumlah Kotor</TableHead><TableHead>Status Tagihan</TableHead><TableHead className="text-center">Aksi</TableHead>
           </TableRow></TableHeader><TableBody>
               {loadingData && !loadingPagination ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
+                  <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
                     Memuat data riwayat registrasi...
                   </TableCell>
                 </TableRow>
               ) : tagihanList.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center text-muted-foreground">
+                  <TableCell colSpan={8} className="text-center text-muted-foreground">
                     Tidak ada data riwayat registrasi.
                   </TableCell>
                 </TableRow>
@@ -365,9 +365,15 @@ const RiwayatRegistrasi = () => {
                           <p>{tagihan.nomor_spm}</p>
                         </TooltipContent>
                       </Tooltip>
-                    </TableCell><TableCell>{tagihan.nama_skpd}</TableCell><TableCell className="min-w-[280px]">{tagihan.uraian}</TableCell><TableCell>Rp{tagihan.jumlah_kotor.toLocaleString('id-ID')}</TableCell><TableCell><StatusBadge status={tagihan.status_tagihan} /></TableCell><TableCell className="text-center">
-                      <Button variant="outline" size="icon" title="Lihat Detail" onClick={() => handleDetailClick(tagihan)}>
-                        <EyeIcon className="h-4 w-4" />
+                    </TableCell><TableCell>{tagihan.nama_skpd}</TableCell><TableCell>Rp{tagihan.jumlah_kotor.toLocaleString('id-ID')}</TableCell><TableCell><StatusBadge status={tagihan.status_tagihan} /></TableCell><TableCell className="text-center">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        title="Lihat Detail"
+                        onClick={() => handleDetailClick(tagihan)}
+                        className="hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-300 transition-colors"
+                      >
+                        <EyeIcon className="h-4 w-4 text-slate-600 dark:text-slate-400" />
                       </Button>
                     </TableCell>
                   </TableRow>
