@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSession } from '@/contexts/SessionContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -43,7 +43,9 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select'; // Import Select components
+} from '@/components/ui/select';
+import { useTypingAnimation } from '@/hooks/use-typing-animation';
+
 
 interface Tagihan {
   id_tagihan: string;
@@ -100,6 +102,23 @@ const DashboardRegistrasi = () => {
 
   // NEW: State for time range filter in chart
   const [selectedTimeRangeChart, setSelectedTimeRangeChart] = useState<'Hari Ini' | 'Minggu Ini' | 'Bulan Ini'>('Bulan Ini');
+
+  // Get greeting based on time
+  const greeting = useMemo(() => {
+    const hour = new Date().getHours();
+    if (hour >= 5 && hour < 11) return 'Selamat Pagi';
+    if (hour >= 11 && hour < 15) return 'Selamat Siang';
+    if (hour >= 15 && hour < 18) return 'Selamat Sore';
+    return 'Selamat Malam';
+  }, []);
+
+  // Typing animation texts
+  const typingTexts = useMemo(() => [
+    'Saat ini Anda masuk sebagai Staf Registrasi. Siap memproses tagihan hari ini?',
+    `${greeting}, tetap semangat yaa!!`
+  ], [greeting]);
+
+  const animatedText = useTypingAnimation(typingTexts, 80, 40, 3000);
 
   useEffect(() => {
     const fetchSkpdOptions = async () => {
@@ -324,7 +343,10 @@ const DashboardRegistrasi = () => {
         </h1>
         <p className="text-slate-600 dark:text-slate-400 flex items-center gap-2">
           <Sparkles className="h-4 w-4 text-emerald-500" />
-          Saat ini Anda masuk sebagai Staf Registrasi. Siap memproses tagihan hari ini?
+          <span className="inline-flex items-center">
+            {animatedText}
+            <span className="inline-block w-0.5 h-5 bg-emerald-500 ml-1 animate-pulse"></span>
+          </span>
         </p>
       </div>
 
