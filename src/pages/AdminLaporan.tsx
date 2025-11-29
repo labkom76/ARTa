@@ -13,7 +13,7 @@ import {
 import { DateRange } from 'react-day-picker';
 import { DateRangePickerWithPresets } from '@/components/DateRangePickerWithPresets';
 import { toast } from 'sonner';
-import { FileDownIcon, BarChartIcon, PieChartIcon } from 'lucide-react'; // Import PieChartIcon
+import { FileDownIcon, BarChartIcon, PieChartIcon, FilterIcon, ChevronLeftIcon, ChevronRightIcon } from 'lucide-react';
 import {
   BarChart,
   Bar,
@@ -22,9 +22,9 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
-  PieChart, // Import PieChart
-  Pie,      // Import Pie
-  Cell,     // Import Cell for PieChart colors
+  PieChart,
+  Pie,
+  Cell,
 } from 'recharts';
 import {
   Table,
@@ -34,17 +34,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { supabase } from '@/integrations/supabase/client'; // Import supabase client
-import * as XLSX from 'xlsx'; // Import XLSX library
-// import Papa from 'papaparse'; // Removed Papa Parse
-import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from '@/components/ui/pagination'; // Import Pagination components
+import { supabase } from '@/integrations/supabase/client';
+import * as XLSX from 'xlsx';
 
 // Data Interfaces
 interface ChartDataItem {
@@ -62,7 +53,7 @@ interface TagihanDetail {
   jumlah_kotor: number;
   status_tagihan: string;
   waktu_input: string;
-  sumber_dana?: string; // Added for detail table
+  sumber_dana?: string;
 }
 
 interface SkpdData {
@@ -78,16 +69,16 @@ const AdminLaporan = () => {
   const [loadingPage, setLoadingPage] = useState(true);
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [reportType, setReportType] = useState<string>('');
-  const [selectedStatus, setSelectedStatus] = useState<string>('Semua'); // New state for status filter
-  const [groupByOption, setGroupByOption] = useState<string>('sumber_dana'); // New state for group by
-  const [selectedSkpdForAnalysis, setSelectedSkpdForAnalysis] = useState<string>('Semua SKPD'); // New state for selected SKPD in analysis
-  const [skpdOptionsForAnalysis, setSkpdOptionsForAnalysis] = useState<string[]>([]); // New state for SKPD options
-  const [selectedStatusFilter, setSelectedStatusFilter] = useState<string>('Semua (Selesai)'); // NEW: State for conditional status filter
+  const [selectedStatus, setSelectedStatus] = useState<string>('Semua');
+  const [groupByOption, setGroupByOption] = useState<string>('sumber_dana');
+  const [selectedSkpdForAnalysis, setSelectedSkpdForAnalysis] = useState<string>('Semua SKPD');
+  const [skpdOptionsForAnalysis, setSkpdOptionsForAnalysis] = useState<string[]>([]);
+  const [selectedStatusFilter, setSelectedStatusFilter] = useState<string>('Semua (Selesai)');
 
   const [generatedReportType, setGeneratedReportType] = useState<string | null>(null);
-  const [chartData, setChartData] = useState<ChartDataItem[]>([]); // Separate state for chart data
-  const [tableData, setTableData] = useState<TagihanDetail[]>([]); // Separate state for table data
-  const [loadingReport, setLoadingReport] = useState(false); // New loading state for report generation
+  const [chartData, setChartData] = useState<ChartDataItem[]>([]);
+  const [tableData, setTableData] = useState<TagihanDetail[]>([]);
+  const [loadingReport, setLoadingReport] = useState(false);
 
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
@@ -105,11 +96,11 @@ const AdminLaporan = () => {
       setSelectedStatus('Semua');
     }
     if (reportType !== 'analisis_skpd') {
-      setGroupByOption('sumber_dana'); // Reset to default when not in analysis mode
-      setSelectedSkpdForAnalysis('Semua SKPD'); // Reset SKPD selection
-      setSelectedStatusFilter('Semua (Selesai)'); // NEW: Reset conditional status filter
+      setGroupByOption('sumber_dana');
+      setSelectedSkpdForAnalysis('Semua SKPD');
+      setSelectedStatusFilter('Semua (Selesai)');
     }
-    setCurrentPage(1); // Reset page on report type change
+    setCurrentPage(1);
   }, [reportType]);
 
   // Fetch SKPD options for analysis dropdown
@@ -146,10 +137,10 @@ const AdminLaporan = () => {
     }
 
     setLoadingReport(true);
-    setGeneratedReportType(null); // Clear previous report type
-    setChartData([]); // Clear previous chart data
-    setTableData([]); // Clear previous table data
-    setCurrentPage(1); // Reset to first page on new report generation
+    setGeneratedReportType(null);
+    setChartData([]);
+    setTableData([]);
+    setCurrentPage(1);
 
     try {
       const startDateISO = dateRange?.from ? dateRange.from.toISOString() : undefined;
@@ -166,8 +157,7 @@ const AdminLaporan = () => {
       } else if (reportType === 'analisis_skpd') {
         payload.groupBy = groupByOption;
         payload.skpd = selectedSkpdForAnalysis !== 'Semua SKPD' ? selectedSkpdForAnalysis : undefined;
-        // NEW: Add selectedStatusFilter to payload
-        payload.statusFilter = selectedStatusFilter; // MODIFIED: Always send the value
+        payload.statusFilter = selectedStatusFilter;
       }
 
       const { data, error } = await supabase.functions.invoke('generate-report', {
@@ -181,11 +171,11 @@ const AdminLaporan = () => {
         setChartData(data.chartData || []);
         setTableData(data.tableData || []);
       } else {
-        setChartData(data || []); // For 'sumber_dana' and 'jenis_tagihan'
-        setTableData(data || []); // For 'detail_skpd' and also for aggregated reports if needed in table
+        setChartData(data || []);
+        setTableData(data || []);
       }
-      
-      setGeneratedReportType(reportType); // Set generated report type only on success
+
+      setGeneratedReportType(reportType);
       toast.success('Laporan berhasil dibuat!');
     } catch (error: any) {
       console.error('Error generating report:', error.message);
@@ -198,7 +188,7 @@ const AdminLaporan = () => {
     }
   };
 
-  const handleDownloadCSV = () => { // Renamed to handleDownloadXLSX internally
+  const handleDownloadCSV = () => {
     if (!tableData || tableData.length === 0) {
       toast.error('Tidak ada data untuk diunduh.');
       return;
@@ -206,9 +196,8 @@ const AdminLaporan = () => {
 
     let headers: string[] = [];
     let data: (string | number)[][] = [];
-    let fileName = 'laporan_data.xlsx'; // Default to XLSX
+    let fileName = 'laporan_data.xlsx';
 
-    // Customize headers and data based on report type
     if (generatedReportType === 'sumber_dana' || generatedReportType === 'jenis_tagihan') {
       headers = [generatedReportType === 'sumber_dana' ? 'Sumber Dana' : 'Jenis Tagihan', 'Total Nilai'];
       data = tableData.map((item: ChartDataItem) => [item.name, item.value]);
@@ -244,14 +233,9 @@ const AdminLaporan = () => {
       return;
     }
 
-    // Create a worksheet
     const ws = XLSX.utils.aoa_to_sheet([headers, ...data]);
-    
-    // Create a new workbook
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Laporan"); // Add the worksheet to the workbook
-
-    // Write the file
+    XLSX.utils.book_append_sheet(wb, ws, "Laporan");
     XLSX.writeFile(wb, fileName);
 
     toast.success('Laporan berhasil diunduh!');
@@ -269,130 +253,195 @@ const AdminLaporan = () => {
 
   if (loadingPage) {
     return (
-      <div className="p-6 bg-white rounded-lg shadow-sm border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
-        <h1 className="text-3xl font-bold text-gray-800 dark:text-white mb-4">Memuat Halaman...</h1>
-        <p className="text-gray-600 dark:text-gray-400">Sedang memeriksa hak akses Anda.</p>
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center space-y-4">
+          <div className="relative w-16 h-16 mx-auto">
+            <div className="absolute inset-0 rounded-full border-4 border-emerald-200 dark:border-emerald-900"></div>
+            <div className="absolute inset-0 rounded-full border-4 border-emerald-500 dark:border-emerald-400 border-t-transparent animate-spin"></div>
+          </div>
+          <div className="space-y-2">
+            <h2 className="text-2xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 dark:from-emerald-400 dark:to-teal-400 bg-clip-text text-transparent">
+              Memuat Halaman
+            </h2>
+            <p className="text-sm text-slate-600 dark:text-slate-400">
+              Sedang memeriksa hak akses...
+            </p>
+          </div>
+        </div>
       </div>
     );
   }
 
   if (profile?.peran !== 'Administrator') {
     return (
-      <div className="p-6 bg-white rounded-lg shadow-sm border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
-        <h1 className="text-3xl font-bold text-red-600 dark:text-red-400 mb-4">Akses Ditolak</h1>
-        <p className="text-gray-600 dark:text-gray-400">Anda tidak memiliki izin untuk mengakses halaman ini.</p>
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Card className="max-w-md w-full border-red-200 dark:border-red-900/50 shadow-lg">
+          <CardContent className="pt-6 text-center space-y-4">
+            <div className="w-16 h-16 mx-auto rounded-full bg-red-100 dark:bg-red-900/20 flex items-center justify-center">
+              <svg className="w-8 h-8 text-red-600 dark:text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            <div className="space-y-2">
+              <h2 className="text-2xl font-bold text-red-600 dark:text-red-400">
+                Akses Ditolak
+              </h2>
+              <p className="text-sm text-slate-600 dark:text-slate-400">
+                Anda tidak memiliki izin untuk mengakses halaman ini.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-gray-800 dark:text-white">Generate Laporan</h1>
-      <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
-        Pilih rentang tanggal dan jenis laporan untuk menghasilkan visualisasi dan ringkasan data.
-      </p>
+    <div className="space-y-8 animate-in fade-in duration-500">
+      {/* Header Section */}
+      <div className="space-y-3">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 shadow-lg shadow-emerald-500/20">
+            <BarChartIcon className="h-7 w-7 text-white" />
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 dark:from-emerald-400 dark:to-teal-400 bg-clip-text text-transparent">
+              Generate Laporan
+            </h1>
+            <p className="text-sm text-slate-600 dark:text-slate-400 mt-0.5">
+              Pilih rentang tanggal dan jenis laporan untuk menghasilkan visualisasi dan ringkasan data
+            </p>
+          </div>
+        </div>
+      </div>
 
-      <Card className="shadow-sm rounded-lg">
-        <CardHeader>
-          <CardTitle className="text-xl font-semibold">Filter Laporan</CardTitle>
+      {/* Filter Section */}
+      <Card className="border-slate-200 dark:border-slate-800 shadow-lg hover:shadow-xl transition-shadow duration-300">
+        <CardHeader className="border-b border-slate-200 dark:border-slate-800 bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 shadow-sm">
+              <FilterIcon className="h-4 w-4 text-white" />
+            </div>
+            <CardTitle className="text-lg font-bold text-slate-900 dark:text-white">
+              Filter Laporan
+            </CardTitle>
+          </div>
         </CardHeader>
-        <CardContent className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 items-end"> {/* Adjusted grid columns */}
-          <div className="grid gap-2">
-            <Label htmlFor="date-range">Rentang Tanggal</Label>
-            <DateRangePickerWithPresets
-              date={dateRange}
-              onDateChange={setDateRange}
-              className="w-full"
-            />
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="report-type">Jenis Laporan</Label>
-            <Select onValueChange={setReportType} value={reportType}>
-              <SelectTrigger id="report-type" className="w-full">
-                <SelectValue placeholder="Pilih Jenis Laporan" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="sumber_dana">Laporan per Sumber Dana</SelectItem>
-                <SelectItem value="jenis_tagihan">Laporan per Jenis Tagihan</SelectItem>
-                <SelectItem value="analisis_skpd">Laporan Analisis SKPD</SelectItem> {/* Changed label and value */}
-              </SelectContent>
-            </Select>
-          </div>
-          {(reportType === 'sumber_dana' || reportType === 'jenis_tagihan') && (
+        <CardContent className="pt-6">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 items-end">
             <div className="grid gap-2">
-              <Label htmlFor="status-filter">Status</Label>
-              <Select onValueChange={setSelectedStatus} value={selectedStatus}>
-                <SelectTrigger id="status-filter" className="w-full">
-                  <SelectValue placeholder="Pilih Status" />
+              <Label htmlFor="date-range">Rentang Tanggal</Label>
+              <DateRangePickerWithPresets
+                date={dateRange}
+                onDateChange={setDateRange}
+                className="w-full"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="report-type">Jenis Laporan</Label>
+              <Select onValueChange={setReportType} value={reportType}>
+                <SelectTrigger id="report-type" className="w-full border-slate-300 dark:border-slate-700 hover:border-emerald-500 dark:hover:border-emerald-500 transition-colors">
+                  <SelectValue placeholder="Pilih Jenis Laporan" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Semua">Semua</SelectItem>
-                  <SelectItem value="Diteruskan">Diteruskan</SelectItem>
-                  <SelectItem value="Dikembalikan">Dikembalikan</SelectItem>
+                  <SelectItem value="sumber_dana">Laporan per Sumber Dana</SelectItem>
+                  <SelectItem value="jenis_tagihan">Laporan per Jenis Tagihan</SelectItem>
+                  <SelectItem value="analisis_skpd">Laporan Analisis SKPD</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-          )}
-          {reportType === 'analisis_skpd' && (
-            <>
+            {(reportType === 'sumber_dana' || reportType === 'jenis_tagihan') && (
               <div className="grid gap-2">
-                <Label htmlFor="group-by-option">Kelompokkan Berdasarkan</Label>
-                <Select onValueChange={setGroupByOption} value={groupByOption}>
-                  <SelectTrigger id="group-by-option" className="w-full">
-                    <SelectValue placeholder="Pilih Opsi Pengelompokan" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="sumber_dana">Sumber Dana</SelectItem>
-                    <SelectItem value="jenis_tagihan">Jenis Tagihan</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="skpd-for-analysis">Pilih SKPD</Label>
-                <Select onValueChange={setSelectedSkpdForAnalysis} value={selectedSkpdForAnalysis}>
-                  <SelectTrigger id="skpd-for-analysis" className="w-full">
-                    <SelectValue placeholder="Pilih SKPD" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {skpdOptionsForAnalysis.map((skpd) => (
-                      <SelectItem key={skpd} value={skpd}>
-                        {skpd}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              {/* NEW: Status Tagihan Dropdown */}
-              <div className="grid gap-2">
-                <Label htmlFor="status-tagihan-filter">Status Tagihan</Label>
-                <Select onValueChange={setSelectedStatusFilter} value={selectedStatusFilter}>
-                  <SelectTrigger id="status-tagihan-filter" className="w-full">
+                <Label htmlFor="status-filter">Status</Label>
+                <Select onValueChange={setSelectedStatus} value={selectedStatus}>
+                  <SelectTrigger id="status-filter" className="w-full border-slate-300 dark:border-slate-700 hover:border-emerald-500 dark:hover:border-emerald-500 transition-colors">
                     <SelectValue placeholder="Pilih Status" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Semua (Selesai)">Semua (Selesai)</SelectItem>
+                    <SelectItem value="Semua">Semua</SelectItem>
                     <SelectItem value="Diteruskan">Diteruskan</SelectItem>
                     <SelectItem value="Dikembalikan">Dikembalikan</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-            </>
-          )}
-          <Button onClick={handleGenerateReport} className="w-full md:col-span-1 lg:col-span-1 flex items-center gap-2" disabled={loadingReport}>
-            {loadingReport ? 'Membuat Laporan...' : <><BarChartIcon className="h-4 w-4" /> Tampilkan Laporan</>}
-          </Button>
+            )}
+            {reportType === 'analisis_skpd' && (
+              <>
+                <div className="grid gap-2">
+                  <Label htmlFor="group-by-option">Kelompokkan Berdasarkan</Label>
+                  <Select onValueChange={setGroupByOption} value={groupByOption}>
+                    <SelectTrigger id="group-by-option" className="w-full border-slate-300 dark:border-slate-700 hover:border-emerald-500 dark:hover:border-emerald-500 transition-colors">
+                      <SelectValue placeholder="Pilih Opsi Pengelompokan" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="sumber_dana">Sumber Dana</SelectItem>
+                      <SelectItem value="jenis_tagihan">Jenis Tagihan</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="skpd-for-analysis">Pilih SKPD</Label>
+                  <Select onValueChange={setSelectedSkpdForAnalysis} value={selectedSkpdForAnalysis}>
+                    <SelectTrigger id="skpd-for-analysis" className="w-full border-slate-300 dark:border-slate-700 hover:border-emerald-500 dark:hover:border-emerald-500 transition-colors">
+                      <SelectValue placeholder="Pilih SKPD" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {skpdOptionsForAnalysis.map((skpd) => (
+                        <SelectItem key={skpd} value={skpd}>
+                          {skpd}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="status-tagihan-filter">Status Tagihan</Label>
+                  <Select onValueChange={setSelectedStatusFilter} value={selectedStatusFilter}>
+                    <SelectTrigger id="status-tagihan-filter" className="w-full border-slate-300 dark:border-slate-700 hover:border-emerald-500 dark:hover:border-emerald-500 transition-colors">
+                      <SelectValue placeholder="Pilih Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Semua (Selesai)">Semua (Selesai)</SelectItem>
+                      <SelectItem value="Diteruskan">Diteruskan</SelectItem>
+                      <SelectItem value="Dikembalikan">Dikembalikan</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </>
+            )}
+            <Button
+              onClick={handleGenerateReport}
+              className="w-full md:col-span-1 lg:col-span-1 flex items-center gap-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white shadow-lg shadow-emerald-500/20 transition-all"
+              disabled={loadingReport}
+            >
+              {loadingReport ? 'Membuat Laporan...' : <><BarChartIcon className="h-4 w-4" /> Tampilkan Laporan</>}
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
-      {/* Area Visualisasi Laporan */}
-      <Card className="shadow-sm rounded-lg">
-        <CardHeader>
-          <CardTitle className="text-xl font-semibold">Visualisasi Laporan</CardTitle>
+      {/* Visualization Section */}
+      <Card className="border-slate-200 dark:border-slate-800 shadow-lg hover:shadow-xl transition-shadow duration-300">
+        <CardHeader className="border-b border-slate-200 dark:border-slate-800 bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 shadow-sm">
+              <PieChartIcon className="h-4 w-4 text-white" />
+            </div>
+            <CardTitle className="text-lg font-bold text-slate-900 dark:text-white">
+              Visualisasi Laporan
+            </CardTitle>
+          </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-6">
           {loadingReport ? (
-            <div className="h-80 bg-gray-100 dark:bg-gray-700 flex items-center justify-center rounded-md border border-dashed border-gray-300 dark:border-gray-600 text-muted-foreground">
-              Memuat grafik...
+            <div className="h-80 flex items-center justify-center">
+              <div className="text-center space-y-4">
+                <div className="relative w-12 h-12 mx-auto">
+                  <div className="absolute inset-0 rounded-full border-4 border-emerald-200 dark:border-emerald-900"></div>
+                  <div className="absolute inset-0 rounded-full border-4 border-emerald-500 dark:border-emerald-400 border-t-transparent animate-spin"></div>
+                </div>
+                <p className="text-sm text-slate-600 dark:text-slate-400 font-medium">Memuat grafik...</p>
+              </div>
             </div>
           ) : generatedReportType === 'sumber_dana' && chartData.length > 0 ? (
             <ResponsiveContainer width="100%" height={300}>
@@ -424,7 +473,7 @@ const AdminLaporan = () => {
                   cy="50%"
                   labelLine={false}
                   outerRadius={80}
-                  innerRadius={60} // Kunci untuk Donut Chart
+                  innerRadius={60}
                   fill="#8884d8"
                   dataKey="value"
                   label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
@@ -438,42 +487,54 @@ const AdminLaporan = () => {
                 <Legend />
               </PieChart>
             </ResponsiveContainer>
-          ) : generatedReportType === 'analisis_skpd' && chartData.length > 0 ? ( // NEW: Bar Chart for analisis_skpd
+          ) : generatedReportType === 'analisis_skpd' && chartData.length > 0 ? (
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={chartData}>
                 <XAxis dataKey="name" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
                 <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
                 <Tooltip cursor={{ fill: 'transparent' }} formatter={(value: number) => formatCurrency(value)} />
                 <Legend />
-                <Bar dataKey="value" fill="#8884d8" radius={[4, 4, 0, 0]} name="Total Nilai" />
+                <Bar dataKey="value" fill="#10b981" radius={[4, 4, 0, 0]} name="Total Nilai" />
               </BarChart>
             </ResponsiveContainer>
           ) : (
-            <div className="h-80 bg-gray-100 dark:bg-gray-700 flex items-center justify-center rounded-md border border-dashed border-gray-300 dark:border-gray-600 text-muted-foreground">
-              Area Chart / Grafik Akan Muncul Di Sini
+            <div className="h-80 bg-slate-50 dark:bg-slate-900/50 flex items-center justify-center rounded-lg border-2 border-dashed border-slate-300 dark:border-slate-700">
+              <div className="text-center space-y-2">
+                <PieChartIcon className="h-12 w-12 mx-auto text-slate-400 dark:text-slate-600" />
+                <p className="text-sm text-slate-600 dark:text-slate-400">Area Chart / Grafik Akan Muncul Di Sini</p>
+              </div>
             </div>
           )}
         </CardContent>
       </Card>
 
-      {/* Area Tabel Rangkuman */}
-      <Card className="shadow-sm rounded-lg">
-        <CardHeader>
-          <CardTitle className="text-xl font-semibold">Tabel Rangkuman</CardTitle>
+      {/* Table Section */}
+      <Card className="border-slate-200 dark:border-slate-800 shadow-lg hover:shadow-xl transition-shadow duration-300">
+        <CardHeader className="border-b border-slate-200 dark:border-slate-800 bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 shadow-sm">
+              <BarChartIcon className="h-4 w-4 text-white" />
+            </div>
+            <CardTitle className="text-lg font-bold text-slate-900 dark:text-white">
+              Tabel Rangkuman
+            </CardTitle>
+          </div>
         </CardHeader>
-        <CardContent>
-          {/* "Baris per halaman" dropdown */}
-          <div className="mb-4 flex justify-end items-center space-x-2">
-            <Label htmlFor="items-per-page" className="whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">Baris per halaman:</Label>
+        <CardContent className="pt-6">
+          {/* Items per page */}
+          <div className="mb-5 flex items-center justify-end gap-2">
+            <Label htmlFor="items-per-page" className="text-sm text-slate-700 dark:text-slate-300 whitespace-nowrap">
+              Tampilkan:
+            </Label>
             <Select
               value={itemsPerPage.toString()}
               onValueChange={(value) => {
                 setItemsPerPage(Number(value));
-                setCurrentPage(1); // Reset to first page when items per page changes
+                setCurrentPage(1);
               }}
             >
-              <SelectTrigger className="w-[100px]">
-                <SelectValue placeholder="10" />
+              <SelectTrigger className="w-[100px] h-9 border-slate-300 dark:border-slate-700">
+                <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="10">10</SelectItem>
@@ -485,95 +546,121 @@ const AdminLaporan = () => {
             </Select>
           </div>
 
-          {loadingReport ? (
-            <div className="h-60 bg-gray-100 dark:bg-gray-700 flex items-center justify-center rounded-md border border-dashed border-gray-300 dark:border-gray-600 text-muted-foreground">
-              Memuat tabel...
-            </div>
-          ) : (generatedReportType === 'sumber_dana' || generatedReportType === 'jenis_tagihan') && tableData.length > 0 ? (
-            <div className="overflow-x-auto">
+          <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-800">
+            {loadingReport ? (
+              <div className="h-60 flex items-center justify-center">
+                <div className="text-center space-y-4">
+                  <div className="relative w-12 h-12 mx-auto">
+                    <div className="absolute inset-0 rounded-full border-4 border-emerald-200 dark:border-emerald-900"></div>
+                    <div className="absolute inset-0 rounded-full border-4 border-emerald-500 dark:border-emerald-400 border-t-transparent animate-spin"></div>
+                  </div>
+                  <p className="text-sm text-slate-600 dark:text-slate-400 font-medium">Memuat tabel...</p>
+                </div>
+              </div>
+            ) : (generatedReportType === 'sumber_dana' || generatedReportType === 'jenis_tagihan') && tableData.length > 0 ? (
               <Table>
                 <TableHeader>
-                  <TableRow>
-                    <TableHead>{generatedReportType === 'sumber_dana' ? 'Sumber Dana' : 'Jenis Tagihan'}</TableHead>
-                    <TableHead className="text-right">Total Nilai</TableHead>
+                  <TableRow className="bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950 dark:to-teal-950 hover:from-emerald-50 hover:to-teal-50 dark:hover:from-emerald-950 dark:hover:to-teal-950 border-b border-emerald-100 dark:border-emerald-900">
+                    <TableHead className="font-bold text-emerald-900 dark:text-emerald-100">{generatedReportType === 'sumber_dana' ? 'Sumber Dana' : 'Jenis Tagihan'}</TableHead>
+                    <TableHead className="text-right font-bold text-emerald-900 dark:text-emerald-100">Total Nilai</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {currentTableData.map((item: ChartDataItem, index) => (
-                    <TableRow key={index}>
-                      <TableCell>{item.name}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(item.value)}</TableCell>
+                    <TableRow key={index} className="hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
+                      <TableCell className="text-slate-700 dark:text-slate-300">{item.name}</TableCell>
+                      <TableCell className="text-right font-medium text-slate-900 dark:text-white">{formatCurrency(item.value)}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
-            </div>
-          ) : generatedReportType === 'analisis_skpd' && tableData.length > 0 ? ( // NEW: Detail Table for analisis_skpd
-            <div className="overflow-x-auto">
+            ) : generatedReportType === 'analisis_skpd' && tableData.length > 0 ? (
               <Table>
                 <TableHeader>
-                  <TableRow>
-                    <TableHead>Nama SKPD</TableHead>
-                    <TableHead>Nomor SPM</TableHead>
-                    <TableHead>Jenis SPM</TableHead>
-                    <TableHead>Jenis Tagihan</TableHead>
-                    <TableHead>Sumber Dana</TableHead>
-                    <TableHead>Uraian</TableHead>
-                    <TableHead className="text-right">Jumlah Kotor</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Waktu Input</TableHead>
+                  <TableRow className="bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950 dark:to-teal-950 hover:from-emerald-50 hover:to-teal-50 dark:hover:from-emerald-950 dark:hover:to-teal-950 border-b border-emerald-100 dark:border-emerald-900">
+                    <TableHead className="font-bold text-emerald-900 dark:text-emerald-100">Nama SKPD</TableHead>
+                    <TableHead className="font-bold text-emerald-900 dark:text-emerald-100">Nomor SPM</TableHead>
+                    <TableHead className="font-bold text-emerald-900 dark:text-emerald-100">Jenis SPM</TableHead>
+                    <TableHead className="font-bold text-emerald-900 dark:text-emerald-100">Jenis Tagihan</TableHead>
+                    <TableHead className="font-bold text-emerald-900 dark:text-emerald-100">Sumber Dana</TableHead>
+                    <TableHead className="font-bold text-emerald-900 dark:text-emerald-100">Uraian</TableHead>
+                    <TableHead className="text-right font-bold text-emerald-900 dark:text-emerald-100">Jumlah Kotor</TableHead>
+                    <TableHead className="font-bold text-emerald-900 dark:text-emerald-100">Status</TableHead>
+                    <TableHead className="font-bold text-emerald-900 dark:text-emerald-100">Waktu Input</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {currentTableData.map((item: TagihanDetail) => (
-                    <TableRow key={item.id_tagihan}>
-                      <TableCell>{item.nama_skpd}</TableCell>
-                      <TableCell>{item.nomor_spm}</TableCell>
-                      <TableCell>{item.jenis_spm}</TableCell>
-                      <TableCell>{item.jenis_tagihan}</TableCell>
-                      <TableCell>{item.sumber_dana || '-'}</TableCell>
-                      <TableCell>{item.uraian}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(item.jumlah_kotor)}</TableCell>
-                      <TableCell>{item.status_tagihan}</TableCell>
-                      <TableCell>{new Date(item.waktu_input).toLocaleDateString('id-ID')}</TableCell>
+                    <TableRow key={item.id_tagihan} className="hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
+                      <TableCell className="text-slate-700 dark:text-slate-300">{item.nama_skpd}</TableCell>
+                      <TableCell className="font-semibold text-slate-900 dark:text-white">{item.nomor_spm}</TableCell>
+                      <TableCell className="text-slate-700 dark:text-slate-300">{item.jenis_spm}</TableCell>
+                      <TableCell className="text-slate-700 dark:text-slate-300">{item.jenis_tagihan}</TableCell>
+                      <TableCell className="text-slate-700 dark:text-slate-300">{item.sumber_dana || '-'}</TableCell>
+                      <TableCell className="text-slate-700 dark:text-slate-300">{item.uraian}</TableCell>
+                      <TableCell className="text-right font-medium text-slate-900 dark:text-white">{formatCurrency(item.jumlah_kotor)}</TableCell>
+                      <TableCell className="text-slate-700 dark:text-slate-300">{item.status_tagihan}</TableCell>
+                      <TableCell className="text-slate-700 dark:text-slate-300">{new Date(item.waktu_input).toLocaleDateString('id-ID')}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
-            </div>
-          ) : (
-            <div className="h-60 bg-gray-100 dark:bg-gray-700 flex items-center justify-center rounded-md border border-dashed border-gray-300 dark:border-gray-600 text-muted-foreground">
-              Tabel Rangkuman Akan Muncul Di Sini
-            </div>
-          )}
+            ) : (
+              <div className="h-60 bg-slate-50 dark:bg-slate-900/50 flex items-center justify-center">
+                <div className="text-center space-y-2">
+                  <BarChartIcon className="h-12 w-12 mx-auto text-slate-400 dark:text-slate-600" />
+                  <p className="text-sm text-slate-600 dark:text-slate-400">Tabel Rangkuman Akan Muncul Di Sini</p>
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* Pagination Controls */}
           {tableData.length > 0 && (
-            <div className="mt-6 flex flex-col sm:flex-row items-center justify-end space-y-2 sm:space-y-0 space-x-4">
-              <div className="text-sm text-muted-foreground">
-                Halaman {tableData.length === 0 ? 0 : currentPage} dari {totalPages} ({tableData.length} total item)
+            <div className="px-6 py-4 mt-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 rounded-b-lg">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="text-sm text-slate-600 dark:text-slate-400 font-medium">
+                  Menampilkan <span className="text-slate-900 dark:text-white font-semibold">{tableData.length === 0 ? 0 : indexOfFirstItem + 1}</span> - <span className="text-slate-900 dark:text-white font-semibold">{Math.min(indexOfLastItem, tableData.length)}</span> dari <span className="text-slate-900 dark:text-white font-semibold">{tableData.length}</span> item
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                    disabled={currentPage === 1 || itemsPerPage === -1}
+                    className="gap-1.5 hover:bg-emerald-50 hover:border-emerald-500 hover:text-emerald-600 dark:hover:bg-emerald-950 dark:hover:border-emerald-500 dark:hover:text-emerald-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <ChevronLeftIcon className="h-4 w-4" />
+                    <span className="hidden sm:inline">Sebelumnya</span>
+                  </Button>
+                  <div className="px-3 py-1.5 rounded-md bg-emerald-100 dark:bg-emerald-900/30 text-sm font-semibold text-emerald-700 dark:text-emerald-400">
+                    {currentPage} / {totalPages}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                    disabled={currentPage === totalPages || itemsPerPage === -1}
+                    className="gap-1.5 hover:bg-emerald-50 hover:border-emerald-500 hover:text-emerald-600 dark:hover:bg-emerald-950 dark:hover:border-emerald-500 dark:hover:text-emerald-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <span className="hidden sm:inline">Berikutnya</span>
+                    <ChevronRightIcon className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
-              <Button
-                variant="outline"
-                onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-                disabled={currentPage === 1 || itemsPerPage === -1}
-              >
-                Sebelumnya
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-                disabled={currentPage === totalPages || itemsPerPage === -1}
-              >
-                Berikutnya
-              </Button>
             </div>
           )}
         </CardContent>
       </Card>
 
-      {/* Tombol Download Laporan */}
+      {/* Download Button */}
       <div className="flex justify-end">
-        <Button onClick={handleDownloadCSV} variant="outline" className="flex items-center gap-2" disabled={!generatedReportType || loadingReport || tableData.length === 0}>
+        <Button
+          onClick={handleDownloadCSV}
+          variant="outline"
+          className="flex items-center gap-2 hover:bg-emerald-50 hover:border-emerald-500 hover:text-emerald-600 dark:hover:bg-emerald-950 dark:hover:border-emerald-500 dark:hover:text-emerald-400 transition-colors"
+          disabled={!generatedReportType || loadingReport || tableData.length === 0}
+        >
           <FileDownIcon className="h-4 w-4" /> Download Laporan (XLSX)
         </Button>
       </div>
