@@ -193,7 +193,7 @@ const AddUserDialog: React.FC<AddUserDialogProps> = ({ isOpen, onClose, onUserAd
         if (values.peran !== 'SKPD' || asalSkpdToSave === null) {
           const { error: profileUpdateError } = await supabase
             .from('profiles')
-            .update({ 
+            .update({
               peran: values.peran,
               asal_skpd: asalSkpdToSave,
             })
@@ -223,67 +223,69 @@ const AddUserDialog: React.FC<AddUserDialogProps> = ({ isOpen, onClose, onUserAd
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>{isEditMode ? 'Edit Pengguna' : 'Tambah Pengguna Baru'}</DialogTitle>
-          <DialogDescription>
-            {isEditMode ? 'Perbarui detail pengguna di sini.' : 'Masukkan detail pengguna baru di sini.'} Klik simpan setelah selesai.
+      <DialogContent className="sm:max-w-[500px]">
+        <DialogHeader className="border-b border-slate-200 dark:border-slate-800 pb-4 bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950 dark:to-teal-950 -m-6 mb-0 p-6 rounded-t-lg">
+          <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 dark:from-emerald-400 dark:to-teal-400 bg-clip-text text-transparent">
+            {isEditMode ? 'Edit Pengguna' : 'Tambah Pengguna Baru'}
+          </DialogTitle>
+          <DialogDescription className="text-slate-600 dark:text-slate-400">
+            {isEditMode ? 'Perbarui detail pengguna di sini' : 'Masukkan detail pengguna baru di sini'}
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4">
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="nama_lengkap" className="text-right">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5 mt-6">
+          <div className="space-y-2">
+            <Label htmlFor="nama_lengkap" className="text-sm font-semibold text-slate-700 dark:text-slate-300">
               Nama Lengkap
             </Label>
             <Input
               id="nama_lengkap"
               {...form.register('nama_lengkap')}
-              className="col-span-3"
+              className="border-slate-300 dark:border-slate-700 focus:border-emerald-500 focus:ring-emerald-500"
               disabled={isSubmitting}
             />
             {form.formState.errors.nama_lengkap && (
-              <p className="col-span-4 text-right text-red-500 text-sm">
+              <p className="text-red-500 text-sm">
                 {form.formState.errors.nama_lengkap.message}
               </p>
             )}
           </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="email" className="text-right">
+          <div className="space-y-2">
+            <Label htmlFor="email" className="text-sm font-semibold text-slate-700 dark:text-slate-300">
               Email
             </Label>
             <Input
               id="email"
               type="email"
               {...form.register('email')}
-              className="col-span-3"
+              className="border-slate-300 dark:border-slate-700 focus:border-emerald-500 focus:ring-emerald-500"
               disabled={isSubmitting || isEditMode}
             />
             {form.formState.errors.email && (
-              <p className="col-span-4 text-right text-red-500 text-sm">
+              <p className="text-red-500 text-sm">
                 {form.formState.errors.email.message}
               </p>
             )}
           </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="password" className="text-right">
+          <div className="space-y-2">
+            <Label htmlFor="password" className="text-sm font-semibold text-slate-700 dark:text-slate-300">
               Password
             </Label>
             <Input
               id="password"
               type="password"
               {...form.register('password')}
-              className="col-span-3"
+              className="border-slate-300 dark:border-slate-700 focus:border-emerald-500 focus:ring-emerald-500"
               disabled={isSubmitting || isEditMode}
               placeholder={isEditMode ? "Tidak dapat diubah" : "Masukkan password"}
             />
             {form.formState.errors.password && (
-              <p className="col-span-4 text-right text-red-500 text-sm">
+              <p className="text-red-500 text-sm">
                 {form.formState.errors.password.message}
               </p>
             )}
           </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="peran" className="text-right">
+          <div className="space-y-2">
+            <Label htmlFor="peran" className="text-sm font-semibold text-slate-700 dark:text-slate-300">
               Peran
             </Label>
             <Controller
@@ -291,7 +293,7 @@ const AddUserDialog: React.FC<AddUserDialogProps> = ({ isOpen, onClose, onUserAd
               control={form.control}
               render={({ field }) => (
                 <Select onValueChange={field.onChange} value={field.value} disabled={isSubmitting}>
-                  <SelectTrigger className="col-span-3">
+                  <SelectTrigger className="border-slate-300 dark:border-slate-700">
                     <SelectValue placeholder="Pilih Peran" />
                   </SelectTrigger>
                   <SelectContent>
@@ -305,13 +307,13 @@ const AddUserDialog: React.FC<AddUserDialogProps> = ({ isOpen, onClose, onUserAd
               )}
             />
             {form.formState.errors.peran && (
-              <p className="col-span-4 text-right text-red-500 text-sm">
+              <p className="text-red-500 text-sm">
                 {form.formState.errors.peran.message}
               </p>
             )}
           </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="asal_skpd" className="text-right">
+          <div className="space-y-2">
+            <Label htmlFor="asal_skpd" className="text-sm font-semibold text-slate-700 dark:text-slate-300">
               Asal SKPD
             </Label>
             <Controller
@@ -323,19 +325,23 @@ const AddUserDialog: React.FC<AddUserDialogProps> = ({ isOpen, onClose, onUserAd
                   value={field.value || ''}
                   onValueChange={field.onChange}
                   placeholder="Pilih Asal SKPD"
-                  disabled={isSubmitting || selectedPeran !== 'SKPD'} // Disable if not SKPD
-                  className="col-span-3"
+                  disabled={isSubmitting || selectedPeran !== 'SKPD'}
+                  className="w-full border-slate-300 dark:border-slate-700"
                 />
               )}
             />
             {form.formState.errors.asal_skpd && (
-              <p className="col-span-4 text-right text-red-500 text-sm">
+              <p className="text-red-500 text-sm">
                 {form.formState.errors.asal_skpd.message}
               </p>
             )}
           </div>
-          <DialogFooter>
-            <Button type="submit" disabled={isSubmitting}>
+          <DialogFooter className="mt-6 pt-4 border-t border-slate-200 dark:border-slate-800">
+            <Button
+              type="submit"
+              disabled={isSubmitting}
+              className="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
+            >
               {isSubmitting ? (editingUser ? 'Memperbarui...' : 'Menyimpan...') : 'Simpan'}
             </Button>
           </DialogFooter>

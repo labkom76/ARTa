@@ -43,17 +43,27 @@ export function Combobox({
 }: ComboboxProps) {
   const [open, setOpen] = React.useState(false)
 
+  const [popoverWidth, setPopoverWidth] = React.useState<number>(0)
+  const triggerRef = React.useRef<HTMLButtonElement>(null)
+
+  React.useEffect(() => {
+    if (triggerRef.current) {
+      setPopoverWidth(triggerRef.current.offsetWidth)
+    }
+  }, [open])
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
+          ref={triggerRef}
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className={cn("w-64 justify-between", className)}
+          className={cn("w-full justify-between", className)}
           disabled={disabled}
         >
-          <span className="truncate"> {/* Added span with truncate class */}
+          <span className="truncate">
             {value
               ? options.find((option) => option.value === value)?.label
               : placeholder}
@@ -61,16 +71,20 @@ export function Combobox({
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-64 p-0">
+      <PopoverContent
+        className="p-0"
+        style={{ width: popoverWidth > 0 ? `${popoverWidth}px` : 'auto' }}
+        align="start"
+      >
         <Command>
-          <CommandInput placeholder="Search option..." />
+          <CommandInput placeholder="Search option..." className="h-9" />
           <CommandEmpty>No option found.</CommandEmpty>
-          <CommandGroup>
-            <CommandList>
+          <CommandList style={{ maxHeight: '300px', overflowY: 'auto', overflowX: 'hidden' }}>
+            <CommandGroup>
               {options.map((option) => (
                 <CommandItem
                   key={option.value}
-                  value={option.label} // Use label for searchability
+                  value={option.label}
                   onSelect={(currentValue) => {
                     const selectedOption = options.find(o => o.label.toLowerCase() === currentValue.toLowerCase());
                     onValueChange(selectedOption ? selectedOption.value : "");
@@ -86,8 +100,8 @@ export function Combobox({
                   {option.label}
                 </CommandItem>
               ))}
-            </CommandList>
-          </CommandGroup>
+            </CommandGroup>
+          </CommandList>
         </Command>
       </PopoverContent>
     </Popover>

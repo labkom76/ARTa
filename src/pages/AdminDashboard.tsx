@@ -16,13 +16,15 @@ import {
 } from 'recharts';
 import {
   LayoutDashboardIcon,
-  UsersIcon, // Digunakan untuk pengguna baru
+  UsersIcon,
   FileTextIcon,
   CheckCircleIcon,
   HourglassIcon,
   DollarSignIcon,
   PieChartIcon,
   BarChart3Icon,
+  TrendingUpIcon,
+  ActivityIcon,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfYear, endOfYear, startOfDay, endOfDay } from 'date-fns';
@@ -65,21 +67,22 @@ const AdminDashboard = () => {
   const { theme } = useTheme();
 
   const statusColorMap = {
-    'Diteruskan': 0, // Green
-    'Menunggu Registrasi': 1, // Yellow
-    'Menunggu Verifikasi': 2, // Purple
+    'Diteruskan': 0, // Emerald
+    'Menunggu Registrasi': 1, // Amber
+    'Menunggu Verifikasi': 2, // Blue
     'Dikembalikan': 3, // Red
   };
 
-  const lightThemeChartColors = ['#22C55E', '#FACC15', '#A855F7', '#EF4444'];
-  const darkThemeChartColors = ['#4ADE80', '#FDE047', '#C084FC', '#F87171'];
+  // Emerald-themed chart colors
+  const lightThemeChartColors = ['#10b981', '#f59e0b', '#3b82f6', '#ef4444'];
+  const darkThemeChartColors = ['#34d399', '#fbbf24', '#60a5fa', '#f87171'];
 
   const currentChartColors = theme === 'dark' ? darkThemeChartColors : lightThemeChartColors;
 
-  const axisAndLabelColor = theme === 'dark' ? '#A0A0A0' : '#888888';
-  const tooltipBgColor = theme === 'dark' ? '#333333' : '#FFFFFF';
-  const tooltipTextColor = theme === 'dark' ? '#FFFFFF' : '#000000';
-  const legendTextColor = theme === 'dark' ? '#E0E0E0' : '#333333';
+  const axisAndLabelColor = theme === 'dark' ? '#94a3b8' : '#64748b';
+  const tooltipBgColor = theme === 'dark' ? '#1e293b' : '#ffffff';
+  const tooltipTextColor = theme === 'dark' ? '#f1f5f9' : '#0f172a';
+  const legendTextColor = theme === 'dark' ? '#e2e8f0' : '#334155';
 
 
   useEffect(() => {
@@ -213,63 +216,129 @@ const AdminDashboard = () => {
 
   if (loadingPage || loadingData) {
     return (
-      <div className="p-6 bg-white rounded-lg shadow-sm border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
-        <h1 className="text-3xl font-bold text-gray-800 dark:text-white mb-4">Memuat Halaman...</h1>
-        <p className="text-xl text-gray-600 dark:text-gray-400">Sedang memeriksa hak akses Anda dan mengambil data.</p>
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center space-y-4">
+          <div className="relative w-16 h-16 mx-auto">
+            <div className="absolute inset-0 rounded-full border-4 border-emerald-200 dark:border-emerald-900"></div>
+            <div className="absolute inset-0 rounded-full border-4 border-emerald-500 dark:border-emerald-400 border-t-transparent animate-spin"></div>
+          </div>
+          <div className="space-y-2">
+            <h2 className="text-2xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 dark:from-emerald-400 dark:to-teal-400 bg-clip-text text-transparent">
+              Memuat Dashboard
+            </h2>
+            <p className="text-sm text-slate-600 dark:text-slate-400">
+              Sedang mengambil data sistem...
+            </p>
+          </div>
+        </div>
       </div>
     );
   }
 
   if (profile?.peran !== 'Administrator') {
     return (
-      <div className="p-6 bg-white rounded-lg shadow-sm border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
-        <h1 className="text-3xl font-bold text-red-600 dark:text-red-400 mb-4">Akses Ditolak</h1>
-        <p className="text-xl text-gray-600 dark:text-gray-400">Anda tidak memiliki izin untuk mengakses halaman ini.</p>
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Card className="max-w-md w-full border-red-200 dark:border-red-900/50 shadow-lg">
+          <CardContent className="pt-6 text-center space-y-4">
+            <div className="w-16 h-16 mx-auto rounded-full bg-red-100 dark:bg-red-900/20 flex items-center justify-center">
+              <svg className="w-8 h-8 text-red-600 dark:text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            <div className="space-y-2">
+              <h2 className="text-2xl font-bold text-red-600 dark:text-red-400">
+                Akses Ditolak
+              </h2>
+              <p className="text-sm text-slate-600 dark:text-slate-400">
+                Anda tidak memiliki izin untuk mengakses halaman ini.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-gray-800 dark:text-white">Dashboard Administrator</h1>
-      <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
-        Selamat datang, {profile?.nama_lengkap || 'Administrator'}! Ini adalah ringkasan aktivitas sistem.
-      </p>
+    <div className="space-y-8 animate-in fade-in duration-500">
+      {/* Header Section */}
+      <div className="space-y-3">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 shadow-lg shadow-emerald-500/20">
+            <LayoutDashboardIcon className="h-7 w-7 text-white" />
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 dark:from-emerald-400 dark:to-teal-400 bg-clip-text text-transparent">
+              Dashboard Administrator
+            </h1>
+            <p className="text-sm text-slate-600 dark:text-slate-400 mt-0.5">
+              Selamat datang, {profile?.nama_lengkap || 'Administrator'}! 👋
+            </p>
+          </div>
+        </div>
+      </div>
 
-      {/* Kotak Informasi (Cards) */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      {/* KPI Cards Grid */}
+      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
         {/* Total SKPD Card */}
-        <Card className="shadow-sm rounded-lg flex flex-col h-full">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total SKPD</CardTitle>
-            <UsersIcon className="h-4 w-4 text-blue-500" />
+        <Card className="group relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-cyan-600 opacity-100"></div>
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-600 to-cyan-700 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+          <CardHeader className="relative flex flex-row items-center justify-between space-y-0 pb-3">
+            <CardTitle className="text-sm font-semibold text-white/90">Total SKPD</CardTitle>
+            <div className="p-2.5 rounded-lg bg-white/20 backdrop-blur-sm group-hover:scale-110 transition-transform duration-300">
+              <UsersIcon className="h-5 w-5 text-white" />
+            </div>
           </CardHeader>
-          <CardContent className="flex-grow flex flex-col justify-end">
-            <div className="text-2xl font-bold">{kpiData?.totalSKPD}</div>
-            <p className="text-xs text-muted-foreground">Jumlah SKPD Terdaftar</p>
+          <CardContent className="relative">
+            <div className="text-3xl font-bold text-white mb-1">
+              {kpiData?.totalSKPD || 0}
+            </div>
+            <p className="text-xs text-white/80 font-medium">
+              SKPD Terdaftar
+            </p>
+            <div className="absolute bottom-0 right-0 opacity-10 group-hover:opacity-20 transition-opacity duration-300">
+              <UsersIcon className="h-24 w-24 text-white" />
+            </div>
           </CardContent>
         </Card>
 
-        {/* Pengguna Baru Menunggu Aktivasi Card */}
-        <Card className="shadow-sm rounded-lg flex flex-col h-full">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Menunggu Aktivasi</CardTitle> {/* Changed Title */}
-            <HourglassIcon className="h-4 w-4 text-yellow-500" />
+        {/* Menunggu Aktivasi Card */}
+        <Card className="group relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+          <div className="absolute inset-0 bg-gradient-to-br from-amber-500 to-orange-600 opacity-100"></div>
+          <div className="absolute inset-0 bg-gradient-to-br from-amber-600 to-orange-700 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+          <CardHeader className="relative flex flex-row items-center justify-between space-y-0 pb-3">
+            <CardTitle className="text-sm font-semibold text-white/90">Menunggu Aktivasi</CardTitle>
+            <div className="p-2.5 rounded-lg bg-white/20 backdrop-blur-sm group-hover:scale-110 transition-transform duration-300">
+              <HourglassIcon className="h-5 w-5 text-white" />
+            </div>
           </CardHeader>
-          <CardContent className="flex-grow flex flex-col justify-end">
-            <div className="text-2xl font-bold">{kpiData?.newUsersPendingActivation}</div>
-            <p className="text-xs text-muted-foreground">Perlu penetapan SKPD</p> {/* Changed Description */}
+          <CardContent className="relative">
+            <div className="text-3xl font-bold text-white mb-1">
+              {kpiData?.newUsersPendingActivation || 0}
+            </div>
+            <p className="text-xs text-white/80 font-medium">
+              Perlu Penetapan SKPD
+            </p>
+            <div className="absolute bottom-0 right-0 opacity-10 group-hover:opacity-20 transition-opacity duration-300">
+              <HourglassIcon className="h-24 w-24 text-white" />
+            </div>
           </CardContent>
         </Card>
 
-        {/* Nilai Total Tagihan Card with filter */}
-        <Card className="shadow-sm rounded-lg flex flex-col h-full">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Nilai Total Tagihan</CardTitle>
+        {/* Nilai Total Tagihan Card */}
+        <Card className="group relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+          <div className="absolute inset-0 bg-gradient-to-br from-emerald-500 to-teal-600 opacity-100"></div>
+          <div className="absolute inset-0 bg-gradient-to-br from-emerald-600 to-teal-700 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+          <CardHeader className="relative flex flex-row items-center justify-between space-y-0 pb-3">
+            <CardTitle className="text-sm font-semibold text-white/90">Nilai Total Tagihan</CardTitle>
             <div className="flex items-center gap-2">
-              <Select onValueChange={(value: 'Hari Ini' | 'Minggu Ini' | 'Bulan Ini' | 'Tahun Ini') => setTotalAmountTimeFilter(value)} value={totalAmountTimeFilter}>
-                <SelectTrigger className="w-auto h-auto p-0 border-none shadow-none text-xs font-medium text-muted-foreground">
-                  <SelectValue placeholder="Filter Waktu" />
+              <Select
+                onValueChange={(value: 'Hari Ini' | 'Minggu Ini' | 'Bulan Ini' | 'Tahun Ini') => setTotalAmountTimeFilter(value)}
+                value={totalAmountTimeFilter}
+              >
+                <SelectTrigger className="h-7 w-auto px-2 border-white/30 bg-white/10 backdrop-blur-sm text-white text-xs font-medium hover:bg-white/20 transition-colors">
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Hari Ini">Hari Ini</SelectItem>
@@ -278,112 +347,214 @@ const AdminDashboard = () => {
                   <SelectItem value="Tahun Ini">Tahun Ini</SelectItem>
                 </SelectContent>
               </Select>
-              <DollarSignIcon className="h-4 w-4 text-purple-500" />
+              <div className="p-2.5 rounded-lg bg-white/20 backdrop-blur-sm group-hover:scale-110 transition-transform duration-300">
+                <TrendingUpIcon className="h-5 w-5 text-white" />
+              </div>
             </div>
           </CardHeader>
-          <CardContent className="flex-grow flex flex-col justify-end">
-            <div className="text-2xl font-bold">Rp{kpiData?.totalAmountProcessed.toLocaleString('id-ID') || '0'}</div>
-            <p className="text-xs text-muted-foreground">Jumlah kotor tagihan diteruskan</p>
+          <CardContent className="relative">
+            <div className="text-2xl sm:text-3xl font-bold text-white mb-1 break-words">
+              Rp{(kpiData?.totalAmountProcessed || 0).toLocaleString('id-ID')}
+            </div>
+            <p className="text-xs text-white/80 font-medium">
+              Tagihan Diteruskan
+            </p>
+            <div className="absolute bottom-0 right-0 opacity-10 group-hover:opacity-20 transition-opacity duration-300">
+              <TrendingUpIcon className="h-24 w-24 text-white" />
+            </div>
           </CardContent>
         </Card>
 
         {/* Tagihan Dalam Antrian Card */}
-        <Card className="shadow-sm rounded-lg flex flex-col h-full">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Tagihan Dalam Antrian</CardTitle>
-            <HourglassIcon className="h-4 w-4 text-yellow-500" />
+        <Card className="group relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+          <div className="absolute inset-0 bg-gradient-to-br from-purple-500 to-pink-600 opacity-100"></div>
+          <div className="absolute inset-0 bg-gradient-to-br from-purple-600 to-pink-700 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+          <CardHeader className="relative flex flex-row items-center justify-between space-y-0 pb-3">
+            <CardTitle className="text-sm font-semibold text-white/90">Dalam Antrian</CardTitle>
+            <div className="p-2.5 rounded-lg bg-white/20 backdrop-blur-sm group-hover:scale-110 transition-transform duration-300">
+              <ActivityIcon className="h-5 w-5 text-white" />
+            </div>
           </CardHeader>
-          <CardContent className="flex-grow flex flex-col justify-end">
-            <div className="text-2xl font-bold">{kpiData?.queuedTagihan}</div>
-            <p className="text-xs text-muted-foreground">Menunggu registrasi/verifikasi</p>
+          <CardContent className="relative">
+            <div className="text-3xl font-bold text-white mb-1">
+              {kpiData?.queuedTagihan || 0}
+            </div>
+            <p className="text-xs text-white/80 font-medium">
+              Menunggu Proses
+            </p>
+            <div className="absolute bottom-0 right-0 opacity-10 group-hover:opacity-20 transition-opacity duration-300">
+              <ActivityIcon className="h-24 w-24 text-white" />
+            </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Grafik Batang (Bar Chart) */}
-      <Card className="shadow-sm rounded-lg">
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-            <LayoutDashboardIcon className="h-5 w-5 text-gray-600 dark:text-gray-300" />
-            Status Alur Kerja Langsung
-          </CardTitle>
-          <div className="flex items-center space-x-2">
-            {/* New Dropdown for Time Range */}
-            <Select onValueChange={(value: 'Hari Ini' | 'Minggu Ini' | 'Bulan Ini' | 'Tahun Ini') => setSelectedTimeRangeForChart(value)} value={selectedTimeRangeForChart}>
-              <SelectTrigger className="w-[120px] h-auto p-2 text-xs font-medium">
-                <SelectValue placeholder="Rentang Waktu" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Hari Ini">Hari Ini</SelectItem>
-                <SelectItem value="Minggu Ini">Minggu Ini</SelectItem>
-                <SelectItem value="Bulan Ini">Bulan Ini</SelectItem>
-                <SelectItem value="Tahun Ini">Tahun Ini</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button
-              variant={chartView === 'bar' ? 'secondary' : 'ghost'}
-              size="icon"
-              onClick={() => setChartView('bar')}
-              title="Tampilkan Bar Chart"
-            >
-              <BarChart3Icon className="h-4 w-4" />
-            </Button>
-            <Button
-              variant={chartView === 'donut' ? 'secondary' : 'ghost'}
-              size="icon"
-              onClick={() => setChartView('donut')}
-              title="Tampilkan Donut Chart"
-            >
-              <PieChartIcon className="h-4 w-4" />
-            </Button>
+      {/* Chart Section */}
+      <Card className="border-slate-200 dark:border-slate-800 shadow-lg hover:shadow-xl transition-shadow duration-300">
+        <CardHeader className="border-b border-slate-200 dark:border-slate-800 bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 shadow-md shadow-emerald-500/20">
+                <BarChart3Icon className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <CardTitle className="text-lg font-bold text-slate-900 dark:text-white">
+                  Status Alur Kerja
+                </CardTitle>
+                <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
+                  Visualisasi status tagihan
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 flex-wrap">
+              {/* Time Range Filter */}
+              <Select
+                onValueChange={(value: 'Hari Ini' | 'Minggu Ini' | 'Bulan Ini' | 'Tahun Ini') => setSelectedTimeRangeForChart(value)}
+                value={selectedTimeRangeForChart}
+              >
+                <SelectTrigger className="w-[140px] h-9 border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-emerald-500 dark:hover:border-emerald-500 transition-colors">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Hari Ini">Hari Ini</SelectItem>
+                  <SelectItem value="Minggu Ini">Minggu Ini</SelectItem>
+                  <SelectItem value="Bulan Ini">Bulan Ini</SelectItem>
+                  <SelectItem value="Tahun Ini">Tahun Ini</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {/* Chart Type Toggle */}
+              <div className="flex items-center gap-1 p-1 rounded-lg bg-slate-200 dark:bg-slate-800">
+                <Button
+                  variant={chartView === 'bar' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setChartView('bar')}
+                  className={cn(
+                    "h-7 px-3 transition-all duration-200",
+                    chartView === 'bar'
+                      ? "bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-md hover:from-emerald-600 hover:to-teal-700"
+                      : "hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300"
+                  )}
+                  title="Tampilkan Bar Chart"
+                >
+                  <BarChart3Icon className="h-4 w-4 mr-1.5" />
+                  <span className="text-xs font-medium">Bar</span>
+                </Button>
+                <Button
+                  variant={chartView === 'donut' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setChartView('donut')}
+                  className={cn(
+                    "h-7 px-3 transition-all duration-200",
+                    chartView === 'donut'
+                      ? "bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-md hover:from-emerald-600 hover:to-teal-700"
+                      : "hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300"
+                  )}
+                  title="Tampilkan Donut Chart"
+                >
+                  <PieChartIcon className="h-4 w-4 mr-1.5" />
+                  <span className="text-xs font-medium">Donut</span>
+                </Button>
+              </div>
+            </div>
           </div>
         </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={300}>
-            {chartView === 'bar' ? (
-              <BarChart data={barChartData}>
-                <XAxis dataKey="name" stroke={axisAndLabelColor} fontSize={12} tickLine={false} axisLine={false} />
-                <YAxis stroke={axisAndLabelColor} fontSize={12} tickLine={false} axisLine={false} />
-                <Tooltip
-                  cursor={{ fill: 'transparent' }}
-                  contentStyle={{ backgroundColor: tooltipBgColor, borderColor: axisAndLabelColor }}
-                  itemStyle={{ color: tooltipTextColor }}
-                  labelStyle={{ color: tooltipTextColor }}
-                />
-                <Legend wrapperStyle={{ color: legendTextColor }} />
-                <Bar
-                  dataKey="value"
-                  fill={({ name }) => currentChartColors[statusColorMap[name as keyof typeof statusColorMap]]}
-                  radius={[4, 4, 0, 0]}
-                />
-              </BarChart>
-            ) : (
-              <PieChart>
-                <Pie
-                  data={barChartData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  outerRadius={80}
-                  innerRadius={60} // For donut effect
-                  dataKey="value"
-                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                  paddingAngle={5}
-                >
-                  {barChartData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={currentChartColors[statusColorMap[entry.name as keyof typeof statusColorMap]]} />
-                  ))}
-                </Pie>
-                <Tooltip
-                  formatter={(value: number, name: string) => [`${value.toLocaleString('id-ID')}`, name]}
-                  contentStyle={{ backgroundColor: tooltipBgColor, borderColor: axisAndLabelColor }}
-                  itemStyle={{ color: tooltipTextColor }}
-                  labelStyle={{ color: tooltipTextColor }}
-                />
-                <Legend wrapperStyle={{ color: legendTextColor }} />
-              </PieChart>
-            )}
-          </ResponsiveContainer>
+
+        <CardContent className="pt-6">
+          {barChartData.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-[300px] text-center">
+              <div className="p-4 rounded-full bg-slate-100 dark:bg-slate-800 mb-4">
+                <BarChart3Icon className="h-12 w-12 text-slate-400 dark:text-slate-600" />
+              </div>
+              <p className="text-sm font-medium text-slate-600 dark:text-slate-400">
+                Tidak ada data untuk ditampilkan
+              </p>
+              <p className="text-xs text-slate-500 dark:text-slate-500 mt-1">
+                Silakan pilih rentang waktu yang berbeda
+              </p>
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height={350}>
+              {chartView === 'bar' ? (
+                <BarChart data={barChartData} margin={{ top: 10, right: 10, left: 0, bottom: 10 }}>
+                  <XAxis
+                    dataKey="name"
+                    stroke={axisAndLabelColor}
+                    fontSize={12}
+                    tickLine={false}
+                    axisLine={false}
+                    tick={{ fill: axisAndLabelColor }}
+                  />
+                  <YAxis
+                    stroke={axisAndLabelColor}
+                    fontSize={12}
+                    tickLine={false}
+                    axisLine={false}
+                    tick={{ fill: axisAndLabelColor }}
+                  />
+                  <Tooltip
+                    cursor={{ fill: 'rgba(16, 185, 129, 0.1)' }}
+                    contentStyle={{
+                      backgroundColor: tooltipBgColor,
+                      borderColor: '#10b981',
+                      borderRadius: '8px',
+                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                    }}
+                    itemStyle={{ color: tooltipTextColor }}
+                    labelStyle={{ color: tooltipTextColor, fontWeight: 'bold' }}
+                  />
+                  <Legend
+                    wrapperStyle={{ color: legendTextColor, paddingTop: '20px' }}
+                    iconType="circle"
+                  />
+                  <Bar
+                    dataKey="value"
+                    fill={({ name }) => currentChartColors[statusColorMap[name as keyof typeof statusColorMap]]}
+                    radius={[8, 8, 0, 0]}
+                    maxBarSize={60}
+                  />
+                </BarChart>
+              ) : (
+                <PieChart>
+                  <Pie
+                    data={barChartData}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    outerRadius={100}
+                    innerRadius={70}
+                    dataKey="value"
+                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    paddingAngle={3}
+                  >
+                    {barChartData.map((entry, index) => (
+                      <Cell
+                        key={`cell-${index}`}
+                        fill={currentChartColors[statusColorMap[entry.name as keyof typeof statusColorMap]]}
+                        className="hover:opacity-80 transition-opacity duration-200"
+                      />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    formatter={(value: number, name: string) => [`${value.toLocaleString('id-ID')}`, name]}
+                    contentStyle={{
+                      backgroundColor: tooltipBgColor,
+                      borderColor: '#10b981',
+                      borderRadius: '8px',
+                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                    }}
+                    itemStyle={{ color: tooltipTextColor }}
+                    labelStyle={{ color: tooltipTextColor, fontWeight: 'bold' }}
+                  />
+                  <Legend
+                    wrapperStyle={{ color: legendTextColor, paddingTop: '20px' }}
+                    iconType="circle"
+                  />
+                </PieChart>
+              )}
+            </ResponsiveContainer>
+          )}
         </CardContent>
       </Card>
     </div>
