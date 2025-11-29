@@ -4,7 +4,7 @@ import { useSession } from '@/contexts/SessionContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { ReceiptTextIcon, HourglassIcon, FileCheckIcon, SendIcon, RotateCcwIcon, Sparkles } from 'lucide-react';
+import { ReceiptTextIcon, HourglassIcon, FileCheckIcon, SendIcon, RotateCcwIcon, Sparkles, ClockIcon } from 'lucide-react';
 import { parseISO, formatDistanceToNow } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
 import { useTypingAnimation } from '@/hooks/use-typing-animation';
@@ -165,9 +165,21 @@ const DashboardSKPD = () => {
 
     if (sessionLoading || dataLoading) {
         return (
-            <div className="p-6 bg-white dark:bg-slate-900 rounded-lg shadow-md border border-gray-200 dark:border-slate-800 transition-colors duration-200">
-                <h1 className="text-3xl font-bold text-gray-900 dark:text-slate-100 mb-4">Memuat Dashboard...</h1>
-                <p className="text-gray-600 dark:text-slate-400">Sedang mengambil data tagihan Anda.</p>
+            <div className="flex items-center justify-center min-h-[60vh]">
+                <div className="text-center space-y-4">
+                    <div className="relative w-16 h-16 mx-auto">
+                        <div className="absolute inset-0 rounded-full border-4 border-emerald-200 dark:border-emerald-900"></div>
+                        <div className="absolute inset-0 rounded-full border-4 border-emerald-500 dark:border-emerald-400 border-t-transparent animate-spin"></div>
+                    </div>
+                    <div className="space-y-2">
+                        <h2 className="text-2xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 dark:from-emerald-400 dark:to-teal-400 bg-clip-text text-transparent">
+                            Memuat Dashboard
+                        </h2>
+                        <p className="text-sm text-slate-600 dark:text-slate-400">
+                            Sedang mengambil data tagihan Anda...
+                        </p>
+                    </div>
+                </div>
             </div>
         );
     }
@@ -188,86 +200,148 @@ const DashboardSKPD = () => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mb-6">
+                {/* Total Tagihan Card */}
                 <Card
-                    className="shadow-md hover:shadow-lg transition-all duration-300 border-l-4 border-l-emerald-500 bg-gradient-to-br from-white to-emerald-50/30 dark:from-slate-900 dark:to-emerald-950/20 cursor-pointer"
+                    className="group relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 cursor-pointer"
                     onClick={() => navigate('/portal-skpd?status=Semua Status')}
                 >
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-semibold text-slate-700 dark:text-slate-300">Total Tagihan</CardTitle>
-                        <div className="p-2 bg-emerald-100 dark:bg-emerald-950/50 rounded-lg">
-                            <ReceiptTextIcon className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                    <div className="absolute inset-0 bg-gradient-to-br from-emerald-500 to-teal-600 opacity-100"></div>
+                    <div className="absolute inset-0 bg-gradient-to-br from-emerald-600 to-teal-700 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                    <CardHeader className="relative flex flex-row items-center justify-between space-y-0 pb-3">
+                        <CardTitle className="text-sm font-semibold text-white/90">Total Tagihan</CardTitle>
+                        <div className="p-2.5 rounded-lg bg-white/20 backdrop-blur-sm group-hover:scale-110 transition-transform duration-300">
+                            <ReceiptTextIcon className="h-5 w-5 text-white" />
                         </div>
                     </CardHeader>
-                    <CardContent>
-                        <div className="text-3xl font-bold text-emerald-700 dark:text-emerald-400">{counts?.total}</div>
+                    <CardContent className="relative">
+                        <div className="text-3xl font-bold text-white mb-1">
+                            {counts?.total}
+                        </div>
+                        <p className="text-xs text-white/80 font-medium">
+                            Total Semua Tagihan
+                        </p>
+                        <div className="absolute bottom-0 right-0 opacity-10 group-hover:opacity-20 transition-opacity duration-300">
+                            <ReceiptTextIcon className="h-24 w-24 text-white" />
+                        </div>
                     </CardContent>
                 </Card>
 
+                {/* Menunggu Registrasi Card */}
                 <Card
-                    className="shadow-md hover:shadow-lg transition-all duration-300 border-l-4 border-l-yellow-500 bg-gradient-to-br from-white to-yellow-50/30 dark:from-slate-900 dark:to-yellow-950/20 cursor-pointer"
+                    className="group relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 cursor-pointer"
                     onClick={() => navigate('/portal-skpd?status=Menunggu Registrasi')}
                 >
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-semibold text-slate-700 dark:text-slate-300">Menunggu Registrasi</CardTitle>
-                        <div className="p-2 bg-yellow-100 dark:bg-yellow-950/50 rounded-lg">
-                            <HourglassIcon className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
+                    <div className="absolute inset-0 bg-gradient-to-br from-amber-500 to-orange-600 opacity-100"></div>
+                    <div className="absolute inset-0 bg-gradient-to-br from-amber-600 to-orange-700 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                    <CardHeader className="relative flex flex-row items-center justify-between space-y-0 pb-3">
+                        <CardTitle className="text-sm font-semibold text-white/90">Menunggu Registrasi</CardTitle>
+                        <div className="p-2.5 rounded-lg bg-white/20 backdrop-blur-sm group-hover:scale-110 transition-transform duration-300">
+                            <HourglassIcon className="h-5 w-5 text-white" />
                         </div>
                     </CardHeader>
-                    <CardContent>
-                        <div className="text-3xl font-bold text-yellow-700 dark:text-yellow-400">{counts?.menungguRegistrasi}</div>
+                    <CardContent className="relative">
+                        <div className="text-3xl font-bold text-white mb-1">
+                            {counts?.menungguRegistrasi}
+                        </div>
+                        <p className="text-xs text-white/80 font-medium">
+                            Belum Diregistrasi
+                        </p>
+                        <div className="absolute bottom-0 right-0 opacity-10 group-hover:opacity-20 transition-opacity duration-300">
+                            <HourglassIcon className="h-24 w-24 text-white" />
+                        </div>
                     </CardContent>
                 </Card>
 
+                {/* Menunggu Verifikasi Card */}
                 <Card
-                    className="shadow-md hover:shadow-lg transition-all duration-300 border-l-4 border-l-blue-500 bg-gradient-to-br from-white to-blue-50/30 dark:from-slate-900 dark:to-blue-950/20 cursor-pointer"
+                    className="group relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 cursor-pointer"
                     onClick={() => navigate('/portal-skpd?status=Menunggu Verifikasi')}
                 >
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-semibold text-slate-700 dark:text-slate-300">Menunggu Verifikasi</CardTitle>
-                        <div className="p-2 bg-blue-100 dark:bg-blue-950/50 rounded-lg">
-                            <FileCheckIcon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                    <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-cyan-600 opacity-100"></div>
+                    <div className="absolute inset-0 bg-gradient-to-br from-blue-600 to-cyan-700 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                    <CardHeader className="relative flex flex-row items-center justify-between space-y-0 pb-3">
+                        <CardTitle className="text-sm font-semibold text-white/90">Menunggu Verifikasi</CardTitle>
+                        <div className="p-2.5 rounded-lg bg-white/20 backdrop-blur-sm group-hover:scale-110 transition-transform duration-300">
+                            <FileCheckIcon className="h-5 w-5 text-white" />
                         </div>
                     </CardHeader>
-                    <CardContent>
-                        <div className="text-3xl font-bold text-blue-700 dark:text-blue-400">{counts?.menungguVerifikasi}</div>
+                    <CardContent className="relative">
+                        <div className="text-3xl font-bold text-white mb-1">
+                            {counts?.menungguVerifikasi}
+                        </div>
+                        <p className="text-xs text-white/80 font-medium">
+                            Sedang Diverifikasi
+                        </p>
+                        <div className="absolute bottom-0 right-0 opacity-10 group-hover:opacity-20 transition-opacity duration-300">
+                            <FileCheckIcon className="h-24 w-24 text-white" />
+                        </div>
                     </CardContent>
                 </Card>
 
+                {/* Diteruskan Card */}
                 <Card
-                    className="shadow-md hover:shadow-lg transition-all duration-300 border-l-4 border-l-emerald-500 bg-gradient-to-br from-white to-emerald-50/30 dark:from-slate-900 dark:to-emerald-950/20 cursor-pointer"
+                    className="group relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 cursor-pointer"
                     onClick={() => navigate('/portal-skpd?status=Diteruskan')}
                 >
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-semibold text-slate-700 dark:text-slate-300">Diteruskan</CardTitle>
-                        <div className="p-2 bg-emerald-100 dark:bg-emerald-950/50 rounded-lg">
-                            <SendIcon className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                    <div className="absolute inset-0 bg-gradient-to-br from-emerald-500 to-teal-600 opacity-100"></div>
+                    <div className="absolute inset-0 bg-gradient-to-br from-emerald-600 to-teal-700 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                    <CardHeader className="relative flex flex-row items-center justify-between space-y-0 pb-3">
+                        <CardTitle className="text-sm font-semibold text-white/90">Diteruskan</CardTitle>
+                        <div className="p-2.5 rounded-lg bg-white/20 backdrop-blur-sm group-hover:scale-110 transition-transform duration-300">
+                            <SendIcon className="h-5 w-5 text-white" />
                         </div>
                     </CardHeader>
-                    <CardContent>
-                        <div className="text-3xl font-bold text-emerald-700 dark:text-emerald-400">{counts?.diteruskan}</div>
+                    <CardContent className="relative">
+                        <div className="text-3xl font-bold text-white mb-1">
+                            {counts?.diteruskan}
+                        </div>
+                        <p className="text-xs text-white/80 font-medium">
+                            Berhasil Diteruskan
+                        </p>
+                        <div className="absolute bottom-0 right-0 opacity-10 group-hover:opacity-20 transition-opacity duration-300">
+                            <SendIcon className="h-24 w-24 text-white" />
+                        </div>
                     </CardContent>
                 </Card>
 
+                {/* Dikembalikan Card */}
                 <Card
-                    className="shadow-md hover:shadow-lg transition-all duration-300 border-l-4 border-l-red-500 bg-gradient-to-br from-white to-red-50/30 dark:from-slate-900 dark:to-red-950/20 cursor-pointer"
+                    className="group relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 cursor-pointer"
                     onClick={() => navigate('/portal-skpd?status=Dikembalikan')}
                 >
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-semibold text-slate-700 dark:text-slate-300">Dikembalikan</CardTitle>
-                        <div className="p-2 bg-red-100 dark:bg-red-950/50 rounded-lg">
-                            <RotateCcwIcon className="h-5 w-5 text-red-600 dark:text-red-400" />
+                    <div className="absolute inset-0 bg-gradient-to-br from-red-500 to-rose-600 opacity-100"></div>
+                    <div className="absolute inset-0 bg-gradient-to-br from-red-600 to-rose-700 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                    <CardHeader className="relative flex flex-row items-center justify-between space-y-0 pb-3">
+                        <CardTitle className="text-sm font-semibold text-white/90">Dikembalikan</CardTitle>
+                        <div className="p-2.5 rounded-lg bg-white/20 backdrop-blur-sm group-hover:scale-110 transition-transform duration-300">
+                            <RotateCcwIcon className="h-5 w-5 text-white" />
                         </div>
                     </CardHeader>
-                    <CardContent>
-                        <div className="text-3xl font-bold text-red-700 dark:text-red-400">{counts?.dikembalikan}</div>
+                    <CardContent className="relative">
+                        <div className="text-3xl font-bold text-white mb-1">
+                            {counts?.dikembalikan}
+                        </div>
+                        <p className="text-xs text-white/80 font-medium">
+                            Perlu Perbaikan
+                        </p>
+                        <div className="absolute bottom-0 right-0 opacity-10 group-hover:opacity-20 transition-opacity duration-300">
+                            <RotateCcwIcon className="h-24 w-24 text-white" />
+                        </div>
                     </CardContent>
                 </Card>
             </div>
 
             {/* Timeline Activities */}
-            <Card className="shadow-md hover:shadow-lg transition-all duration-300 bg-gradient-to-br from-white to-slate-50/30 dark:from-slate-900 dark:to-slate-800/30">
-                <CardHeader className="border-b border-slate-200 dark:border-slate-700 pb-4">
-                    <CardTitle className="text-lg font-bold text-slate-900 dark:text-white">Linimasa Aktivitas Terbaru</CardTitle>
+            <Card className="border-slate-200 dark:border-slate-800 shadow-lg hover:shadow-xl transition-shadow duration-300">
+                <CardHeader className="border-b border-slate-200 dark:border-slate-800 bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
+                    <div className="flex items-center gap-2">
+                        <div className="p-1.5 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 shadow-sm">
+                            <ClockIcon className="h-4 w-4 text-white" />
+                        </div>
+                        <CardTitle className="text-lg font-bold text-slate-900 dark:text-white">
+                            Linimasa Aktivitas Terbaru
+                        </CardTitle>
+                    </div>
                 </CardHeader>
                 <CardContent className="pt-6">
                     {timelineActivities.length === 0 ? (
@@ -280,26 +354,45 @@ const DashboardSKPD = () => {
 
                                 let message = '';
                                 let statusColor = 'text-gray-500';
+                                let StatusIcon = ReceiptTextIcon; // Default icon
+                                let iconBgColor = 'bg-gray-100 dark:bg-gray-800';
+                                let iconColor = 'text-gray-600 dark:text-gray-400';
+
                                 switch (activity.status_tagihan) {
                                     case 'Menunggu Registrasi':
                                         message = `Anda baru saja menginput tagihan ${activity.nomor_spm}.`;
                                         statusColor = 'text-amber-600 dark:text-amber-400';
+                                        StatusIcon = HourglassIcon;
+                                        iconBgColor = 'bg-amber-100 dark:bg-amber-950/50';
+                                        iconColor = 'text-amber-600 dark:text-amber-400';
                                         break;
                                     case 'Menunggu Verifikasi':
                                         message = `Tagihan ${activity.nomor_spm} Anda telah diregistrasi.`;
                                         statusColor = 'text-indigo-600 dark:text-indigo-400';
+                                        StatusIcon = FileCheckIcon;
+                                        iconBgColor = 'bg-indigo-100 dark:bg-indigo-950/50';
+                                        iconColor = 'text-indigo-600 dark:text-indigo-400';
                                         break;
                                     case 'Diteruskan':
                                         message = `Tagihan ${activity.nomor_spm} Anda telah Diteruskan.`;
                                         statusColor = 'text-emerald-600 dark:text-emerald-400';
+                                        StatusIcon = SendIcon;
+                                        iconBgColor = 'bg-emerald-100 dark:bg-emerald-950/50';
+                                        iconColor = 'text-emerald-600 dark:text-emerald-400';
                                         break;
                                     case 'Dikembalikan':
                                         message = `Tagihan ${activity.nomor_spm} Anda telah Dikembalikan.`;
                                         statusColor = 'text-rose-600 dark:text-rose-400';
+                                        StatusIcon = RotateCcwIcon;
+                                        iconBgColor = 'bg-rose-100 dark:bg-rose-950/50';
+                                        iconColor = 'text-rose-600 dark:text-rose-400';
                                         break;
                                     case 'Tinjau Kembali':
                                         message = `Tagihan ${activity.nomor_spm} Anda Perlu Ditinjau Kembali.`;
                                         statusColor = 'text-purple-600 dark:text-purple-400';
+                                        StatusIcon = RotateCcwIcon;
+                                        iconBgColor = 'bg-purple-100 dark:bg-purple-950/50';
+                                        iconColor = 'text-purple-600 dark:text-purple-400';
                                         break;
                                     default:
                                         message = `Aktivitas tidak diketahui untuk tagihan ${activity.nomor_spm}.`;
@@ -309,13 +402,18 @@ const DashboardSKPD = () => {
                                 return (
                                     <li key={activity.id_tagihan} className="mb-6 ml-6">
                                         <span className="absolute flex items-center justify-center w-3 h-3 bg-emerald-500 dark:bg-emerald-400 rounded-full -left-1.5 ring-8 ring-white dark:ring-slate-900"></span>
-                                        <div className="flex flex-col">
-                                            <p className={`text-sm font-normal ${statusColor}`}>
-                                                {message}
-                                            </p>
-                                            <time className="text-xs font-normal text-gray-400 dark:text-slate-500">
-                                                {relativeTime}
-                                            </time>
+                                        <div className="flex items-start gap-3">
+                                            <div className={`p-2 rounded-lg ${iconBgColor} flex-shrink-0`}>
+                                                <StatusIcon className={`h-4 w-4 ${iconColor}`} />
+                                            </div>
+                                            <div className="flex flex-col flex-1">
+                                                <p className={`text-sm font-normal ${statusColor}`}>
+                                                    {message}
+                                                </p>
+                                                <time className="text-xs font-normal text-gray-400 dark:text-slate-500">
+                                                    {relativeTime}
+                                                </time>
+                                            </div>
                                         </div>
                                     </li>
                                 );

@@ -803,7 +803,17 @@ const PortalSKPD = () => {
           </div>
 
           {loading && !loadingPagination ? ( // Show full loading only if not pagination-only
-            <p className="text-center text-gray-600 dark:text-gray-400">Memuat tagihan...</p>
+            <div className="flex items-center justify-center py-12">
+              <div className="text-center space-y-4">
+                <div className="relative w-12 h-12 mx-auto">
+                  <div className="absolute inset-0 rounded-full border-4 border-emerald-200 dark:border-emerald-900"></div>
+                  <div className="absolute inset-0 rounded-full border-4 border-emerald-500 dark:border-emerald-400 border-t-transparent animate-spin"></div>
+                </div>
+                <p className="text-sm font-medium bg-gradient-to-r from-emerald-600 to-teal-600 dark:from-emerald-400 dark:to-teal-400 bg-clip-text text-transparent">
+                  Memuat tagihan...
+                </p>
+              </div>
+            </div>
           ) : tagihanList.length === 0 ? (
             <p className="text-center text-gray-600 dark:text-gray-400">Tidak ada tagihan ditemukan.</p>
           ) : (
