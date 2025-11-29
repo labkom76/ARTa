@@ -9,7 +9,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
-import { Textarea } from '@/components/ui/textarea'; // Import Textarea
+import { Textarea } from '@/components/ui/textarea';
+import DeleteConfirmationDialog from '@/components/DeleteConfirmationDialog';
 
 // Utility function to sanitize file names
 const sanitizeFileName = (name: string): string => {
@@ -51,6 +52,10 @@ const AdminCustomLogin = () => {
   const [announcementVisibility, setAnnouncementVisibility] = useState(false);
   const [announcementContent, setAnnouncementContent] = useState('');
   const [isSavingAnnouncement, setIsSavingAnnouncement] = useState(false);
+
+  // DELETE CONFIRMATION DIALOG STATES
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{ type: 'image' | 'logo', name?: string } | null>(null);
 
 
   // Generic function to update a setting in app_settings table
@@ -170,29 +175,51 @@ const AdminCustomLogin = () => {
   };
 
   const handleDeleteImage = async (imageName: string) => {
-    if (!window.confirm('Apakah Anda yakin ingin menghapus gambar ini?')) {
-      return;
-    }
+    setDeleteTarget({ type: 'image', name: imageName });
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleRemoveLogo = async () => {
+    setDeleteTarget({ type: 'logo' });
+    setIsDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
 
     try {
-      const { error } = await supabase.storage
-        .from('login-backgrounds')
-        .remove([imageName]);
+      if (deleteTarget.type === 'image' && deleteTarget.name) {
+        const { error } = await supabase.storage
+          .from('login-backgrounds')
+          .remove([deleteTarget.name]);
 
-      if (error) throw error;
+        if (error) throw error;
 
-      // If the deleted image was the currently selected background, clear it
-      const { data: publicUrlData } = supabase.storage.from('login-backgrounds').getPublicUrl(imageName);
-      if (selectedBackgroundUrl === publicUrlData.publicUrl) {
-        await updateSetting('login_background_url', ''); // Use updateSetting for consistency
-        setSelectedBackgroundUrl(null);
+        const { data: publicUrlData } = supabase.storage.from('login-backgrounds').getPublicUrl(deleteTarget.name);
+        if (selectedBackgroundUrl === publicUrlData.publicUrl) {
+          await updateSetting('login_background_url', '');
+          setSelectedBackgroundUrl(null);
+        }
+
+        toast.success('Gambar berhasil dihapus!');
+        fetchBackgroundImages();
+      } else if (deleteTarget.type === 'logo') {
+        if (appLogoUrl) {
+          const fileName = appLogoUrl.split('/').pop();
+          if (fileName) {
+            await supabase.storage.from('branding').remove([fileName]);
+          }
+        }
+        await updateSetting('app_logo_url', '');
+        setAppLogoUrl(null);
+        toast.success('Logo aplikasi berhasil dihapus!');
       }
-
-      toast.success('Gambar berhasil dihapus!');
-      fetchBackgroundImages();
     } catch (error: any) {
-      console.error('Error deleting image:', error.message);
-      toast.error('Gagal menghapus gambar: ' + error.message);
+      console.error('Error deleting:', error.message);
+      toast.error('Gagal menghapus: ' + error.message);
+    } finally {
+      setIsDeleteDialogOpen(false);
+      setDeleteTarget(null);
     }
   };
 
@@ -244,25 +271,7 @@ const AdminCustomLogin = () => {
     }
   };
 
-  const handleRemoveLogo = async () => {
-    if (!window.confirm('Apakah Anda yakin ingin menghapus logo ini?')) {
-      return;
-    }
-    try {
-      if (appLogoUrl) {
-        const fileName = appLogoUrl.split('/').pop();
-        if (fileName) {
-          await supabase.storage.from('branding').remove([fileName]);
-        }
-      }
-      await updateSetting('app_logo_url', '');
-      setAppLogoUrl(null);
-      toast.success('Logo aplikasi berhasil dihapus!');
-    } catch (error: any) {
-      console.error('Error removing logo:', error.message);
-      toast.error('Gagal menghapus logo: ' + error.message);
-    }
-  };
+
 
   // NEW: Function to save announcement settings
   const handleSaveAnnouncementSettings = async () => {
@@ -344,9 +353,10 @@ const AdminCustomLogin = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* Main Content Grid - 2 Columns */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Left Column */}
-        <div className="lg:col-span-1 space-y-6">
+        <div className="space-y-6">
           {/* Pengaturan Branding Card */}
           <Card className="border-slate-200 dark:border-slate-800 shadow-lg hover:shadow-xl transition-shadow duration-300">
             <CardHeader className="border-b border-slate-200 dark:border-slate-800 bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
@@ -428,6 +438,66 @@ const AdminCustomLogin = () => {
             </CardContent>
           </Card>
 
+          {/* Pengaturan Tampilan Form Card */}
+          <Card className="border-slate-200 dark:border-slate-800 shadow-lg hover:shadow-xl transition-shadow duration-300">
+            <CardHeader className="border-b border-slate-200 dark:border-slate-800 bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 shadow-sm">
+                  <svg className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                </div>
+                <CardTitle className="text-lg font-bold text-slate-900 dark:text-white">
+                  Pengaturan Tampilan Form
+                </CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="show-forgot-password-link">Tampilkan Tombol Lupa Password</Label>
+                <Switch
+                  id="show-forgot-password-link"
+                  checked={showForgotPasswordLink}
+                  onCheckedChange={(checked) => {
+                    setShowForgotPasswordLink(checked);
+                    updateSetting('login_show_forgot_password', String(checked));
+                  }}
+                  aria-label="Toggle forgot password link"
+                  className="data-[state=checked]:bg-emerald-500 dark:data-[state=checked]:bg-emerald-600"
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="show-signup-link">Tampilkan Tombol Daftar Akun Baru</Label>
+                <Switch
+                  id="show-signup-link"
+                  checked={showSignupLink}
+                  onCheckedChange={(checked) => {
+                    setShowSignupLink(checked);
+                    updateSetting('login_show_signup', String(checked));
+                  }}
+                  aria-label="Toggle signup link"
+                  className="data-[state=checked]:bg-emerald-500 dark:data-[state=checked]:bg-emerald-600"
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="show-email-password-login">Tampilkan login dengan Email/Password</Label>
+                <Switch
+                  id="show-email-password-login"
+                  checked={showEmailPasswordLogin}
+                  onCheckedChange={(checked) => {
+                    setShowEmailPasswordLogin(checked);
+                    updateSetting('login_show_email_password', String(checked));
+                  }}
+                  aria-label="Toggle email/password login form"
+                  className="data-[state=checked]:bg-emerald-500 dark:data-[state=checked]:bg-emerald-600"
+                />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Right Column */}
+        <div className="space-y-6">
           {/* Pengaturan Papan Informasi Card */}
           <Card className="border-slate-200 dark:border-slate-800 shadow-lg hover:shadow-xl transition-shadow duration-300">
             <CardHeader className="border-b border-slate-200 dark:border-slate-800 bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
@@ -449,8 +519,8 @@ const AdminCustomLogin = () => {
                   id="announcement-visibility"
                   checked={announcementVisibility}
                   onCheckedChange={(checked) => {
-                    setAnnouncementVisibility(checked); // Update local state
-                    updateSetting('announcement_visibility', String(checked)); // Persist to database immediately
+                    setAnnouncementVisibility(checked);
+                    updateSetting('announcement_visibility', String(checked));
                   }}
                   aria-label="Toggle announcement board visibility"
                   className="data-[state=checked]:bg-emerald-500 dark:data-[state=checked]:bg-emerald-600"
@@ -465,7 +535,6 @@ const AdminCustomLogin = () => {
                   placeholder="Masukkan pesan yang akan ditampilkan di papan informasi..."
                   rows={5}
                 />
-                {/* Helper text for Markdown */}
                 <p className="text-xs text-muted-foreground">Gunakan format Markdown (misal: `**bold**`, `*italic*`, `1. list item`).</p>
               </div>
               <Button
@@ -558,7 +627,7 @@ const AdminCustomLogin = () => {
                     updateSetting('login_background_effect', String(checked));
                   }}
                   aria-label="Toggle background effect"
-                  className="data-[state=checked]:bg-green-500"
+                  className="data-[state=checked]:bg-emerald-500 dark:data-[state=checked]:bg-emerald-600"
                 />
               </div>
               <div className="flex items-center justify-between">
@@ -571,157 +640,115 @@ const AdminCustomLogin = () => {
                     updateSetting('login_background_blur', String(checked));
                   }}
                   aria-label="Toggle background blur effect"
-                  className="data-[state=checked]:bg-green-500"
-                />
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Pengaturan Tampilan Form Card */}
-          <Card className="border-slate-200 dark:border-slate-800 shadow-lg hover:shadow-xl transition-shadow duration-300">
-            <CardHeader className="border-b border-slate-200 dark:border-slate-800 bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
-              <div className="flex items-center gap-2">
-                <div className="p-1.5 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 shadow-sm">
-                  <svg className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                </div>
-                <CardTitle className="text-lg font-bold text-slate-900 dark:text-white">
-                  Pengaturan Tampilan Form
-                </CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="show-forgot-password-link">Tampilkan Tombol Lupa Password</Label>
-                <Switch
-                  id="show-forgot-password-link"
-                  checked={showForgotPasswordLink}
-                  onCheckedChange={(checked) => {
-                    setShowForgotPasswordLink(checked);
-                    updateSetting('login_show_forgot_password', String(checked));
-                  }}
-                  aria-label="Toggle forgot password link"
                   className="data-[state=checked]:bg-emerald-500 dark:data-[state=checked]:bg-emerald-600"
                 />
               </div>
-              <div className="flex items-center justify-between">
-                <Label htmlFor="show-signup-link">Tampilkan Tombol Daftar Akun Baru</Label>
-                <Switch
-                  id="show-signup-link"
-                  checked={showSignupLink}
-                  onCheckedChange={(checked) => {
-                    setShowSignupLink(checked);
-                    updateSetting('login_show_signup', String(checked));
-                  }}
-                  aria-label="Toggle signup link"
-                  className="data-[state=checked]:bg-emerald-500 dark:data-[state=checked]:bg-emerald-600"
-                />
-              </div>
-              <div className="flex items-center justify-between">
-                <Label htmlFor="show-email-password-login">Tampilkan login dengan Email/Password</Label>
-                <Switch
-                  id="show-email-password-login"
-                  checked={showEmailPasswordLogin}
-                  onCheckedChange={(checked) => {
-                    setShowEmailPasswordLogin(checked);
-                    updateSetting('login_show_email_password', String(checked));
-                  }}
-                  aria-label="Toggle email/password login form"
-                  className="data-[state=checked]:bg-emerald-500 dark:data-[state=checked]:bg-emerald-600"
-                />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Right Column */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Galeri Gambar Panel */}
-          <Card className="border-slate-200 dark:border-slate-800 shadow-lg hover:shadow-xl transition-shadow duration-300">
-            <CardHeader className="border-b border-slate-200 dark:border-slate-800 bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
-              <div className="flex items-center justify-between w-full">
-                <div className="flex items-center gap-2">
-                  <div className="p-1.5 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 shadow-sm">
-                    <ImageIcon className="h-4 w-4 text-white" />
-                  </div>
-                  <CardTitle className="text-lg font-bold text-slate-900 dark:text-white">
-                    Galeri Gambar
-                  </CardTitle>
-                </div>
-                <div className="flex items-center gap-4"> {/* Container for switch and upload button */}
-                  <div className="flex items-center gap-2">
-                    <Label htmlFor="enable-slider" className="text-sm">Aktifkan Slider</Label>
-                    <Switch
-                      id="enable-slider"
-                      checked={enableSlider}
-                      onCheckedChange={(checked) => {
-                        setEnableSlider(checked);
-                        updateSetting('login_background_slider', String(checked));
-                      }}
-                      aria-label="Toggle background image slider"
-                      className="data-[state=checked]:bg-emerald-500 dark:data-[state=checked]:bg-emerald-600"
-                    />
-                  </div>
-                  <Input
-                    id="file-upload"
-                    type="file"
-                    accept="image/*"
-                    onChange={handleFileUpload}
-                    className="hidden"
-                  />
-                  <Button
-                    variant="outline"
-                    className="flex items-center gap-2 hover:bg-emerald-50 hover:border-emerald-500 hover:text-emerald-600 dark:hover:bg-emerald-950 dark:hover:border-emerald-500 dark:hover:text-emerald-400 transition-colors"
-                    onClick={() => document.getElementById('file-upload')?.click()}
-                  >
-                    <UploadIcon className="h-4 w-4" /> Unggah Gambar
-                  </Button>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {loadingImages ? (
-                <p className="text-center text-gray-600 dark:text-gray-400">Memuat gambar...</p>
-              ) : backgroundImages.length === 0 ? (
-                <p className="text-center text-gray-600 dark:text-gray-400">Tidak ada gambar latar belakang ditemukan.</p>
-              ) : (
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                  {backgroundImages.map((image, index) => (
-                    <div
-                      key={image.name}
-                      className={
-                        `relative aspect-video overflow-hidden rounded-md border-2 cursor-pointer group ` +
-                        (selectedBackgroundUrl === image.url ? 'border-emerald-500 ring-2 ring-emerald-500' : 'border-slate-200 dark:border-slate-700')
-                      }
-                      onClick={() => handleSelectImage(image.url)}
-                    >
-                      <img
-                        src={image.url}
-                        alt={`Background Image ${index + 1}`}
-                        className="w-full h-full object-cover"
-                      />
-                      <div className="absolute inset-0 bg-black bg-opacity-20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                        <Button
-                          variant="destructive"
-                          size="icon"
-                          className="opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                          onClick={(e) => {
-                            e.stopPropagation(); // Prevent selecting image when deleting
-                            handleDeleteImage(image.name);
-                          }}
-                        >
-                          <Trash2Icon className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
             </CardContent>
           </Card>
         </div>
       </div>
+
+      {/* Full Width Section - Galeri Gambar */}
+      <div className="mt-6">
+        <Card className="border-slate-200 dark:border-slate-800 shadow-lg hover:shadow-xl transition-shadow duration-300">
+          <CardHeader className="border-b border-slate-200 dark:border-slate-800 bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
+            <div className="flex items-center justify-between w-full">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 shadow-sm">
+                  <ImageIcon className="h-4 w-4 text-white" />
+                </div>
+                <CardTitle className="text-lg font-bold text-slate-900 dark:text-white">
+                  Galeri Gambar
+                </CardTitle>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="enable-slider" className="text-sm">Aktifkan Slider</Label>
+                  <Switch
+                    id="enable-slider"
+                    checked={enableSlider}
+                    onCheckedChange={(checked) => {
+                      setEnableSlider(checked);
+                      updateSetting('login_background_slider', String(checked));
+                    }}
+                    aria-label="Toggle background image slider"
+                    className="data-[state=checked]:bg-emerald-500 dark:data-[state=checked]:bg-emerald-600"
+                  />
+                </div>
+                <Input
+                  id="file-upload"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                />
+                <Button
+                  variant="outline"
+                  className="flex items-center gap-2 hover:bg-emerald-50 hover:border-emerald-500 hover:text-emerald-600 dark:hover:bg-emerald-950 dark:hover:border-emerald-500 dark:hover:text-emerald-400 transition-colors"
+                  onClick={() => document.getElementById('file-upload')?.click()}
+                >
+                  <UploadIcon className="h-4 w-4" /> Unggah Gambar
+                </Button>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {loadingImages ? (
+              <p className="text-center text-gray-600 dark:text-gray-400">Memuat gambar...</p>
+            ) : backgroundImages.length === 0 ? (
+              <p className="text-center text-gray-600 dark:text-gray-400">Tidak ada gambar latar belakang ditemukan.</p>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {backgroundImages.map((image, index) => (
+                  <div
+                    key={image.name}
+                    className={
+                      `relative aspect-video overflow-hidden rounded-md border-2 cursor-pointer group ` +
+                      (selectedBackgroundUrl === image.url ? 'border-emerald-500 ring-2 ring-emerald-500' : 'border-slate-200 dark:border-slate-700')
+                    }
+                    onClick={() => handleSelectImage(image.url)}
+                  >
+                    <img
+                      src={image.url}
+                      alt={`Background Image ${index + 1}`}
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute inset-0 bg-black bg-opacity-20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                      <Button
+                        variant="destructive"
+                        size="icon"
+                        className="opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteImage(image.name);
+                        }}
+                      >
+                        <Trash2Icon className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Delete Confirmation Dialog */}
+      <DeleteConfirmationDialog
+        isOpen={isDeleteDialogOpen}
+        onClose={() => {
+          setIsDeleteDialogOpen(false);
+          setDeleteTarget(null);
+        }}
+        onConfirm={confirmDelete}
+        title={deleteTarget?.type === 'logo' ? 'Hapus Logo' : 'Hapus Gambar'}
+        message={
+          deleteTarget?.type === 'logo'
+            ? 'Apakah Anda yakin ingin menghapus logo ini? Tindakan ini tidak dapat dibatalkan.'
+            : 'Apakah Anda yakin ingin menghapus gambar ini? Tindakan ini tidak dapat dibatalkan.'
+        }
+      />
     </div>
   );
 };

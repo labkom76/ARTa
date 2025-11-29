@@ -464,44 +464,45 @@ const AdminTagihan = () => {
               </CardTitle>
             </div>
 
-            {/* Items per page */}
-            <div className="flex items-center gap-2">
-              <Label htmlFor="items-per-page" className="text-sm text-slate-700 dark:text-slate-300 whitespace-nowrap">
-                Tampilkan:
-              </Label>
-              <Select
-                value={itemsPerPage.toString()}
-                onValueChange={(value) => {
-                  setItemsPerPage(Number(value));
-                  setCurrentPage(1);
-                }}
-              >
-                <SelectTrigger className="w-[100px] h-9 border-slate-300 dark:border-slate-700">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="10">10</SelectItem>
-                  <SelectItem value="25">25</SelectItem>
-                  <SelectItem value="50">50</SelectItem>
-                  <SelectItem value="100">100</SelectItem>
-                  <SelectItem value="-1">Semua</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+
           </div>
         </CardHeader>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
+        <CardContent className="pt-6">
+          {/* Items per page */}
+          <div className="mb-5 flex items-center justify-end gap-2">
+            <Label htmlFor="items-per-page" className="text-sm text-slate-700 dark:text-slate-300 whitespace-nowrap">
+              Tampilkan:
+            </Label>
+            <Select
+              value={itemsPerPage.toString()}
+              onValueChange={(value) => {
+                setItemsPerPage(Number(value));
+                setCurrentPage(1);
+              }}
+            >
+              <SelectTrigger className="w-[100px] h-9 border-slate-300 dark:border-slate-700">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="10">10</SelectItem>
+                <SelectItem value="25">25</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+                <SelectItem value="100">100</SelectItem>
+                <SelectItem value="-1">Semua</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-800">
             <Table>
               <TableHeader>
-                <TableRow className="bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-50 dark:hover:bg-slate-900/50">
-                  <TableHead className="font-semibold text-slate-700 dark:text-slate-300">Waktu Input</TableHead>
-                  <TableHead className="font-semibold text-slate-700 dark:text-slate-300">Nomor SPM</TableHead>
-                  <TableHead className="font-semibold text-slate-700 dark:text-slate-300">Nama SKPD</TableHead>
-                  <TableHead className="font-semibold text-slate-700 dark:text-slate-300">Jumlah Kotor</TableHead>
-                  <TableHead className="font-semibold text-slate-700 dark:text-slate-300">Status</TableHead>
-                  <TableHead className="font-semibold text-slate-700 dark:text-slate-300">Diperiksa oleh</TableHead>
-                  <TableHead className="text-center font-semibold text-slate-700 dark:text-slate-300">Aksi</TableHead>
+                <TableRow className="bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950 dark:to-teal-950 hover:from-emerald-50 hover:to-teal-50 dark:hover:from-emerald-950 dark:hover:to-teal-950 border-b border-emerald-100 dark:border-emerald-900">
+                  <TableHead className="font-bold text-emerald-900 dark:text-emerald-100">Waktu Input</TableHead>
+                  <TableHead className="font-bold text-emerald-900 dark:text-emerald-100">Nomor SPM</TableHead>
+                  <TableHead className="font-bold text-emerald-900 dark:text-emerald-100">Nama SKPD</TableHead>
+                  <TableHead className="font-bold text-emerald-900 dark:text-emerald-100">Jumlah Kotor</TableHead>
+                  <TableHead className="font-bold text-emerald-900 dark:text-emerald-100">Status</TableHead>
+                  <TableHead className="font-bold text-emerald-900 dark:text-emerald-100">Diperiksa oleh</TableHead>
+                  <TableHead className="text-center font-bold text-emerald-900 dark:text-emerald-100">Aksi</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -575,11 +576,11 @@ const AdminTagihan = () => {
                   ))
                 )}
               </TableBody>
-            </Table>
-          </div>
+            </Table >
+          </div > {/* Tutup border wrapper - HARUS DI SINI */}
 
           {/* Pagination Controls */}
-          <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50">
+          <div className="px-6 py-4 mt-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 rounded-b-lg">
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
               <div className="text-sm text-slate-600 dark:text-slate-400 font-medium">
                 Menampilkan <span className="text-slate-900 dark:text-white font-semibold">{totalItems === 0 ? 0 : ((currentPage - 1) * itemsPerPage) + 1}</span> - <span className="text-slate-900 dark:text-white font-semibold">{Math.min(currentPage * itemsPerPage, totalItems)}</span> dari <span className="text-slate-900 dark:text-white font-semibold">{totalItems}</span> tagihan
@@ -610,9 +611,9 @@ const AdminTagihan = () => {
                 </Button>
               </div>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </div >
+        </CardContent >
+      </Card >
 
       <TagihanDetailDialog
         isOpen={isDetailModalOpen}
@@ -635,7 +636,7 @@ const AdminTagihan = () => {
         title="Konfirmasi Penghapusan Tagihan"
         message={`Apakah Anda yakin ingin menghapus tagihan dengan Nomor SPM: ${tagihanToDelete?.nomorSpm || ''}? Tindakan ini tidak dapat diurungkan.`}
       />
-    </div>
+    </div >
   );
 };
 

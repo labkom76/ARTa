@@ -10,7 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { PlusCircleIcon, EditIcon, Trash2Icon, SearchIcon, UploadIcon, FileDownIcon } from 'lucide-react';
+import { PlusCircleIcon, EditIcon, Trash2Icon, SearchIcon, UploadIcon, FileDownIcon, BuildingIcon, ChevronLeftIcon, ChevronRightIcon } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import AddSkpdDialog from '@/components/AddSkpdDialog';
@@ -318,27 +318,67 @@ const AdminKodeSKPD = () => {
 
   if (loadingPage) {
     return (
-      <div className="p-6 bg-white rounded-lg shadow-sm border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
-        <h1 className="text-3xl font-bold text-gray-800 dark:text-white mb-4">Memuat Halaman...</h1>
-        <p className="text-gray-600 dark:text-gray-400">Sedang memeriksa hak akses Anda.</p>
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center space-y-4">
+          <div className="relative w-16 h-16 mx-auto">
+            <div className="absolute inset-0 rounded-full border-4 border-emerald-200 dark:border-emerald-900"></div>
+            <div className="absolute inset-0 rounded-full border-4 border-emerald-500 dark:border-emerald-400 border-t-transparent animate-spin"></div>
+          </div>
+          <div className="space-y-2">
+            <h2 className="text-2xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 dark:from-emerald-400 dark:to-teal-400 bg-clip-text text-transparent">
+              Memuat Halaman
+            </h2>
+            <p className="text-sm text-slate-600 dark:text-slate-400">
+              Sedang memeriksa hak akses...
+            </p>
+          </div>
+        </div>
       </div>
     );
   }
 
   if (profile?.peran !== 'Administrator') {
     return (
-      <div className="p-6 bg-white rounded-lg shadow-sm border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
-        <h1 className="text-3xl font-bold text-red-600 dark:text-red-400 mb-4">Akses Ditolak</h1>
-        <p className="text-gray-600 dark:text-gray-400">Anda tidak memiliki izin untuk mengakses halaman ini.</p>
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Card className="max-w-md w-full border-red-200 dark:border-red-900/50 shadow-lg">
+          <CardContent className="pt-6 text-center space-y-4">
+            <div className="w-16 h-16 mx-auto rounded-full bg-red-100 dark:bg-red-900/20 flex items-center justify-center">
+              <svg className="w-8 h-8 text-red-600 dark:text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            <div className="space-y-2">
+              <h2 className="text-2xl font-bold text-red-600 dark:text-red-400">
+                Akses Ditolak
+              </h2>
+              <p className="text-sm text-slate-600 dark:text-slate-400">
+                Anda tidak memiliki izin untuk mengakses halaman ini.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-gray-800 dark:text-white">Manajemen Kode SKPD</h1>
-        <div className="flex space-x-2">
+    <div className="space-y-8 animate-in fade-in duration-500">
+      {/* Header Section */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 shadow-lg shadow-emerald-500/20">
+            <BuildingIcon className="h-7 w-7 text-white" />
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 dark:from-emerald-400 dark:to-teal-400 bg-clip-text text-transparent">
+              Manajemen Kode SKPD
+            </h1>
+            <p className="text-sm text-slate-600 dark:text-slate-400 mt-0.5">
+              Kelola daftar Satuan Kerja Perangkat Daerah
+            </p>
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-2">
           <input
             type="file"
             ref={fileInputRef}
@@ -347,30 +387,49 @@ const AdminKodeSKPD = () => {
             className="hidden"
             disabled={isUploading}
           />
-          <Button variant="outline" className="flex items-center gap-2" onClick={handleUploadButtonClick} disabled={isUploading}>
+          <Button
+            variant="outline"
+            className="flex items-center gap-2 hover:bg-emerald-50 hover:border-emerald-500 hover:text-emerald-600 dark:hover:bg-emerald-950 transition-colors"
+            onClick={handleUploadButtonClick}
+            disabled={isUploading}
+          >
             {isUploading ? 'Mengunggah...' : <><UploadIcon className="h-4 w-4" /> Upload CSV</>}
           </Button>
-          <Button variant="outline" className="flex items-center gap-2" onClick={handleDownloadSkpdCSV}>
+          <Button
+            variant="outline"
+            className="flex items-center gap-2 hover:bg-emerald-50 hover:border-emerald-500 hover:text-emerald-600 dark:hover:bg-emerald-950 transition-colors"
+            onClick={handleDownloadSkpdCSV}
+          >
             <FileDownIcon className="h-4 w-4" /> Download CSV
           </Button>
-          <Button onClick={() => setIsAddSkpdModalOpen(true)} className="flex items-center gap-2">
-            <PlusCircleIcon className="h-4 w-4" /> Tambah SKPD Baru
+          <Button
+            onClick={() => setIsAddSkpdModalOpen(true)}
+            className="flex items-center gap-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
+          >
+            <PlusCircleIcon className="h-4 w-4" /> Tambah SKPD
           </Button>
         </div>
       </div>
 
-      <Card className="shadow-sm rounded-lg">
-        <CardHeader>
-          <CardTitle className="text-xl font-semibold">Daftar Kode SKPD</CardTitle>
+      <Card className="border-slate-200 dark:border-slate-800 shadow-lg hover:shadow-xl transition-shadow duration-300">
+        <CardHeader className="border-b border-slate-200 dark:border-slate-800 bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 shadow-sm">
+              <BuildingIcon className="h-4 w-4 text-white" />
+            </div>
+            <CardTitle className="text-lg font-bold text-slate-900 dark:text-white">
+              Daftar Kode SKPD
+            </CardTitle>
+          </div>
         </CardHeader>
-        <CardContent>
-          <div className="mb-4 flex flex-col sm:flex-row items-center justify-between space-y-2 sm:space-y-0 sm:space-x-2">
-            <div className="relative flex-1 w-full sm:w-auto">
-              <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400" />
+        <CardContent className="pt-6">
+          <div className="mb-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="relative flex-1 w-full">
+              <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500 dark:text-slate-400" />
               <Input
                 type="text"
                 placeholder="Cari berdasarkan Nama atau Kode SKPD..."
-                className="pl-9 w-full"
+                className="pl-9 w-full border-slate-300 dark:border-slate-700 focus:border-emerald-500 focus:ring-emerald-500"
                 value={searchQuery}
                 onChange={(e) => {
                   setSearchQuery(e.target.value);
@@ -378,8 +437,8 @@ const AdminKodeSKPD = () => {
                 }}
               />
             </div>
-            <div className="flex items-center space-x-2">
-              <Label htmlFor="items-per-page" className="whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">Baris per halaman:</Label>
+            <div className="flex items-center gap-2">
+              <Label htmlFor="items-per-page" className="whitespace-nowrap text-sm text-slate-700 dark:text-slate-300">Baris per halaman:</Label>
               <Select
                 value={itemsPerPage.toString()}
                 onValueChange={(value) => {
@@ -400,11 +459,19 @@ const AdminKodeSKPD = () => {
               </Select>
             </div>
           </div>
-
-          <div className="overflow-x-auto">
-            <Table><TableHeader><TableRow>
-                  <TableHead>Nama SKPD</TableHead><TableHead>Kode SKPD</TableHead><TableHead>Kode SKPD Penagihan</TableHead><TableHead className="text-center">Aksi</TableHead>
-                </TableRow></TableHeader><TableBody>
+        </CardContent>
+        <CardContent>
+          <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-800">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950 dark:to-teal-950 hover:from-emerald-50 hover:to-teal-50 dark:hover:from-emerald-950 dark:hover:to-teal-950 border-b border-emerald-100 dark:border-emerald-900">
+                  <TableHead className="font-bold text-emerald-900 dark:text-emerald-100">Nama SKPD</TableHead>
+                  <TableHead className="font-bold text-emerald-900 dark:text-emerald-100">Kode SKPD</TableHead>
+                  <TableHead className="font-bold text-emerald-900 dark:text-emerald-100">Kode SKPD Penagihan</TableHead>
+                  <TableHead className="text-center font-bold text-emerald-900 dark:text-emerald-100">Aksi</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {loadingData && !loadingPagination ? (
                   <TableRow>
                     <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
@@ -418,14 +485,29 @@ const AdminKodeSKPD = () => {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  skpdList.map((skpd, index) => (
-                    <TableRow key={skpd.id}>
-                      <TableCell className="font-medium">{skpd.nama_skpd}</TableCell><TableCell>{skpd.kode_skpd}</TableCell><TableCell>{skpd.kode_skpd_penagihan || '-'}</TableCell><TableCell className="text-center">
-                        <div className="flex justify-center space-x-2">
-                          <Button variant="outline" size="icon" title="Edit SKPD" onClick={() => handleEditClick(skpd)}>
+                  skpdList.map((skpd) => (
+                    <TableRow key={skpd.id} className="hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
+                      <TableCell className="font-medium">{skpd.nama_skpd}</TableCell>
+                      <TableCell>{skpd.kode_skpd}</TableCell>
+                      <TableCell>{skpd.kode_skpd_penagihan || '-'}</TableCell>
+                      <TableCell className="text-center">
+                        <div className="flex justify-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            title="Edit SKPD"
+                            onClick={() => handleEditClick(skpd)}
+                            className="hover:bg-emerald-50 hover:border-emerald-500 hover:text-emerald-600 dark:hover:bg-emerald-950 transition-colors"
+                          >
                             <EditIcon className="h-4 w-4" />
                           </Button>
-                          <Button variant="destructive" size="icon" title="Hapus SKPD" onClick={() => handleDeleteClick(skpd)}>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            title="Hapus SKPD"
+                            onClick={() => handleDeleteClick(skpd)}
+                            className="hover:bg-red-50 hover:border-red-500 hover:text-red-600 dark:hover:bg-red-950 transition-colors"
+                          >
                             <Trash2Icon className="h-4 w-4" />
                           </Button>
                         </div>
@@ -433,27 +515,39 @@ const AdminKodeSKPD = () => {
                     </TableRow>
                   ))
                 )}
-              </TableBody></Table>
+              </TableBody>
+            </Table>
           </div>
 
-          <div className="mt-6 flex items-center justify-end space-x-4">
-            <div className="text-sm text-muted-foreground">
-              Halaman {totalItems === 0 ? 0 : currentPage} dari {totalPages} ({totalItems} total item)
+          <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="text-sm text-slate-600 dark:text-slate-400">
+              Menampilkan <span className="font-semibold text-emerald-600 dark:text-emerald-400">{totalItems === 0 ? 0 : ((currentPage - 1) * itemsPerPage) + 1}</span> - <span className="font-semibold text-emerald-600 dark:text-emerald-400">{Math.min(currentPage * itemsPerPage, totalItems)}</span> dari <span className="font-semibold text-emerald-600 dark:text-emerald-400">{totalItems}</span> item
             </div>
-            <Button
-              variant="outline"
-              onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-              disabled={currentPage === 1 || itemsPerPage === -1 || loadingPagination}
-            >
-              Sebelumnya
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-              disabled={currentPage === totalPages || itemsPerPage === -1 || loadingPagination}
-            >
-              Berikutnya
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                disabled={currentPage === 1 || itemsPerPage === -1 || loadingPagination}
+                className="hover:bg-emerald-50 hover:border-emerald-500 hover:text-emerald-600 dark:hover:bg-emerald-950 transition-colors"
+              >
+                <ChevronLeftIcon className="h-4 w-4 mr-1" />
+                Sebelumnya
+              </Button>
+              <div className="text-sm text-slate-600 dark:text-slate-400 px-2">
+                Hal. <span className="font-semibold text-emerald-600 dark:text-emerald-400">{totalItems === 0 ? 0 : currentPage}</span> / <span className="font-semibold">{totalPages}</span>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                disabled={currentPage === totalPages || itemsPerPage === -1 || loadingPagination}
+                className="hover:bg-emerald-50 hover:border-emerald-500 hover:text-emerald-600 dark:hover:bg-emerald-950 transition-colors"
+              >
+                Berikutnya
+                <ChevronRightIcon className="h-4 w-4 ml-1" />
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -479,7 +573,7 @@ const AdminKodeSKPD = () => {
         title="Konfirmasi Penghapusan SKPD"
         message={`Apakah Anda yakin ingin menghapus SKPD "${skpdToDelete?.namaSkpd || ''}"? Tindakan ini tidak dapat diurungkan.`}
       />
-    </div>
+    </div >
   );
 };
 
