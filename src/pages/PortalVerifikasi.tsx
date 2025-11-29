@@ -822,9 +822,21 @@ const PortalVerifikasi = () => {
 
   if (sessionLoading || loadingQueue || loadingHistory) {
     return (
-      <div className="p-6 bg-gradient-to-br from-white to-emerald-50/20 dark:from-slate-900 dark:to-emerald-950/10 rounded-lg shadow-md border border-emerald-200 dark:border-emerald-900/30">
-        <h1 className="text-3xl font-bold text-emerald-700 dark:text-emerald-400 mb-4">Memuat Halaman...</h1>
-        <p className="text-slate-600 dark:text-slate-400">Sedang memeriksa hak akses Anda dan mengambil data.</p>
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center space-y-4">
+          <div className="relative w-16 h-16 mx-auto">
+            <div className="absolute inset-0 rounded-full border-4 border-emerald-200 dark:border-emerald-900"></div>
+            <div className="absolute inset-0 rounded-full border-4 border-emerald-500 dark:border-emerald-400 border-t-transparent animate-spin"></div>
+          </div>
+          <div className="space-y-2">
+            <h2 className="text-2xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 dark:from-emerald-400 dark:to-teal-400 bg-clip-text text-transparent">
+              Memuat Portal Verifikasi
+            </h2>
+            <p className="text-sm text-slate-600 dark:text-slate-400">
+              Sedang memeriksa hak akses dan mengambil data...
+            </p>
+          </div>
+        </div>
       </div>
     );
   }
@@ -832,9 +844,24 @@ const PortalVerifikasi = () => {
   // Updated access check to include 'Staf Koreksi'
   if (profile?.peran !== 'Staf Verifikator' && profile?.peran !== 'Staf Koreksi') {
     return (
-      <div className="p-6 bg-gradient-to-br from-white to-red-50/20 dark:from-slate-900 dark:to-red-950/10 rounded-lg shadow-md border border-red-200 dark:border-red-900/30">
-        <h1 className="text-3xl font-bold text-red-600 dark:text-red-400 mb-4">Akses Ditolak</h1>
-        <p className="text-slate-600 dark:text-slate-400">Anda tidak memiliki izin untuk mengakses halaman ini.</p>
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Card className="max-w-md w-full border-red-200 dark:border-red-900/50 shadow-lg">
+          <CardContent className="pt-6 text-center space-y-4">
+            <div className="w-16 h-16 mx-auto rounded-full bg-red-100 dark:bg-red-900/20 flex items-center justify-center">
+              <svg className="w-8 h-8 text-red-600 dark:text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            <div className="space-y-2">
+              <h2 className="text-2xl font-bold text-red-600 dark:text-red-400">
+                Akses Ditolak
+              </h2>
+              <p className="text-sm text-slate-600 dark:text-slate-400">
+                Anda tidak memiliki izin untuk mengakses halaman ini.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
