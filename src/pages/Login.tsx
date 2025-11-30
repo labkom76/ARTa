@@ -140,7 +140,7 @@ const Login = () => {
     if (isSliderEnabled && allBackgroundImages.length > 1) {
       intervalId = setInterval(() => {
         setCurrentImageIndex(prev => (prev + 1) % allBackgroundImages.length);
-      }, 5000); // Faster transition for hero carousel
+      }, 10000); // 10 seconds per image
     }
     return () => clearInterval(intervalId);
   }, [isSliderEnabled, allBackgroundImages.length]);
@@ -148,8 +148,10 @@ const Login = () => {
   useEffect(() => {
     if (isSliderEnabled && allBackgroundImages.length > 0) {
       setCurrentBackground(allBackgroundImages[currentImageIndex]);
+      // Sync testimonial with background image
+      setCurrentTestimonialIndex(currentImageIndex % backgroundQuotes.length);
     }
-  }, [currentImageIndex, isSliderEnabled, allBackgroundImages]);
+  }, [currentImageIndex, isSliderEnabled, allBackgroundImages, backgroundQuotes.length]);
 
   // Testimonial Slider Logic
   const nextTestimonial = () => setCurrentTestimonialIndex(prev => (prev + 1) % backgroundQuotes.length);
@@ -452,7 +454,10 @@ const Login = () => {
             <Quote className="h-10 w-10 text-emerald-400 mb-6 opacity-80" />
 
             <div className="min-h-[120px]">
-              <h2 className="text-2xl lg:text-3xl font-medium leading-tight mb-6 tracking-tight">
+              <h2
+                key={currentTestimonialIndex}
+                className="text-2xl lg:text-3xl font-medium leading-tight mb-6 tracking-tight animate-in fade-in slide-in-from-bottom-2 duration-700"
+              >
                 "{backgroundQuotes[currentTestimonialIndex]}"
               </h2>
             </div>

@@ -465,6 +465,66 @@ const AdminCustomLogin = () => {
             </CardContent>
           </Card>
 
+          {/* Pengaturan Tata Letak Card */}
+          <Card className="border-slate-200 dark:border-slate-800 shadow-lg hover:shadow-xl transition-shadow duration-300">
+            <CardHeader className="border-b border-slate-200 dark:border-slate-800 bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 shadow-sm">
+                  <SettingsIcon className="h-4 w-4 text-white" />
+                </div>
+                <CardTitle className="text-lg font-bold text-slate-900 dark:text-white">
+                  Pengaturan Tata Letak
+                </CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="random-layout">Acak Tata Letak</Label>
+                <Switch
+                  id="random-layout"
+                  checked={randomLayout}
+                  onCheckedChange={(checked) => {
+                    setRandomLayout(checked);
+                    updateSetting('login_layout_random', String(checked));
+                  }}
+                  aria-label="Toggle random layout"
+                  className="data-[state=checked]:bg-emerald-500 dark:data-[state=checked]:bg-emerald-600"
+                />
+              </div>
+
+              <div className="grid gap-2">
+                <Label>Posisi Form Login:</Label>
+                <RadioGroup
+                  value={formPosition}
+                  onValueChange={(value) => {
+                    setFormPosition(value);
+                    updateSetting('login_form_position', value);
+                  }}
+                  className="space-y-2"
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="right" id="form-right" />
+                    <Label htmlFor="form-right" className="font-normal cursor-pointer">
+                      Form di Kiri
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="center" id="form-center" />
+                    <Label htmlFor="form-center" className="font-normal cursor-pointer">
+                      Form di Tengah
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="left" id="form-left" />
+                    <Label htmlFor="form-left" className="font-normal cursor-pointer">
+                      Form di Kanan
+                    </Label>
+                  </div>
+                </RadioGroup>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Pengaturan Tampilan Form Card */}
           <Card className="border-slate-200 dark:border-slate-800 shadow-lg hover:shadow-xl transition-shadow duration-300">
             <CardHeader className="border-b border-slate-200 dark:border-slate-800 bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
@@ -639,60 +699,6 @@ const AdminCustomLogin = () => {
             </CardContent>
           </Card>
 
-          {/* Pengaturan Tata Letak Card */}
-          <Card className="border-slate-200 dark:border-slate-800 shadow-lg hover:shadow-xl transition-shadow duration-300">
-            <CardHeader className="border-b border-slate-200 dark:border-slate-800 bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
-              <div className="flex items-center gap-2">
-                <div className="p-1.5 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 shadow-sm">
-                  <svg className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h4a1 1 0 011 1v7a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM14 5a1 1 0 011-1h4a1 1 0 011 1v7a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 16a1 1 0 011-1h4a1 1 0 011 1v3a1 1 0 01-1 1H5a1 1 0 01-1-1v-3zM14 16a1 1 0 011-1h4a1 1 0 011 1v3a1 1 0 01-1 1h-4a1 1 0 01-1-1v-3z" />
-                  </svg>
-                </div>
-                <CardTitle className="text-lg font-bold text-slate-900 dark:text-white">
-                  Pengaturan Tata Letak
-                </CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="random-layout">Acak Tata Letak</Label>
-                <Switch
-                  id="random-layout"
-                  checked={randomLayout}
-                  onCheckedChange={(checked) => {
-                    setRandomLayout(checked);
-                    updateSetting('login_layout_random', String(checked));
-                  }}
-                  aria-label="Toggle random layout"
-                  className="data-[state=checked]:bg-emerald-500 dark:data-[state=checked]:bg-emerald-600"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Posisi Form Login:</Label>
-                <RadioGroup
-                  value={formPosition}
-                  onValueChange={(value) => {
-                    setFormPosition(value);
-                    updateSetting('login_form_position', value);
-                  }}
-                  className="flex flex-col space-y-1"
-                >
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="left" id="form-left" />
-                    <Label htmlFor="form-left">Form di Kiri</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="center" id="form-center" />
-                    <Label htmlFor="form-center">Form di Tengah</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="right" id="form-right" />
-                    <Label htmlFor="form-right">Form di Kanan</Label>
-                  </div>
-                </RadioGroup>
-              </div>
-            </CardContent>
-          </Card>
 
           {/* Efek Latar Belakang Card */}
           <Card className="border-slate-200 dark:border-slate-800 shadow-lg hover:shadow-xl transition-shadow duration-300">
