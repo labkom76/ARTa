@@ -196,7 +196,7 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar, isCollapsed = false }) =
   };
 
   return (
-    <header className="sticky top-0 z-40 flex items-center justify-between h-16 px-4 bg-gradient-to-r from-white via-emerald-50/30 to-white dark:from-slate-950 dark:via-emerald-950/20 dark:to-slate-950 border-b border-gray-200 dark:border-slate-800 shadow-md hover:shadow-lg transition-all duration-300">
+    <header className="sticky top-0 z-40 flex items-center justify-between h-16 px-4 bg-white dark:bg-slate-950 border-b border-gray-200 dark:border-slate-800 shadow-sm">
       <div className="flex items-center">
         <Button
           variant="ghost"
