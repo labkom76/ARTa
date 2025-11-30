@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { HomeIcon, LayoutDashboardIcon, FileTextIcon, HistoryIcon, ListFilterIcon, UsersIcon, PaletteIcon } from 'lucide-react';
+import { HomeIcon, LayoutDashboardIcon, FileTextIcon, HistoryIcon, ListFilterIcon, UsersIcon, PaletteIcon, ClipboardListIcon, MapPinIcon, ListChecksIcon, CalendarCheckIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSession } from '@/contexts/SessionContext';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -105,7 +105,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onLinkClick }) => {
   } else if (role === 'Administrator') {
     navItems.push(
       { to: '/admin/dashboard', icon: LayoutDashboardIcon, label: 'Dashboard Admin' },
-      { to: '/admin/tagihan', icon: FileTextIcon, label: 'Manajemen Tagihan' },
+      { to: '/admin/tagihan', icon: ClipboardListIcon, label: 'Manajemen Tagihan' },
       {
         type: 'collapsible',
         label: 'Manajemen',
@@ -120,12 +120,13 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onLinkClick }) => {
         label: 'Data Master',
         icon: ListFilterIcon, // You can choose a more appropriate icon
         children: [
-          { to: '/admin/kode-wilayah', icon: FileTextIcon, label: 'Kode Wilayah' }, // New item
-          { to: '/admin/kode-skpd', icon: FileTextIcon, label: 'Kode SKPD' },
-          { to: '/admin/jadwal-penganggaran', icon: HistoryIcon, label: 'Jadwal Penganggaran' },
+          { to: '/admin/kode-wilayah', icon: MapPinIcon, label: 'Kode Wilayah' }, // New item
+          { to: '/admin/kode-skpd', icon: ListChecksIcon, label: 'Kode SKPD' },
+          { to: '/admin/jadwal-penganggaran', icon: CalendarCheckIcon, label: 'Jadwal Penganggaran' },
         ]
       },
       { to: '/admin/laporan', icon: HistoryIcon, label: 'Laporan' }, // New "Laporan" menu item
+      { to: '/admin/activity-log', icon: FileTextIcon, label: 'Activity Log' }, // NEW: Activity Log item, icon changed to FileTextIcon
     );
   } else {
     navItems.push(
