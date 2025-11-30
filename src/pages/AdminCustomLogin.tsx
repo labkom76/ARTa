@@ -53,6 +53,12 @@ const AdminCustomLogin = () => {
   const [announcementContent, setAnnouncementContent] = useState('');
   const [isSavingAnnouncement, setIsSavingAnnouncement] = useState(false);
 
+  // NEW STATES FOR BACKGROUND QUOTES
+  const [backgroundQuote1, setBackgroundQuote1] = useState('');
+  const [backgroundQuote2, setBackgroundQuote2] = useState('');
+  const [backgroundQuote3, setBackgroundQuote3] = useState('');
+  const [isSavingQuotes, setIsSavingQuotes] = useState(false);
+
   // DELETE CONFIRMATION DIALOG STATES
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ type: 'image' | 'logo', name?: string } | null>(null);
@@ -103,6 +109,11 @@ const AdminCustomLogin = () => {
       // NEW: Fetch announcement settings
       setAnnouncementVisibility(settingsMap.get('announcement_visibility') === 'true');
       setAnnouncementContent(settingsMap.get('announcement_content') || '');
+
+      // NEW: Fetch background quotes
+      setBackgroundQuote1(settingsMap.get('background_quote_1') || '');
+      setBackgroundQuote2(settingsMap.get('background_quote_2') || '');
+      setBackgroundQuote3(settingsMap.get('background_quote_3') || '');
 
     } catch (error: any) {
       console.error('Error fetching settings:', error.message);
@@ -285,6 +296,22 @@ const AdminCustomLogin = () => {
       toast.error('Gagal menyimpan pengaturan papan informasi: ' + error.message);
     } finally {
       setIsSavingAnnouncement(false);
+    }
+  };
+
+  // NEW: Function to save background quotes
+  const handleSaveBackgroundQuotes = async () => {
+    setIsSavingQuotes(true);
+    try {
+      await updateSetting('background_quote_1', backgroundQuote1);
+      await updateSetting('background_quote_2', backgroundQuote2);
+      await updateSetting('background_quote_3', backgroundQuote3);
+      toast.success('Background quotes berhasil disimpan!');
+    } catch (error: any) {
+      console.error('Error saving background quotes:', error.message);
+      toast.error('Gagal menyimpan background quotes: ' + error.message);
+    } finally {
+      setIsSavingQuotes(false);
     }
   };
 
@@ -543,6 +570,71 @@ const AdminCustomLogin = () => {
                 className="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
               >
                 {isSavingAnnouncement ? 'Menyimpan...' : 'Simpan Pengaturan Papan Informasi'}
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Pengaturan Background Quotes Card */}
+          <Card className="border-slate-200 dark:border-slate-800 shadow-lg hover:shadow-xl transition-shadow duration-300">
+            <CardHeader className="border-b border-slate-200 dark:border-slate-800 bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 shadow-sm">
+                  <svg className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+                  </svg>
+                </div>
+                <CardTitle className="text-lg font-bold text-slate-900 dark:text-white">
+                  Background Quotes Split Screen
+                </CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-slate-600 dark:text-slate-400">
+                Kelola quotes yang ditampilkan di hero section split screen login (Form di Kiri/Kanan)
+              </p>
+
+              <div className="grid gap-2">
+                <Label htmlFor="background-quote-1">Quote 1</Label>
+                <Textarea
+                  id="background-quote-1"
+                  value={backgroundQuote1}
+                  onChange={(e) => setBackgroundQuote1(e.target.value)}
+                  placeholder="Masukkan quote pertama..."
+                  rows={3}
+                  className="resize-none"
+                />
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="background-quote-2">Quote 2</Label>
+                <Textarea
+                  id="background-quote-2"
+                  value={backgroundQuote2}
+                  onChange={(e) => setBackgroundQuote2(e.target.value)}
+                  placeholder="Masukkan quote kedua..."
+                  rows={3}
+                  className="resize-none"
+                />
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="background-quote-3">Quote 3</Label>
+                <Textarea
+                  id="background-quote-3"
+                  value={backgroundQuote3}
+                  onChange={(e) => setBackgroundQuote3(e.target.value)}
+                  placeholder="Masukkan quote ketiga..."
+                  rows={3}
+                  className="resize-none"
+                />
+              </div>
+
+              <Button
+                onClick={handleSaveBackgroundQuotes}
+                disabled={isSavingQuotes}
+                className="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
+              >
+                {isSavingQuotes ? 'Menyimpan...' : 'Simpan Background Quotes'}
               </Button>
             </CardContent>
           </Card>
