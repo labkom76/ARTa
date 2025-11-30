@@ -1,0 +1,666 @@
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogDescription,
+    DialogFooter,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/components/ui/table';
+import { format, parseISO, startOfMonth, endOfMonth, addDays, differenceInDays } from 'date-fns';
+import { id as localeId } from 'date-fns/locale';
+import { ClipboardCheckIcon, FileText, CheckSquare, AlertCircle, Calendar, User, Building2, DollarSign } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+import { useSession } from '@/contexts/SessionContext';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+
+interface VerificationItem {
+    item: string;
+    memenuhi_syarat: boolean;
+    keterangan: string;
+}
+
+interface Tagihan {
+    id_tagihan: string;
+    nama_skpd: string;
+    nomor_spm: string;
+    jenis_spm: string;
+    jenis_tagihan: string;
+    uraian: string;
+    jumlah_kotor: number;
+    status_tagihan: string;
+    waktu_input: string;
+    id_pengguna_input: string;
+    nomor_registrasi?: string;
+    waktu_registrasi?: string;
+    nama_registrator?: string;
+    catatan_verifikator?: string;
+    waktu_verifikasi?: string;
+    detail_verifikasi?: VerificationItem[];
+    nomor_verifikasi?: string;
+    nama_verifikator?: string;
+    locked_by?: string;
+    locked_at?: string;
+    sumber_dana?: string;
+    skpd_can_edit?: boolean;
+    tenggat_perbaikan?: string;
+}
+
+interface VerifikasiTagihanDialogProps {
+    isOpen: boolean;
+    onClose: () => void;
+    onVerificationSuccess: () => void;
+    tagihan: Tagihan | null;
+}
+
+const checklistItems = [
+    'SPTJ',
+    'Kebenaran Perhitungan Tagihan',
+    'Kesesuaian Kode Rekening',
+    'E-Billing',
+    'Fotocopy Rekening Pihak Ketiga / Bendahara Pengeluaran / Bendahara Pengeluaran Pembantu',
+    'Fotocopy NPWP',
+    'Tanda Penerimaan / Kwitansi / Bukti Pembayaran',
+    'Lainnya',
+];
+
+const verificationFormSchema = z.object({
+    status_keputusan: z.enum(['Diteruskan', 'Dikembalikan'], {
+        required_error: 'Keputusan verifikasi wajib dipilih.',
+    }),
+    detail_verifikasi: z.array(
+        z.object({
+            item: z.string(),
+            memenuhi_syarat: z.boolean(),
+            keterangan: z.string().optional(),
+        })
+    ).min(1, { message: 'Checklist verifikasi tidak boleh kosong.' }),
+    durasi_penahanan: z.preprocess(
+        (val) => Number(val),
+        z.number().int().min(1).max(3, { message: 'Durasi penahanan harus antara 1 hingga 3 hari.' }).optional()
+    ),
+    allow_skpd_edit: z.boolean().optional(),
+}).superRefine((data, ctx) => {
+    if (data.status_keputusan === 'Dikembalikan' && (!data.durasi_penahanan || data.durasi_penahanan < 1 || data.durasi_penahanan > 3)) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: 'Durasi Penahanan wajib dipilih jika status dikembalikan.',
+            path: ['durasi_penahanan'],
+        });
+    }
+});
+
+type VerificationFormValues = z.infer<typeof verificationFormSchema>;
+
+const generateNomorVerifikasi = async (): Promise<string> => {
+    const now = new Date();
+    const yearMonthDay = format(now, 'yyyyMMdd');
+    const startOfCurrentMonth = startOfMonth(now).toISOString();
+    const endOfCurrentMonth = now.toISOString();
+
+    const { data, error } = await supabase
+        .from('database_tagihan')
+        .select('nomor_verifikasi')
+        .not('nomor_verifikasi', 'is', null)
+        .gte('waktu_verifikasi', startOfCurrentMonth)
+        .lte('waktu_verifikasi', endOfCurrentMonth)
+        .order('nomor_verifikasi', { ascending: false })
+        .limit(1);
+
+    if (error) {
+        console.error('Error fetching last verification number:', error.message);
+        throw new Error('Gagal membuat nomor verifikasi.');
+    }
+
+    let nextSequence = 1;
+    if (data && data.length > 0 && data[0].nomor_verifikasi) {
+        const lastNomor = data[0].nomor_verifikasi;
+        const parts = lastNomor.split('-');
+        if (parts.length === 3) {
+            const lastSequenceStr = parts[2];
+            const lastSequenceNum = parseInt(lastSequenceStr, 10);
+            if (!isNaN(lastSequenceNum)) {
+                nextSequence = lastSequenceNum + 1;
+            }
+        }
+    }
+
+    const formattedSequence = String(nextSequence).padStart(4, '0');
+    return `VER-${yearMonthDay}-${formattedSequence}`;
+};
+
+const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpen, onClose, onVerificationSuccess, tagihan }) => {
+    const { user, profile } = useSession();
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [availableStatusOptions, setAvailableStatusOptions] = useState<Array<'Diteruskan' | 'Dikembalikan'>>([]);
+    const [isConfirmDefaultOpen, setIsConfirmDefaultOpen] = useState(false);
+
+    const form = useForm<VerificationFormValues>({
+        resolver: zodResolver(verificationFormSchema),
+        defaultValues: {
+            status_keputusan: undefined,
+            detail_verifikasi: checklistItems.map(item => ({
+                item,
+                memenuhi_syarat: true,
+                keterangan: '',
+            })),
+            durasi_penahanan: 1,
+            allow_skpd_edit: false,
+        },
+    });
+
+    const handleExecuteSubmit = useCallback(async (values: VerificationFormValues) => {
+        if (!user || !profile?.nama_lengkap) {
+            toast.error('Informasi pengguna tidak lengkap. Harap login ulang.');
+            return;
+        }
+        if (!tagihan) {
+            toast.error('Data tagihan tidak tersedia.');
+            return;
+        }
+
+        setIsSubmitting(true);
+        try {
+            const now = new Date();
+
+            let tenggatPerbaikan: string | null = null;
+            let skpdCanEdit: boolean = false;
+
+            if (values.status_keputusan === 'Dikembalikan') {
+                if (values.durasi_penahanan) {
+                    const tenggat = addDays(now, values.durasi_penahanan);
+                    tenggatPerbaikan = tenggat.toISOString();
+                }
+                skpdCanEdit = values.allow_skpd_edit || false;
+            }
+
+            let nomorVerifikasiToUse: string | undefined = tagihan.nomor_verifikasi;
+            if (values.status_keputusan === 'Diteruskan') {
+                if (!tagihan.nomor_verifikasi) {
+                    nomorVerifikasiToUse = await generateNomorVerifikasi();
+                }
+            } else if (values.status_keputusan === 'Dikembalikan') {
+                if (!tagihan.nomor_verifikasi) {
+                    nomorVerifikasiToUse = await generateNomorVerifikasi();
+                }
+            }
+
+            const { error } = await supabase
+                .from('database_tagihan')
+                .update({
+                    status_tagihan: values.status_keputusan,
+                    waktu_verifikasi: now.toISOString(),
+                    nama_verifikator: profile.nama_lengkap,
+                    detail_verifikasi: values.detail_verifikasi,
+                    nomor_verifikasi: nomorVerifikasiToUse,
+                    locked_by: null,
+                    locked_at: null,
+                    nomor_koreksi: null,
+                    id_korektor: null,
+                    waktu_koreksi: null,
+                    catatan_koreksi: null,
+                    tenggat_perbaikan: tenggatPerbaikan,
+                    skpd_can_edit: skpdCanEdit,
+                })
+                .eq('id_tagihan', tagihan.id_tagihan);
+
+            if (error) {
+                console.error('Supabase update error:', error);
+                throw error;
+            }
+
+            let notificationMessage = '';
+            if (values.status_keputusan === 'Diteruskan') {
+                notificationMessage = `Selamat! Tagihan SPM ${tagihan.nomor_spm} Anda telah DITERUSKAN.`;
+            } else if (values.status_keputusan === 'Dikembalikan') {
+                notificationMessage = `Perhatian! Tagihan SPM ${tagihan.nomor_spm} DIKEMBALIKAN.`;
+                if (tenggatPerbaikan && values.durasi_penahanan && values.durasi_penahanan > 1) {
+                    const formattedTenggat = format(parseISO(tenggatPerbaikan), 'dd MMMM yyyy', { locale: localeId });
+                    notificationMessage += ` Harap perbaiki sebelum ${formattedTenggat}.`;
+                }
+            }
+
+            if (notificationMessage) {
+                const { error: notificationError } = await supabase
+                    .from('notifications')
+                    .insert({
+                        user_id: tagihan.id_pengguna_input,
+                        message: notificationMessage,
+                        is_read: false,
+                        tagihan_id: tagihan.id_tagihan,
+                        tenggat_perbaikan: tenggatPerbaikan,
+                    });
+
+                if (notificationError) {
+                    console.error('Error inserting notification:', notificationError.message);
+                }
+            }
+
+            toast.success(`Tagihan ${tagihan.nomor_spm} berhasil ${values.status_keputusan.toLowerCase()}!`);
+            onVerificationSuccess();
+            onClose();
+        } catch (error: any) {
+            console.error('Error processing verifikasi:', error.message);
+            toast.error('Gagal memproses verifikasi: ' + error.message);
+        } finally {
+            setIsSubmitting(false);
+            setIsConfirmDefaultOpen(false);
+        }
+    }, [user, profile, tagihan, onVerificationSuccess, onClose]);
+
+    const detailVerifikasiWatch = form.watch('detail_verifikasi');
+    const statusKeputusanWatch = form.watch('status_keputusan');
+    const durasiPenahananWatch = form.watch('durasi_penahanan');
+
+    const allChecklistItemsMet = detailVerifikasiWatch.every(item => item.memenuhi_syarat === true);
+
+    useEffect(() => {
+        if (allChecklistItemsMet) {
+            setAvailableStatusOptions(['Diteruskan']);
+            if (statusKeputusanWatch !== 'Diteruskan') {
+                form.setValue('status_keputusan', 'Diteruskan');
+            }
+        } else {
+            setAvailableStatusOptions(['Dikembalikan']);
+            if (statusKeputusanWatch !== 'Dikembalikan') {
+                form.setValue('status_keputusan', 'Dikembalikan');
+            }
+        }
+    }, [allChecklistItemsMet, form, statusKeputusanWatch]);
+
+    useEffect(() => {
+        if (isOpen && tagihan) {
+            const defaultDetailVerifikasi = checklistItems.map(item => ({
+                item,
+                memenuhi_syarat: true,
+                keterangan: '',
+            }));
+
+            let initialValues: VerificationFormValues = {
+                status_keputusan: undefined,
+                detail_verifikasi: tagihan.detail_verifikasi && tagihan.detail_verifikasi.length > 0
+                    ? tagihan.detail_verifikasi
+                    : defaultDetailVerifikasi,
+                durasi_penahanan: 1,
+                allow_skpd_edit: false,
+            };
+
+            if (tagihan.status_tagihan === 'Dikembalikan') {
+                initialValues.status_keputusan = 'Dikembalikan';
+                initialValues.allow_skpd_edit = tagihan.skpd_can_edit || false;
+
+                if (tagihan.tenggat_perbaikan && tagihan.waktu_verifikasi) {
+                    const deadlineDate = parseISO(tagihan.tenggat_perbaikan);
+                    const verificationDate = parseISO(tagihan.waktu_verifikasi);
+                    const diffDays = differenceInDays(deadlineDate, verificationDate);
+
+                    if (diffDays >= 1 && diffDays <= 3) {
+                        initialValues.durasi_penahanan = diffDays;
+                    } else {
+                        initialValues.durasi_penahanan = 1;
+                    }
+                } else {
+                    initialValues.durasi_penahanan = 1;
+                }
+            }
+
+            form.reset(initialValues);
+        }
+    }, [isOpen, tagihan, form]);
+
+    if (!tagihan) return null;
+
+    const formatDate = (dateString: string | undefined) => {
+        if (!dateString) return '-';
+        try {
+            return format(parseISO(dateString), 'dd MMMM yyyy HH:mm', { locale: localeId });
+        } catch (e) {
+            console.error("Error formatting date:", dateString, e);
+            return dateString;
+        }
+    };
+
+    const onSubmit = async (values: VerificationFormValues) => {
+        if (values.status_keputusan === 'Diteruskan' && !allChecklistItemsMet) {
+            toast.error('Tidak dapat meneruskan tagihan. Semua item checklist harus memenuhi syarat.');
+            return;
+        }
+
+        if (values.status_keputusan === 'Dikembalikan' && allChecklistItemsMet) {
+            toast.error('Tidak dapat mengembalikan tagihan. Semua item checklist sudah memenuhi syarat.');
+            return;
+        }
+
+        if (values.status_keputusan === 'Dikembalikan' && values.durasi_penahanan === 1) {
+            setIsConfirmDefaultOpen(true);
+        } else {
+            handleExecuteSubmit(values);
+        }
+    };
+
+    const getButtonVariant = (status: 'Diteruskan' | 'Dikembalikan' | undefined) => {
+        if (status === 'Diteruskan') return 'default';
+        if (status === 'Dikembalikan') return 'destructive';
+        return 'secondary';
+    };
+
+    const isSubmitButtonDisabled = isSubmitting || !statusKeputusanWatch ||
+        (statusKeputusanWatch === 'Diteruskan' && !allChecklistItemsMet) ||
+        (statusKeputusanWatch === 'Dikembalikan' && allChecklistItemsMet);
+
+    return (
+        <>
+            <Dialog open={isOpen} onOpenChange={onClose}>
+                <DialogContent className="sm:max-w-[700px] max-h-[90vh] flex flex-col bg-gradient-to-br from-white to-emerald-50/30 dark:from-slate-900 dark:to-emerald-950/20">
+                    <DialogHeader className="border-b border-emerald-100 dark:border-emerald-900/30 pb-4 pr-10">
+                        <div className="space-y-3">
+                            <div className="flex items-center gap-2">
+                                <ClipboardCheckIcon className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+                                <DialogTitle className="text-2xl font-bold text-slate-900 dark:text-white">
+                                    Verifikasi Tagihan
+                                </DialogTitle>
+                            </div>
+                            <DialogDescription className="text-slate-600 dark:text-slate-400">
+                                Periksa detail tagihan dan tentukan keputusan verifikasi untuk SPM {tagihan.nomor_spm}
+                            </DialogDescription>
+                        </div>
+                    </DialogHeader>
+
+                    <div className="flex-1 overflow-y-auto pr-4 -mr-4">
+                        <form id="verification-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 py-4">
+                            {/* Detail Tagihan Section */}
+                            <div className="bg-white dark:bg-slate-800/50 rounded-xl p-5 border border-emerald-100 dark:border-emerald-900/30 shadow-sm">
+                                <div className="flex items-center gap-2 mb-4">
+                                    <div className="h-8 w-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
+                                        <Building2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                                    </div>
+                                    <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Informasi Tagihan</h3>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="space-y-1">
+                                        <Label className="text-xs text-slate-500 dark:text-slate-400 font-medium">Nomor Registrasi</Label>
+                                        <p className="text-sm font-medium text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-900/50 px-3 py-2 rounded-lg">{tagihan.nomor_registrasi || '-'}</p>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <Label className="text-xs text-slate-500 dark:text-slate-400 font-medium flex items-center gap-1">
+                                            <Calendar className="h-3 w-3" />
+                                            Waktu Registrasi
+                                        </Label>
+                                        <p className="text-sm font-medium text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-900/50 px-3 py-2 rounded-lg">{formatDate(tagihan.waktu_registrasi)}</p>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <Label className="text-xs text-slate-500 dark:text-slate-400 font-medium">Nama SKPD</Label>
+                                        <p className="text-sm font-medium text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-900/50 px-3 py-2 rounded-lg">{tagihan.nama_skpd}</p>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <Label className="text-xs text-slate-500 dark:text-slate-400 font-medium">Jenis SPM</Label>
+                                        <p className="text-sm font-medium text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-900/50 px-3 py-2 rounded-lg">{tagihan.jenis_spm}</p>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <Label className="text-xs text-slate-500 dark:text-slate-400 font-medium">Jenis Tagihan</Label>
+                                        <p className="text-sm font-medium text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-900/50 px-3 py-2 rounded-lg">{tagihan.jenis_tagihan}</p>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <Label className="text-xs text-slate-500 dark:text-slate-400 font-medium">Sumber Dana</Label>
+                                        <p className="text-sm font-medium text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-900/50 px-3 py-2 rounded-lg">{tagihan.sumber_dana || '-'}</p>
+                                    </div>
+                                    <div className="md:col-span-2 space-y-1">
+                                        <Label className="text-xs text-slate-500 dark:text-slate-400 font-medium">Uraian</Label>
+                                        <p className="text-sm text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-900/50 px-3 py-2 rounded-lg leading-relaxed">{tagihan.uraian}</p>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <Label className="text-xs text-slate-500 dark:text-slate-400 font-medium flex items-center gap-1">
+                                            <DollarSign className="h-3 w-3" />
+                                            Jumlah Kotor
+                                        </Label>
+                                        <p className="text-sm font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 px-3 py-2 rounded-lg border border-emerald-200 dark:border-emerald-800/50">
+                                            Rp {tagihan.jumlah_kotor.toLocaleString('id-ID')}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Checklist Verifikasi Section */}
+                            <div className="bg-white dark:bg-slate-800/50 rounded-xl p-5 border border-emerald-100 dark:border-emerald-900/30 shadow-sm">
+                                <div className="flex items-center gap-2 mb-4">
+                                    <div className="h-8 w-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
+                                        <CheckSquare className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                                    </div>
+                                    <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Checklist Verifikasi</h3>
+                                </div>
+                                <div className="rounded-lg border border-emerald-200 dark:border-emerald-800/50 overflow-hidden">
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow className="bg-emerald-50 dark:bg-emerald-950/30 hover:bg-emerald-50 dark:hover:bg-emerald-950/30">
+                                                <TableHead className="w-[250px] text-emerald-900 dark:text-emerald-300 font-semibold">Uraian</TableHead>
+                                                <TableHead className="w-[120px] text-center text-emerald-900 dark:text-emerald-300 font-semibold">Memenuhi Syarat</TableHead>
+                                                <TableHead className="text-emerald-900 dark:text-emerald-300 font-semibold"></TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {checklistItems.map((item, index) => (
+                                                <React.Fragment key={item}>
+                                                    <TableRow className="hover:bg-emerald-50/50 dark:hover:bg-emerald-950/20">
+                                                        <TableCell className="font-medium text-slate-900 dark:text-slate-200">{item}</TableCell>
+                                                        <TableCell className="text-center">
+                                                            <Controller
+                                                                name={`detail_verifikasi.${index}.memenuhi_syarat`}
+                                                                control={form.control}
+                                                                render={({ field }) => (
+                                                                    <Checkbox
+                                                                        checked={field.value}
+                                                                        onCheckedChange={(checked) => {
+                                                                            field.onChange(checked);
+                                                                            if (checked) {
+                                                                                form.setValue(`detail_verifikasi.${index}.keterangan`, '');
+                                                                            }
+                                                                        }}
+                                                                    />
+                                                                )}
+                                                            />
+                                                        </TableCell>
+                                                        <TableCell></TableCell>
+                                                    </TableRow>
+                                                    <TableRow className="hover:bg-emerald-50/50 dark:hover:bg-emerald-950/20">
+                                                        <TableCell colSpan={3}>
+                                                            <Controller
+                                                                name={`detail_verifikasi.${index}.keterangan`}
+                                                                control={form.control}
+                                                                render={({ field }) => (
+                                                                    <Input
+                                                                        {...field}
+                                                                        placeholder="Keterangan (opsional)"
+                                                                        className="h-8 w-full mt-2"
+                                                                        disabled={detailVerifikasiWatch[index]?.memenuhi_syarat}
+                                                                    />
+                                                                )}
+                                                            />
+                                                        </TableCell>
+                                                    </TableRow>
+                                                </React.Fragment>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
+                                </div>
+                                {form.formState.errors.detail_verifikasi && (
+                                    <p className="text-red-500 text-sm mt-3">
+                                        {form.formState.errors.detail_verifikasi.message}
+                                    </p>
+                                )}
+                            </div>
+
+                            {/* Keputusan Verifikasi Section */}
+                            <div className="bg-white dark:bg-slate-800/50 rounded-xl p-5 border border-blue-100 dark:border-blue-900/30 shadow-sm">
+                                <div className="flex items-center gap-2 mb-4">
+                                    <div className="h-8 w-8 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                                        <AlertCircle className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                                    </div>
+                                    <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Keputusan Verifikasi</h3>
+                                </div>
+                                <Controller
+                                    name="status_keputusan"
+                                    control={form.control}
+                                    render={({ field }) => (
+                                        <div className="space-y-1">
+                                            <Label className="text-xs text-slate-500 dark:text-slate-400 font-medium">Pilih Status</Label>
+                                            <Select onValueChange={field.onChange} value={field.value}>
+                                                <SelectTrigger className="w-full">
+                                                    <SelectValue placeholder="Pilih Keputusan" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {availableStatusOptions.map(option => (
+                                                        <SelectItem key={option} value={option}>
+                                                            {option}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                    )}
+                                />
+                                {form.formState.errors.status_keputusan && (
+                                    <p className="text-red-500 text-sm mt-2">
+                                        {form.formState.errors.status_keputusan.message}
+                                    </p>
+                                )}
+                            </div>
+
+                            {statusKeputusanWatch === 'Dikembalikan' && (
+                                <>
+                                    <div className="bg-white dark:bg-slate-800/50 rounded-xl p-5 border border-amber-100 dark:border-amber-900/30 shadow-sm">
+                                        <div className="flex items-center gap-2 mb-4">
+                                            <div className="h-8 w-8 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+                                                <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                                            </div>
+                                            <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Durasi Penahanan</h3>
+                                        </div>
+                                        <Controller
+                                            name="durasi_penahanan"
+                                            control={form.control}
+                                            render={({ field }) => (
+                                                <div className="space-y-1">
+                                                    <Label className="text-xs text-slate-500 dark:text-slate-400 font-medium">Pilih Durasi</Label>
+                                                    <Select onValueChange={field.onChange} value={field.value?.toString()}>
+                                                        <SelectTrigger className="w-full">
+                                                            <SelectValue placeholder="Pilih Durasi" />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value="1">Default (Final)</SelectItem>
+                                                            <SelectItem value="2">2 Hari</SelectItem>
+                                                            <SelectItem value="3">3 Hari</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
+                                            )}
+                                        />
+                                        {form.formState.errors.durasi_penahanan && (
+                                            <p className="text-red-500 text-sm mt-2">
+                                                {form.formState.errors.durasi_penahanan.message}
+                                            </p>
+                                        )}
+                                        {(Number(durasiPenahananWatch) === 2 || Number(durasiPenahananWatch) === 3) && (
+                                            <div className="flex items-center space-x-2 mt-4 p-3 bg-amber-50 dark:bg-amber-950/20 rounded-lg border border-amber-200 dark:border-amber-800/50">
+                                                <Controller
+                                                    name="allow_skpd_edit"
+                                                    control={form.control}
+                                                    render={({ field }) => (
+                                                        <Checkbox
+                                                            id="allow-skpd-edit"
+                                                            checked={field.value}
+                                                            onCheckedChange={field.onChange}
+                                                        />
+                                                    )}
+                                                />
+                                                <Label htmlFor="allow-skpd-edit" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-amber-900 dark:text-amber-300">
+                                                    Izinkan SKPD mengedit?
+                                                </Label>
+                                            </div>
+                                        )}
+                                    </div>
+                                </>
+                            )}
+                        </form>
+                    </div>
+
+                    <DialogFooter>
+                        <Button
+                            type="submit"
+                            form="verification-form"
+                            className="w-full"
+                            variant={getButtonVariant(statusKeputusanWatch)}
+                            disabled={isSubmitButtonDisabled}
+                        >
+                            {isSubmitting ? 'Memproses...' : `Proses Tagihan (${statusKeputusanWatch || 'Pilih Keputusan'})`}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            <AlertDialog open={isConfirmDefaultOpen} onOpenChange={setIsConfirmDefaultOpen}>
+                <AlertDialogContent className="bg-gradient-to-br from-white to-red-50/30 dark:from-slate-900 dark:to-red-950/20 border-red-200 dark:border-red-800/50">
+                    <AlertDialogHeader>
+                        <div className="flex items-center gap-3 mb-2">
+                            <div className="h-12 w-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+                                <AlertCircle className="h-6 w-6 text-red-600 dark:text-red-400" />
+                            </div>
+                            <AlertDialogTitle className="text-xl font-bold text-slate-900 dark:text-white">Konfirmasi Keputusan Final</AlertDialogTitle>
+                        </div>
+                        <AlertDialogDescription className="space-y-3 pt-2">
+                            <p className="text-slate-700 dark:text-slate-300 leading-relaxed">
+                                Anda yakin? Tindakan ini <b className="text-red-600 dark:text-red-400">Final</b>. Tagihan ini <b>tidak akan muncul opsi edit oleh SKPD</b> dan akan <b>hilang</b> dari panel ini setelah 24 jam.
+                            </p>
+                            <p className="text-slate-700 dark:text-slate-300 leading-relaxed bg-amber-50 dark:bg-amber-950/20 p-3 rounded-lg border border-amber-200 dark:border-amber-800/50">
+                                💡 Jika tagihan ini masih perlu diperbaiki SKPD, pilih <b className="text-amber-700 dark:text-amber-400">'Batal'</b> lalu pilih durasi 2 atau 3 hari. <b>Lanjutkan?</b>
+                            </p>
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter className="gap-2 sm:gap-2">
+                        <AlertDialogCancel asChild>
+                            <Button variant="outline" onClick={() => setIsConfirmDefaultOpen(false)} className="border-slate-300 dark:border-slate-700">Batal</Button>
+                        </AlertDialogCancel>
+                        <AlertDialogAction asChild>
+                            <Button variant="destructive" onClick={() => form.handleSubmit(handleExecuteSubmit)()} className="bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800">
+                                Ya, Proses (Final)
+                            </Button>
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+        </>
+    );
+};
+
+export default VerifikasiTagihanDialog;

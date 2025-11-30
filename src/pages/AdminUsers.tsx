@@ -10,7 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { PlusCircleIcon, EditIcon, Trash2Icon, SearchIcon, BanIcon, CheckCircleIcon, ArrowRightLeftIcon } from 'lucide-react'; // Import BanIcon and CheckCircleIcon
+import { PlusCircleIcon, EditIcon, Trash2Icon, SearchIcon, BanIcon, CheckCircleIcon, ArrowRightLeftIcon, UsersIcon, ChevronLeftIcon, ChevronRightIcon, FilterIcon } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
 import AddUserDialog from '@/components/AddUserDialog';
@@ -251,58 +251,117 @@ const AdminUsers = () => {
 
   if (loadingPage) {
     return (
-      <div className="p-6 bg-white rounded-lg shadow-sm border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
-        <h1 className="text-3xl font-bold text-gray-800 dark:text-white mb-4">Memuat Halaman...</h1>
-        <p className="text-gray-600 dark:text-gray-400">Sedang memeriksa hak akses Anda.</p>
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center space-y-4">
+          <div className="relative w-16 h-16 mx-auto">
+            <div className="absolute inset-0 rounded-full border-4 border-emerald-200 dark:border-emerald-900"></div>
+            <div className="absolute inset-0 rounded-full border-4 border-emerald-500 dark:border-emerald-400 border-t-transparent animate-spin"></div>
+          </div>
+          <div className="space-y-2">
+            <h2 className="text-2xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 dark:from-emerald-400 dark:to-teal-400 bg-clip-text text-transparent">
+              Memuat Halaman
+            </h2>
+            <p className="text-sm text-slate-600 dark:text-slate-400">
+              Sedang memeriksa hak akses...
+            </p>
+          </div>
+        </div>
       </div>
     );
   }
 
   if (profile?.peran !== 'Administrator') {
     return (
-      <div className="p-6 bg-white rounded-lg shadow-sm border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
-        <h1 className="text-3xl font-bold text-red-600 dark:text-red-400 mb-4">Akses Ditolak</h1>
-        <p className="text-xl text-gray-600 dark:text-gray-400">Anda tidak memiliki izin untuk mengakses halaman ini.</p>
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Card className="max-w-md w-full border-red-200 dark:border-red-900/50 shadow-lg">
+          <CardContent className="pt-6 text-center space-y-4">
+            <div className="w-16 h-16 mx-auto rounded-full bg-red-100 dark:bg-red-900/20 flex items-center justify-center">
+              <svg className="w-8 h-8 text-red-600 dark:text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            <div className="space-y-2">
+              <h2 className="text-2xl font-bold text-red-600 dark:text-red-400">
+                Akses Ditolak
+              </h2>
+              <p className="text-sm text-slate-600 dark:text-slate-400">
+                Anda tidak memiliki izin untuk mengakses halaman ini.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-gray-800 dark:text-white">Manajemen Pengguna</h1>
-        <div className="flex space-x-2"> {/* Container for multiple buttons */}
-          <Button onClick={() => setIsTransferModalOpen(true)} className="flex items-center gap-2" variant="outline">
-            <ArrowRightLeftIcon className="h-4 w-4" /> Transfer Data Pengguna
-          </Button>
-          <Button onClick={() => { setEditingUser(null); setIsAddUserModalOpen(true); }} className="flex items-center gap-2">
-            <PlusCircleIcon className="h-4 w-4" /> Tambah Pengguna Baru
-          </Button>
+    <div className="space-y-8 animate-in fade-in duration-500">
+      {/* Header Section */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 shadow-lg shadow-emerald-500/20">
+              <UsersIcon className="h-7 w-7 text-white" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 dark:from-emerald-400 dark:to-teal-400 bg-clip-text text-transparent">
+                Manajemen Pengguna
+              </h1>
+              <p className="text-sm text-slate-600 dark:text-slate-400 mt-0.5">
+                Kelola akun pengguna dalam sistem
+              </p>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              onClick={() => setIsTransferModalOpen(true)}
+              className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white shadow-md hover:shadow-lg transition-all duration-200"
+              size="sm"
+            >
+              <ArrowRightLeftIcon className="h-4 w-4" /> Transfer Data
+            </Button>
+            <Button
+              onClick={() => { setEditingUser(null); setIsAddUserModalOpen(true); }}
+              className="flex items-center gap-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
+            >
+              <PlusCircleIcon className="h-4 w-4" /> Tambah Pengguna
+            </Button>
+          </div>
         </div>
       </div>
 
-      <Card className="shadow-sm rounded-lg">
-        <CardHeader>
-          <CardTitle className="text-xl font-semibold">Daftar Pengguna</CardTitle>
+      {/* Filter & Search Section */}
+      <Card className="border-slate-200 dark:border-slate-800 shadow-lg hover:shadow-xl transition-shadow duration-300">
+        <CardHeader className="border-b border-slate-200 dark:border-slate-800 bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 shadow-sm">
+              <FilterIcon className="h-4 w-4 text-white" />
+            </div>
+            <CardTitle className="text-lg font-bold text-slate-900 dark:text-white">
+              Filter & Pencarian
+            </CardTitle>
+          </div>
         </CardHeader>
-        <CardContent>
-          <div className="mb-4 flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-2">
-            <div className="relative flex-1 w-full sm:w-auto">
-              <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400" />
+        <CardContent className="pt-6">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            {/* Search Input */}
+            <div className="relative lg:col-span-2">
+              <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500 dark:text-slate-400" />
               <Input
                 type="text"
-                placeholder="Cari berdasarkan Nama atau Email..."
+                placeholder="Cari Nama atau Email..."
                 value={searchQuery}
                 onChange={(e) => {
                   setSearchQuery(e.target.value);
-                  setCurrentPage(1); // Reset to first page on search
+                  setCurrentPage(1);
                 }}
-                className="pl-9 w-full"
+                className="pl-9 border-slate-300 dark:border-slate-700 focus:border-emerald-500 focus:ring-emerald-500 transition-colors"
               />
             </div>
-            {/* NEW: Role Filter Dropdown */}
+
+            {/* Role Filter */}
             <Select onValueChange={(value) => { setSelectedRoleFilter(value); setCurrentPage(1); }} value={selectedRoleFilter}>
-              <SelectTrigger className="w-full sm:w-[200px]">
+              <SelectTrigger className="border-slate-300 dark:border-slate-700 hover:border-emerald-500 dark:hover:border-emerald-500 transition-colors">
                 <SelectValue placeholder="Filter Peran" />
               </SelectTrigger>
               <SelectContent>
@@ -313,17 +372,21 @@ const AdminUsers = () => {
                 <SelectItem value="SKPD (Menunggu Aktivasi)">SKPD (Menunggu Aktivasi)</SelectItem>
               </SelectContent>
             </Select>
-            <div className="flex items-center space-x-2">
-              <Label htmlFor="items-per-page" className="whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">Baris per halaman:</Label>
+
+            {/* Items per page */}
+            <div className="flex items-center gap-2">
+              <Label htmlFor="items-per-page" className="text-sm text-slate-700 dark:text-slate-300 whitespace-nowrap">
+                Tampilkan:
+              </Label>
               <Select
                 value={itemsPerPage.toString()}
                 onValueChange={(value) => {
                   setItemsPerPage(Number(value));
-                  setCurrentPage(1); // Reset to first page when items per page changes
+                  setCurrentPage(1);
                 }}
               >
-                <SelectTrigger className="w-[100px]">
-                  <SelectValue placeholder="10" />
+                <SelectTrigger className="w-[100px] h-9 border-slate-300 dark:border-slate-700">
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="10">10</SelectItem>
@@ -335,32 +398,78 @@ const AdminUsers = () => {
               </Select>
             </div>
           </div>
+        </CardContent>
+      </Card>
 
+      {/* Table Section */}
+      <Card className="border-slate-200 dark:border-slate-800 shadow-lg hover:shadow-xl transition-shadow duration-300">
+        <CardHeader className="border-b border-slate-200 dark:border-slate-800 bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 shadow-sm">
+              <UsersIcon className="h-4 w-4 text-white" />
+            </div>
+            <CardTitle className="text-lg font-bold text-slate-900 dark:text-white">
+              Daftar Pengguna
+            </CardTitle>
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
           <div className="overflow-x-auto">
-            <Table><TableHeader><TableRow>
-                  <TableHead>Nama Lengkap</TableHead><TableHead>Email</TableHead><TableHead>Asal SKPD</TableHead><TableHead>Peran</TableHead><TableHead className="text-center">Aksi</TableHead>
-                </TableRow></TableHeader><TableBody>
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-50 dark:hover:bg-slate-900/50">
+                  <TableHead className="font-semibold text-slate-700 dark:text-slate-300">Nama Lengkap</TableHead>
+                  <TableHead className="font-semibold text-slate-700 dark:text-slate-300">Email</TableHead>
+                  <TableHead className="font-semibold text-slate-700 dark:text-slate-300">Asal SKPD</TableHead>
+                  <TableHead className="font-semibold text-slate-700 dark:text-slate-300">Peran</TableHead>
+                  <TableHead className="text-center font-semibold text-slate-700 dark:text-slate-300">Aksi</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {loadingUsers && !loadingPagination ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
-                      Memuat pengguna...
+                    <TableCell colSpan={5} className="text-center py-12">
+                      <div className="flex flex-col items-center gap-3">
+                        <div className="relative w-12 h-12">
+                          <div className="absolute inset-0 rounded-full border-4 border-emerald-200 dark:border-emerald-900"></div>
+                          <div className="absolute inset-0 rounded-full border-4 border-emerald-500 dark:border-emerald-400 border-t-transparent animate-spin"></div>
+                        </div>
+                        <p className="text-sm text-slate-600 dark:text-slate-400 font-medium">Memuat pengguna...</p>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ) : users.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
-                      Tidak ada pengguna ditemukan.
+                    <TableCell colSpan={5} className="text-center py-12">
+                      <div className="flex flex-col items-center gap-3">
+                        <div className="p-4 rounded-full bg-slate-100 dark:bg-slate-800">
+                          <UsersIcon className="h-8 w-8 text-slate-400 dark:text-slate-600" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Tidak ada pengguna ditemukan</p>
+                          <p className="text-xs text-slate-500 dark:text-slate-500 mt-1">Coba ubah filter pencarian</p>
+                        </div>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ) : (
                   users.map((userProfile) => (
-                    <TableRow key={userProfile.id}>
-                      <TableCell className="font-medium">{userProfile.nama_lengkap || '-'}</TableCell><TableCell>{userProfile.email}</TableCell><TableCell>{userProfile.asal_skpd || '-'}</TableCell><TableCell>{userProfile.peran || '-'}</TableCell><TableCell className="text-center">
-                        <div className="flex justify-center space-x-2">
+                    <TableRow key={userProfile.id} className="hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
+                      <TableCell className="font-semibold text-slate-900 dark:text-white">{userProfile.nama_lengkap || '-'}</TableCell>
+                      <TableCell className="text-slate-700 dark:text-slate-300">{userProfile.email}</TableCell>
+                      <TableCell className="text-slate-700 dark:text-slate-300">{userProfile.asal_skpd || '-'}</TableCell>
+                      <TableCell className="text-slate-700 dark:text-slate-300">{userProfile.peran || '-'}</TableCell>
+                      <TableCell className="text-center">
+                        <div className="flex justify-center gap-1.5">
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <Button variant="outline" size="icon" onClick={() => handleEditClick(userProfile)}>
+                                <Button
+                                  variant="outline"
+                                  size="icon"
+                                  className="h-8 w-8 hover:bg-blue-50 hover:border-blue-500 hover:text-blue-600 dark:hover:bg-blue-950 dark:hover:border-blue-500 dark:hover:text-blue-400 transition-colors"
+                                  onClick={() => handleEditClick(userProfile)}
+                                >
                                   <EditIcon className="h-4 w-4" />
                                 </Button>
                               </TooltipTrigger>
@@ -369,20 +478,23 @@ const AdminUsers = () => {
                               </TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
-                          {/* NEW: Toggle User Status Button - Only show for SKPD roles */}
                           {userProfile.peran === 'SKPD' && (
                             <TooltipProvider>
                               <Tooltip>
                                 <TooltipTrigger asChild>
                                   <Button
-                                    variant={userProfile.is_active ? 'destructive' : 'outline'}
+                                    variant="outline"
                                     size="icon"
+                                    className={`h-8 w-8 transition-colors ${userProfile.is_active
+                                        ? 'hover:bg-red-50 hover:border-red-500 hover:text-red-600 dark:hover:bg-red-950 dark:hover:border-red-500 dark:hover:text-red-400'
+                                        : 'hover:bg-green-50 hover:border-green-500 hover:text-green-600 dark:hover:bg-green-950 dark:hover:border-green-500 dark:hover:text-green-400'
+                                      }`}
                                     onClick={() => handleToggleUserStatus(userProfile)}
                                   >
                                     {userProfile.is_active ? (
                                       <BanIcon className="h-4 w-4" />
                                     ) : (
-                                      <CheckCircleIcon className="h-4 w-4 text-green-500" />
+                                      <CheckCircleIcon className="h-4 w-4" />
                                     )}
                                   </Button>
                                 </TooltipTrigger>
@@ -396,8 +508,9 @@ const AdminUsers = () => {
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <Button
-                                  variant="destructive"
+                                  variant="outline"
                                   size="icon"
+                                  className="h-8 w-8 hover:bg-red-50 hover:border-red-500 hover:text-red-600 dark:hover:bg-red-950 dark:hover:border-red-500 dark:hover:text-red-400 transition-colors"
                                   onClick={() => handleDeleteClick(userProfile)}
                                 >
                                   <Trash2Icon className="h-4 w-4" />
@@ -413,28 +526,42 @@ const AdminUsers = () => {
                     </TableRow>
                   ))
                 )}
-              </TableBody></Table>
+              </TableBody>
+            </Table>
           </div>
 
           {/* Pagination Controls */}
-          <div className="mt-6 flex items-center justify-end space-x-4">
-            <div className="text-sm text-muted-foreground">
-              Halaman {totalItems === 0 ? 0 : currentPage} dari {totalPages} ({totalItems} total item)
+          <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="text-sm text-slate-600 dark:text-slate-400 font-medium">
+                Menampilkan <span className="text-slate-900 dark:text-white font-semibold">{totalItems === 0 ? 0 : ((currentPage - 1) * itemsPerPage) + 1}</span> - <span className="text-slate-900 dark:text-white font-semibold">{Math.min(currentPage * itemsPerPage, totalItems)}</span> dari <span className="text-slate-900 dark:text-white font-semibold">{totalItems}</span> pengguna
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1 || itemsPerPage === -1 || loadingPagination}
+                  className="gap-1.5 hover:bg-emerald-50 hover:border-emerald-500 hover:text-emerald-600 dark:hover:bg-emerald-950 dark:hover:border-emerald-500 dark:hover:text-emerald-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  <ChevronLeftIcon className="h-4 w-4" />
+                  <span className="hidden sm:inline">Sebelumnya</span>
+                </Button>
+                <div className="px-3 py-1.5 rounded-md bg-emerald-100 dark:bg-emerald-900/30 text-sm font-semibold text-emerald-700 dark:text-emerald-400">
+                  {currentPage} / {totalPages}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                  disabled={currentPage === totalPages || itemsPerPage === -1 || loadingPagination}
+                  className="gap-1.5 hover:bg-emerald-50 hover:border-emerald-500 hover:text-emerald-600 dark:hover:bg-emerald-950 dark:hover:border-emerald-500 dark:hover:text-emerald-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  <span className="hidden sm:inline">Berikutnya</span>
+                  <ChevronRightIcon className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
-            <Button
-              variant="outline"
-              onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-              disabled={currentPage === 1 || itemsPerPage === -1 || loadingPagination}
-            >
-              Sebelumnya
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-              disabled={currentPage === totalPages || itemsPerPage === -1 || loadingPagination}
-            >
-              Berikutnya
-            </Button>
           </div>
         </CardContent>
       </Card>

@@ -10,8 +10,9 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { SearchIcon, EyeIcon, PrinterIcon } from 'lucide-react'; // Import PrinterIcon
+import { SearchIcon, EyeIcon, PrinterIcon, ClockIcon, Sparkles, FilterIcon } from 'lucide-react'; // Import PrinterIcon, ClockIcon, Sparkles, FilterIcon
 import { format, parseISO, startOfDay, endOfDay } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -41,6 +42,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"; // Import Tooltip components
+import { Combobox } from '@/components/ui/combobox'; // Import Combobox
 
 interface VerificationItem {
   item: string;
@@ -69,6 +71,11 @@ interface Tagihan {
   nama_verifikator?: string;
 }
 
+interface SkpdOption {
+  value: string;
+  label: string;
+}
+
 const RiwayatRegistrasi = () => {
   const { profile, loading: sessionLoading } = useSession();
   const [tagihanList, setTagihanList] = useState<Tagihan[]>([]);
@@ -77,6 +84,8 @@ const RiwayatRegistrasi = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const debouncedSearchQuery = useDebounce(searchQuery, 500);
   const [selectedStatus, setSelectedStatus] = useState<string>('Semua Status');
+  const [selectedSkpd, setSelectedSkpd] = useState<string>('Semua SKPD');
+  const [skpdOptions, setSkpdOptions] = useState<SkpdOption[]>([]);
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
 
   // Pagination states
@@ -90,12 +99,37 @@ const RiwayatRegistrasi = () => {
   // Refs to track previous values for determining pagination-only changes
   const prevSearchQuery = useRef(searchQuery);
   const prevSelectedStatus = useRef(selectedStatus);
+  const prevSelectedSkpd = useRef(selectedSkpd);
   const prevDateRange = useRef(dateRange);
   const prevItemsPerPage = useRef(itemsPerPage);
   const prevCurrentPage = useRef(currentPage);
 
   // 1. Buat Ref untuk Input
   const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Fetch SKPD list
+  useEffect(() => {
+    const fetchSkpdOptions = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('master_skpd')
+          .select('nama_skpd')
+          .order('nama_skpd', { ascending: true });
+
+        if (error) throw error;
+
+        const uniqueSkpd: SkpdOption[] = Array.from(new Set(data.map(item => item.nama_skpd)))
+          .filter((skpd): skpd is string => skpd !== null && skpd.trim() !== '')
+          .map(skpd => ({ value: skpd, label: skpd })); // Map to { value, label } format
+
+        setSkpdOptions([{ value: 'Semua SKPD', label: 'Semua SKPD' }, ...uniqueSkpd]); // Add 'Semua SKPD' option
+      } catch (error: any) {
+        console.error('Error fetching SKPD options:', error.message);
+        toast.error('Gagal memuat daftar SKPD: ' + error.message);
+      }
+    };
+    fetchSkpdOptions();
+  }, []);
 
   useEffect(() => {
     const fetchRiwayatRegistrasi = async (isPaginationOnlyChange = false) => {
@@ -125,6 +159,10 @@ const RiwayatRegistrasi = () => {
 
         if (selectedStatus !== 'Semua Status') {
           query = query.eq('status_tagihan', selectedStatus);
+        }
+
+        if (selectedSkpd !== 'Semua SKPD') {
+          query = query.eq('nama_skpd', selectedSkpd);
         }
 
         if (dateRange?.from) {
@@ -162,6 +200,7 @@ const RiwayatRegistrasi = () => {
       prevCurrentPage.current !== currentPage &&
       prevSearchQuery.current === searchQuery &&
       prevSelectedStatus.current === selectedStatus &&
+      prevSelectedSkpd.current === selectedSkpd &&
       prevDateRange.current === dateRange &&
       prevItemsPerPage.current === itemsPerPage
     ) {
@@ -172,11 +211,12 @@ const RiwayatRegistrasi = () => {
 
     prevSearchQuery.current = searchQuery;
     prevSelectedStatus.current = selectedStatus;
+    prevSelectedSkpd.current = selectedSkpd;
     prevDateRange.current = dateRange;
     prevItemsPerPage.current = itemsPerPage;
     prevCurrentPage.current = currentPage;
 
-  }, [sessionLoading, profile, debouncedSearchQuery, selectedStatus, dateRange, currentPage, itemsPerPage]);
+  }, [sessionLoading, profile, debouncedSearchQuery, selectedStatus, selectedSkpd, dateRange, currentPage, itemsPerPage]);
 
   // Efek baru untuk mengembalikan fokus ke input pencarian setelah loading selesai
   useEffect(() => {
@@ -194,65 +234,123 @@ const RiwayatRegistrasi = () => {
 
   if (sessionLoading || loadingData) {
     return (
-      <div className="p-6 bg-white rounded-lg shadow-sm border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
-        <h1 className="text-3xl font-bold text-gray-800 dark:text-white mb-4">Memuat Halaman...</h1>
-        <p className="text-gray-600 dark:text-gray-400">Sedang memeriksa hak akses Anda dan mengambil data.</p>
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center space-y-4">
+          <div className="relative w-16 h-16 mx-auto">
+            <div className="absolute inset-0 rounded-full border-4 border-emerald-200 dark:border-emerald-900"></div>
+            <div className="absolute inset-0 rounded-full border-4 border-emerald-500 dark:border-emerald-400 border-t-transparent animate-spin"></div>
+          </div>
+          <div className="space-y-2">
+            <h2 className="text-2xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 dark:from-emerald-400 dark:to-teal-400 bg-clip-text text-transparent">
+              Memuat Riwayat Registrasi
+            </h2>
+            <p className="text-sm text-slate-600 dark:text-slate-400">
+              Sedang memeriksa hak akses dan mengambil data...
+            </p>
+          </div>
+        </div>
       </div>
     );
   }
 
   if (profile?.peran !== 'Staf Registrasi') {
     return (
-      <div className="p-6 bg-white rounded-lg shadow-sm border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
-        <h1 className="text-3xl font-bold text-red-600 dark:text-red-400 mb-4">Akses Ditolak</h1>
-        <p className="text-gray-600 dark:text-gray-400">Anda tidak memiliki izin untuk mengakses halaman ini.</p>
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Card className="max-w-md w-full border-red-200 dark:border-red-900/50 shadow-lg">
+          <CardContent className="pt-6 text-center space-y-4">
+            <div className="w-16 h-16 mx-auto rounded-full bg-red-100 dark:bg-red-900/20 flex items-center justify-center">
+              <svg className="w-8 h-8 text-red-600 dark:text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            <div className="space-y-2">
+              <h2 className="text-2xl font-bold text-red-600 dark:text-red-400">
+                Akses Ditolak
+              </h2>
+              <p className="text-sm text-slate-600 dark:text-slate-400">
+                Anda tidak memiliki izin untuk mengakses halaman ini.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
   return (
-    <div className="p-6 bg-white rounded-lg shadow-sm border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
-      <h1 className="text-3xl font-bold text-gray-800 dark:text-white mb-6">Riwayat Registrasi Tagihan</h1>
+    <div className="space-y-6">
+      <div className="mb-8">
+        <h1 className="text-4xl font-bold bg-gradient-to-r from-slate-600 to-slate-400 bg-clip-text text-transparent mb-2 pb-1 inline-flex items-center gap-3">
+          <ClockIcon className="h-10 w-10 text-slate-600 dark:text-slate-400" />
+          Riwayat Registrasi Tagihan
+        </h1>
+        <p className="text-slate-600 dark:text-slate-400 flex items-center gap-2">
+          <Sparkles className="h-4 w-4 text-slate-500" />
+          Lihat riwayat tagihan yang sudah diregistrasi
+        </p>
+      </div>
 
-      {/* Area Kontrol Filter */}
-      <div className="mb-6 flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-2">
-        <div className="relative flex-1 w-full sm:w-auto">
-          <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400" />
-          <Input
-            ref={searchInputRef} // Lampirkan Ref ke Input
-            type="text"
-            placeholder="Cari berdasarkan Nomor SPM atau Nama SKPD..."
-            value={searchQuery}
-            onChange={(e) => {
-              setSearchQuery(e.target.value);
+      {/* Filter Panel - Separate Card */}
+      <div className="p-6 bg-white rounded-lg shadow-sm border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
+        <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-200 dark:border-slate-700">
+          <div className="p-2 bg-slate-100 dark:bg-slate-800 rounded-lg">
+            <FilterIcon className="h-6 w-6 text-slate-600 dark:text-slate-400" />
+          </div>
+          <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Filter Data</h2>
+        </div>
+        <div className="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-2">
+          <div className="relative flex-1 w-full sm:w-auto">
+            <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400" />
+            <Input
+              ref={searchInputRef}
+              type="text"
+              placeholder="Cari berdasarkan Nomor SPM atau Nama SKPD..."
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="pl-9 w-full focus-visible:ring-slate-500"
+            />
+          </div>
+          <Select onValueChange={(value) => { setSelectedStatus(value); setCurrentPage(1); }} value={selectedStatus}>
+            <SelectTrigger className="w-full sm:w-[200px] focus:ring-slate-500">
+              <SelectValue placeholder="Filter Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="Semua Status">Semua Status</SelectItem>
+              <SelectItem value="Menunggu Verifikasi">Menunggu Verifikasi</SelectItem>
+              <SelectItem value="Diteruskan">Diteruskan</SelectItem>
+              <SelectItem value="Dikembalikan">Dikembalikan</SelectItem>
+            </SelectContent>
+          </Select>
+          <Combobox
+            options={skpdOptions}
+            value={selectedSkpd}
+            onValueChange={(value) => {
+              setSelectedSkpd(value);
               setCurrentPage(1);
             }}
-            className="pl-9 w-full"
+            placeholder="Filter SKPD"
+            className="w-full sm:w-[200px]"
           />
+          <DateRangePickerWithPresets date={dateRange} onDateChange={(newDateRange) => { setDateRange(newDateRange); setCurrentPage(1); }} className="w-full sm:w-auto" />
         </div>
-        <Select onValueChange={(value) => { setSelectedStatus(value); setCurrentPage(1); }} value={selectedStatus}>
-          <SelectTrigger className="w-full sm:w-[200px]">
-            <SelectValue placeholder="Filter Status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="Semua Status">Semua Status</SelectItem>
-            <SelectItem value="Menunggu Verifikasi">Menunggu Verifikasi</SelectItem>
-            <SelectItem value="Diteruskan">Diteruskan</SelectItem>
-            <SelectItem value="Dikembalikan">Dikembalikan</SelectItem>
-          </SelectContent>
-        </Select>
-        <DateRangePickerWithPresets date={dateRange} onDateChange={(newDateRange) => { setDateRange(newDateRange); setCurrentPage(1); }} className="w-full sm:w-auto" />
-        {/* Moved "Baris per halaman" here */}
-        <div className="flex items-center space-x-2">
+      </div>
+
+      {/* Table Panel */}
+      <div className="p-6 bg-white rounded-lg shadow-sm border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
+        {/* Baris per halaman - Inside Table Panel */}
+        <div className="mb-4 flex items-center justify-end space-x-2">
           <Label htmlFor="items-per-page" className="whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">Baris per halaman:</Label>
           <Select
             value={itemsPerPage.toString()}
             onValueChange={(value) => {
               setItemsPerPage(Number(value));
-              setCurrentPage(1); // Reset to first page when items per page changes
+              setCurrentPage(1);
             }}
           >
-            <SelectTrigger className="w-[100px]">
+            <SelectTrigger className="w-[100px] focus:ring-slate-500">
               <SelectValue placeholder="10" />
             </SelectTrigger>
             <SelectContent>
@@ -264,75 +362,81 @@ const RiwayatRegistrasi = () => {
             </SelectContent>
           </Select>
         </div>
-      </div>
 
-      <div className="overflow-x-auto">
-        <Table><TableHeader><TableRow>
-              <TableHead className="w-[50px]">No.</TableHead><TableHead>Waktu Registrasi</TableHead><TableHead>Nomor Registrasi</TableHead><TableHead>Nomor SPM</TableHead><TableHead>Nama SKPD</TableHead><TableHead className="min-w-[280px]">Uraian</TableHead><TableHead>Jumlah Kotor</TableHead><TableHead>Status Tagihan</TableHead><TableHead className="text-center">Aksi</TableHead>
-            </TableRow></TableHeader><TableBody>
-            {loadingData && !loadingPagination ? (
-              <TableRow>
-                <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
-                  Memuat data riwayat registrasi...
-                </TableCell>
-              </TableRow>
-            ) : tagihanList.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={9} className="text-center text-muted-foreground">
-                  Tidak ada data riwayat registrasi.
-                </TableCell>
-              </TableRow>
-            ) : (
-              tagihanList.map((tagihan, index) => (
-                <TableRow key={tagihan.id_tagihan}>
-                  <TableCell>{(currentPage - 1) * itemsPerPage + index + 1}</TableCell><TableCell>
-                    {tagihan.waktu_registrasi ? format(parseISO(tagihan.waktu_registrasi), 'dd MMMM yyyy HH:mm', { locale: localeId }) : '-'}
-                  </TableCell><TableCell className="font-medium">{tagihan.nomor_registrasi || '-'}</TableCell><TableCell className="font-medium">
-                    <Tooltip>
-                      <TooltipTrigger className="max-w-[250px] whitespace-nowrap overflow-hidden text-ellipsis block">
-                        {tagihan.nomor_spm}
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>{tagihan.nomor_spm}</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TableCell><TableCell>{tagihan.nama_skpd}</TableCell><TableCell className="min-w-[280px]">{tagihan.uraian}</TableCell><TableCell>Rp{tagihan.jumlah_kotor.toLocaleString('id-ID')}</TableCell><TableCell><StatusBadge status={tagihan.status_tagihan} /></TableCell><TableCell className="text-center">
-                    <Button variant="outline" size="icon" title="Lihat Detail" onClick={() => handleDetailClick(tagihan)}>
-                      <EyeIcon className="h-4 w-4" />
-                    </Button>
+        <div className="overflow-x-auto">
+          <Table><TableHeader><TableRow>
+            <TableHead className="w-[50px]">No.</TableHead><TableHead>Waktu Registrasi</TableHead><TableHead>Nomor Registrasi</TableHead><TableHead>Nomor SPM</TableHead><TableHead>Nama SKPD</TableHead><TableHead>Jumlah Kotor</TableHead><TableHead>Status Tagihan</TableHead><TableHead className="text-center">Aksi</TableHead>
+          </TableRow></TableHeader><TableBody>
+              {loadingData && !loadingPagination ? (
+                <TableRow>
+                  <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                    Memuat data riwayat registrasi...
                   </TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody></Table>
-      </div>
-
-      {/* Pagination Controls */}
-      <div className="mt-6 flex items-center justify-end space-x-4">
-        <div className="text-sm text-muted-foreground">
-          Halaman {totalItems === 0 ? 0 : currentPage} dari {totalPages} ({totalItems} total item)
+              ) : tagihanList.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={8} className="text-center text-muted-foreground">
+                    Tidak ada data riwayat registrasi.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                tagihanList.map((tagihan, index) => (
+                  <TableRow key={tagihan.id_tagihan}>
+                    <TableCell>{(currentPage - 1) * itemsPerPage + index + 1}</TableCell><TableCell>
+                      {tagihan.waktu_registrasi ? format(parseISO(tagihan.waktu_registrasi), 'dd MMMM yyyy HH:mm', { locale: localeId }) : '-'}
+                    </TableCell><TableCell className="font-medium">{tagihan.nomor_registrasi || '-'}</TableCell><TableCell className="font-medium">
+                      <Tooltip>
+                        <TooltipTrigger className="max-w-[250px] whitespace-nowrap overflow-hidden text-ellipsis block">
+                          {tagihan.nomor_spm}
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{tagihan.nomor_spm}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TableCell><TableCell>{tagihan.nama_skpd}</TableCell><TableCell>Rp{tagihan.jumlah_kotor.toLocaleString('id-ID')}</TableCell><TableCell><StatusBadge status={tagihan.status_tagihan} /></TableCell><TableCell className="text-center">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        title="Lihat Detail"
+                        onClick={() => handleDetailClick(tagihan)}
+                        className="hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-300 transition-colors"
+                      >
+                        <EyeIcon className="h-4 w-4 text-slate-600 dark:text-slate-400" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody></Table>
         </div>
-        <Button
-          variant="outline"
-          onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-          disabled={currentPage === 1 || itemsPerPage === -1 || loadingPagination}
-        >
-          Sebelumnya
-        </Button>
-        <Button
-          variant="outline"
-          onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-          disabled={currentPage === totalPages || itemsPerPage === -1 || loadingPagination}
-        >
-          Berikutnya
-        </Button>
-      </div>
 
-      <TagihanDetailDialog
-        isOpen={isDetailModalOpen}
-        onClose={() => setIsDetailModalOpen(false)}
-        tagihan={selectedTagihanForDetail}
-      />
+        {/* Pagination Controls */}
+        <div className="mt-6 flex items-center justify-end space-x-4">
+          <div className="text-sm text-muted-foreground">
+            Halaman {totalItems === 0 ? 0 : currentPage} dari {totalPages} ({totalItems} total item)
+          </div>
+          <Button
+            variant="outline"
+            onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+            disabled={currentPage === 1 || itemsPerPage === -1 || loadingPagination}
+          >
+            Sebelumnya
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+            disabled={currentPage === totalPages || itemsPerPage === -1 || loadingPagination}
+          >
+            Berikutnya
+          </Button>
+        </div>
+
+        <TagihanDetailDialog
+          isOpen={isDetailModalOpen}
+          onClose={() => setIsDetailModalOpen(false)}
+          tagihan={selectedTagihanForDetail}
+        />
+      </div>
     </div>
   );
 };

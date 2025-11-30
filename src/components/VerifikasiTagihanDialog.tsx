@@ -29,6 +29,7 @@ import {
 } from '@/components/ui/table';
 import { format, parseISO, startOfMonth, endOfMonth, addDays, differenceInDays } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
+import { ClipboardCheckIcon, FileText, CheckSquare, AlertCircle, Calendar, User, Building2, DollarSign } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useSession } from '@/contexts/SessionContext';
@@ -379,141 +380,179 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
   const isSubmitButtonDisabled = isSubmitting || !statusKeputusanWatch ||
     (statusKeputusanWatch === 'Diteruskan' && !allChecklistItemsMet) ||
     (statusKeputusanWatch === 'Dikembalikan' && allChecklistItemsMet);
-  
+
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="sm:max-w-[600px] max-h-[90vh] flex flex-col">
-          <DialogHeader>
-            <DialogTitle>Verifikasi Tagihan: {tagihan.nomor_spm}</DialogTitle>
-            <DialogDescription>
-              Periksa detail tagihan dan tentukan keputusan verifikasi.
-            </DialogDescription>
+        <DialogContent className="sm:max-w-[700px] max-h-[90vh] flex flex-col bg-gradient-to-br from-white to-emerald-50/30 dark:from-slate-900 dark:to-emerald-950/20">
+          <DialogHeader className="border-b border-emerald-100 dark:border-emerald-900/30 pb-4 pr-10">
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <ClipboardCheckIcon className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+                <DialogTitle className="text-2xl font-bold text-slate-900 dark:text-white">
+                  Verifikasi Tagihan
+                </DialogTitle>
+              </div>
+              <DialogDescription className="text-slate-600 dark:text-slate-400">
+                Periksa detail tagihan dan tentukan keputusan verifikasi untuk SPM {tagihan.nomor_spm}
+              </DialogDescription>
+            </div>
           </DialogHeader>
 
           <div className="flex-1 overflow-y-auto pr-4 -mr-4">
-            <form id="verification-form" onSubmit={form.handleSubmit(onSubmit)} className="grid gap-6 py-4">
-              <div className="grid gap-2">
-                <h3 className="text-lg font-semibold">Detail Tagihan</h3>
-                <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-                  <div>
-                    <Label className="text-muted-foreground">Nomor Registrasi</Label>
-                    <p className="font-medium">{tagihan.nomor_registrasi || '-'}</p>
+            <form id="verification-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 py-4">
+              {/* Detail Tagihan Section */}
+              <div className="bg-white dark:bg-slate-800/50 rounded-xl p-5 border border-emerald-100 dark:border-emerald-900/30 shadow-sm">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="h-8 w-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
+                    <Building2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
                   </div>
-                  <div>
-                    <Label className="text-muted-foreground">Waktu Registrasi</Label>
-                    <p className="font-medium">{formatDate(tagihan.waktu_registrasi)}</p>
+                  <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Informasi Tagihan</h3>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <Label className="text-xs text-slate-500 dark:text-slate-400 font-medium">Nomor Registrasi</Label>
+                    <p className="text-sm font-medium text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-900/50 px-3 py-2 rounded-lg">{tagihan.nomor_registrasi || '-'}</p>
                   </div>
-                  <div>
-                    <Label className="text-muted-foreground">Nama SKPD</Label>
-                    <p className="font-medium">{tagihan.nama_skpd}</p>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-slate-500 dark:text-slate-400 font-medium flex items-center gap-1">
+                      <Calendar className="h-3 w-3" />
+                      Waktu Registrasi
+                    </Label>
+                    <p className="text-sm font-medium text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-900/50 px-3 py-2 rounded-lg">{formatDate(tagihan.waktu_registrasi)}</p>
                   </div>
-                  <div>
-                    <Label className="text-muted-foreground">Jenis SPM</Label>
-                    <p className="font-medium">{tagihan.jenis_spm}</p>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-slate-500 dark:text-slate-400 font-medium">Nama SKPD</Label>
+                    <p className="text-sm font-medium text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-900/50 px-3 py-2 rounded-lg">{tagihan.nama_skpd}</p>
                   </div>
-                  <div>
-                    <Label className="text-muted-foreground">Jenis Tagihan</Label>
-                    <p className="font-medium">{tagihan.jenis_tagihan}</p>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-slate-500 dark:text-slate-400 font-medium">Jenis SPM</Label>
+                    <p className="text-sm font-medium text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-900/50 px-3 py-2 rounded-lg">{tagihan.jenis_spm}</p>
                   </div>
-                  <div>
-                    <Label className="text-muted-foreground">Sumber Dana</Label>
-                    <p className="font-medium">{tagihan.sumber_dana || '-'}</p>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-slate-500 dark:text-slate-400 font-medium">Jenis Tagihan</Label>
+                    <p className="text-sm font-medium text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-900/50 px-3 py-2 rounded-lg">{tagihan.jenis_tagihan}</p>
                   </div>
-                  <div className="col-span-2">
-                    <Label className="text-muted-foreground">Uraian</Label>
-                    <p className="font-medium">{tagihan.uraian}</p>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-slate-500 dark:text-slate-400 font-medium">Sumber Dana</Label>
+                    <p className="text-sm font-medium text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-900/50 px-3 py-2 rounded-lg">{tagihan.sumber_dana || '-'}</p>
                   </div>
-                  <div>
-                    <Label className="text-muted-foreground">Jumlah Kotor</Label>
-                    <p className="font-medium">Rp{tagihan.jumlah_kotor.toLocaleString('id-ID')}</p>
+                  <div className="md:col-span-2 space-y-1">
+                    <Label className="text-xs text-slate-500 dark:text-slate-400 font-medium">Uraian</Label>
+                    <p className="text-sm text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-900/50 px-3 py-2 rounded-lg leading-relaxed">{tagihan.uraian}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-slate-500 dark:text-slate-400 font-medium flex items-center gap-1">
+                      <DollarSign className="h-3 w-3" />
+                      Jumlah Kotor
+                    </Label>
+                    <p className="text-sm font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 px-3 py-2 rounded-lg border border-emerald-200 dark:border-emerald-800/50">
+                      Rp {tagihan.jumlah_kotor.toLocaleString('id-ID')}
+                    </p>
                   </div>
                 </div>
               </div>
 
-              <div className="grid gap-2 mt-4">
-                <h3 className="text-lg font-semibold">Checklist Verifikasi</h3>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-[250px]">Uraian</TableHead>
-                      <TableHead className="w-[120px] text-center">Memenuhi Syarat</TableHead>
-                      <TableHead></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {checklistItems.map((item, index) => (
-                      <React.Fragment key={item}>
-                        <TableRow>
-                          <TableCell className="flex items-center">{item}</TableCell>
-                          <TableCell className="text-center">
-                            <Controller
-                              name={`detail_verifikasi.${index}.memenuhi_syarat`}
-                              control={form.control}
-                              render={({ field }) => (
-                                <Checkbox
-                                  checked={field.value}
-                                  onCheckedChange={(checked) => {
-                                    field.onChange(checked);
-                                    if (checked) {
-                                      form.setValue(`detail_verifikasi.${index}.keterangan`, '');
-                                    }
-                                  }}
-                                />
-                              )}
-                            />
-                          </TableCell>
-                          <TableCell></TableCell>
-                        </TableRow>
-                        <TableRow>
-                          <TableCell colSpan={3}>
-                            <Controller
-                              name={`detail_verifikasi.${index}.keterangan`}
-                              control={form.control}
-                              render={({ field }) => (
-                                <Input
-                                  {...field}
-                                  placeholder="Keterangan (opsional)"
-                                  className="h-8 w-full mt-2"
-                                  disabled={detailVerifikasiWatch[index]?.memenuhi_syarat}
-                                />
-                              )}
-                            />
-                          </TableCell>
-                        </TableRow>
-                      </React.Fragment>
-                    ))}
-                  </TableBody>
-                </Table>
+              {/* Checklist Verifikasi Section */}
+              <div className="bg-white dark:bg-slate-800/50 rounded-xl p-5 border border-emerald-100 dark:border-emerald-900/30 shadow-sm">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="h-8 w-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
+                    <CheckSquare className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Checklist Verifikasi</h3>
+                </div>
+                <div className="rounded-lg border border-emerald-200 dark:border-emerald-800/50 overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-emerald-50 dark:bg-emerald-950/30 hover:bg-emerald-50 dark:hover:bg-emerald-950/30">
+                        <TableHead className="w-[250px] text-emerald-900 dark:text-emerald-300 font-semibold">Uraian</TableHead>
+                        <TableHead className="w-[120px] text-center text-emerald-900 dark:text-emerald-300 font-semibold">Memenuhi Syarat</TableHead>
+                        <TableHead className="text-emerald-900 dark:text-emerald-300 font-semibold"></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {checklistItems.map((item, index) => (
+                        <React.Fragment key={item}>
+                          <TableRow className="hover:bg-emerald-50/50 dark:hover:bg-emerald-950/20">
+                            <TableCell className="font-medium text-slate-900 dark:text-slate-200">{item}</TableCell>
+                            <TableCell className="text-center">
+                              <Controller
+                                name={`detail_verifikasi.${index}.memenuhi_syarat`}
+                                control={form.control}
+                                render={({ field }) => (
+                                  <Checkbox
+                                    checked={field.value}
+                                    onCheckedChange={(checked) => {
+                                      field.onChange(checked);
+                                      if (checked) {
+                                        form.setValue(`detail_verifikasi.${index}.keterangan`, '');
+                                      }
+                                    }}
+                                  />
+                                )}
+                              />
+                            </TableCell>
+                            <TableCell></TableCell>
+                          </TableRow>
+                          <TableRow className="hover:bg-emerald-50/50 dark:hover:bg-emerald-950/20">
+                            <TableCell colSpan={3}>
+                              <Controller
+                                name={`detail_verifikasi.${index}.keterangan`}
+                                control={form.control}
+                                render={({ field }) => (
+                                  <Input
+                                    {...field}
+                                    placeholder="Keterangan (opsional)"
+                                    className="h-8 w-full mt-2"
+                                    disabled={detailVerifikasiWatch[index]?.memenuhi_syarat}
+                                  />
+                                )}
+                              />
+                            </TableCell>
+                          </TableRow>
+                        </React.Fragment>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
                 {form.formState.errors.detail_verifikasi && (
-                  <p className="text-red-500 text-sm mt-2">
+                  <p className="text-red-500 text-sm mt-3">
                     {form.formState.errors.detail_verifikasi.message}
                   </p>
                 )}
               </div>
 
-              <div className="grid gap-2 mt-4">
-                <Label htmlFor="status_keputusan" className="text-lg font-semibold">Keputusan Verifikasi</Label>
+              {/* Keputusan Verifikasi Section */}
+              <div className="bg-white dark:bg-slate-800/50 rounded-xl p-5 border border-blue-100 dark:border-blue-900/30 shadow-sm">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="h-8 w-8 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                    <AlertCircle className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Keputusan Verifikasi</h3>
+                </div>
                 <Controller
                   name="status_keputusan"
                   control={form.control}
                   render={({ field }) => (
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Pilih Keputusan" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {availableStatusOptions.map(option => (
-                          <SelectItem key={option} value={option}>
-                            {option}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <div className="space-y-1">
+                      <Label className="text-xs text-slate-500 dark:text-slate-400 font-medium">Pilih Status</Label>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Pilih Keputusan" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {availableStatusOptions.map(option => (
+                            <SelectItem key={option} value={option}>
+                              {option}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   )}
                 />
                 {form.formState.errors.status_keputusan && (
-                  <p className="text-red-500 text-sm">
+                  <p className="text-red-500 text-sm mt-2">
                     {form.formState.errors.status_keputusan.message}
                   </p>
                 )}
@@ -521,48 +560,56 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
 
               {statusKeputusanWatch === 'Dikembalikan' && (
                 <>
-                  <div className="grid gap-2 mt-4">
-                    <Label htmlFor="durasi_penahanan" className="text-lg font-semibold">Durasi Penahanan</Label>
+                  <div className="bg-white dark:bg-slate-800/50 rounded-xl p-5 border border-amber-100 dark:border-amber-900/30 shadow-sm">
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="h-8 w-8 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+                        <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                      </div>
+                      <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Durasi Penahanan</h3>
+                    </div>
                     <Controller
                       name="durasi_penahanan"
                       control={form.control}
                       render={({ field }) => (
-                        <Select onValueChange={field.onChange} value={field.value?.toString()}>
-                          <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Pilih Durasi" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="1">Default (Final)</SelectItem>
-                            <SelectItem value="2">2 Hari</SelectItem>
-                            <SelectItem value="3">3 Hari</SelectItem>
-                          </SelectContent>
-                        </Select>
+                        <div className="space-y-1">
+                          <Label className="text-xs text-slate-500 dark:text-slate-400 font-medium">Pilih Durasi</Label>
+                          <Select onValueChange={field.onChange} value={field.value?.toString()}>
+                            <SelectTrigger className="w-full">
+                              <SelectValue placeholder="Pilih Durasi" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="1">Default (Final)</SelectItem>
+                              <SelectItem value="2">2 Hari</SelectItem>
+                              <SelectItem value="3">3 Hari</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
                       )}
                     />
                     {form.formState.errors.durasi_penahanan && (
-                      <p className="text-red-500 text-sm">
+                      <p className="text-red-500 text-sm mt-2">
                         {form.formState.errors.durasi_penahanan.message}
                       </p>
                     )}
+                    {(Number(durasiPenahananWatch) === 2 || Number(durasiPenahananWatch) === 3) && (
+                      <div className="flex items-center space-x-2 mt-4 p-3 bg-amber-50 dark:bg-amber-950/20 rounded-lg border border-amber-200 dark:border-amber-800/50">
+                        <Controller
+                          name="allow_skpd_edit"
+                          control={form.control}
+                          render={({ field }) => (
+                            <Checkbox
+                              id="allow-skpd-edit"
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                            />
+                          )}
+                        />
+                        <Label htmlFor="allow-skpd-edit" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-amber-900 dark:text-amber-300">
+                          Izinkan SKPD mengedit?
+                        </Label>
+                      </div>
+                    )}
                   </div>
-                  {(Number(durasiPenahananWatch) === 2 || Number(durasiPenahananWatch) === 3) && (
-                    <div className="flex items-center space-x-2 mt-4">
-                      <Controller
-                        name="allow_skpd_edit"
-                        control={form.control}
-                        render={({ field }) => (
-                          <Checkbox
-                            id="allow-skpd-edit"
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                          />
-                        )}
-                      />
-                      <Label htmlFor="allow-skpd-edit" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                        Izinkan SKPD mengedit?
-                      </Label>
-                    </div>
-                  )}
                 </>
               )}
             </form>
@@ -583,24 +630,29 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
       </Dialog>
 
       <AlertDialog open={isConfirmDefaultOpen} onOpenChange={setIsConfirmDefaultOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent className="bg-gradient-to-br from-white to-red-50/30 dark:from-slate-900 dark:to-red-950/20 border-red-200 dark:border-red-800/50">
           <AlertDialogHeader>
-            <AlertDialogTitle>Konfirmasi Keputusan Final</AlertDialogTitle>
-            <AlertDialogDescription>
-              <p>
-                Anda yakin? Tindakan ini <b>Final</b>. Tagihan ini <b>tidak akan muncul opsi edit oleh SKPD</b> dan akan <b>hilang</b> dari panel ini setelah 24 jam.
+            <div className="flex items-center gap-3 mb-2">
+              <div className="h-12 w-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+                <AlertCircle className="h-6 w-6 text-red-600 dark:text-red-400" />
+              </div>
+              <AlertDialogTitle className="text-xl font-bold text-slate-900 dark:text-white">Konfirmasi Keputusan Final</AlertDialogTitle>
+            </div>
+            <AlertDialogDescription className="space-y-3 pt-2">
+              <p className="text-slate-700 dark:text-slate-300 leading-relaxed">
+                Anda yakin? Tindakan ini <b className="text-red-600 dark:text-red-400">Final</b>. Tagihan ini <b>tidak akan muncul opsi edit oleh SKPD</b> dan akan <b>hilang</b> dari panel ini setelah 24 jam.
               </p>
-              <p className="mt-2">
-                Jika tagihan ini masih perlu diperbaiki SKPD, pilih 'Batal' lalu pilih durasi 2 atau 3 hari. <b>Lanjutkan?</b>
+              <p className="text-slate-700 dark:text-slate-300 leading-relaxed bg-amber-50 dark:bg-amber-950/20 p-3 rounded-lg border border-amber-200 dark:border-amber-800/50">
+                💡 Jika tagihan ini masih perlu diperbaiki SKPD, pilih <b className="text-amber-700 dark:text-amber-400">'Batal'</b> lalu pilih durasi 2 atau 3 hari. <b>Lanjutkan?</b>
               </p>
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
+          <AlertDialogFooter className="gap-2 sm:gap-2">
             <AlertDialogCancel asChild>
-              <Button variant="outline" onClick={() => setIsConfirmDefaultOpen(false)}>Batal</Button>
+              <Button variant="outline" onClick={() => setIsConfirmDefaultOpen(false)} className="border-slate-300 dark:border-slate-700">Batal</Button>
             </AlertDialogCancel>
             <AlertDialogAction asChild>
-              <Button variant="destructive" onClick={() => form.handleSubmit(handleExecuteSubmit)()}>
+              <Button variant="destructive" onClick={() => form.handleSubmit(handleExecuteSubmit)()} className="bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800">
                 Ya, Proses (Final)
               </Button>
             </AlertDialogAction>

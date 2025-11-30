@@ -16,6 +16,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { supabase } from '@/integrations/supabase/client';
+import { CalendarClockIcon } from 'lucide-react';
 
 interface AddScheduleDialogProps {
   isOpen: boolean;
@@ -78,50 +79,78 @@ const AddScheduleDialog: React.FC<AddScheduleDialogProps> = ({ isOpen, onClose, 
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>Tambah Jadwal Baru</DialogTitle>
-          <DialogDescription>
-            Masukkan detail jadwal penganggaran baru di sini. Klik simpan setelah selesai.
-          </DialogDescription>
+      <DialogContent className="sm:max-w-[500px] border-slate-200 dark:border-slate-800 shadow-xl">
+        <DialogHeader className="border-b border-slate-100 dark:border-slate-800 pb-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 shadow-lg shadow-emerald-500/20">
+              <CalendarClockIcon className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <DialogTitle className="text-xl font-bold text-slate-900 dark:text-white">
+                Tambah Jadwal Baru
+              </DialogTitle>
+              <DialogDescription className="text-slate-500 dark:text-slate-400 mt-0.5">
+                Masukkan detail jadwal penganggaran baru di bawah ini
+              </DialogDescription>
+            </div>
+          </div>
         </DialogHeader>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4">
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="kode_jadwal" className="text-right">
-              Kode Jadwal
-            </Label>
-            <Input
-              id="kode_jadwal"
-              {...form.register('kode_jadwal')}
-              className="col-span-3"
-              disabled={isSubmitting}
-            />
-            {form.formState.errors.kode_jadwal && (
-              <p className="col-span-4 text-right text-red-500 text-sm">
-                {form.formState.errors.kode_jadwal.message}
-              </p>
-            )}
+
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 pt-4">
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="kode_jadwal" className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                Kode Jadwal <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                id="kode_jadwal"
+                {...form.register('kode_jadwal')}
+                placeholder="Contoh: 2024-MURNI"
+                className="w-full border-slate-300 dark:border-slate-700 focus:border-emerald-500 focus:ring-emerald-500"
+                disabled={isSubmitting}
+              />
+              {form.formState.errors.kode_jadwal && (
+                <p className="text-red-500 text-xs mt-1">
+                  {form.formState.errors.kode_jadwal.message}
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="deskripsi_jadwal" className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                Deskripsi Jadwal <span className="text-red-500">*</span>
+              </Label>
+              <Textarea
+                id="deskripsi_jadwal"
+                {...form.register('deskripsi_jadwal')}
+                placeholder="Contoh: Anggaran Murni Tahun 2024"
+                className="w-full border-slate-300 dark:border-slate-700 focus:border-emerald-500 focus:ring-emerald-500 min-h-[100px]"
+                disabled={isSubmitting}
+              />
+              {form.formState.errors.deskripsi_jadwal && (
+                <p className="text-red-500 text-xs mt-1">
+                  {form.formState.errors.deskripsi_jadwal.message}
+                </p>
+              )}
+            </div>
           </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="deskripsi_jadwal" className="text-right">
-              Deskripsi Jadwal
-            </Label>
-            <Textarea
-              id="deskripsi_jadwal"
-              {...form.register('deskripsi_jadwal')}
-              className="col-span-3"
-              rows={3}
+
+          <DialogFooter className="border-t border-slate-100 dark:border-slate-800 pt-4 gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onClose}
               disabled={isSubmitting}
-            />
-            {form.formState.errors.deskripsi_jadwal && (
-              <p className="col-span-4 text-right text-red-500 text-sm">
-                {form.formState.errors.deskripsi_jadwal.message}
-              </p>
-            )}
-          </div>
-          <DialogFooter>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? 'Menyimpan...' : 'Simpan'}
+              className="hover:bg-slate-100 dark:hover:bg-slate-800"
+            >
+              Batal
+            </Button>
+            <Button
+              type="submit"
+              disabled={isSubmitting}
+              className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white shadow-md hover:shadow-lg transition-all duration-200"
+            >
+              {isSubmitting ? 'Menyimpan...' : 'Simpan Jadwal'}
             </Button>
           </DialogFooter>
         </form>
