@@ -3,6 +3,7 @@ import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
+import { useActivityTracker } from '@/hooks/useActivityTracker';
 
 interface Profile {
   id: string;
@@ -21,6 +22,7 @@ interface SessionContextType {
   profile: Profile | null;
   role: string | null;
   loading: boolean;
+  trackActivity: () => Promise<void>;
 }
 
 const SessionContext = createContext<SessionContextType | undefined>(undefined);
@@ -41,21 +43,24 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const location = useLocation();
-  
+
   // Refs untuk mencegah duplicate operations
   const isFetchingProfile = useRef(false);
   const hasInitialized = useRef(false);
   const lastFetchedUserId = useRef<string | null>(null);
   const navigationPending = useRef(false);
 
+  // Activity tracker with heartbeat
+  const { trackActivity } = useActivityTracker(user?.id);
+
   const fetchProfile = async (userId: string, currentPath: string): Promise<boolean> => {
     // Skip jika sudah fetch untuk user yang sama
     if (isFetchingProfile.current || lastFetchedUserId.current === userId) {
       return true;
     }
-    
+
     isFetchingProfile.current = true;
-    
+
     try {
       // Step 1: Fetch the user's profile data
       const { data: profileDataRaw, error: profileError } = await supabase
@@ -77,8 +82,8 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
 
       let finalProfile: Profile = profileDataRaw as Profile;
 
-      // Step 2: If asal_skpd exists, fetch kode_skpd_penagihan from master_skpd
-      if (profileDataRaw.asal_skpd) {
+      // Step 2: If asal_skpd exists and is valid, fetch kode_skpd_penagihan from master_skpd
+      if (profileDataRaw.asal_skpd && profileDataRaw.asal_skpd !== '-' && profileDataRaw.asal_skpd.trim() !== '') {
         const { data: skpdData, error: skpdError } = await supabase
           .from('master_skpd')
           .select('kode_skpd_penagihan')
@@ -105,6 +110,23 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
         setProfile(finalProfile);
         setRole(finalProfile.peran);
         lastFetchedUserId.current = userId;
+
+        // Update last_active timestamp in background (don't await to avoid blocking)
+        try {
+          supabase
+            .from('profiles')
+            .update({ last_active: new Date().toISOString() })
+            .eq('id', userId)
+            .then(({ error }) => {
+              if (error) {
+                console.warn('Failed to update last_active:', error.message);
+              }
+            });
+        } catch (err) {
+          // Silently ignore errors to prevent blocking user experience
+          console.warn('Exception in last_active update:', err);
+        }
+
         return true;
       }
     } catch (error: any) {
@@ -132,21 +154,21 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
             toast.error('Waktu habis saat memuat data. Silakan refresh halaman.');
           }
         }, 5000);
-        
+
         const { data: { session: initialSession }, error: sessionError } = await supabase.auth.getSession();
-        
+
         if (sessionError) {
           throw sessionError;
         }
-        
+
         if (!mounted) return;
 
         if (initialSession) {
           setSession(initialSession);
           setUser(initialSession.user);
-          
+
           const profileLoaded = await fetchProfile(initialSession.user.id, location.pathname);
-          
+
           if (!profileLoaded) {
             toast.error('Gagal memuat profil. Silakan login ulang.');
           }
@@ -156,9 +178,9 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
           setProfile(null);
           setRole(null);
         }
-        
+
         clearTimeout(timeoutId);
-        
+
         if (mounted) {
           setLoading(false);
           hasInitialized.current = true;
@@ -199,19 +221,19 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
       if (event === 'SIGNED_IN') {
         setLoading(true);
         navigationPending.current = false;
-        
+
         if (currentSession) {
           setSession(currentSession);
           setUser(currentSession.user);
           const profileLoaded = await fetchProfile(currentSession.user.id, location.pathname);
-          
+
           if (!profileLoaded) {
             toast.error('Gagal memuat profil. Silakan coba lagi.');
           }
         }
-        
+
         setLoading(false);
-      } 
+      }
       // Tangani SIGNED_OUT
       else if (event === 'SIGNED_OUT') {
         setSession(null);
@@ -220,7 +242,7 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
         setRole(null);
         lastFetchedUserId.current = null;
         navigationPending.current = false;
-      } 
+      }
       // Tangani USER_UPDATED
       else if (event === 'USER_UPDATED') {
         setSession(currentSession);
@@ -305,13 +327,13 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
       setTimeout(() => {
         navigate(targetPath, { replace: true });
       }, 0);
-      
+
       return;
     }
   }, [session, loading, role, navigate, location.pathname, profile]);
 
   return (
-    <SessionContext.Provider value={{ session, user, profile, role, loading }}>
+    <SessionContext.Provider value={{ session, user, profile, role, loading, trackActivity }}>
       {children}
     </SessionContext.Provider>
   );
