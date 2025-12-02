@@ -35,7 +35,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import useDebounce from '@/hooks/use-debounce';
-import KoreksiTagihanSidePanel from '@/components/KoreksiTagihanSidePanel'; // Import the new component
+import KoreksiTagihanDialog from '@/components/KoreksiTagihanDialog'; // Import the new component
 import StatusBadge from '@/components/StatusBadge'; // Import StatusBadge
 import { Combobox } from '@/components/ui/combobox'; // Import Combobox
 import { SearchInput } from '@/components/ui/search-input'; //import search-input
@@ -745,7 +745,7 @@ const PortalVerifikasi = () => {
   const handleCloseKoreksiSidePanel = () => {
     setIsKoreksiSidePanelOpen(false);
     setSelectedTagihanForKoreksi(null);
-    // No unlock logic needed here for now, as KoreksiTagihanSidePanel is static.
+    // No unlock logic needed here for now, as KoreksiTagihanDialog is static.
     // If Koreksi becomes interactive and involves locking, add unlock logic here.
   };
 
@@ -1195,7 +1195,7 @@ const PortalVerifikasi = () => {
         tagihan={selectedTagihanForDetail}
       />
 
-      <KoreksiTagihanSidePanel
+      <KoreksiTagihanDialog
         isOpen={isKoreksiSidePanelOpen}
         onClose={handleCloseKoreksiSidePanel}
         onCorrectionSuccess={handleActionSuccess} // Pass the new prop

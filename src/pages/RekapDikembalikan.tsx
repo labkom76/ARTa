@@ -9,24 +9,16 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { format, parseISO, startOfDay, endOfDay } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
-import { EyeIcon, PrinterIcon, SearchIcon } from 'lucide-react';
+import { EyeIcon, PrinterIcon, SearchIcon, ClockIcon, Sparkles, FilterIcon, RotateCcwIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import useDebounce from '@/hooks/use-debounce';
 import { DateRange } from 'react-day-picker';
 import { DateRangePickerWithPresets } from '@/components/DateRangePickerWithPresets';
-import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from '@/components/ui/pagination';
 import {
   Select,
   SelectContent,
@@ -35,7 +27,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import TagihanDetailDialog from '@/components/TagihanDetailDialog'; // Import TagihanDetailDialog
+import TagihanDetailDialog from '@/components/TagihanDetailDialog';
 
 interface Tagihan {
   id_tagihan: string;
@@ -44,7 +36,6 @@ interface Tagihan {
   nomor_koreksi?: string;
   waktu_koreksi?: string;
   catatan_koreksi?: string;
-  // Add other fields that might be needed for TagihanDetailDialog or PrintKoreksi
   jenis_spm?: string;
   jenis_tagihan?: string;
   uraian?: string;
@@ -67,10 +58,11 @@ const RekapDikembalikan = () => {
   const { user, profile, loading: sessionLoading } = useSession();
   const [tagihanList, setTagihanList] = useState<Tagihan[]>([]);
   const [loadingData, setLoadingData] = useState(true);
-  const [loadingPagination, setLoadingPagination] = useState(false); // New state for pagination loading
+  const [loadingPagination, setLoadingPagination] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const debouncedSearchQuery = useDebounce(searchQuery, 500);
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
@@ -81,7 +73,7 @@ const RekapDikembalikan = () => {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [selectedTagihanForDetail, setSelectedTagihanForDetail] = useState<Tagihan | null>(null);
 
-  // Refs to track previous values for determining pagination-only changes
+  // Refs to track previous values
   const prevSearchQuery = useRef(searchQuery);
   const prevDateRange = useRef(dateRange);
   const prevItemsPerPage = useRef(itemsPerPage);
@@ -95,15 +87,15 @@ const RekapDikembalikan = () => {
       }
 
       if (!isPaginationOnlyChange) {
-        setLoadingData(true); // Show full loading spinner for search/filter changes
+        setLoadingData(true);
       } else {
-        setLoadingPagination(true); // Only disable pagination buttons for page changes
+        setLoadingPagination(true);
       }
 
       try {
         let query = supabase
           .from('database_tagihan')
-          .select('*', { count: 'exact' }) // Select all columns for detail view
+          .select('*', { count: 'exact' })
           .eq('id_korektor', user.id)
           .order('waktu_koreksi', { ascending: false });
 
@@ -120,7 +112,6 @@ const RekapDikembalikan = () => {
           query = query.lte('waktu_koreksi', endOfDay(dateRange.to).toISOString());
         }
 
-        // Apply pagination range
         if (itemsPerPage !== -1) {
           const from = (currentPage - 1) * itemsPerPage;
           const to = from + itemsPerPage - 1;
@@ -145,7 +136,6 @@ const RekapDikembalikan = () => {
     };
 
     let isPaginationOnlyChange = false;
-    // Check if only currentPage changed, while other filters/search/itemsPerPage remained the same
     if (
       prevCurrentPage.current !== currentPage &&
       prevSearchQuery.current === searchQuery &&
@@ -157,7 +147,6 @@ const RekapDikembalikan = () => {
 
     fetchRekapDikembalikan(isPaginationOnlyChange);
 
-    // Update refs for the next render cycle
     prevSearchQuery.current = searchQuery;
     prevDateRange.current = dateRange;
     prevItemsPerPage.current = itemsPerPage;
@@ -171,7 +160,6 @@ const RekapDikembalikan = () => {
   };
 
   const handlePrintClick = (tagihanId: string) => {
-    // Mengubah ini untuk membuka halaman PrintKoreksi yang baru
     const printWindow = window.open(`/print-koreksi?id=${tagihanId}`, '_blank', 'width=800,height=900,scrollbars=yes');
     if (printWindow) {
       printWindow.focus();
@@ -184,114 +172,185 @@ const RekapDikembalikan = () => {
 
   if (sessionLoading || loadingData) {
     return (
-      <div className="p-6 bg-white rounded-lg shadow-sm border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
-        <h1 className="text-3xl font-bold text-gray-800 dark:text-white mb-4">Memuat Halaman...</h1>
-        <p className="text-gray-600 dark:text-gray-400">Sedang memeriksa hak akses Anda dan mengambil data.</p>
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center space-y-4">
+          <div className="relative w-16 h-16 mx-auto">
+            <div className="absolute inset-0 rounded-full border-4 border-red-200 dark:border-red-900"></div>
+            <div className="absolute inset-0 rounded-full border-4 border-red-500 dark:border-red-400 border-t-transparent animate-spin"></div>
+          </div>
+          <div className="space-y-2">
+            <h2 className="text-2xl font-bold bg-gradient-to-r from-red-600 to-rose-600 dark:from-red-400 dark:to-rose-400 bg-clip-text text-transparent">
+              Memuat Rekap Dikembalikan
+            </h2>
+            <p className="text-sm text-slate-600 dark:text-slate-400">
+              Sedang memeriksa hak akses dan mengambil data...
+            </p>
+          </div>
+        </div>
       </div>
     );
   }
 
   if (profile?.peran !== 'Staf Koreksi') {
     return (
-      <div className="p-6 bg-white rounded-lg shadow-sm border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
-        <h1 className="text-3xl font-bold text-red-600 dark:text-red-400 mb-4">Akses Ditolak</h1>
-        <p className="text-gray-600 dark:text-gray-400">Anda tidak memiliki izin untuk mengakses halaman ini.</p>
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Card className="max-w-md w-full border-red-200 dark:border-red-900/50 shadow-lg">
+          <CardContent className="pt-6 text-center space-y-4">
+            <div className="w-16 h-16 mx-auto rounded-full bg-red-100 dark:bg-red-900/20 flex items-center justify-center">
+              <svg className="w-8 h-8 text-red-600 dark:text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            <div className="space-y-2">
+              <h2 className="text-2xl font-bold text-red-600 dark:text-red-400">
+                Akses Ditolak
+              </h2>
+              <p className="text-sm text-slate-600 dark:text-slate-400">
+                Anda tidak memiliki izin untuk mengakses halaman ini.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-gray-800 dark:text-white mb-6">Rekap Tagihan Dikembalikan</h1>
+      {/* Header with gradient title */}
+      <div className="mb-8">
+        <div className="flex justify-between items-start">
+          <div>
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-red-600 to-rose-400 bg-clip-text text-transparent mb-2 pb-1 inline-flex items-center gap-3">
+              <RotateCcwIcon className="h-10 w-10 text-red-600 dark:text-red-400" />
+              Rekap Tagihan Dikembalikan
+            </h1>
+            <p className="text-slate-600 dark:text-slate-400 flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-red-500" />
+              Lihat riwayat tagihan yang sudah Anda kembalikan
+            </p>
+          </div>
+        </div>
+      </div>
 
-      {/* Area Kontrol Filter */}
-      <Card className="shadow-sm rounded-lg">
-        <CardHeader>
-          <CardTitle className="text-xl font-semibold">Filter Data</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-2">
-            <div className="relative flex-1 w-full sm:w-auto">
-              <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400" />
-              <Input
-                type="text"
-                placeholder="Cari berdasarkan Nomor SPM atau Nama SKPD..."
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  setCurrentPage(1); // Reset to first page on search
-                }}
-                className="pl-9 w-full"
-              />
-            </div>
-            <DateRangePickerWithPresets
-              date={dateRange}
-              onDateChange={(newDateRange) => {
-                setDateRange(newDateRange);
-                setCurrentPage(1); // Reset to first page on date range change
+      {/* Filter Panel - Separate Card */}
+      <div className="p-6 bg-white rounded-lg shadow-sm border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
+        <div className="flex items-center gap-3 mb-6 pb-4 border-b border-red-200 dark:border-red-900/30">
+          <div className="p-2 bg-red-100 dark:bg-red-950/50 rounded-lg">
+            <FilterIcon className="h-6 w-6 text-red-600 dark:text-red-400" />
+          </div>
+          <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Filter Data</h2>
+        </div>
+        <div className="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-2">
+          <div className="relative flex-1 w-full sm:w-auto">
+            <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400" />
+            <Input
+              ref={searchInputRef}
+              type="text"
+              placeholder="Cari berdasarkan Nomor SPM atau Nama SKPD..."
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setCurrentPage(1);
               }}
-              className="w-full sm:w-auto"
+              className="pl-9 w-full"
             />
           </div>
-        </CardContent>
-      </Card>
+          <DateRangePickerWithPresets
+            date={dateRange}
+            onDateChange={(newDateRange) => {
+              setDateRange(newDateRange);
+              setCurrentPage(1);
+            }}
+            className="w-full sm:w-auto"
+          />
+        </div>
+      </div>
 
-      {/* Tabel Riwayat */}
-      <Card className="shadow-sm rounded-lg">
-        <CardHeader>
-          <CardTitle className="text-xl font-semibold">Daftar Tagihan Dikembalikan</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {/* "Baris per halaman" dropdown */}
-          <div className="mb-4 flex justify-end items-center space-x-2">
-            <Label htmlFor="items-per-page" className="whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">Baris per halaman:</Label>
-            <Select
-              value={itemsPerPage.toString()}
-              onValueChange={(value) => {
-                setItemsPerPage(Number(value));
-                setCurrentPage(1); // Reset to first page when items per page changes
-              }}
-            >
-              <SelectTrigger className="w-[100px]">
-                <SelectValue placeholder="10" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="10">10</SelectItem>
-                <SelectItem value="25">25</SelectItem>
-                <SelectItem value="50">50</SelectItem>
-                <SelectItem value="100">100</SelectItem>
-                <SelectItem value="-1">Semua</SelectItem>
-              </SelectContent>
-            </Select>
+      {/* Table Card */}
+      <Card className="border-slate-200 dark:border-slate-800 shadow-lg">
+        <CardContent className="p-0">
+          {/* Items per page selector */}
+          <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-900/50">
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Daftar Tagihan Dikembalikan</h3>
+            <div className="flex items-center space-x-2">
+              <Label htmlFor="items-per-page" className="whitespace-nowrap text-sm text-slate-700 dark:text-slate-300">Baris per halaman:</Label>
+              <Select
+                value={itemsPerPage.toString()}
+                onValueChange={(value) => {
+                  setItemsPerPage(Number(value));
+                  setCurrentPage(1);
+                }}
+              >
+                <SelectTrigger className="w-[100px]">
+                  <SelectValue placeholder="10" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="10">10</SelectItem>
+                  <SelectItem value="25">25</SelectItem>
+                  <SelectItem value="50">50</SelectItem>
+                  <SelectItem value="100">100</SelectItem>
+                  <SelectItem value="-1">Semua</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           <div className="overflow-x-auto">
-            <Table><TableHeader><TableRow>
-                  <TableHead>Waktu Koreksi</TableHead><TableHead>Nomor Koreksi</TableHead><TableHead>Nomor SPM</TableHead><TableHead>Nama SKPD</TableHead><TableHead>Keterangan</TableHead><TableHead className="text-center">Aksi</TableHead>
-                </TableRow></TableHeader><TableBody>
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-50 dark:hover:bg-slate-900/50">
+                  <TableHead className="font-semibold text-slate-700 dark:text-slate-300">Waktu Koreksi</TableHead>
+                  <TableHead className="font-semibold text-slate-700 dark:text-slate-300">Nomor Koreksi</TableHead>
+                  <TableHead className="font-semibold text-slate-700 dark:text-slate-300">Nomor SPM</TableHead>
+                  <TableHead className="font-semibold text-slate-700 dark:text-slate-300">Nama SKPD</TableHead>
+                  <TableHead className="font-semibold text-slate-700 dark:text-slate-300">Keterangan</TableHead>
+                  <TableHead className="text-center font-semibold text-slate-700 dark:text-slate-300">Aksi</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {loadingData && !loadingPagination ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                      Memuat data tagihan dikembalikan...
+                    <TableCell colSpan={6} className="text-center py-12">
+                      <div className="flex flex-col items-center gap-3">
+                        <div className="relative w-12 h-12">
+                          <div className="absolute inset-0 rounded-full border-4 border-red-200 dark:border-red-900"></div>
+                          <div className="absolute inset-0 rounded-full border-4 border-red-500 dark:border-red-400 border-t-transparent animate-spin"></div>
+                        </div>
+                        <p className="text-sm text-slate-600 dark:text-slate-400">Memuat data tagihan dikembalikan...</p>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ) : tagihanList.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                      Tidak ada data tagihan dikembalikan.
+                    <TableCell colSpan={6} className="text-center py-12">
+                      <div className="flex flex-col items-center gap-3">
+                        <div className="p-4 rounded-full bg-slate-100 dark:bg-slate-800">
+                          <RotateCcwIcon className="h-8 w-8 text-slate-400 dark:text-slate-600" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Tidak ada data tagihan dikembalikan</p>
+                          <p className="text-xs text-slate-500 dark:text-slate-500 mt-1">Riwayat akan muncul di sini</p>
+                        </div>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ) : (
                   tagihanList.map((tagihan) => (
-                    <TableRow key={tagihan.id_tagihan}>
-                      <TableCell>
+                    <TableRow key={tagihan.id_tagihan} className="hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
+                      <TableCell className="text-slate-700 dark:text-slate-300">
                         {tagihan.waktu_koreksi ? format(parseISO(tagihan.waktu_koreksi), 'dd MMMM yyyy HH:mm', { locale: localeId }) : '-'}
-                      </TableCell><TableCell className="font-medium">{tagihan.nomor_koreksi || '-'}</TableCell><TableCell>{tagihan.nomor_spm}</TableCell><TableCell>{tagihan.nama_skpd}</TableCell><TableCell>{tagihan.catatan_koreksi || '-'}</TableCell><TableCell className="text-center">
+                      </TableCell>
+                      <TableCell className="font-semibold text-red-600 dark:text-red-400">{tagihan.nomor_koreksi || '-'}</TableCell>
+                      <TableCell className="font-mono text-sm text-slate-700 dark:text-slate-300">{tagihan.nomor_spm}</TableCell>
+                      <TableCell className="text-slate-700 dark:text-slate-300">{tagihan.nama_skpd}</TableCell>
+                      <TableCell className="text-slate-700 dark:text-slate-300">{tagihan.catatan_koreksi || '-'}</TableCell>
+                      <TableCell className="text-center">
                         <div className="flex justify-center space-x-2">
-                          <Button variant="outline" size="icon" title="Lihat Detail" onClick={() => handleDetailClick(tagihan)}>
+                          <Button variant="outline" size="icon" title="Lihat Detail" onClick={() => handleDetailClick(tagihan)} className="hover:bg-emerald-50 dark:hover:bg-emerald-950/20 hover:text-emerald-600 dark:hover:text-emerald-400 hover:border-emerald-300 dark:hover:border-emerald-800">
                             <EyeIcon className="h-4 w-4" />
                           </Button>
-                          <Button variant="outline" size="icon" title="Cetak" onClick={() => handlePrintClick(tagihan.id_tagihan)}>
+                          <Button variant="outline" size="icon" title="Cetak" onClick={() => handlePrintClick(tagihan.id_tagihan)} className="hover:bg-blue-50 dark:hover:bg-blue-950/20 hover:text-blue-600 dark:hover:text-blue-400 hover:border-blue-300 dark:hover:border-blue-800">
                             <PrinterIcon className="h-4 w-4" />
                           </Button>
                         </div>
@@ -299,28 +358,31 @@ const RekapDikembalikan = () => {
                     </TableRow>
                   ))
                 )}
-              </TableBody></Table>
+              </TableBody>
+            </Table>
           </div>
 
           {/* Pagination Controls */}
-          <div className="mt-6 flex items-center justify-end space-x-4">
-            <div className="text-sm text-muted-foreground">
+          <div className="p-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-900/50">
+            <div className="text-sm text-slate-600 dark:text-slate-400">
               Halaman {totalItems === 0 ? 0 : currentPage} dari {totalPages} ({totalItems} total item)
             </div>
-            <Button
-              variant="outline"
-              onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-              disabled={currentPage === 1 || itemsPerPage === -1 || loadingPagination}
-            >
-              Sebelumnya
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-              disabled={currentPage === totalPages || itemsPerPage === -1 || loadingPagination}
-            >
-              Berikutnya
-            </Button>
+            <div className="flex items-center space-x-2">
+              <Button
+                variant="outline"
+                onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                disabled={currentPage === 1 || itemsPerPage === -1 || loadingPagination}
+              >
+                Sebelumnya
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                disabled={currentPage === totalPages || itemsPerPage === -1 || loadingPagination}
+              >
+                Berikutnya
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
