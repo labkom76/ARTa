@@ -20,13 +20,15 @@ import { ThemeToggle } from "@/components/ThemeToggle"; // Import ThemeToggle
 import { useNavigate } from 'react-router-dom'; // Import useNavigate
 import TagihanDetailDialog from '@/components/TagihanDetailDialog'; // Re-import TagihanDetailDialog
 
-// Re-define Tagihan interface or import it from a shared location
-// For now, I'll define a minimal one here, but ideally it would be imported.
-// Given the context, I'll import from PortalSKPD for consistency.
-import { Tagihan } from '@/pages/PortalSKPD'; 
+// Define Tagihan interface locally
+interface Tagihan {
+  id_tagihan: string;
+  [key: string]: any; // Allow other properties
+}
 
 interface HeaderProps {
   toggleSidebar: () => void;
+  isCollapsed?: boolean;
 }
 
 interface Notification {
@@ -38,7 +40,7 @@ interface Notification {
   tagihan_id?: string;
 }
 
-const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
+const Header: React.FC<HeaderProps> = ({ toggleSidebar, isCollapsed = false }) => {
   const { profile, user } = useSession();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -194,10 +196,29 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
   };
 
   return (
-    <header className="sticky top-0 z-40 flex items-center justify-between h-16 px-4 bg-white border-b border-gray-200 shadow-sm dark:bg-gray-800 dark:border-gray-700">
+    <header className="sticky top-0 z-40 flex items-center justify-between h-16 px-4 bg-white dark:bg-slate-950 border-b border-gray-200 dark:border-slate-800 shadow-sm">
       <div className="flex items-center">
-        <Button variant="ghost" size="icon" onClick={toggleSidebar} className="mr-2">
-          <MenuIcon className="h-5 w-5 text-gray-600 dark:text-gray-300" />
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={toggleSidebar}
+          className="mr-2 hover:bg-emerald-50 dark:hover:bg-slate-900 hover:text-emerald-600 dark:hover:text-emerald-400 hover:scale-110 transition-all duration-200 hover:shadow-md relative"
+        >
+          {/* Custom Animated Hamburger Menu */}
+          <div className="w-5 h-5 flex flex-col justify-center items-center gap-1">
+            <div className={cn(
+              "w-5 h-0.5 bg-gray-700 dark:bg-slate-400 rounded-full transition-all duration-300 origin-center",
+              isCollapsed && "rotate-45 translate-y-1.5"
+            )} />
+            <div className={cn(
+              "w-5 h-0.5 bg-gray-700 dark:bg-slate-400 rounded-full transition-all duration-300",
+              isCollapsed && "opacity-0 scale-0"
+            )} />
+            <div className={cn(
+              "w-5 h-0.5 bg-gray-700 dark:bg-slate-400 rounded-full transition-all duration-300 origin-center",
+              isCollapsed && "-rotate-45 -translate-y-1.5"
+            )} />
+          </div>
         </Button>
       </div>
       <div className="flex items-center space-x-4">
@@ -208,10 +229,18 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
           }
         }}>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="relative text-gray-600 dark:text-gray-300">
+            <Button variant="ghost" size="icon" className="relative text-gray-700 dark:text-slate-400 hover:bg-emerald-50 dark:hover:bg-slate-900 hover:text-emerald-600 dark:hover:text-emerald-400 hover:scale-110 transition-all duration-200 hover:shadow-md">
               <BellIcon className="h-5 w-5" />
               {unreadCount > 0 && (
-                <span className="absolute top-1 right-1 block h-2 w-2 rounded-full bg-red-500 ring-2 ring-white dark:ring-gray-800" />
+                <>
+                  {/* Outer pulsing ring */}
+                  <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-4 w-4 bg-red-500 items-center justify-center ring-2 ring-white dark:ring-slate-950">
+                      <span className="text-[9px] font-bold text-white leading-none">{unreadCount > 9 ? '9+' : unreadCount}</span>
+                    </span>
+                  </span>
+                </>
               )}
             </Button>
           </DropdownMenuTrigger>
@@ -228,13 +257,13 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
                 notifications.map((notification) => (
                   <DropdownMenuItem
                     key={notification.id}
-                    className={`flex flex-col items-start space-y-1 py-2 px-3 rounded-md cursor-pointer ${!notification.is_read ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}
+                    className={`flex flex-col items-start space-y-1 py-2 px-3 rounded-md cursor-pointer transition-colors ${!notification.is_read ? 'bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/30' : 'hover:bg-gray-100 dark:hover:bg-slate-900'}`}
                     onClick={() => handleNotificationClick(notification)}
                   >
                     {/* Teks notifikasi dengan word-break */}
                     <p className={cn(
                       `text-sm break-words whitespace-normal`, // Added whitespace-normal and break-words
-                      !notification.is_read ? 'font-medium text-blue-700 dark:text-blue-300' : 'text-gray-800 dark:text-gray-200'
+                      !notification.is_read ? 'font-medium text-emerald-700 dark:text-emerald-300' : 'text-gray-800 dark:text-gray-200'
                     )}>
                       {notification.message}
                     </p>
@@ -248,7 +277,7 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
             {notifications.length > 0 && (
               <DropdownMenuSeparator />
             )}
-            <DropdownMenuItem className="text-center text-sm text-blue-600 hover:text-blue-700 cursor-pointer" disabled>
+            <DropdownMenuItem className="text-center text-sm text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 cursor-pointer" disabled>
               Tandai semua sudah dibaca
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -259,52 +288,83 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
         {user && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+              <Button variant="ghost" className="relative h-8 w-8 rounded-full hover:scale-105 transition-all duration-200">
                 <Avatar>
                   <AvatarImage src={profile?.avatar_url || undefined} alt={profile?.nama_lengkap || user.email || "User"} />
-                  <AvatarFallback className="bg-blue-500 text-white">
+                  <AvatarFallback className="bg-gradient-to-br from-emerald-500 to-emerald-600 text-white font-semibold">
                     {getInitials(profile?.nama_lengkap || user.email)}
                   </AvatarFallback>
                 </Avatar>
-            </Button>
+              </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-56" align="end" forceMount>
-              <DropdownMenuLabel className="font-normal">
-                <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium leading-none">{profile?.nama_lengkap || 'Pengguna'}</p>
-                  <p className="text-xs leading-none text-muted-foreground">
+            <DropdownMenuContent className="w-64" align="end" forceMount>
+              {/* Header - User Info with Avatar */}
+              <div className="flex items-center gap-3 px-4 py-3">
+                <Avatar className="h-10 w-10">
+                  <AvatarImage src={profile?.avatar_url || undefined} alt={profile?.nama_lengkap || user.email || "User"} />
+                  <AvatarFallback className="bg-gradient-to-br from-emerald-500 to-emerald-600 text-white font-semibold text-sm">
+                    {getInitials(profile?.nama_lengkap || user.email)}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
+                    {profile?.nama_lengkap || 'Pengguna'}
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
                     {user.email}
                   </p>
                 </div>
-              </DropdownMenuLabel>
+              </div>
+
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="flex flex-col items-start space-y-1" disabled>
-                <p className="text-xs text-muted-foreground">Nama Lengkap</p>
-                <p className="text-sm font-medium">{profile?.nama_lengkap || '-'}</p>
-              </DropdownMenuItem>
-              {profile?.peran === 'SKPD' ? (
-                <DropdownMenuItem className="flex flex-col items-start space-y-1" disabled>
-                  <p className="text-xs text-muted-foreground">Asal SKPD</p>
-                  <p className="text-sm font-medium">{profile?.asal_skpd || '-'}</p>
-                </DropdownMenuItem>
-              ) : (
-                <DropdownMenuItem className="flex flex-col items-start space-y-1" disabled>
-                  <p className="text-xs text-muted-foreground">Peran</p>
-                  <p className="text-sm font-medium">
-                    {profile?.peran === 'Staf Koreksi' ? 'Kuasa BUD' : (profile?.peran || '-')}
-                  </p>
-                </DropdownMenuItem>
-              )}
+
+              {/* Info Items with Icons */}
+              <div className="py-1">
+                <div className="flex items-center gap-2 px-4 py-2">
+                  <svg className="h-4 w-4 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                  <span className="text-sm text-gray-900 dark:text-white">
+                    {profile?.nama_lengkap || '-'}
+                  </span>
+                </div>
+
+                {profile?.peran === 'SKPD' ? (
+                  <div className="flex items-center gap-2 px-4 py-2">
+                    <svg className="h-4 w-4 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                    </svg>
+                    <span className="text-sm text-gray-900 dark:text-white">
+                      {profile?.asal_skpd || '-'}
+                    </span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 px-4 py-2">
+                    <svg className="h-4 w-4 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                    </svg>
+                    <span className="text-sm text-gray-900 dark:text-white">
+                      {profile?.peran === 'Staf Koreksi' ? 'Kuasa BUD' : (profile?.peran || '-')}
+                    </span>
+                  </div>
+                )}
+              </div>
+
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleLogout} className="cursor-pointer">
+
+              {/* Logout */}
+              <DropdownMenuItem
+                onClick={handleLogout}
+                className="cursor-pointer text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-950/20 focus:bg-red-50 dark:focus:bg-red-950/20"
+              >
                 <LogOutIcon className="mr-2 h-4 w-4" />
-                <span>Log out</span>
+                <span>Logout</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         )}
         {!user && (
-          <Button variant="ghost" size="icon" onClick={handleLogout} className="text-gray-600 hover:text-red-500 dark:text-gray-300 dark:hover:text-red-400">
+          <Button variant="ghost" size="icon" onClick={handleLogout} className="text-gray-700 dark:text-slate-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 transition-colors">
             <LogOutIcon className="h-5 w-5" />
           </Button>
         )}

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useSession } from '@/contexts/SessionContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,7 +10,9 @@ import {
   TimerIcon,
   BarChart3Icon,
   BarChartIcon,
-  PieChartIcon, // Import PieChartIcon
+  PieChartIcon,
+  ClipboardCheckIcon,
+  Sparkles,
 } from 'lucide-react';
 import {
   BarChart,
@@ -26,6 +28,7 @@ import {
 } from 'recharts';
 import { format, subDays, startOfDay, endOfDay, startOfMonth, endOfMonth, parseISO, differenceInMinutes } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
+import { useTypingAnimation } from '@/hooks/use-typing-animation';
 
 // NEW IMPORTS FOR SWIPER
 import { Swiper, SwiperSlide } from 'swiper/react';
@@ -60,6 +63,23 @@ const DashboardVerifikasi = () => {
 
   // Define colors for the Pie Chart
   const PIE_COLORS = ['#EF4444', '#F97316', '#F59E0B', '#EAB308', '#84CC16', '#3B82F6', '#6366F1'];
+
+  // Get greeting based on time
+  const greeting = useMemo(() => {
+    const hour = new Date().getHours();
+    if (hour >= 5 && hour < 11) return 'Selamat Pagi';
+    if (hour >= 11 && hour < 15) return 'Selamat Siang';
+    if (hour >= 15 && hour < 18) return 'Selamat Sore';
+    return 'Selamat Malam';
+  }, []);
+
+  // Typing animation texts
+  const typingTexts = useMemo(() => [
+    `Selamat datang ${profile?.nama_lengkap || 'yudistira'}! Siap memverifikasi tagihan hari ini?`,
+    `${greeting}, tetap semangat yaa!!`
+  ], [greeting, profile?.nama_lengkap]);
+
+  const animatedText = useTypingAnimation(typingTexts, 80, 40, 3000);
 
 
   useEffect(() => {
@@ -183,86 +203,170 @@ const DashboardVerifikasi = () => {
 
   if (sessionLoading || loading) {
     return (
-      <div className="p-6 bg-white rounded-lg shadow-sm border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
-        <h1 className="text-3xl font-bold text-gray-800 dark:text-white mb-4">Memuat Dashboard Verifikasi...</h1>
-        <p className="text-gray-600 dark:text-gray-400">Sedang mengambil data untuk Anda.</p>
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center space-y-4">
+          <div className="relative w-16 h-16 mx-auto">
+            <div className="absolute inset-0 rounded-full border-4 border-emerald-200 dark:border-emerald-900"></div>
+            <div className="absolute inset-0 rounded-full border-4 border-emerald-500 dark:border-emerald-400 border-t-transparent animate-spin"></div>
+          </div>
+          <div className="space-y-2">
+            <h2 className="text-2xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 dark:from-emerald-400 dark:to-teal-400 bg-clip-text text-transparent">
+              Memuat Dashboard
+            </h2>
+            <p className="text-sm text-slate-600 dark:text-slate-400">
+              Sedang mengambil data untuk Anda...
+            </p>
+          </div>
+        </div>
       </div>
     );
   }
 
   if (profile?.peran !== 'Staf Verifikator') {
     return (
-      <div className="p-6 bg-white rounded-lg shadow-sm border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
-        <h1 className="text-3xl font-bold text-red-600 dark:text-red-400 mb-4">Akses Ditolak</h1>
-        <p className="text-gray-600 dark:text-gray-400">Anda tidak memiliki izin untuk mengakses halaman ini.</p>
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Card className="max-w-md w-full border-red-200 dark:border-red-900/50 shadow-lg">
+          <CardContent className="pt-6 text-center space-y-4">
+            <div className="w-16 h-16 mx-auto rounded-full bg-red-100 dark:bg-red-900/20 flex items-center justify-center">
+              <svg className="w-8 h-8 text-red-600 dark:text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            <div className="space-y-2">
+              <h2 className="text-2xl font-bold text-red-600 dark:text-red-400">
+                Akses Ditolak
+              </h2>
+              <p className="text-sm text-slate-600 dark:text-slate-400">
+                Anda tidak memiliki izin untuk mengakses halaman ini.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-gray-800 dark:text-white">
-        Selamat Datang, {profile?.nama_lengkap || 'Staf'}!
-      </h1>
-      <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
-        Saat ini Anda masuk sebagai Staf Verifikasi. Siap memverifikasi tagihan hari ini?
-      </p>
+      <div className="mb-8">
+        <h1 className="text-4xl font-bold bg-gradient-to-r from-emerald-600 to-emerald-400 bg-clip-text text-transparent mb-2 pb-1 inline-flex items-center gap-3">
+          <ClipboardCheckIcon className="h-10 w-10 text-emerald-600 dark:text-emerald-400" />
+          Dashboard Verifikasi
+        </h1>
+        <p className="text-slate-600 dark:text-slate-400 flex items-center gap-2">
+          <Sparkles className="h-4 w-4 text-emerald-500" />
+          <span className="inline-flex items-center">
+            {animatedText}
+            <span className="inline-block w-0.5 h-5 bg-emerald-500 ml-1 animate-pulse"></span>
+          </span>
+        </p>
+      </div>
 
       {/* KPI Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="shadow-sm rounded-lg">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Antrian Verifikasi</CardTitle>
-            <HourglassIcon className="h-4 w-4 text-yellow-500 dark:text-yellow-400" />
+        {/* Antrian Verifikasi Card */}
+        <Card className="group relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+          <div className="absolute inset-0 bg-gradient-to-br from-amber-500 to-orange-600 opacity-100"></div>
+          <div className="absolute inset-0 bg-gradient-to-br from-amber-600 to-orange-700 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+          <CardHeader className="relative flex flex-row items-center justify-between space-y-0 pb-3">
+            <CardTitle className="text-sm font-semibold text-white/90">Antrian Verifikasi</CardTitle>
+            <div className="p-2.5 rounded-lg bg-white/20 backdrop-blur-sm group-hover:scale-110 transition-transform duration-300">
+              <HourglassIcon className="h-5 w-5 text-white" />
+            </div>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{kpiData?.antrianVerifikasi}</div>
-            <p className="text-xs text-muted-foreground">Tagihan menunggu verifikasi</p>
+          <CardContent className="relative">
+            <div className="text-3xl font-bold text-white mb-1">
+              {kpiData?.antrianVerifikasi}
+            </div>
+            <p className="text-xs text-white/80 font-medium">
+              Tagihan menunggu verifikasi
+            </p>
+            <div className="absolute bottom-0 right-0 opacity-10 group-hover:opacity-20 transition-opacity duration-300">
+              <HourglassIcon className="h-24 w-24 text-white" />
+            </div>
           </CardContent>
         </Card>
 
-        <Card className="shadow-sm rounded-lg">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Diproses (Bulan Ini)</CardTitle> {/* MODIFIED Title */}
-            <CheckCircleIcon className="h-4 w-4 text-green-500 dark:text-green-400" />
+        {/* Total Diproses (Bulan Ini) Card */}
+        <Card className="group relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-cyan-600 opacity-100"></div>
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-600 to-cyan-700 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+          <CardHeader className="relative flex flex-row items-center justify-between space-y-0 pb-3">
+            <CardTitle className="text-sm font-semibold text-white/90">Total Diproses (Bulan Ini)</CardTitle>
+            <div className="p-2.5 rounded-lg bg-white/20 backdrop-blur-sm group-hover:scale-110 transition-transform duration-300">
+              <CheckCircleIcon className="h-5 w-5 text-white" />
+            </div>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{kpiData?.totalDiprosesBulanIni}</div> {/* MODIFIED Value */}
-            <p className="text-xs text-muted-foreground">Total tagihan diproses bulan ini</p> {/* MODIFIED Description */}
+          <CardContent className="relative">
+            <div className="text-3xl font-bold text-white mb-1">
+              {kpiData?.totalDiprosesBulanIni}
+            </div>
+            <p className="text-xs text-white/80 font-medium">
+              Total tagihan diproses bulan ini
+            </p>
+            <div className="absolute bottom-0 right-0 opacity-10 group-hover:opacity-20 transition-opacity duration-300">
+              <CheckCircleIcon className="h-24 w-24 text-white" />
+            </div>
           </CardContent>
         </Card>
 
-        <Card className="shadow-sm rounded-lg">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Diteruskan Hari Ini</CardTitle>
-            <CheckCircleIcon className="h-4 w-4 text-green-500 dark:text-green-400" />
+        {/* Diteruskan Hari Ini Card */}
+        <Card className="group relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+          <div className="absolute inset-0 bg-gradient-to-br from-emerald-500 to-teal-600 opacity-100"></div>
+          <div className="absolute inset-0 bg-gradient-to-br from-emerald-600 to-teal-700 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+          <CardHeader className="relative flex flex-row items-center justify-between space-y-0 pb-3">
+            <CardTitle className="text-sm font-semibold text-white/90">Diteruskan Hari Ini</CardTitle>
+            <div className="p-2.5 rounded-lg bg-white/20 backdrop-blur-sm group-hover:scale-110 transition-transform duration-300">
+              <CheckCircleIcon className="h-5 w-5 text-white" />
+            </div>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{kpiData?.diteruskanHariIni}</div>
-            <p className="text-xs text-muted-foreground">Tagihan diteruskan hari ini</p>
+          <CardContent className="relative">
+            <div className="text-3xl font-bold text-white mb-1">
+              {kpiData?.diteruskanHariIni}
+            </div>
+            <p className="text-xs text-white/80 font-medium">
+              Tagihan diteruskan hari ini
+            </p>
+            <div className="absolute bottom-0 right-0 opacity-10 group-hover:opacity-20 transition-opacity duration-300">
+              <CheckCircleIcon className="h-24 w-24 text-white" />
+            </div>
           </CardContent>
         </Card>
 
-        <Card className="shadow-sm rounded-lg">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Dikembalikan Hari Ini</CardTitle>
-            <RotateCcwIcon className="h-4 w-4 text-red-500 dark:text-red-400" />
+        {/* Dikembalikan Hari Ini Card */}
+        <Card className="group relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+          <div className="absolute inset-0 bg-gradient-to-br from-red-500 to-rose-600 opacity-100"></div>
+          <div className="absolute inset-0 bg-gradient-to-br from-red-600 to-rose-700 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+          <CardHeader className="relative flex flex-row items-center justify-between space-y-0 pb-3">
+            <CardTitle className="text-sm font-semibold text-white/90">Dikembalikan Hari Ini</CardTitle>
+            <div className="p-2.5 rounded-lg bg-white/20 backdrop-blur-sm group-hover:scale-110 transition-transform duration-300">
+              <RotateCcwIcon className="h-5 w-5 text-white" />
+            </div>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{kpiData?.dikembalikanHariIni}</div>
-            <p className="text-xs text-muted-foreground">Tagihan dikembalikan hari ini</p>
+          <CardContent className="relative">
+            <div className="text-3xl font-bold text-white mb-1">
+              {kpiData?.dikembalikanHariIni}
+            </div>
+            <p className="text-xs text-white/80 font-medium">
+              Tagihan dikembalikan hari ini
+            </p>
+            <div className="absolute bottom-0 right-0 opacity-10 group-hover:opacity-20 transition-opacity duration-300">
+              <RotateCcwIcon className="h-24 w-24 text-white" />
+            </div>
           </CardContent>
         </Card>
       </div>
 
       {/* Charts */}
       <div className="grid gap-6 lg:grid-cols-2">
-        <Card className="shadow-sm rounded-lg">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-              <BarChart3Icon className="h-5 w-5 text-gray-600 dark:text-gray-300" />
-              Hasil Verifikasi (30 Hari Terakhir)
-            </CardTitle>
+        <Card className="shadow-md hover:shadow-lg transition-all duration-300 rounded-lg border-emerald-200 dark:border-emerald-900/30 bg-gradient-to-br from-white to-emerald-50/20 dark:from-slate-900 dark:to-emerald-950/10">
+          <CardHeader className="pb-4">
+            <div className="flex items-center gap-3 mb-2 pb-2 border-b border-emerald-200 dark:border-emerald-900/30">
+              <div className="p-2 bg-emerald-100 dark:bg-emerald-950/50 rounded-lg">
+                <BarChart3Icon className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+              </div>
+              <CardTitle className="text-xl font-bold text-slate-900 dark:text-white">Hasil Verifikasi (30 Hari Terakhir)</CardTitle>
+            </div>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
@@ -278,12 +382,14 @@ const DashboardVerifikasi = () => {
           </CardContent>
         </Card>
 
-        <Card className="shadow-sm rounded-lg">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-              <PieChartIcon className="h-5 w-5 text-gray-600 dark:text-gray-300" /> {/* Changed icon to PieChartIcon */}
-              Tagihan yang dikembalikan (PerSKPD) {/* Changed title */}
-            </CardTitle>
+        <Card className="shadow-md hover:shadow-lg transition-all duration-300 rounded-lg border-emerald-200 dark:border-emerald-900/30 bg-gradient-to-br from-white to-emerald-50/20 dark:from-slate-900 dark:to-emerald-950/10">
+          <CardHeader className="pb-4">
+            <div className="flex items-center gap-3 mb-2 pb-2 border-b border-emerald-200 dark:border-emerald-900/30">
+              <div className="p-2 bg-emerald-100 dark:bg-emerald-950/50 rounded-lg">
+                <PieChartIcon className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+              </div>
+              <CardTitle className="text-xl font-bold text-slate-900 dark:text-white">Tagihan yang Dikembalikan (Per SKPD)</CardTitle>
+            </div>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
