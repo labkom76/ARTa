@@ -12,7 +12,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { SearchIcon, EyeIcon, PrinterIcon, FileDownIcon, ClockIcon, Sparkles, FilterIcon } from 'lucide-react';
+import { EyeIcon, PrinterIcon, SearchIcon, ClockIcon, Sparkles, FilterIcon, FileDownIcon, PencilIcon } from 'lucide-react';
 import { format, parseISO, startOfDay, endOfDay } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -36,6 +36,7 @@ import {
 } from "@/components/ui/tooltip";
 import { Combobox } from '@/components/ui/combobox';
 import * as XLSX from 'xlsx';
+import EditTagihanVerifikatorDialog from '@/components/EditTagihanVerifikatorDialog';
 
 interface VerificationItem {
   item: string;
@@ -96,6 +97,11 @@ const RiwayatVerifikasi = () => {
 
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [selectedTagihanForDetail, setSelectedTagihanForDetail] = useState<Tagihan | null>(null);
+
+  // Edit Dialog states
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingTagihan, setEditingTagihan] = useState<Tagihan | null>(null);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   const prevSearchQuery = React.useRef(searchQuery);
   const prevSelectedStatus = React.useRef(selectedStatus);
@@ -253,7 +259,7 @@ const RiwayatVerifikasi = () => {
     prevSelectedVerifierId.current = selectedVerifierId;
     prevSelectedSkpd.current = selectedSkpd;
 
-  }, [sessionLoading, profile, debouncedSearchQuery, selectedStatus, dateRange, currentPage, itemsPerPage, selectedVerifierId, selectedSkpd, verifierOptions, skpdOptions]);
+  }, [sessionLoading, profile, debouncedSearchQuery, selectedStatus, dateRange, currentPage, itemsPerPage, selectedVerifierId, selectedSkpd, verifierOptions, skpdOptions, refreshTrigger]);
 
   useEffect(() => {
     if (!loadingData && !loadingPagination && debouncedSearchQuery && searchInputRef.current) {
@@ -264,6 +270,17 @@ const RiwayatVerifikasi = () => {
   const handleDetailClick = (tagihan: Tagihan) => {
     setSelectedTagihanForDetail(tagihan);
     setIsDetailModalOpen(true);
+  };
+
+  const handleEditClick = (tagihan: Tagihan) => {
+    setEditingTagihan(tagihan);
+    setIsEditDialogOpen(true);
+  };
+
+  const handleEditSuccess = () => {
+    setRefreshTrigger(prev => prev + 1); // ✅ GANTI DENGAN INI
+    setIsEditDialogOpen(false);
+    setEditingTagihan(null);
   };
 
   const handlePrintClick = (tagihanId: string) => {
@@ -496,6 +513,17 @@ const RiwayatVerifikasi = () => {
                       </Tooltip>
                     </TableCell><TableCell>Rp{tagihan.jumlah_kotor.toLocaleString('id-ID')}</TableCell><TableCell><StatusBadge status={tagihan.status_tagihan} /></TableCell><TableCell>{tagihan.nama_verifikator || '-'}</TableCell><TableCell className="text-center">
                       <div className="flex justify-center space-x-1.5">
+                        {profile?.peran === 'Staf Verifikator' && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            title="Ubah Tagihan"
+                            onClick={() => handleEditClick(tagihan)}
+                            className="hover:bg-emerald-50 dark:hover:bg-emerald-950/20 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"
+                          >
+                            <PencilIcon className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                          </Button>
+                        )}
                         <Button
                           variant="ghost"
                           size="icon"
@@ -547,6 +575,15 @@ const RiwayatVerifikasi = () => {
           isOpen={isDetailModalOpen}
           onClose={() => setIsDetailModalOpen(false)}
           tagihan={selectedTagihanForDetail}
+        />
+        <EditTagihanVerifikatorDialog
+          isOpen={isEditDialogOpen}
+          onClose={() => {
+            setIsEditDialogOpen(false);
+            setEditingTagihan(null);
+          }}
+          editingTagihan={editingTagihan}
+          onTagihanUpdated={handleEditSuccess}
         />
       </div>
     </div >

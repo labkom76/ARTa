@@ -12,7 +12,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { SearchIcon, EyeIcon, PrinterIcon, ClockIcon, Sparkles, FilterIcon } from 'lucide-react'; // Import PrinterIcon, ClockIcon, Sparkles, FilterIcon
+import { SearchIcon, EyeIcon, PrinterIcon, ClockIcon, Sparkles, FilterIcon, Copy, Check } from 'lucide-react'; // Import PrinterIcon, ClockIcon, Sparkles, FilterIcon, Copy, Check
 import { format, parseISO, startOfDay, endOfDay } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -95,6 +95,7 @@ const RiwayatRegistrasi = () => {
 
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [selectedTagihanForDetail, setSelectedTagihanForDetail] = useState<Tagihan | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   // Refs to track previous values for determining pagination-only changes
   const prevSearchQuery = useRef(searchQuery);
@@ -228,6 +229,39 @@ const RiwayatRegistrasi = () => {
   const handleDetailClick = (tagihan: Tagihan) => {
     setSelectedTagihanForDetail(tagihan);
     setIsDetailModalOpen(true);
+  };
+
+  const handleCopyUraian = async (uraian: string, id: string) => {
+    try {
+      await navigator.clipboard.writeText(uraian);
+      setCopiedId(id);
+      toast.success('Uraian berhasil disalin!');
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch (error) {
+      toast.error('Gagal menyalin uraian');
+    }
+  };
+
+  const handleCopySkpd = async (skpd: string, id: string) => {
+    try {
+      await navigator.clipboard.writeText(skpd);
+      setCopiedId(id + '_skpd');
+      toast.success('Nama SKPD berhasil disalin!');
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch (error) {
+      toast.error('Gagal menyalin nama SKPD');
+    }
+  };
+
+  const handleCopyJumlah = async (jumlah: number, id: string) => {
+    try {
+      await navigator.clipboard.writeText(jumlah.toString());
+      setCopiedId(id + '_jumlah');
+      toast.success('Jumlah kotor berhasil disalin!');
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch (error) {
+      toast.error('Gagal menyalin jumlah kotor');
+    }
   };
 
   const totalPages = itemsPerPage === -1 ? 1 : Math.ceil(totalItems / itemsPerPage);
@@ -365,17 +399,17 @@ const RiwayatRegistrasi = () => {
 
         <div className="overflow-x-auto">
           <Table><TableHeader><TableRow>
-            <TableHead className="w-[50px]">No.</TableHead><TableHead>Waktu Registrasi</TableHead><TableHead>Nomor Registrasi</TableHead><TableHead>Nomor SPM</TableHead><TableHead>Nama SKPD</TableHead><TableHead>Jumlah Kotor</TableHead><TableHead>Status Tagihan</TableHead><TableHead className="text-center">Aksi</TableHead>
+            <TableHead className="w-[50px]">No.</TableHead><TableHead>Waktu Registrasi</TableHead><TableHead>Nomor Registrasi</TableHead><TableHead>Nomor SPM</TableHead><TableHead>Nama SKPD</TableHead><TableHead>Uraian</TableHead><TableHead>Jumlah Kotor</TableHead><TableHead>Status Tagihan</TableHead><TableHead className="text-center">Aksi</TableHead>
           </TableRow></TableHeader><TableBody>
               {loadingData && !loadingPagination ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                  <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
                     Memuat data riwayat registrasi...
                   </TableCell>
                 </TableRow>
               ) : tagihanList.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center text-muted-foreground">
+                  <TableCell colSpan={9} className="text-center text-muted-foreground">
                     Tidak ada data riwayat registrasi.
                   </TableCell>
                 </TableRow>
@@ -393,7 +427,54 @@ const RiwayatRegistrasi = () => {
                           <p>{tagihan.nomor_spm}</p>
                         </TooltipContent>
                       </Tooltip>
-                    </TableCell><TableCell>{tagihan.nama_skpd}</TableCell><TableCell>Rp{tagihan.jumlah_kotor.toLocaleString('id-ID')}</TableCell><TableCell><StatusBadge status={tagihan.status_tagihan} /></TableCell><TableCell className="text-center">
+                    </TableCell><TableCell className="relative group/skpd">
+                      <div className="pr-8">{tagihan.nama_skpd}</div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 absolute top-1 right-1 opacity-0 group-hover/skpd:opacity-100 transition-opacity hover:bg-slate-100 dark:hover:bg-slate-800"
+                        onClick={() => handleCopySkpd(tagihan.nama_skpd, tagihan.id_tagihan)}
+                        title="Salin nama SKPD"
+                      >
+                        {copiedId === tagihan.id_tagihan + '_skpd' ? (
+                          <Check className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                        ) : (
+                          <Copy className="h-3.5 w-3.5 text-slate-500 dark:text-slate-400" />
+                        )}
+                      </Button>
+                    </TableCell><TableCell className="min-w-[280px] relative group/uraian">
+                      <div className="pr-8">{tagihan.uraian || '-'}</div>
+                      {tagihan.uraian && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 absolute top-1 right-1 opacity-0 group-hover/uraian:opacity-100 transition-opacity hover:bg-slate-100 dark:hover:bg-slate-800"
+                          onClick={() => handleCopyUraian(tagihan.uraian, tagihan.id_tagihan)}
+                          title="Salin uraian"
+                        >
+                          {copiedId === tagihan.id_tagihan ? (
+                            <Check className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                          ) : (
+                            <Copy className="h-3.5 w-3.5 text-slate-500 dark:text-slate-400" />
+                          )}
+                        </Button>
+                      )}
+                    </TableCell><TableCell className="relative group/jumlah">
+                      <div className="pr-8">Rp{tagihan.jumlah_kotor.toLocaleString('id-ID')}</div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 absolute top-1 right-1 opacity-0 group-hover/jumlah:opacity-100 transition-opacity hover:bg-slate-100 dark:hover:bg-slate-800"
+                        onClick={() => handleCopyJumlah(tagihan.jumlah_kotor, tagihan.id_tagihan)}
+                        title="Salin jumlah kotor"
+                      >
+                        {copiedId === tagihan.id_tagihan + '_jumlah' ? (
+                          <Check className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                        ) : (
+                          <Copy className="h-3.5 w-3.5 text-slate-500 dark:text-slate-400" />
+                        )}
+                      </Button>
+                    </TableCell><TableCell><StatusBadge status={tagihan.status_tagihan} /></TableCell><TableCell className="text-center">
                       <Button
                         variant="ghost"
                         size="icon"

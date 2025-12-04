@@ -17,6 +17,8 @@ import AddUserDialog from '@/components/AddUserDialog';
 import DeleteConfirmationDialog from '@/components/DeleteConfirmationDialog';
 import { Input } from '@/components/ui/input';
 import useDebounce from '@/hooks/use-debounce';
+import { formatDistanceToNow, parseISO } from 'date-fns';
+import { id as localeId } from 'date-fns/locale';
 import {
   Pagination,
   PaginationContent,
@@ -47,7 +49,8 @@ interface UserProfile {
   asal_skpd: string;
   peran: string;
   email: string;
-  is_active: boolean; // Add is_active to the interface
+  is_active: boolean;
+  last_active?: string; // Add last_active timestamp
 }
 
 const AdminUsers = () => {
@@ -102,7 +105,7 @@ const AdminUsers = () => {
     try {
       let query = supabase
         .from('user_profiles_with_email')
-        .select('id, nama_lengkap, asal_skpd, peran, email, is_active', { count: 'exact' }); // Select is_active
+        .select('id, nama_lengkap, asal_skpd, peran, email, is_active, last_active', { count: 'exact' });
 
       if (debouncedSearchQuery) {
         query = query.or(
@@ -141,7 +144,8 @@ const AdminUsers = () => {
         asal_skpd: user.asal_skpd,
         peran: user.peran,
         email: user.email || 'N/A',
-        is_active: user.is_active, // Map is_active
+        is_active: user.is_active,
+        last_active: user.last_active,
       }));
 
       setUsers(usersWithEmail);
@@ -422,13 +426,14 @@ const AdminUsers = () => {
                   <TableHead className="font-semibold text-slate-700 dark:text-slate-300">Email</TableHead>
                   <TableHead className="font-semibold text-slate-700 dark:text-slate-300">Asal SKPD</TableHead>
                   <TableHead className="font-semibold text-slate-700 dark:text-slate-300">Peran</TableHead>
+                  <TableHead className="font-semibold text-slate-700 dark:text-slate-300">Terakhir Aktif</TableHead>
                   <TableHead className="text-center font-semibold text-slate-700 dark:text-slate-300">Aksi</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loadingUsers && !loadingPagination ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center py-12">
+                    <TableCell colSpan={6} className="text-center py-12">
                       <div className="flex flex-col items-center gap-3">
                         <div className="relative w-12 h-12">
                           <div className="absolute inset-0 rounded-full border-4 border-emerald-200 dark:border-emerald-900"></div>
@@ -440,7 +445,7 @@ const AdminUsers = () => {
                   </TableRow>
                 ) : users.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center py-12">
+                    <TableCell colSpan={6} className="text-center py-12">
                       <div className="flex flex-col items-center gap-3">
                         <div className="p-4 rounded-full bg-slate-100 dark:bg-slate-800">
                           <UsersIcon className="h-8 w-8 text-slate-400 dark:text-slate-600" />
@@ -459,6 +464,14 @@ const AdminUsers = () => {
                       <TableCell className="text-slate-700 dark:text-slate-300">{userProfile.email}</TableCell>
                       <TableCell className="text-slate-700 dark:text-slate-300">{userProfile.asal_skpd || '-'}</TableCell>
                       <TableCell className="text-slate-700 dark:text-slate-300">{userProfile.peran || '-'}</TableCell>
+                      <TableCell className="text-slate-700 dark:text-slate-300">
+                        {userProfile.last_active
+                          ? formatDistanceToNow(parseISO(userProfile.last_active), {
+                            addSuffix: true,
+                            locale: localeId
+                          })
+                          : 'Belum pernah aktif'}
+                      </TableCell>
                       <TableCell className="text-center">
                         <div className="flex justify-center gap-1.5">
                           <TooltipProvider>
@@ -486,8 +499,8 @@ const AdminUsers = () => {
                                     variant="outline"
                                     size="icon"
                                     className={`h-8 w-8 transition-colors ${userProfile.is_active
-                                        ? 'hover:bg-red-50 hover:border-red-500 hover:text-red-600 dark:hover:bg-red-950 dark:hover:border-red-500 dark:hover:text-red-400'
-                                        : 'hover:bg-green-50 hover:border-green-500 hover:text-green-600 dark:hover:bg-green-950 dark:hover:border-green-500 dark:hover:text-green-400'
+                                      ? 'hover:bg-red-50 hover:border-red-500 hover:text-red-600 dark:hover:bg-red-950 dark:hover:border-red-500 dark:hover:text-red-400'
+                                      : 'hover:bg-green-50 hover:border-green-500 hover:text-green-600 dark:hover:bg-green-950 dark:hover:border-green-500 dark:hover:text-green-400'
                                       }`}
                                     onClick={() => handleToggleUserStatus(userProfile)}
                                   >
