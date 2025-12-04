@@ -51,6 +51,7 @@ interface ActivityLogItem {
 const actionOptions = [
   'Semua Aksi',
   'TAGIHAN_CREATED',
+  'TAGIHAN_UPDATED',
   'STATUS_CHANGED',
   'PROFILE_UPDATED',
   'USER_DELETED',

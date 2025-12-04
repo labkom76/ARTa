@@ -114,6 +114,47 @@ const EditTagihanVerifikatorDialog: React.FC<EditTagihanVerifikatorDialogProps> 
 
             if (error) throw error;
 
+            // Log activity to database - only record changed fields
+            try {
+                const { data: { user } } = await supabase.auth.getUser();
+
+                // Build changes object with only modified fields
+                const perubahan: Record<string, { dari: any; menjadi: any }> = {};
+
+                if (editingTagihan.uraian !== values.uraian) {
+                    perubahan.uraian = { dari: editingTagihan.uraian, menjadi: values.uraian };
+                }
+                if (editingTagihan.jumlah_kotor !== values.jumlah_kotor) {
+                    perubahan.jumlah_kotor = { dari: editingTagihan.jumlah_kotor, menjadi: values.jumlah_kotor };
+                }
+                if (editingTagihan.jenis_spm !== values.jenis_spm) {
+                    perubahan.jenis_spm = { dari: editingTagihan.jenis_spm, menjadi: values.jenis_spm };
+                }
+                if (editingTagihan.jenis_tagihan !== values.jenis_tagihan) {
+                    perubahan.jenis_tagihan = { dari: editingTagihan.jenis_tagihan, menjadi: values.jenis_tagihan };
+                }
+                if (editingTagihan.sumber_dana !== values.sumber_dana) {
+                    perubahan.sumber_dana = { dari: editingTagihan.sumber_dana, menjadi: values.sumber_dana };
+                }
+
+                // Only log if there are actual changes
+                if (Object.keys(perubahan).length > 0) {
+                    await supabase.from('activity_log').insert({
+                        user_id: user?.id,
+                        user_role: 'Staf Verifikator',
+                        action: 'TAGIHAN_UPDATED',
+                        tagihan_terkait: editingTagihan.id_tagihan,
+                        details: {
+                            nomor_spm: editingTagihan.nomor_spm,
+                            perubahan
+                        }
+                    });
+                }
+            } catch (logError: any) {
+                console.error('Failed to log activity:', logError);
+                // Don't throw - logging failure shouldn't fail the update
+            }
+
             toast.success('Tagihan berhasil diperbarui!');
             onTagihanUpdated();
             onClose();
