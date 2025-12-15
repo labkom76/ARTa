@@ -10,12 +10,14 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { PlusCircleIcon, EditIcon, Trash2Icon, SearchIcon, BanIcon, CheckCircleIcon, ArrowRightLeftIcon, UsersIcon, ChevronLeftIcon, ChevronRightIcon, FilterIcon } from 'lucide-react';
+import { PlusCircleIcon, EditIcon, Trash2Icon, SearchIcon, BanIcon, CheckCircleIcon, ArrowRightLeftIcon, UsersIcon, ChevronLeftIcon, ChevronRightIcon, FilterIcon, Trash2, UserCheck, UserX } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
 import AddUserDialog from '@/components/AddUserDialog';
 import DeleteConfirmationDialog from '@/components/DeleteConfirmationDialog';
+import ConfirmationDialog from '@/components/ConfirmationDialog';
 import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
 import useDebounce from '@/hooks/use-debounce';
 import { formatDistanceToNow, parseISO } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
@@ -77,6 +79,15 @@ const AdminUsers = () => {
 
   // State for Transfer Data Modal
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
+
+  // Bulk selection states
+  const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(new Set());
+  const [selectAll, setSelectAll] = useState(false);
+
+  // Bulk action dialog states
+  const [isBulkDeleteDialogOpen, setIsBulkDeleteDialogOpen] = useState(false);
+  const [isBulkActivateDialogOpen, setIsBulkActivateDialogOpen] = useState(false);
+  const [isBulkDeactivateDialogOpen, setIsBulkDeactivateDialogOpen] = useState(false);
 
   // Refs to track previous values for determining pagination-only changes
   const prevSearchQuery = useRef(searchQuery);
@@ -251,6 +262,134 @@ const AdminUsers = () => {
     }
   };
 
+  // Bulk selection handlers
+  const handleSelectAll = (checked: boolean) => {
+    setSelectAll(checked);
+    if (checked) {
+      const allIds = new Set(users.map(u => u.id));
+      setSelectedUserIds(allIds);
+    } else {
+      setSelectedUserIds(new Set());
+    }
+  };
+
+  const handleSelectUser = (userId: string, checked: boolean) => {
+    const newSelected = new Set(selectedUserIds);
+    if (checked) {
+      newSelected.add(userId);
+    } else {
+      newSelected.delete(userId);
+      setSelectAll(false);
+    }
+    setSelectedUserIds(newSelected);
+  };
+
+  // Bulk action handlers
+  const handleBulkDeleteClick = () => {
+    if (selectedUserIds.size === 0) {
+      toast.error('Tidak ada pengguna yang dipilih');
+      return;
+    }
+    setIsBulkDeleteDialogOpen(true);
+  };
+
+  const confirmBulkDelete = async () => {
+    setIsBulkDeleteDialogOpen(false);
+
+    try {
+      let successCount = 0;
+      let errorCount = 0;
+
+      for (const userId of selectedUserIds) {
+        try {
+          const { data, error: invokeError } = await supabase.functions.invoke('delete-user', {
+            body: JSON.stringify({ user_id: userId }),
+          });
+
+          if (invokeError || (data && data.error)) {
+            errorCount++;
+          } else {
+            successCount++;
+          }
+        } catch (err) {
+          errorCount++;
+        }
+      }
+
+      if (successCount > 0) {
+        toast.success(`Berhasil menghapus ${successCount} pengguna`);
+      }
+      if (errorCount > 0) {
+        toast.error(`Gagal menghapus ${errorCount} pengguna`);
+      }
+
+      setSelectedUserIds(new Set());
+      setSelectAll(false);
+      fetchUsers();
+    } catch (error: any) {
+      console.error('Error bulk deleting users:', error.message);
+      toast.error('Gagal menghapus pengguna: ' + error.message);
+    }
+  };
+
+  const handleBulkActivateClick = () => {
+    if (selectedUserIds.size === 0) {
+      toast.error('Tidak ada pengguna yang dipilih');
+      return;
+    }
+    setIsBulkActivateDialogOpen(true);
+  };
+
+  const confirmBulkActivate = async () => {
+    setIsBulkActivateDialogOpen(false);
+
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ is_active: true })
+        .in('id', Array.from(selectedUserIds));
+
+      if (error) throw error;
+
+      toast.success(`Berhasil mengaktifkan ${selectedUserIds.size} pengguna`);
+      setSelectedUserIds(new Set());
+      setSelectAll(false);
+      fetchUsers();
+    } catch (error: any) {
+      console.error('Error bulk activating users:', error.message);
+      toast.error('Gagal mengaktifkan pengguna: ' + error.message);
+    }
+  };
+
+  const handleBulkDeactivateClick = () => {
+    if (selectedUserIds.size === 0) {
+      toast.error('Tidak ada pengguna yang dipilih');
+      return;
+    }
+    setIsBulkDeactivateDialogOpen(true);
+  };
+
+  const confirmBulkDeactivate = async () => {
+    setIsBulkDeactivateDialogOpen(false);
+
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ is_active: false })
+        .in('id', Array.from(selectedUserIds));
+
+      if (error) throw error;
+
+      toast.success(`Berhasil menonaktifkan ${selectedUserIds.size} pengguna`);
+      setSelectedUserIds(new Set());
+      setSelectAll(false);
+      fetchUsers();
+    } catch (error: any) {
+      console.error('Error bulk deactivating users:', error.message);
+      toast.error('Gagal menonaktifkan pengguna: ' + error.message);
+    }
+  };
+
   const totalPages = itemsPerPage === -1 ? 1 : Math.ceil(totalItems / itemsPerPage);
 
   if (loadingPage) {
@@ -408,13 +547,49 @@ const AdminUsers = () => {
       {/* Table Section */}
       <Card className="border-slate-200 dark:border-slate-800 shadow-lg hover:shadow-xl transition-shadow duration-300">
         <CardHeader className="border-b border-slate-200 dark:border-slate-800 bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
-          <div className="flex items-center gap-2">
-            <div className="p-1.5 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 shadow-sm">
-              <UsersIcon className="h-4 w-4 text-white" />
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 shadow-sm">
+                <UsersIcon className="h-4 w-4 text-white" />
+              </div>
+              <CardTitle className="text-lg font-bold text-slate-900 dark:text-white">
+                Daftar Pengguna
+              </CardTitle>
             </div>
-            <CardTitle className="text-lg font-bold text-slate-900 dark:text-white">
-              Daftar Pengguna
-            </CardTitle>
+            {selectedUserIds.size > 0 && (
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-slate-600 dark:text-slate-400">
+                  {selectedUserIds.size} dipilih
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleBulkActivateClick}
+                  className="gap-1.5 hover:bg-green-50 hover:border-green-500 hover:text-green-600 dark:hover:bg-green-950 dark:hover:border-green-500 dark:hover:text-green-400"
+                >
+                  <UserCheck className="h-4 w-4" />
+                  Aktifkan
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleBulkDeactivateClick}
+                  className="gap-1.5 hover:bg-orange-50 hover:border-orange-500 hover:text-orange-600 dark:hover:bg-orange-950 dark:hover:border-orange-500 dark:hover:text-orange-400"
+                >
+                  <UserX className="h-4 w-4" />
+                  Nonaktifkan
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleBulkDeleteClick}
+                  className="gap-1.5 hover:bg-red-50 hover:border-red-500 hover:text-red-600 dark:hover:bg-red-950 dark:hover:border-red-500 dark:hover:text-red-400"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Hapus
+                </Button>
+              </div>
+            )}
           </div>
         </CardHeader>
         <CardContent className="p-0">
@@ -422,6 +597,13 @@ const AdminUsers = () => {
             <Table>
               <TableHeader>
                 <TableRow className="bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-50 dark:hover:bg-slate-900/50">
+                  <TableHead className="w-[50px]">
+                    <Checkbox
+                      checked={selectAll}
+                      onCheckedChange={handleSelectAll}
+                      aria-label="Select all"
+                    />
+                  </TableHead>
                   <TableHead className="font-semibold text-slate-700 dark:text-slate-300">Nama Lengkap</TableHead>
                   <TableHead className="font-semibold text-slate-700 dark:text-slate-300">Email</TableHead>
                   <TableHead className="font-semibold text-slate-700 dark:text-slate-300">Asal SKPD</TableHead>
@@ -433,7 +615,7 @@ const AdminUsers = () => {
               <TableBody>
                 {loadingUsers && !loadingPagination ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-12">
+                    <TableCell colSpan={7} className="text-center py-12">
                       <div className="flex flex-col items-center gap-3">
                         <div className="relative w-12 h-12">
                           <div className="absolute inset-0 rounded-full border-4 border-emerald-200 dark:border-emerald-900"></div>
@@ -445,7 +627,7 @@ const AdminUsers = () => {
                   </TableRow>
                 ) : users.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-12">
+                    <TableCell colSpan={7} className="text-center py-12">
                       <div className="flex flex-col items-center gap-3">
                         <div className="p-4 rounded-full bg-slate-100 dark:bg-slate-800">
                           <UsersIcon className="h-8 w-8 text-slate-400 dark:text-slate-600" />
@@ -460,6 +642,13 @@ const AdminUsers = () => {
                 ) : (
                   users.map((userProfile) => (
                     <TableRow key={userProfile.id} className="hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
+                      <TableCell>
+                        <Checkbox
+                          checked={selectedUserIds.has(userProfile.id)}
+                          onCheckedChange={(checked) => handleSelectUser(userProfile.id, checked as boolean)}
+                          aria-label={`Select ${userProfile.nama_lengkap}`}
+                        />
+                      </TableCell>
                       <TableCell className="font-semibold text-slate-900 dark:text-white">{userProfile.nama_lengkap || '-'}</TableCell>
                       <TableCell className="text-slate-700 dark:text-slate-300">{userProfile.email}</TableCell>
                       <TableCell className="text-slate-700 dark:text-slate-300">{userProfile.asal_skpd || '-'}</TableCell>
@@ -597,7 +786,40 @@ const AdminUsers = () => {
       <TransferUserDataDialog
         isOpen={isTransferModalOpen}
         onClose={() => setIsTransferModalOpen(false)}
-        onTransferSuccess={fetchUsers} // Pass fetchUsers to refresh the list
+        onTransferSuccess={fetchUsers}
+      />
+
+      {/* Bulk Delete Confirmation Dialog */}
+      <DeleteConfirmationDialog
+        isOpen={isBulkDeleteDialogOpen}
+        onClose={() => setIsBulkDeleteDialogOpen(false)}
+        onConfirm={confirmBulkDelete}
+        title="Konfirmasi Hapus Massal"
+        message={`Apakah Anda yakin ingin menghapus ${selectedUserIds.size} pengguna yang dipilih? Tindakan ini tidak dapat diurungkan.`}
+      />
+
+      {/* Bulk Activate Confirmation Dialog */}
+      <ConfirmationDialog
+        isOpen={isBulkActivateDialogOpen}
+        onClose={() => setIsBulkActivateDialogOpen(false)}
+        onConfirm={confirmBulkActivate}
+        title="Konfirmasi Aktifkan Massal"
+        message={`Apakah Anda yakin ingin mengaktifkan ${selectedUserIds.size} pengguna yang dipilih?`}
+        confirmText="Aktifkan"
+        confirmIcon={UserCheck}
+        variant="success"
+      />
+
+      {/* Bulk Deactivate Confirmation Dialog */}
+      <ConfirmationDialog
+        isOpen={isBulkDeactivateDialogOpen}
+        onClose={() => setIsBulkDeactivateDialogOpen(false)}
+        onConfirm={confirmBulkDeactivate}
+        title="Konfirmasi Nonaktifkan Massal"
+        message={`Apakah Anda yakin ingin menonaktifkan ${selectedUserIds.size} pengguna yang dipilih?`}
+        confirmText="Nonaktifkan"
+        confirmIcon={UserX}
+        variant="warning"
       />
     </div>
   );
