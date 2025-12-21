@@ -30,6 +30,7 @@ import {
     TooltipProvider,
     TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { getJenisTagihanCode } from '@/utils/spmGenerator';
 
 interface Tagihan {
     id_tagihan: string;
@@ -111,25 +112,34 @@ const EditTagihanVerifikatorDialog: React.FC<EditTagihanVerifikatorDialogProps> 
         }
     }, [isOpen, editingTagihan, form]);
 
-    // Compute preview SPM with current nomor urut
+    // Watch jenis_tagihan for real-time SPM update
+    const jenisTagihanWatch = form.watch('jenis_tagihan');
+
+    // Compute preview SPM with current nomor urut and jenis tagihan
     const previewSpm = React.useMemo(() => {
         if (!editingTagihan?.nomor_spm || !nomorUrut) return editingTagihan?.nomor_spm || '';
         const parts = editingTagihan.nomor_spm.split('/');
         if (parts.length >= 3) {
-            parts[2] = nomorUrut.padStart(6, '0');
+            parts[2] = nomorUrut.padStart(6, '0'); // Update nomor urut (segment 3)
+        }
+        if (parts.length >= 4 && jenisTagihanWatch) {
+            parts[3] = getJenisTagihanCode(jenisTagihanWatch); // Update jenis tagihan code (segment 4)
         }
         return parts.join('/');
-    }, [editingTagihan?.nomor_spm, nomorUrut]);
+    }, [editingTagihan?.nomor_spm, nomorUrut, jenisTagihanWatch]);
 
     const onSubmit = async (values: EditTagihanFormValues) => {
         if (!editingTagihan) return;
 
         setIsSubmitting(true);
         try {
-            // Reconstruct full SPM number with new nomor urut
+            // Reconstruct full SPM number with new nomor urut and jenis tagihan
             const parts = editingTagihan.nomor_spm.split('/');
             if (parts.length >= 3) {
                 parts[2] = nomorUrut.padStart(6, '0'); // Replace 3rd segment with new nomor urut
+            }
+            if (parts.length >= 4) {
+                parts[3] = getJenisTagihanCode(values.jenis_tagihan); // Replace 4th segment with new jenis tagihan code
             }
             const fullNomorSpm = parts.join('/');
 
@@ -455,3 +465,4 @@ const EditTagihanVerifikatorDialog: React.FC<EditTagihanVerifikatorDialogProps> 
 };
 
 export default EditTagihanVerifikatorDialog;
+

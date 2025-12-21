@@ -110,11 +110,11 @@ const verificationFormSchema = z.object({
   ).min(1, { message: 'Checklist verifikasi tidak boleh kosong.' }),
   durasi_penahanan: z.preprocess(
     (val) => Number(val),
-    z.number().int().min(1).max(3, { message: 'Durasi penahanan harus antara 1 hingga 3 hari.' }).optional()
+    z.number().int().min(1).max(7, { message: 'Durasi penahanan harus antara 1 hingga 7 hari.' }).optional()
   ),
   allow_skpd_edit: z.boolean().optional(),
 }).superRefine((data, ctx) => {
-  if (data.status_keputusan === 'Dikembalikan' && (!data.durasi_penahanan || data.durasi_penahanan < 1 || data.durasi_penahanan > 3)) {
+  if (data.status_keputusan === 'Dikembalikan' && (!data.durasi_penahanan || data.durasi_penahanan < 1 || data.durasi_penahanan > 7)) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       message: 'Durasi Penahanan wajib dipilih jika status dikembalikan.',
@@ -327,7 +327,7 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
           const verificationDate = parseISO(tagihan.waktu_verifikasi);
           const diffDays = differenceInDays(deadlineDate, verificationDate);
 
-          if (diffDays >= 1 && diffDays <= 3) {
+          if (diffDays >= 1 && diffDays <= 7) {
             initialValues.durasi_penahanan = diffDays;
           } else {
             initialValues.durasi_penahanan = 1;
@@ -581,6 +581,10 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
                               <SelectItem value="1">Default (Final)</SelectItem>
                               <SelectItem value="2">2 Hari</SelectItem>
                               <SelectItem value="3">3 Hari</SelectItem>
+                              <SelectItem value="4">4 Hari</SelectItem>
+                              <SelectItem value="5">5 Hari</SelectItem>
+                              <SelectItem value="6">6 Hari</SelectItem>
+                              <SelectItem value="7">7 Hari</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
@@ -591,7 +595,7 @@ const VerifikasiTagihanDialog: React.FC<VerifikasiTagihanDialogProps> = ({ isOpe
                         {form.formState.errors.durasi_penahanan.message}
                       </p>
                     )}
-                    {(Number(durasiPenahananWatch) === 2 || Number(durasiPenahananWatch) === 3) && (
+                    {(Number(durasiPenahananWatch) >= 2 && Number(durasiPenahananWatch) <= 7) && (
                       <div className="flex items-center space-x-2 mt-4 p-3 bg-amber-50 dark:bg-amber-950/20 rounded-lg border border-amber-200 dark:border-amber-800/50">
                         <Controller
                           name="allow_skpd_edit"
