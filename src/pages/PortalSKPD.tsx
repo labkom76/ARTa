@@ -27,23 +27,23 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { toast } from 'sonner';
-import { useForm } from 'react-hook-form';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { format, parseISO, startOfMonth, endOfMonth, isWithinInterval, differenceInDays } from 'date-fns'; // Import format, differenceInDays, parseISO
+import { id as localeId } from 'date-fns/locale'; // Import locale for Indonesian date formatting, renamed to localeId
+import { generateNomorSpm, getJenisTagihanCode } from '@/utils/spmGenerator'; // Import utility functions
+import StatusBadge from '@/components/StatusBadge'; // Import StatusBadge
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { PlusCircleIcon, SearchIcon, EditIcon, Trash2Icon, FileDownIcon, ArrowUp, ArrowDown, FilePenLine, EyeIcon, ClipboardListIcon, Sparkles, Undo2 } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import DeleteConfirmationDialog from '@/components/DeleteConfirmationDialog';
 import TagihanDetailDialog from '@/components/TagihanDetailDialog'; // Import the new detail dialog
-import { format, differenceInDays, parseISO } from 'date-fns'; // Import format, differenceInDays, parseISO
-import { id as localeId } from 'date-fns/locale'; // Import locale for Indonesian date formatting, renamed to localeId
-import { generateNomorSpm, getJenisTagihanCode } from '@/utils/spmGenerator'; // Import utility functions
-import StatusBadge from '@/components/StatusBadge'; // Import StatusBadge
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-  TooltipProvider, // Import TooltipProvider
-} from "@/components/ui/tooltip"; // Import Tooltip components
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'; // Import useLocation and useNavigate
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'; // Import Card components
 import * as XLSX from 'xlsx'; // Import XLSX library
@@ -1048,18 +1048,26 @@ const PortalSKPD = () => {
               </div>
             )}
 
-            {/* Pratinjau Nomor SPM Otomatis */}
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="nomor_spm_otomatis" className="text-right">
+              <Label className="text-right">
                 Nomor SPM (Otomatis)
               </Label>
-              <Input
-                id="nomor_spm_otomatis"
-                value={generatedNomorSpm || 'Membuat Nomor SPM...'}
-                readOnly
-                className="col-span-3 font-mono text-sm focus-visible:ring-emerald-500"
-                disabled={true} // Always disabled as it's a preview
-              />
+              <div className="col-span-3">
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="p-3 rounded-lg bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800 cursor-help">
+                        <p className="font-mono text-sm font-semibold text-emerald-700 dark:text-emerald-400 truncate leading-relaxed">
+                          {generatedNomorSpm || 'Membuat Nomor SPM...'}
+                        </p>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="font-mono">{generatedNomorSpm || 'Membuat Nomor SPM...'}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
             </div>
             {/* Input Nomor Urut Tagihan */}
             <div className="grid grid-cols-4 items-center gap-4">
