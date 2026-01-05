@@ -50,6 +50,15 @@ import * as XLSX from 'xlsx'; // Import XLSX library
 import Countdown from 'react-countdown'; // Import Countdown
 import { Label } from '@/components/ui/label'; // Import Label component
 
+import { Calendar } from '@/components/ui/calendar'; // Import Calendar
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'; // Import Popover
+import { cn } from '@/lib/utils'; // Import cn utility
+import { CalendarIcon } from 'lucide-react'; // Import CalendarIcon
+
 // Zod schema for form validation
 const formSchema = z.object({
   uraian: z.string().min(1, { message: 'Uraian wajib diisi.' }).max(250, { message: 'Uraian tidak boleh lebih dari 250 karakter.' }),
@@ -65,6 +74,9 @@ const formSchema = z.object({
     z.number().min(1, { message: 'Nomor Urut Tagihan wajib diisi dan harus angka positif.' })
   ),
   sumber_dana: z.string().min(1, { message: 'Sumber Dana wajib dipilih.' }), // New field for Sumber Dana
+  tanggal_spm: z.date({
+    required_error: "Tanggal SPM wajib diisi.",
+  }),
 });
 
 type TagihanFormValues = z.infer<typeof formSchema>;
@@ -106,6 +118,7 @@ interface Tagihan {
   catatan_registrasi?: string; // NEW: Add catatan_registrasi
   skpd_can_edit?: boolean; // NEW: Add skpd_can_edit
   tenggat_perbaikan?: string; // Add tenggat_perbaikan
+  tanggal_spm?: string; // Add tanggal_spm to Tagihan interface
 }
 
 // --- FUNGSI BARU: isNomorSpmDuplicate (MODIFIED) ---
@@ -171,6 +184,7 @@ const PortalSKPD = () => {
   const [kodeSkpd, setKodeSkpd] = useState<string | null>(null); // New state for kode_skpd
   const [generatedNomorSpm, setGeneratedNomorSpm] = useState<string | null>(null); // State for generated Nomor SPM
   const [isSubmitting, setIsSubmitting] = useState(false); // Deklarasi state isSubmitting yang hilang
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false); // State for controlling calendar popover
 
   // NEW: State for sorting
   const [sortColumn, setSortColumn] = useState<string>('nomor_urut');
@@ -188,6 +202,7 @@ const PortalSKPD = () => {
       kode_jadwal: '', // Default value for new field
       nomor_urut_tagihan: 1, // Default value for new field
       sumber_dana: '', // Default value for new field
+      // tanggal_spm field doesn't need a default value if it's required, or can be undefined initially
     },
   });
 
@@ -415,6 +430,7 @@ const PortalSKPD = () => {
           kode_jadwal: editingTagihan.kode_jadwal || '',
           nomor_urut_tagihan: editingTagihan.nomor_urut || 1, // Menggunakan nomor_urut langsung
           sumber_dana: editingTagihan.sumber_dana || '', // Set sumber_dana for editing
+          tanggal_spm: editingTagihan.tanggal_spm ? parseISO(editingTagihan.tanggal_spm) : undefined, // Pre-fill Date
         });
       } else {
         form.reset({
@@ -425,6 +441,7 @@ const PortalSKPD = () => {
           kode_jadwal: '',
           nomor_urut_tagihan: 1, // Default for new tagihan
           sumber_dana: '', // Default for new tagihan
+          tanggal_spm: undefined, // Reset Date
         });
       }
     }
@@ -458,6 +475,9 @@ const PortalSKPD = () => {
       }
 
       let finalNomorSpm: string | null = null;
+      // Format date for handling (though Supabase handles JS Date objects well usually, let's be safe if needed or just pass object)
+      // Supabase supports ISO strings. values.tanggal_spm is a Date object.
+      const formattedTanggalSpm = values.tanggal_spm ? format(values.tanggal_spm, 'yyyy-MM-dd') : null;
 
       if (editingTagihan) {
         // Logic for UPDATE
@@ -506,6 +526,7 @@ const PortalSKPD = () => {
           nomor_urut: values.nomor_urut_tagihan,
           nomor_spm: finalNomorSpm,
           sumber_dana: values.sumber_dana,
+          tanggal_spm: formattedTanggalSpm, // Add tanggal_spm to update
           catatan_registrasi: null,
           skpd_can_edit: false,
         };
@@ -583,6 +604,7 @@ const PortalSKPD = () => {
           kode_jadwal: values.kode_jadwal,
           nomor_urut: values.nomor_urut_tagihan,
           sumber_dana: values.sumber_dana,
+          tanggal_spm: formattedTanggalSpm, // Add tanggal_spm to insert
           status_tagihan: 'Menunggu Registrasi',
         });
 
@@ -672,6 +694,7 @@ const PortalSKPD = () => {
     const dataToExport = sortedTagihanList.map(tagihan => ({
       'Nomor SPM': tagihan.nomor_spm,
       'Nama SKPD': tagihan.nama_skpd,
+      'Tanggal SPM': tagihan.tanggal_spm ? format(parseISO(tagihan.tanggal_spm), 'dd MMMM yyyy', { locale: localeId }) : '-', // Add Tanggal SPM
       'Jenis SPM': tagihan.jenis_spm,
       'Jenis Tagihan': tagihan.jenis_tagihan,
       'Sumber Dana': tagihan.sumber_dana || '-',
@@ -1056,6 +1079,51 @@ const PortalSKPD = () => {
                 </p>
               )}
             </div>
+            {/* Tanggal SPM - NEW */}
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="tanggal_spm" className="text-right">
+                Tanggal SPM
+              </Label>
+              <div className="col-span-3">
+                <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant={"outline"}
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !form.watch("tanggal_spm") && "text-muted-foreground"
+                      )}
+                      disabled={!isAccountVerified || !profile?.is_active}
+                      onClick={() => setIsCalendarOpen(true)} // Explicitly open on click
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {form.watch("tanggal_spm") ? (
+                        format(form.watch("tanggal_spm")!, "dd MMMM yyyy", { locale: localeId })
+                      ) : (
+                        <span>Pilih Tanggal</span>
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={form.watch("tanggal_spm") as Date}
+                      onSelect={(date) => {
+                        form.setValue("tanggal_spm", date as Date);
+                        setIsCalendarOpen(false); // Close calendar on select
+                      }}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+                {form.formState.errors.tanggal_spm && (
+                  <p className="text-red-500 text-sm mt-1">
+                    {form.formState.errors.tanggal_spm.message}
+                  </p>
+                )}
+              </div>
+            </div>
+
             {/* Jadwal Penganggaran */}
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="kode_jadwal" className="text-right">
