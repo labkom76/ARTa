@@ -30,6 +30,7 @@ import {
     TooltipProvider,
     TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { getJenisTagihanCode } from '@/utils/spmGenerator';
 
 interface Tagihan {
     id_tagihan: string;
@@ -51,6 +52,7 @@ interface EditTagihanVerifikatorDialogProps {
 }
 
 const formSchema = z.object({
+    nomor_spm: z.string().min(1, { message: 'Nomor SPM wajib diisi.' }),
     uraian: z.string().min(1, { message: 'Uraian wajib diisi.' }),
     jumlah_kotor: z.preprocess(
         (val) => Number(val),
@@ -70,10 +72,13 @@ const EditTagihanVerifikatorDialog: React.FC<EditTagihanVerifikatorDialogProps> 
     editingTagihan
 }) => {
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [nomorUrut, setNomorUrut] = useState<string>('');
+    const [copiedSpm, setCopiedSpm] = useState(false);
 
     const form = useForm<EditTagihanFormValues>({
         resolver: zodResolver(formSchema),
         defaultValues: {
+            nomor_spm: '',
             uraian: '',
             jumlah_kotor: 0,
             jenis_spm: '',
@@ -84,7 +89,17 @@ const EditTagihanVerifikatorDialog: React.FC<EditTagihanVerifikatorDialogProps> 
 
     useEffect(() => {
         if (isOpen && editingTagihan) {
+            // Parse SPM number to extract nomor urut (3rd segment)
+            const parts = editingTagihan.nomor_spm.split('/');
+            if (parts.length >= 3) {
+                // Remove leading zeros for display in input
+                const nomorUrutWithZeros = parts[2];
+                const nomorUrutWithoutZeros = parseInt(nomorUrutWithZeros, 10).toString();
+                setNomorUrut(nomorUrutWithoutZeros);
+            }
+
             form.reset({
+                nomor_spm: editingTagihan.nomor_spm,
                 uraian: editingTagihan.uraian,
                 jumlah_kotor: editingTagihan.jumlah_kotor,
                 jenis_spm: editingTagihan.jenis_spm,
@@ -93,17 +108,46 @@ const EditTagihanVerifikatorDialog: React.FC<EditTagihanVerifikatorDialogProps> 
             });
         } else if (isOpen && !editingTagihan) {
             form.reset();
+            setNomorUrut('');
         }
     }, [isOpen, editingTagihan, form]);
+
+    // Watch jenis_tagihan for real-time SPM update
+    const jenisTagihanWatch = form.watch('jenis_tagihan');
+
+    // Compute preview SPM with current nomor urut and jenis tagihan
+    const previewSpm = React.useMemo(() => {
+        if (!editingTagihan?.nomor_spm || !nomorUrut) return editingTagihan?.nomor_spm || '';
+        const parts = editingTagihan.nomor_spm.split('/');
+        if (parts.length >= 3) {
+            parts[2] = nomorUrut.padStart(6, '0'); // Update nomor urut (segment 3)
+        }
+        if (parts.length >= 4 && jenisTagihanWatch) {
+            parts[3] = getJenisTagihanCode(jenisTagihanWatch); // Update jenis tagihan code (segment 4)
+        }
+        return parts.join('/');
+    }, [editingTagihan?.nomor_spm, nomorUrut, jenisTagihanWatch]);
 
     const onSubmit = async (values: EditTagihanFormValues) => {
         if (!editingTagihan) return;
 
         setIsSubmitting(true);
         try {
+            // Reconstruct full SPM number with new nomor urut and jenis tagihan
+            const parts = editingTagihan.nomor_spm.split('/');
+            if (parts.length >= 3) {
+                parts[2] = nomorUrut.padStart(6, '0'); // Replace 3rd segment with new nomor urut
+            }
+            if (parts.length >= 4) {
+                parts[3] = getJenisTagihanCode(values.jenis_tagihan); // Replace 4th segment with new jenis tagihan code
+            }
+            const fullNomorSpm = parts.join('/');
+
             const { error } = await supabase
                 .from('database_tagihan')
                 .update({
+                    nomor_spm: fullNomorSpm,
+                    nomor_urut: parseInt(nomorUrut) || 0,
                     uraian: values.uraian,
                     jumlah_kotor: values.jumlah_kotor,
                     jenis_spm: values.jenis_spm,
@@ -121,6 +165,16 @@ const EditTagihanVerifikatorDialog: React.FC<EditTagihanVerifikatorDialogProps> 
                 // Build changes object with only modified fields
                 const perubahan: Record<string, { dari: any; menjadi: any }> = {};
 
+                // Reconstruct full SPM for comparison
+                const parts = editingTagihan.nomor_spm.split('/');
+                if (parts.length >= 3) {
+                    parts[2] = nomorUrut.padStart(6, '0');
+                }
+                const fullNomorSpm = parts.join('/');
+
+                if (editingTagihan.nomor_spm !== fullNomorSpm) {
+                    perubahan.nomor_spm = { dari: editingTagihan.nomor_spm, menjadi: fullNomorSpm };
+                }
                 if (editingTagihan.uraian !== values.uraian) {
                     perubahan.uraian = { dari: editingTagihan.uraian, menjadi: values.uraian };
                 }
@@ -177,9 +231,35 @@ const EditTagihanVerifikatorDialog: React.FC<EditTagihanVerifikatorDialogProps> 
                                 Edit Tagihan
                             </DialogTitle>
                         </div>
-                        <DialogDescription className="text-slate-600 dark:text-slate-400">
-                            Perbarui informasi tagihan untuk SPM {editingTagihan?.nomor_spm}
-                        </DialogDescription>
+                        <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-sm text-slate-600 dark:text-slate-400">
+                                Perbarui informasi tagihan untuk SPM
+                            </span>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    navigator.clipboard.writeText(editingTagihan?.nomor_spm || '');
+                                    setCopiedSpm(true);
+                                    toast.success('Nomor SPM berhasil disalin!');
+                                    setTimeout(() => setCopiedSpm(false), 2000);
+                                }}
+                                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-100 dark:bg-emerald-900/30 border border-emerald-300 dark:border-emerald-700 hover:bg-emerald-200 dark:hover:bg-emerald-900/50 transition-colors cursor-pointer"
+                                title="Klik untuk menyalin"
+                            >
+                                {copiedSpm ? (
+                                    <svg className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                    </svg>
+                                ) : (
+                                    <svg className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                    </svg>
+                                )}
+                                <code className="font-mono text-xs font-bold text-emerald-900 dark:text-emerald-100">
+                                    {previewSpm}
+                                </code>
+                            </button>
+                        </div>
                     </div>
                 </DialogHeader>
 
@@ -198,19 +278,32 @@ const EditTagihanVerifikatorDialog: React.FC<EditTagihanVerifikatorDialogProps> 
                                 </p>
                             </div>
                             <div className="space-y-1">
-                                <Label className="text-xs text-slate-500 dark:text-slate-400">Nomor SPM</Label>
-                                <TooltipProvider>
-                                    <Tooltip>
-                                        <TooltipTrigger className="w-full text-left">
-                                            <p className="font-mono text-sm font-medium text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-900/50 px-3 py-2 rounded-lg truncate">
-                                                {editingTagihan?.nomor_spm}
-                                            </p>
-                                        </TooltipTrigger>
-                                        <TooltipContent>
-                                            <p className="font-mono">{editingTagihan?.nomor_spm}</p>
-                                        </TooltipContent>
-                                    </Tooltip>
-                                </TooltipProvider>
+                                <Label htmlFor="nomor_urut_spm" className="text-xs text-slate-500 dark:text-slate-400">
+                                    Nomor Urut SPM <span className="text-red-500">*</span>
+                                </Label>
+                                <Input
+                                    id="nomor_urut_spm"
+                                    type="number"
+                                    value={nomorUrut}
+                                    onChange={(e) => {
+                                        const value = e.target.value;
+                                        // Only allow numbers, max 6 digits
+                                        if (/^\d*$/.test(value) && value.length <= 6) {
+                                            setNomorUrut(value);
+                                        }
+                                    }}
+                                    placeholder="000000"
+                                    min="1"
+                                    max="999999"
+                                    disabled={isSubmitting}
+                                    className="font-mono text-center text-lg font-bold border-emerald-200 dark:border-emerald-800 focus:ring-emerald-500"
+                                />
+                                {!nomorUrut && (
+                                    <p className="text-red-500 text-xs">Nomor urut wajib diisi.</p>
+                                )}
+                                {nomorUrut && parseInt(nomorUrut) < 1 && (
+                                    <p className="text-red-500 text-xs">Nomor urut harus lebih dari 0.</p>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -372,3 +465,4 @@ const EditTagihanVerifikatorDialog: React.FC<EditTagihanVerifikatorDialogProps> 
 };
 
 export default EditTagihanVerifikatorDialog;
+

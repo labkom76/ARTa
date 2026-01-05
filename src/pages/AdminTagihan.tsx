@@ -421,6 +421,7 @@ const AdminTagihan = () => {
                 <SelectItem value="Menunggu Verifikasi">Menunggu Verifikasi</SelectItem>
                 <SelectItem value="Diteruskan">Diteruskan</SelectItem>
                 <SelectItem value="Dikembalikan">Dikembalikan</SelectItem>
+                <SelectItem value="Tinjau Kembali">Tinjau Kembali</SelectItem>
               </SelectContent>
             </Select>
 

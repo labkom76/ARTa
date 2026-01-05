@@ -51,6 +51,26 @@ interface BarChartDataItem {
   value: number;
 }
 
+interface VerifikatorStats {
+  nama_verifikator: string;
+  total_tagihan: number;
+  percentage: number;
+}
+
+interface SkpdStats {
+  nama_skpd: string;
+  total_amount: number;
+  transaction_count: number;
+  percentage: number;
+}
+
+interface RegistratorStats {
+  nama_registrator: string;
+  total_registrasi: number;
+  total_amount: number;
+  percentage: number;
+}
+
 const AdminDashboard = () => {
   const { profile, loading: sessionLoading } = useSession();
   const [loadingPage, setLoadingPage] = useState(true);
@@ -63,6 +83,20 @@ const AdminDashboard = () => {
   const [processedStatusFilter, setProcessedStatusFilter] = useState<'Diteruskan' | 'Dikembalikan'>('Diteruskan');
   const [totalAmountTimeFilter, setTotalAmountTimeFilter] = useState<'Hari Ini' | 'Minggu Ini' | 'Bulan Ini' | 'Tahun Ini'>('Bulan Ini');
   const [selectedTimeRangeForChart, setSelectedTimeRangeForChart] = useState<'Hari Ini' | 'Minggu Ini' | 'Bulan Ini' | 'Tahun Ini'>('Bulan Ini');
+
+  // State for Top 5 Verifikator
+  const [topVerifikatorData, setTopVerifikatorData] = useState<VerifikatorStats[]>([]);
+  const [topVerifikatorTimeFilter, setTopVerifikatorTimeFilter] = useState<'Hari Ini' | '7 Hari Terakhir' | '30 Hari Terakhir'>('30 Hari Terakhir');
+
+  // State for Top 10 SKPD
+  const [topSkpdData, setTopSkpdData] = useState<SkpdStats[]>([]);
+  const [topSkpdTimeFilter, setTopSkpdTimeFilter] = useState<'Hari Ini' | '7 Hari Terakhir' | '30 Hari Terakhir'>('30 Hari Terakhir');
+  const [topSkpdCurrentPage, setTopSkpdCurrentPage] = useState(1);
+  const topSkpdItemsPerPage = 5;
+
+  // State for Top Registrator
+  const [topRegistratorData, setTopRegistratorData] = useState<RegistratorStats[]>([]);
+  const [topRegistratorTimeFilter, setTopRegistratorTimeFilter] = useState<'Hari Ini' | '7 Hari Terakhir' | '30 Hari Terakhir'>('30 Hari Terakhir');
 
   const { theme } = useTheme();
 
@@ -198,6 +232,256 @@ const AdminDashboard = () => {
     }
   }, [profile, selectedTimeRangeForChart]);
 
+  // Function to fetch Top 5 Verifikator data
+  const fetchTopVerifikator = useCallback(async () => {
+    if (!profile || profile.peran !== 'Administrator') {
+      return;
+    }
+
+    try {
+      const now = new Date();
+      let timeFilterStart: string;
+      let timeFilterEnd: string;
+
+      switch (topVerifikatorTimeFilter) {
+        case 'Hari Ini':
+          timeFilterStart = startOfDay(now).toISOString();
+          timeFilterEnd = endOfDay(now).toISOString();
+          break;
+        case '7 Hari Terakhir':
+          // Last 7 days including today
+          const sevenDaysAgo = new Date(now);
+          sevenDaysAgo.setDate(now.getDate() - 6); // -6 because today counts as day 1
+          timeFilterStart = startOfDay(sevenDaysAgo).toISOString();
+          timeFilterEnd = endOfDay(now).toISOString();
+          break;
+        case '30 Hari Terakhir':
+          // Last 30 days including today
+          const thirtyDaysAgo = new Date(now);
+          thirtyDaysAgo.setDate(now.getDate() - 29); // -29 because today counts as day 1
+          timeFilterStart = startOfDay(thirtyDaysAgo).toISOString();
+          timeFilterEnd = endOfDay(now).toISOString();
+          break;
+        default:
+          // Default to last 30 days
+          const defaultDaysAgo = new Date(now);
+          defaultDaysAgo.setDate(now.getDate() - 29);
+          timeFilterStart = startOfDay(defaultDaysAgo).toISOString();
+          timeFilterEnd = endOfDay(now).toISOString();
+          break;
+      }
+
+      const { data, error } = await supabase
+        .from('database_tagihan')
+        .select('nama_verifikator')
+        .eq('status_tagihan', 'Diteruskan')
+        .not('nama_verifikator', 'is', null)
+        .gte('waktu_verifikasi', timeFilterStart)
+        .lte('waktu_verifikasi', timeFilterEnd);
+
+      if (error) throw error;
+
+      // Group by verifikator and count
+      const verifikatorMap = new Map<string, number>();
+      data.forEach(item => {
+        const name = item.nama_verifikator!;
+        verifikatorMap.set(name, (verifikatorMap.get(name) || 0) + 1);
+      });
+
+      // Convert to array and sort
+      const verifikatorArray = Array.from(verifikatorMap.entries())
+        .map(([nama_verifikator, total_tagihan]) => ({
+          nama_verifikator,
+          total_tagihan,
+          percentage: 0, // Will calculate below
+        }))
+        .sort((a, b) => b.total_tagihan - a.total_tagihan)
+        .slice(0, 5);
+
+      // Calculate percentages based on max
+      if (verifikatorArray.length > 0) {
+        const maxTagihan = verifikatorArray[0].total_tagihan;
+        verifikatorArray.forEach(item => {
+          item.percentage = maxTagihan > 0 ? (item.total_tagihan / maxTagihan) * 100 : 0;
+        });
+      }
+
+      setTopVerifikatorData(verifikatorArray);
+    } catch (error: any) {
+      console.error('Error fetching top verifikator data:', error.message);
+      toast.error('Gagal memuat data top verifikator: ' + error.message);
+      setTopVerifikatorData([]);
+    }
+  }, [profile, topVerifikatorTimeFilter]);
+
+  // Function to fetch Top 10 SKPD data
+  const fetchTopSkpd = useCallback(async () => {
+    if (!profile || profile.peran !== 'Administrator') {
+      return;
+    }
+
+    try {
+      const now = new Date();
+      let timeFilterStart: string;
+      let timeFilterEnd: string;
+
+      switch (topSkpdTimeFilter) {
+        case 'Hari Ini':
+          timeFilterStart = startOfDay(now).toISOString();
+          timeFilterEnd = endOfDay(now).toISOString();
+          break;
+        case '7 Hari Terakhir':
+          const sevenDaysAgo = new Date(now);
+          sevenDaysAgo.setDate(now.getDate() - 6);
+          timeFilterStart = startOfDay(sevenDaysAgo).toISOString();
+          timeFilterEnd = endOfDay(now).toISOString();
+          break;
+        case '30 Hari Terakhir':
+          const thirtyDaysAgo = new Date(now);
+          thirtyDaysAgo.setDate(now.getDate() - 29);
+          timeFilterStart = startOfDay(thirtyDaysAgo).toISOString();
+          timeFilterEnd = endOfDay(now).toISOString();
+          break;
+        default:
+          const defaultDaysAgo = new Date(now);
+          defaultDaysAgo.setDate(now.getDate() - 29);
+          timeFilterStart = startOfDay(defaultDaysAgo).toISOString();
+          timeFilterEnd = endOfDay(now).toISOString();
+          break;
+      }
+
+      const { data, error } = await supabase
+        .from('database_tagihan')
+        .select('nama_skpd, jumlah_kotor')
+        .eq('status_tagihan', 'Diteruskan')
+        .not('nama_skpd', 'is', null)
+        .gte('waktu_verifikasi', timeFilterStart)
+        .lte('waktu_verifikasi', timeFilterEnd);
+
+      if (error) throw error;
+
+      // Group by SKPD and sum amounts
+      const skpdMap = new Map<string, { total_amount: number; transaction_count: number }>();
+      data.forEach(item => {
+        const name = item.nama_skpd!;
+        const current = skpdMap.get(name) || { total_amount: 0, transaction_count: 0 };
+        skpdMap.set(name, {
+          total_amount: current.total_amount + (item.jumlah_kotor || 0),
+          transaction_count: current.transaction_count + 1
+        });
+      });
+
+      // Convert to array and sort by total amount
+      const skpdArray = Array.from(skpdMap.entries())
+        .map(([nama_skpd, stats]) => ({
+          nama_skpd,
+          total_amount: stats.total_amount,
+          transaction_count: stats.transaction_count,
+          percentage: 0, // Will calculate below
+        }))
+        .sort((a, b) => b.total_amount - a.total_amount)
+        .slice(0, 10); // Top 10
+
+      // Calculate percentages based on max
+      if (skpdArray.length > 0) {
+        const maxAmount = skpdArray[0].total_amount;
+        skpdArray.forEach(item => {
+          item.percentage = maxAmount > 0 ? (item.total_amount / maxAmount) * 100 : 0;
+        });
+      }
+
+      setTopSkpdData(skpdArray);
+    } catch (error: any) {
+      console.error('Error fetching top SKPD data:', error.message);
+      toast.error('Gagal memuat data top SKPD: ' + error.message);
+      setTopSkpdData([]);
+    }
+  }, [profile, topSkpdTimeFilter]);
+
+  // Function to fetch Top Registrator data
+  const fetchTopRegistrator = useCallback(async () => {
+    if (!profile || profile.peran !== 'Administrator') {
+      return;
+    }
+
+    try {
+      const now = new Date();
+      let timeFilterStart: string;
+      let timeFilterEnd: string;
+
+      switch (topRegistratorTimeFilter) {
+        case 'Hari Ini':
+          timeFilterStart = startOfDay(now).toISOString();
+          timeFilterEnd = endOfDay(now).toISOString();
+          break;
+        case '7 Hari Terakhir':
+          const sevenDaysAgo = new Date(now);
+          sevenDaysAgo.setDate(now.getDate() - 6);
+          timeFilterStart = startOfDay(sevenDaysAgo).toISOString();
+          timeFilterEnd = endOfDay(now).toISOString();
+          break;
+        case '30 Hari Terakhir':
+          const thirtyDaysAgo = new Date(now);
+          thirtyDaysAgo.setDate(now.getDate() - 29);
+          timeFilterStart = startOfDay(thirtyDaysAgo).toISOString();
+          timeFilterEnd = endOfDay(now).toISOString();
+          break;
+        default:
+          const defaultDaysAgo = new Date(now);
+          defaultDaysAgo.setDate(now.getDate() - 29);
+          timeFilterStart = startOfDay(defaultDaysAgo).toISOString();
+          timeFilterEnd = endOfDay(now).toISOString();
+          break;
+      }
+
+      const { data, error } = await supabase
+        .from('database_tagihan')
+        .select('nama_registrator, jumlah_kotor')
+        .in('status_tagihan', ['Menunggu Verifikasi', 'Diteruskan', 'Dikembalikan'])
+        .not('nama_registrator', 'is', null)
+        .gte('waktu_registrasi', timeFilterStart)
+        .lte('waktu_registrasi', timeFilterEnd);
+
+      if (error) throw error;
+
+      // Group by registrator and count
+      const registratorMap = new Map<string, { total_registrasi: number; total_amount: number }>();
+      data.forEach(item => {
+        const name = item.nama_registrator!;
+        const current = registratorMap.get(name) || { total_registrasi: 0, total_amount: 0 };
+        registratorMap.set(name, {
+          total_registrasi: current.total_registrasi + 1,
+          total_amount: current.total_amount + (item.jumlah_kotor || 0)
+        });
+      });
+
+      // Convert to array and sort by registration count
+      const registratorArray = Array.from(registratorMap.entries())
+        .map(([nama_registrator, stats]) => ({
+          nama_registrator,
+          total_registrasi: stats.total_registrasi,
+          total_amount: stats.total_amount,
+          percentage: 0, // Will calculate below
+        }))
+        .sort((a, b) => b.total_registrasi - a.total_registrasi)
+        .slice(0, 5); // Top 5
+
+      // Calculate percentages based on max
+      if (registratorArray.length > 0) {
+        const maxRegistrasi = registratorArray[0].total_registrasi;
+        registratorArray.forEach(item => {
+          item.percentage = maxRegistrasi > 0 ? (item.total_registrasi / maxRegistrasi) * 100 : 0;
+        });
+      }
+
+      setTopRegistratorData(registratorArray);
+    } catch (error: any) {
+      console.error('Error fetching top registrator data:', error.message);
+      toast.error('Gagal memuat data top registrator: ' + error.message);
+      setTopRegistratorData([]);
+    }
+  }, [profile, topRegistratorTimeFilter]);
+
 
   useEffect(() => {
     const loadAllData = async () => {
@@ -205,6 +489,9 @@ const AdminDashboard = () => {
       await Promise.all([
         fetchKpiData(),
         fetchChartData(),
+        fetchTopVerifikator(),
+        fetchTopSkpd(),
+        fetchTopRegistrator(),
       ]);
       setLoadingData(false);
     };
@@ -212,7 +499,13 @@ const AdminDashboard = () => {
     if (!sessionLoading && profile?.peran === 'Administrator') {
       loadAllData();
     }
-  }, [sessionLoading, profile, processedStatusFilter, totalAmountTimeFilter, selectedTimeRangeForChart, fetchKpiData, fetchChartData, theme]);
+  }, [sessionLoading, profile, processedStatusFilter, totalAmountTimeFilter, selectedTimeRangeForChart, topVerifikatorTimeFilter, topSkpdTimeFilter, topRegistratorTimeFilter, fetchKpiData, fetchChartData, fetchTopVerifikator, fetchTopSkpd, fetchTopRegistrator, theme]);
+
+  // Reset Top SKPD pagination when filter changes
+  useEffect(() => {
+    setTopSkpdCurrentPage(1);
+  }, [topSkpdTimeFilter]);
+
 
   if (loadingPage || loadingData) {
     return (
@@ -385,6 +678,313 @@ const AdminDashboard = () => {
             <div className="absolute bottom-0 right-0 opacity-10 group-hover:opacity-20 transition-opacity duration-300">
               <ActivityIcon className="h-24 w-24 text-white" />
             </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Top Cards Grid: Verifikator, SKPD & Registrator */}
+      <div className="grid gap-5 lg:grid-cols-3">
+        {/* Top 5 Verifikator Card */}
+        <Card className="border-slate-200 dark:border-slate-800 shadow-lg hover:shadow-xl transition-shadow duration-300 bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
+          <CardHeader className="border-b border-slate-200 dark:border-slate-800">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 shadow-md shadow-emerald-500/20">
+                  <TrendingUpIcon className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <CardTitle className="text-lg font-bold text-slate-900 dark:text-white">
+                    Top 5 Verifikator
+                  </CardTitle>
+                  <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
+                    Petugas dengan jumlah verifikasi tagihan tertinggi
+                  </p>
+                </div>
+              </div>
+              <Select
+                onValueChange={(value: 'Hari Ini' | '7 Hari Terakhir' | '30 Hari Terakhir') => setTopVerifikatorTimeFilter(value)}
+                value={topVerifikatorTimeFilter}
+              >
+                <SelectTrigger className="w-[160px] h-9 border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-emerald-500 dark:hover:border-emerald-500 transition-colors">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Hari Ini">Hari Ini</SelectItem>
+                  <SelectItem value="7 Hari Terakhir">7 Hari Terakhir</SelectItem>
+                  <SelectItem value="30 Hari Terakhir">30 Hari Terakhir</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-6">
+            {topVerifikatorData.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <div className="p-4 rounded-full bg-slate-200 dark:bg-slate-800 mb-4">
+                  <TrendingUpIcon className="h-12 w-12 text-slate-400 dark:text-slate-600" />
+                </div>
+                <p className="text-sm font-medium text-slate-600 dark:text-slate-400">
+                  Tidak ada data verifikator
+                </p>
+                <p className="text-xs text-slate-500 dark:text-slate-500 mt-1">
+                  Belum ada tagihan yang diverifikasi pada periode ini
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {topVerifikatorData.map((verifikator, index) => {
+                  // Get initials from name
+                  const nameParts = verifikator.nama_verifikator.split(' ');
+                  const initials = nameParts.length >= 2
+                    ? `${nameParts[0][0]}${nameParts[1][0]}`.toUpperCase()
+                    : verifikator.nama_verifikator.substring(0, 2).toUpperCase();
+
+                  return (
+                    <div key={index} className="group">
+                      <div className="flex items-center gap-3 mb-2">
+                        {/* Avatar with initials */}
+                        <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-md group-hover:shadow-lg transition-shadow">
+                          <span className="text-sm font-bold text-white">{initials}</span>
+                        </div>
+                        {/* Name and count */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-baseline justify-between gap-2">
+                            <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">
+                              {verifikator.nama_verifikator}
+                            </p>
+                            <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
+                              {Math.round(verifikator.percentage)}%
+                            </span>
+                          </div>
+                          <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
+                            {verifikator.total_tagihan.toLocaleString('id-ID')} tagihan diverifikasi
+                          </p>
+                        </div>
+                      </div>
+                      {/* Progress bar */}
+                      <div className="ml-[52px]">
+                        <div className="h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-gradient-to-r from-emerald-500 to-teal-600 rounded-full transition-all duration-500 ease-out"
+                            style={{ width: `${verifikator.percentage}%` }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Top 10 SKPD Card */}
+        <Card className="border-slate-200 dark:border-slate-800 shadow-lg hover:shadow-xl transition-shadow duration-300 bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
+          <CardHeader className="border-b border-slate-200 dark:border-slate-800">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-600 shadow-md shadow-blue-500/20">
+                  <DollarSignIcon className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <CardTitle className="text-lg font-bold text-slate-900 dark:text-white">
+                    Top 10 SKPD
+                  </CardTitle>
+                  <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
+                    SKPD dengan total jumlah kotor tertinggi
+                  </p>
+                </div>
+              </div>
+              <Select
+                onValueChange={(value: 'Hari Ini' | '7 Hari Terakhir' | '30 Hari Terakhir') => setTopSkpdTimeFilter(value)}
+                value={topSkpdTimeFilter}
+              >
+                <SelectTrigger className="w-[160px] h-9 border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-blue-500 dark:hover:border-blue-500 transition-colors">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Hari Ini">Hari Ini</SelectItem>
+                  <SelectItem value="7 Hari Terakhir">7 Hari Terakhir</SelectItem>
+                  <SelectItem value="30 Hari Terakhir">30 Hari Terakhir</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-6">
+            {topSkpdData.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <div className="p-4 rounded-full bg-slate-200 dark:bg-slate-800 mb-4">
+                  <DollarSignIcon className="h-12 w-12 text-slate-400 dark:text-slate-600" />
+                </div>
+                <p className="text-sm font-medium text-slate-600 dark:text-slate-400">
+                  Tidak ada data SKPD
+                </p>
+                <p className="text-xs text-slate-500 dark:text-slate-500 mt-1">
+                  Belum ada tagihan yang diverifikasi pada periode ini
+                </p>
+              </div>
+            ) : (
+              <>
+                <div className="space-y-4">
+                  {topSkpdData
+                    .slice((topSkpdCurrentPage - 1) * topSkpdItemsPerPage, topSkpdCurrentPage * topSkpdItemsPerPage)
+                    .map((skpd, index) => {
+                      const nameParts = skpd.nama_skpd.split(' ');
+                      const initials = nameParts.length >= 2
+                        ? `${nameParts[0][0]}${nameParts[1][0]}`.toUpperCase()
+                        : skpd.nama_skpd.substring(0, 2).toUpperCase();
+
+                      return (
+                        <div key={index} className="group">
+                          <div className="flex items-center gap-3 mb-2">
+                            <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-cyan-600 flex items-center justify-center shadow-md group-hover:shadow-lg transition-shadow">
+                              <span className="text-sm font-bold text-white">{initials}</span>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-baseline justify-between gap-2">
+                                <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">
+                                  {skpd.nama_skpd}
+                                </p>
+                                <span className="text-sm font-bold text-blue-600 dark:text-blue-400 whitespace-nowrap">
+                                  {Math.round(skpd.percentage)}%
+                                </span>
+                              </div>
+                              <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
+                                {skpd.transaction_count.toLocaleString('id-ID')} transaksi - Rp{skpd.total_amount.toLocaleString('id-ID')}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="ml-[52px]">
+                            <div className="h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                              <div
+                                className="h-full bg-gradient-to-r from-blue-500 to-cyan-600 rounded-full transition-all duration-500 ease-out"
+                                style={{ width: `${skpd.percentage}%` }}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
+
+                {/* Pagination Controls */}
+                {topSkpdData.length > topSkpdItemsPerPage && (
+                  <div className="flex items-center justify-between pt-4 mt-4 border-t border-slate-200 dark:border-slate-700">
+                    <p className="text-xs text-slate-600 dark:text-slate-400">
+                      {(topSkpdCurrentPage - 1) * topSkpdItemsPerPage + 1} - {Math.min(topSkpdCurrentPage * topSkpdItemsPerPage, topSkpdData.length)} of {topSkpdData.length}
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setTopSkpdCurrentPage(prev => Math.max(1, prev - 1))}
+                        disabled={topSkpdCurrentPage === 1}
+                        className="h-8 px-3 text-xs"
+                      >
+                        Prev
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setTopSkpdCurrentPage(prev => Math.min(Math.ceil(topSkpdData.length / topSkpdItemsPerPage), prev + 1))}
+                        disabled={topSkpdCurrentPage >= Math.ceil(topSkpdData.length / topSkpdItemsPerPage)}
+                        className="h-8 px-3 text-xs"
+                      >
+                        Next
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Top Registrator Card */}
+        <Card className="border-slate-200 dark:border-slate-800 shadow-lg hover:shadow-xl transition-shadow duration-300 bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
+          <CardHeader className="border-b border-slate-200 dark:border-slate-800">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 shadow-md shadow-emerald-500/20">
+                  <FileTextIcon className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <CardTitle className="text-lg font-bold text-slate-900 dark:text-white">
+                    Top 5 Registrator
+                  </CardTitle>
+                  <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
+                    Pengguna dengan registrasi tagihan terbanyak
+                  </p>
+                </div>
+              </div>
+              <Select
+                onValueChange={(value: 'Hari Ini' | '7 Hari Terakhir' | '30 Hari Terakhir') => setTopRegistratorTimeFilter(value)}
+                value={topRegistratorTimeFilter}
+              >
+                <SelectTrigger className="w-[160px] h-9 border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-emerald-500 dark:hover:border-emerald-500 transition-colors">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Hari Ini">Hari Ini</SelectItem>
+                  <SelectItem value="7 Hari Terakhir">7 Hari Terakhir</SelectItem>
+                  <SelectItem value="30 Hari Terakhir">30 Hari Terakhir</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-6">
+            {topRegistratorData.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <div className="p-4 rounded-full bg-slate-200 dark:bg-slate-800 mb-4">
+                  <FileTextIcon className="h-12 w-12 text-slate-400 dark:text-slate-600" />
+                </div>
+                <p className="text-sm font-medium text-slate-600 dark:text-slate-400">
+                  Tidak ada data registrator
+                </p>
+                <p className="text-xs text-slate-500 dark:text-slate-500 mt-1">
+                  Belum ada tagihan yang diregistrasi pada periode ini
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {topRegistratorData.map((registrator, index) => {
+                  const nameParts = registrator.nama_registrator.split(' ');
+                  const initials = nameParts.length >= 2
+                    ? `${nameParts[0][0]}${nameParts[1][0]}`.toUpperCase()
+                    : registrator.nama_registrator.substring(0, 2).toUpperCase();
+
+                  return (
+                    <div key={index} className="group">
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-md group-hover:shadow-lg transition-shadow">
+                          <span className="text-sm font-bold text-white">{initials}</span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-baseline justify-between gap-2">
+                            <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">
+                              {registrator.nama_registrator}
+                            </p>
+                            <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
+                              {Math.round(registrator.percentage)}%
+                            </span>
+                          </div>
+                          <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
+                            {registrator.total_registrasi.toLocaleString('id-ID')} registrasi
+                          </p>
+                        </div>
+                      </div>
+                      <div className="ml-[52px]">
+                        <div className="h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-gradient-to-r from-emerald-500 to-teal-600 rounded-full transition-all duration-500 ease-out"
+                            style={{ width: `${registrator.percentage}%` }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

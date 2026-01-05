@@ -1127,6 +1127,7 @@ const PortalVerifikasi = () => {
                                 >
                                   <PrinterIcon className="h-4 w-4 text-slate-600 dark:text-slate-400" />
                                 </Button>
+                                {/* Edit button for Dikembalikan status */}
                                 {tagihan.status_tagihan === 'Dikembalikan' && (
                                   <Button
                                     variant="ghost"
@@ -1136,6 +1137,18 @@ const PortalVerifikasi = () => {
                                     className="hover:bg-amber-50 dark:hover:bg-amber-950/20 hover:text-amber-600 dark:hover:text-amber-400 transition-colors"
                                   >
                                     <FilePenLine className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                                  </Button>
+                                )}
+                                {/* Edit button for Diteruskan status (within 24 hours) */}
+                                {tagihan.status_tagihan === 'Diteruskan' && (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    title="Edit (Verifikasi Ulang)"
+                                    onClick={() => handleEditVerificationClick(tagihan)}
+                                    className="hover:bg-emerald-50 dark:hover:bg-emerald-950/20 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"
+                                  >
+                                    <FilePenLine className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
                                   </Button>
                                 )}
                                 {/* NEW: Tombol "Periksa" untuk status "Menunggu Verifikasi" */}
