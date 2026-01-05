@@ -40,7 +40,7 @@ import StatusBadge from '@/components/StatusBadge'; // Import StatusBadge
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { PlusCircleIcon, SearchIcon, EditIcon, Trash2Icon, FileDownIcon, ArrowUp, ArrowDown, FilePenLine, EyeIcon, ClipboardListIcon, Sparkles, Undo2 } from 'lucide-react';
+import { PlusCircleIcon, SearchIcon, EditIcon, Trash2Icon, FileDownIcon, ArrowUp, ArrowDown, FilePenLine, EyeIcon, ClipboardListIcon, Sparkles, Undo2, HistoryIcon } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import DeleteConfirmationDialog from '@/components/DeleteConfirmationDialog';
 import TagihanDetailDialog from '@/components/TagihanDetailDialog'; // Import the new detail dialog
@@ -191,6 +191,7 @@ const PortalSKPD = () => {
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
   const location = useLocation(); // Initialize useLocation
+  const navigate = useNavigate(); // Initialize useNavigate
 
   const form = useForm<TagihanFormValues>({
     resolver: zodResolver(formSchema),
@@ -336,10 +337,13 @@ const PortalSKPD = () => {
     }
 
     try {
+      const currentYear = new Date().getFullYear();
+
       let query = supabase
         .from('database_tagihan')
         .select('*, skpd_can_edit, tenggat_perbaikan, waktu_verifikasi', { count: 'exact' }) // Select all columns for detail view, including skpd_can_edit and tenggat_perbaikan
-        .eq('id_pengguna_input', user.id);
+        .eq('id_pengguna_input', user.id)
+        .ilike('nomor_spm', `%/${currentYear}`);
 
       if (searchQuery) {
         query = query.ilike('nomor_spm', `%${searchQuery}%`);
@@ -744,12 +748,22 @@ const PortalSKPD = () => {
       <div className="mb-8">
         <h1 className="text-4xl font-bold bg-gradient-to-r from-emerald-600 to-emerald-400 bg-clip-text text-transparent mb-2 pb-1 inline-flex items-center gap-3">
           <ClipboardListIcon className="h-10 w-10 text-emerald-600 dark:text-emerald-400" />
-          Portal SKPD
+          Portal Tagihan SKPD - Tahun {new Date().getFullYear()}
         </h1>
-        <p className="text-slate-600 dark:text-slate-400 flex items-center gap-2">
-          <Sparkles className="h-4 w-4 text-emerald-500" />
-          Kelola dan input tagihan baru Anda di sini
-        </p>
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <p className="text-slate-600 dark:text-slate-400 flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-emerald-500" />
+            Kelola pengajuan tagihan Anda tahun berjalan
+          </p>
+          <Button
+            variant="outline"
+            onClick={() => navigate('/riwayat-tagihan')}
+            className="flex items-center gap-2 border-emerald-200 dark:border-emerald-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400"
+          >
+            <HistoryIcon className="h-4 w-4" />
+            Lihat Riwayat Tagihan
+          </Button>
+        </div>
       </div>
 
       <div className="flex justify-end items-center mb-6">

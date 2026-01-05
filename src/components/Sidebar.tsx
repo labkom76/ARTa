@@ -90,6 +90,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onLinkClick }) => {
     navItems.push(
       { to: '/dashboard-skpd', icon: LayoutDashboardIcon, label: 'Dashboard' },
       { to: '/portal-skpd', icon: FileTextIcon, label: 'Tagihan' },
+      { to: '/riwayat-tagihan', icon: HistoryIcon, label: 'Riwayat Tagihan' },
     );
   } else if (role === 'Staf Registrasi') {
     navItems.push(
@@ -229,25 +230,26 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onLinkClick }) => {
               );
             }
           } else {
+            const navItem = item as NavItem;
             return (
               <Link
-                key={item.to}
-                to={item.to}
+                key={navItem.to}
+                to={navItem.to}
                 onClick={onLinkClick}
                 className={cn(
                   "flex items-center gap-3 rounded-lg px-3 py-2.5 transition-all duration-200 group",
-                  location.pathname === item.to
+                  location.pathname === navItem.to
                     ? "bg-gradient-to-r from-emerald-500 to-teal-600 dark:from-emerald-600 dark:to-teal-700 text-white shadow-md shadow-emerald-500/30"
                     : "text-slate-700 dark:text-slate-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 hover:text-emerald-600 dark:hover:text-emerald-400 hover:shadow-sm",
                   isCollapsed && "justify-center"
                 )}
-                title={isCollapsed ? item.label : undefined}
+                title={isCollapsed ? navItem.label : undefined}
               >
-                <item.icon className={cn(
+                <navItem.icon className={cn(
                   "h-5 w-5 transition-transform duration-200",
-                  location.pathname === item.to ? "" : "group-hover:scale-110"
+                  location.pathname === navItem.to ? "" : "group-hover:scale-110"
                 )} />
-                <span className={cn("text-sm font-medium", isCollapsed && "hidden")}>{item.label}</span>
+                <span className={cn("text-sm font-medium", isCollapsed && "hidden")}>{navItem.label}</span>
               </Link>
             );
           }
