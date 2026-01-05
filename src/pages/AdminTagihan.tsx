@@ -65,6 +65,7 @@ interface Tagihan {
   waktu_koreksi?: string;
   catatan_koreksi?: string;
   sumber_dana?: string;
+  tanggal_spm?: string;
 }
 
 interface SkpdOption {
@@ -498,6 +499,7 @@ const AdminTagihan = () => {
               <TableHeader>
                 <TableRow className="bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950 dark:to-teal-950 hover:from-emerald-50 hover:to-teal-50 dark:hover:from-emerald-950 dark:hover:to-teal-950 border-b border-emerald-100 dark:border-emerald-900">
                   <TableHead className="font-bold text-emerald-900 dark:text-emerald-100">Waktu Input</TableHead>
+                  <TableHead className="font-bold text-emerald-900 dark:text-emerald-100">Tanggal SPM</TableHead>
                   <TableHead className="font-bold text-emerald-900 dark:text-emerald-100">Nomor SPM</TableHead>
                   <TableHead className="font-bold text-emerald-900 dark:text-emerald-100">Nama SKPD</TableHead>
                   <TableHead className="font-bold text-emerald-900 dark:text-emerald-100">Jumlah Kotor</TableHead>
@@ -537,6 +539,9 @@ const AdminTagihan = () => {
                   tagihanList.map((tagihan) => (
                     <TableRow key={tagihan.id_tagihan} className="hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
                       <TableCell className="text-slate-700 dark:text-slate-300">{formatDate(tagihan.waktu_input)}</TableCell>
+                      <TableCell className="text-slate-700 dark:text-slate-300">
+                        {tagihan.tanggal_spm ? format(parseISO(tagihan.tanggal_spm), 'dd MMM yyyy', { locale: localeId }) : '-'}
+                      </TableCell>
                       <TableCell className="font-semibold text-slate-900 dark:text-white">{tagihan.nomor_spm}</TableCell>
                       <TableCell className="text-slate-700 dark:text-slate-300">{tagihan.nama_skpd}</TableCell>
                       <TableCell className="font-medium text-slate-900 dark:text-white">Rp{tagihan.jumlah_kotor.toLocaleString('id-ID')}</TableCell>

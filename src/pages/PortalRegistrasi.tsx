@@ -89,6 +89,7 @@ interface Tagihan {
   nama_verifikator?: string;
   catatan_registrasi?: string; // NEW: Add catatan_registrasi
   sumber_dana?: string; // Add sumber_dana
+  tanggal_spm?: string; // Add tanggal_spm
 }
 
 interface SkpdOption { // Define interface for SKPD options
@@ -667,6 +668,7 @@ const PortalRegistrasi = () => {
                     <TableHead className="w-[50px]">No.</TableHead>
                     <TableHead>Waktu Input</TableHead>
                     <TableHead>Nama SKPD</TableHead>
+                    <TableHead>Tanggal SPM</TableHead>
                     <TableHead>Nomor SPM</TableHead>
                     <TableHead>Jenis SPM</TableHead>
                     <TableHead>Jumlah Kotor</TableHead>
@@ -679,6 +681,7 @@ const PortalRegistrasi = () => {
                       <TableCell>{(queueCurrentPage - 1) * queueItemsPerPage + index + 1}</TableCell>
                       <TableCell>{format(parseISO(tagihan.waktu_input), 'dd MMMM yyyy HH:mm', { locale: localeId })}</TableCell>
                       <TableCell className="font-medium">{tagihan.nama_skpd}</TableCell>
+                      <TableCell>{tagihan.tanggal_spm ? format(parseISO(tagihan.tanggal_spm), 'dd MMM yyyy', { locale: localeId }) : '-'}</TableCell>
                       <TableCell>{tagihan.nomor_spm}</TableCell>
                       <TableCell>{tagihan.jenis_spm}</TableCell>
                       <TableCell>Rp{tagihan.jumlah_kotor.toLocaleString('id-ID')}</TableCell>

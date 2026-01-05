@@ -31,6 +31,16 @@ import {
     TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { getJenisTagihanCode } from '@/utils/spmGenerator';
+import { format } from 'date-fns';
+import { id } from 'date-fns/locale';
+import { Calendar } from '@/components/ui/calendar';
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from '@/components/ui/popover';
+import { cn } from '@/lib/utils';
+import { CalendarIcon } from 'lucide-react';
 
 interface Tagihan {
     id_tagihan: string;
@@ -42,6 +52,7 @@ interface Tagihan {
     jumlah_kotor: number;
     status_tagihan: string;
     sumber_dana?: string;
+    tanggal_spm?: string;
 }
 
 interface EditTagihanVerifikatorDialogProps {
@@ -61,6 +72,9 @@ const formSchema = z.object({
     jenis_spm: z.string().min(1, { message: 'Jenis SPM wajib dipilih.' }),
     jenis_tagihan: z.string().min(1, { message: 'Jenis Tagihan wajib dipilih.' }),
     sumber_dana: z.string().min(1, { message: 'Sumber Dana wajib dipilih.' }),
+    tanggal_spm: z.date({
+        required_error: "Tanggal SPM wajib diisi.",
+    }),
 });
 
 type EditTagihanFormValues = z.infer<typeof formSchema>;
@@ -72,6 +86,7 @@ const EditTagihanVerifikatorDialog: React.FC<EditTagihanVerifikatorDialogProps> 
     editingTagihan
 }) => {
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isCalendarOpen, setIsCalendarOpen] = useState(false);
     const [nomorUrut, setNomorUrut] = useState<string>('');
     const [copiedSpm, setCopiedSpm] = useState(false);
 
@@ -84,6 +99,7 @@ const EditTagihanVerifikatorDialog: React.FC<EditTagihanVerifikatorDialogProps> 
             jenis_spm: '',
             jenis_tagihan: '',
             sumber_dana: '',
+            tanggal_spm: undefined,
         },
     });
 
@@ -105,9 +121,18 @@ const EditTagihanVerifikatorDialog: React.FC<EditTagihanVerifikatorDialogProps> 
                 jenis_spm: editingTagihan.jenis_spm,
                 jenis_tagihan: editingTagihan.jenis_tagihan,
                 sumber_dana: editingTagihan.sumber_dana || '',
+                tanggal_spm: editingTagihan.tanggal_spm ? new Date(editingTagihan.tanggal_spm) : undefined,
             });
         } else if (isOpen && !editingTagihan) {
-            form.reset();
+            form.reset({
+                nomor_spm: '',
+                uraian: '',
+                jumlah_kotor: 0,
+                jenis_spm: '',
+                jenis_tagihan: '',
+                sumber_dana: '',
+                tanggal_spm: undefined,
+            });
             setNomorUrut('');
         }
     }, [isOpen, editingTagihan, form]);
@@ -153,6 +178,7 @@ const EditTagihanVerifikatorDialog: React.FC<EditTagihanVerifikatorDialogProps> 
                     jenis_spm: values.jenis_spm,
                     jenis_tagihan: values.jenis_tagihan,
                     sumber_dana: values.sumber_dana,
+                    tanggal_spm: values.tanggal_spm ? format(values.tanggal_spm, 'yyyy-MM-dd') : null,
                 })
                 .eq('id_tagihan', editingTagihan.id_tagihan);
 
@@ -189,6 +215,11 @@ const EditTagihanVerifikatorDialog: React.FC<EditTagihanVerifikatorDialogProps> 
                 }
                 if (editingTagihan.sumber_dana !== values.sumber_dana) {
                     perubahan.sumber_dana = { dari: editingTagihan.sumber_dana, menjadi: values.sumber_dana };
+                }
+
+                const formattedNewTanggalSpm = values.tanggal_spm ? format(values.tanggal_spm, 'yyyy-MM-dd') : null;
+                if (editingTagihan.tanggal_spm !== formattedNewTanggalSpm) {
+                    perubahan.tanggal_spm = { dari: editingTagihan.tanggal_spm, menjadi: formattedNewTanggalSpm };
                 }
 
                 // Only log if there are actual changes
@@ -394,6 +425,51 @@ const EditTagihanVerifikatorDialog: React.FC<EditTagihanVerifikatorDialogProps> 
                             />
                             {form.formState.errors.sumber_dana && (
                                 <p className="text-red-500 text-xs">{form.formState.errors.sumber_dana.message}</p>
+                            )}
+                        </div>
+
+                        {/* Tanggal SPM */}
+                        <div className="space-y-2">
+                            <Label className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                                Tanggal SPM <span className="text-red-500">*</span>
+                            </Label>
+                            <Controller
+                                name="tanggal_spm"
+                                control={form.control}
+                                render={({ field }) => (
+                                    <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+                                        <PopoverTrigger asChild>
+                                            <Button
+                                                variant={"outline"}
+                                                className={cn(
+                                                    "w-full justify-start text-left font-normal border-emerald-200 dark:border-emerald-800 focus:ring-emerald-500",
+                                                    !field.value && "text-muted-foreground"
+                                                )}
+                                                disabled={isSubmitting}
+                                            >
+                                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                                {field.value ? format(field.value, "dd MMMM yyyy", { locale: id }) : <span>Pilih Tanggal SPM</span>}
+                                            </Button>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-auto p-0" align="start">
+                                            <Calendar
+                                                mode="single"
+                                                selected={field.value}
+                                                onSelect={(date) => {
+                                                    field.onChange(date);
+                                                    setIsCalendarOpen(false);
+                                                }}
+                                                disabled={(date) =>
+                                                    date > new Date() || date < new Date("1900-01-01")
+                                                }
+                                                initialFocus
+                                            />
+                                        </PopoverContent>
+                                    </Popover>
+                                )}
+                            />
+                            {form.formState.errors.tanggal_spm && (
+                                <p className="text-red-500 text-xs">{form.formState.errors.tanggal_spm.message}</p>
                             )}
                         </div>
 

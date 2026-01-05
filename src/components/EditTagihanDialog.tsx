@@ -24,10 +24,25 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { supabase } from '@/integrations/supabase/client';
 import { useSession } from '@/contexts/SessionContext';
-import { format } from 'date-fns';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { format, parseISO, startOfMonth, endOfMonth } from 'date-fns';
 import { generateNomorSpm, getJenisTagihanCode } from '@/utils/spmGenerator';
 import { Combobox } from '@/components/ui/combobox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { id } from 'date-fns/locale';
+import { Calendar } from '@/components/ui/calendar';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import { cn } from '@/lib/utils';
+import { CalendarIcon } from 'lucide-react';
 
 interface VerificationItem {
   item: string;
@@ -61,6 +76,7 @@ interface Tagihan {
   kode_jadwal?: string;
   nomor_urut?: number;
   sumber_dana?: string;
+  tanggal_spm?: string;
 }
 
 interface ScheduleOption {
@@ -92,9 +108,12 @@ const formSchema = z.object({
   kode_jadwal: z.string().min(1, { message: 'Kode Jadwal Penganggaran wajib dipilih.' }),
   nomor_urut_tagihan: z.preprocess(
     (val) => Number(val),
-    z.number().min(1, { message: 'Nomor Urut Tagihan wajib diisi dan harus angka positif.' })
+    z.number().min(1, { message: 'Nomor Urut Tagihan wajib diisi and harus angka positif.' })
   ),
   sumber_dana: z.string().min(1, { message: 'Sumber Dana wajib dipilih.' }),
+  tanggal_spm: z.date({
+    required_error: "Tanggal SPM wajib diisi.",
+  }),
 });
 
 type EditTagihanFormValues = z.infer<typeof formSchema>;
@@ -102,6 +121,7 @@ type EditTagihanFormValues = z.infer<typeof formSchema>;
 const EditTagihanDialog: React.FC<EditTagihanDialogProps> = ({ isOpen, onClose, onTagihanUpdated, editingTagihan, verifierOptions }) => {
   const { profile } = useSession();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [scheduleOptions, setScheduleOptions] = useState<ScheduleOption[]>([]);
   const [kodeWilayah, setKodeWilayah] = useState<string | null>(null);
   const [kodeSkpd, setKodeSkpd] = useState<string | null>(null);
@@ -120,6 +140,7 @@ const EditTagihanDialog: React.FC<EditTagihanDialogProps> = ({ isOpen, onClose, 
       kode_jadwal: '',
       nomor_urut_tagihan: 1,
       sumber_dana: '',
+      tanggal_spm: undefined,
     },
   });
 
@@ -208,9 +229,21 @@ const EditTagihanDialog: React.FC<EditTagihanDialogProps> = ({ isOpen, onClose, 
         kode_jadwal: editingTagihan.kode_jadwal || '',
         nomor_urut_tagihan: editingTagihan.nomor_urut || 1,
         sumber_dana: editingTagihan.sumber_dana || '',
+        tanggal_spm: editingTagihan.tanggal_spm ? new Date(editingTagihan.tanggal_spm) : undefined,
       });
     } else if (isOpen && !editingTagihan) {
-      form.reset();
+      form.reset({
+        nama_skpd: '',
+        uraian: '',
+        jumlah_kotor: 0,
+        jenis_spm: '',
+        jenis_tagihan: '',
+        status_tagihan: 'Menunggu Registrasi',
+        kode_jadwal: '',
+        nomor_urut_tagihan: 1,
+        sumber_dana: '',
+        tanggal_spm: undefined,
+      });
     }
   }, [isOpen, editingTagihan, form]);
 
@@ -343,6 +376,7 @@ const EditTagihanDialog: React.FC<EditTagihanDialogProps> = ({ isOpen, onClose, 
           kode_jadwal: values.kode_jadwal,
           nomor_urut: values.nomor_urut_tagihan,
           sumber_dana: values.sumber_dana,
+          tanggal_spm: values.tanggal_spm ? format(values.tanggal_spm, 'yyyy-MM-dd') : null,
         })
         .eq('id_tagihan', editingTagihan.id_tagihan);
 
@@ -413,11 +447,20 @@ const EditTagihanDialog: React.FC<EditTagihanDialogProps> = ({ isOpen, onClose, 
                 <Label htmlFor="nomor_spm_otomatis" className="text-sm font-semibold text-slate-700 dark:text-slate-300">
                   Nomor SPM (Otomatis)
                 </Label>
-                <div className="p-3 rounded-lg bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950/50 dark:to-teal-950/50 border-2 border-emerald-200 dark:border-emerald-800">
-                  <p className="font-mono text-sm font-semibold text-emerald-700 dark:text-emerald-400">
-                    {generatedNomorSpmPreview || 'Membuat Nomor SPM...'}
-                  </p>
-                </div>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="p-3 rounded-lg bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950/50 dark:to-teal-950/50 border-2 border-emerald-200 dark:border-emerald-800 cursor-help">
+                        <p className="font-mono text-sm font-semibold text-emerald-700 dark:text-emerald-400 truncate">
+                          {generatedNomorSpmPreview || 'Membuat Nomor SPM...'}
+                        </p>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="font-mono">{generatedNomorSpmPreview || 'Membuat Nomor SPM...'}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -525,6 +568,53 @@ const EditTagihanDialog: React.FC<EditTagihanDialogProps> = ({ isOpen, onClose, 
                     </p>
                   )}
                 </div>
+              </div>
+
+              {/* Tanggal SPM */}
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                  Tanggal SPM <span className="text-red-500">*</span>
+                </Label>
+                <Controller
+                  name="tanggal_spm"
+                  control={form.control}
+                  render={({ field }) => (
+                    <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant={"outline"}
+                          className={cn(
+                            "w-full justify-start text-left font-normal border-slate-300 dark:border-slate-700 focus:border-emerald-500 focus:ring-emerald-500",
+                            !field.value && "text-muted-foreground"
+                          )}
+                          disabled={isSubmitting}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {field.value ? format(field.value, "dd MMMM yyyy", { locale: id }) : <span>Pilih Tanggal SPM</span>}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={field.value}
+                          onSelect={(date) => {
+                            field.onChange(date);
+                            setIsCalendarOpen(false);
+                          }}
+                          disabled={(date) =>
+                            date > new Date() || date < new Date("1900-01-01")
+                          }
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  )}
+                />
+                {form.formState.errors.tanggal_spm && (
+                  <p className="text-red-500 text-sm">
+                    {form.formState.errors.tanggal_spm.message}
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">
