@@ -12,8 +12,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { SearchIcon, EyeIcon, PrinterIcon, ClockIcon, Sparkles, FilterIcon, Copy, Check } from 'lucide-react'; // Import PrinterIcon, ClockIcon, Sparkles, FilterIcon, Copy, Check
-import { format, parseISO, startOfDay, endOfDay } from 'date-fns';
+import { SearchIcon, EyeIcon, PrinterIcon, ClockIcon, Sparkles, FilterIcon, Copy, Check, CalendarIcon } from 'lucide-react';
+import { format, parseISO, startOfDay, endOfDay, startOfMonth, endOfMonth } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
 import { toast } from 'sonner';
 import useDebounce from '@/hooks/use-debounce';
@@ -88,6 +88,18 @@ const RiwayatRegistrasi = () => {
   const [selectedSkpd, setSelectedSkpd] = useState<string>('Semua SKPD');
   const [skpdOptions, setSkpdOptions] = useState<SkpdOption[]>([]);
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+
+  // Year and Month Filter States
+  const currentYearInt = new Date().getFullYear();
+  const currentMonthInt = new Date().getMonth();
+  const [selectedYear, setSelectedYear] = useState<string>(currentYearInt.toString());
+  const [selectedMonth, setSelectedMonth] = useState<string>(currentMonthInt.toString());
+
+  const years = Array.from({ length: 5 }, (_, i) => (currentYearInt - i).toString());
+  const months = [
+    'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+    'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+  ];
 
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
@@ -167,11 +179,29 @@ const RiwayatRegistrasi = () => {
           query = query.eq('nama_skpd', selectedSkpd);
         }
 
-        if (dateRange?.from) {
-          query = query.gte('waktu_registrasi', startOfDay(dateRange.from).toISOString());
-        }
-        if (dateRange?.to) {
-          query = query.lte('waktu_registrasi', endOfDay(dateRange.to).toISOString());
+        // Date Range has priority over Year/Month filters
+        if (dateRange?.from || dateRange?.to) {
+          if (dateRange?.from) {
+            query = query.gte('waktu_registrasi', startOfDay(dateRange.from).toISOString());
+          }
+          if (dateRange?.to) {
+            query = query.lte('waktu_registrasi', endOfDay(dateRange.to).toISOString());
+          }
+        } else {
+          // Only apply Year/Month filters if no date range is selected
+          if (selectedYear !== 'Semua Tahun') {
+            if (selectedMonth !== 'Semua Bulan') {
+              const mIdx = parseInt(selectedMonth);
+              const yVal = parseInt(selectedYear);
+              const start = startOfMonth(new Date(yVal, mIdx));
+              const end = endOfMonth(new Date(yVal, mIdx));
+              query = query.gte('waktu_registrasi', start.toISOString())
+                .lte('waktu_registrasi', end.toISOString());
+            } else {
+              query = query.gte('waktu_registrasi', `${selectedYear}-01-01T00:00:00Z`)
+                .lte('waktu_registrasi', `${selectedYear}-12-31T23:59:59Z`);
+            }
+          }
         }
 
         if (itemsPerPage !== -1) {
@@ -218,7 +248,7 @@ const RiwayatRegistrasi = () => {
     prevItemsPerPage.current = itemsPerPage;
     prevCurrentPage.current = currentPage;
 
-  }, [sessionLoading, profile, debouncedSearchQuery, selectedStatus, selectedSkpd, dateRange, currentPage, itemsPerPage]);
+  }, [sessionLoading, profile, debouncedSearchQuery, selectedStatus, selectedSkpd, dateRange, currentPage, itemsPerPage, selectedYear, selectedMonth]);
 
   // Efek baru untuk mengembalikan fokus ke input pencarian setelah loading selesai
   useEffect(() => {
@@ -326,50 +356,65 @@ const RiwayatRegistrasi = () => {
       </div>
 
       {/* Filter Panel - Separate Card */}
-      <div className="p-6 bg-white rounded-lg shadow-sm border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
-        <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-200 dark:border-slate-700">
-          <div className="p-2 bg-slate-100 dark:bg-slate-800 rounded-lg">
-            <FilterIcon className="h-6 w-6 text-slate-600 dark:text-slate-400" />
-          </div>
-          <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Filter Data</h2>
+      <div className="p-6 bg-white rounded-lg shadow-sm border border-gray-200 dark:bg-gray-800 dark:border-gray-700 space-y-4">
+        <div className="flex items-center gap-3 mb-2">
+          <FilterIcon className="h-5 w-5 text-slate-500" />
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Filter Data</h2>
         </div>
-        <div className="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-2">
-          <div className="relative flex-1 w-full sm:w-auto">
-            <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400" />
-            <Input
-              ref={searchInputRef}
-              type="text"
-              placeholder="Cari berdasarkan Nomor SPM atau Nama SKPD..."
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                setCurrentPage(1);
-              }}
-              className="pl-9 w-full focus-visible:ring-slate-500"
-            />
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-slate-500">Pilih Tahun</label>
+            <Select value={selectedYear} onValueChange={(value) => { setSelectedYear(value); setCurrentPage(1); if (value !== 'Semua Tahun') setDateRange(undefined); }}>
+              <SelectTrigger className="w-full focus:ring-slate-500"><SelectValue placeholder="Pilih Tahun" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Semua Tahun">Semua Tahun</SelectItem>
+                {years.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}
+              </SelectContent>
+            </Select>
           </div>
-          <Select onValueChange={(value) => { setSelectedStatus(value); setCurrentPage(1); }} value={selectedStatus}>
-            <SelectTrigger className="w-full sm:w-[200px] focus:ring-slate-500">
-              <SelectValue placeholder="Filter Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Semua Status">Semua Status</SelectItem>
-              <SelectItem value="Menunggu Verifikasi">Menunggu Verifikasi</SelectItem>
-              <SelectItem value="Diteruskan">Diteruskan</SelectItem>
-              <SelectItem value="Dikembalikan">Dikembalikan</SelectItem>
-            </SelectContent>
-          </Select>
-          <Combobox
-            options={skpdOptions}
-            value={selectedSkpd}
-            onValueChange={(value) => {
-              setSelectedSkpd(value);
-              setCurrentPage(1);
-            }}
-            placeholder="Filter SKPD"
-            className="w-full sm:w-[200px]"
-          />
-          <DateRangePickerWithPresets date={dateRange} onDateChange={(newDateRange) => { setDateRange(newDateRange); setCurrentPage(1); }} className="w-full sm:w-auto" />
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-slate-500">Pilih Bulan</label>
+            <Select value={selectedMonth} onValueChange={(value) => { setSelectedMonth(value); setCurrentPage(1); if (value !== 'Semua Bulan') setDateRange(undefined); }}>
+              <SelectTrigger className="w-full focus:ring-slate-500"><SelectValue placeholder="Pilih Bulan" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Semua Bulan">Semua Bulan</SelectItem>
+                {months.map((m, i) => <SelectItem key={i} value={i.toString()}>{m}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-slate-500">Rentang Tanggal</label>
+            <DateRangePickerWithPresets date={dateRange} onDateChange={(newDateRange) => { setDateRange(newDateRange); setCurrentPage(1); if (newDateRange?.from) { setSelectedYear('Semua Tahun'); setSelectedMonth('Semua Bulan'); } }} className="w-full" />
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-slate-500">Filter Status</label>
+            <Select onValueChange={(value) => { setSelectedStatus(value); setCurrentPage(1); }} value={selectedStatus}>
+              <SelectTrigger className="w-full focus:ring-slate-500"><SelectValue placeholder="Filter Status" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Semua Status">Semua Status</SelectItem>
+                <SelectItem value="Menunggu Verifikasi">Menunggu Verifikasi</SelectItem>
+                <SelectItem value="Diteruskan">Diteruskan</SelectItem>
+                <SelectItem value="Dikembalikan">Dikembalikan</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-slate-500">Cari Data</label>
+            <div className="relative">
+              <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400" />
+              <Input ref={searchInputRef} type="text" placeholder="Cari SPM/SKPD..." value={searchQuery} onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }} className="pl-9 w-full focus-visible:ring-slate-500" />
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-slate-500">Filter SKPD</label>
+            <Combobox options={skpdOptions} value={selectedSkpd} onValueChange={(value) => { setSelectedSkpd(value); setCurrentPage(1); }} placeholder="Pilih SKPD" className="w-full" />
+          </div>
         </div>
       </div>
 
