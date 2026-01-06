@@ -485,17 +485,17 @@ const RiwayatVerifikasi = () => {
 
         <div className="overflow-x-auto">
           <Table><TableHeader><TableRow>
-            <TableHead className="w-[50px]">No.</TableHead><TableHead>Waktu Verifikasi</TableHead><TableHead>Nomor Verifikasi</TableHead><TableHead>Nama SKPD</TableHead><TableHead>Tanggal SPM</TableHead><TableHead>Nomor SPM</TableHead><TableHead>Jumlah Kotor</TableHead><TableHead>Status Akhir</TableHead><TableHead>Diperiksa oleh</TableHead><TableHead className="text-center">Aksi</TableHead>
+            <TableHead className="w-[50px]">No.</TableHead><TableHead>Waktu Verifikasi</TableHead><TableHead>Nomor Verifikasi</TableHead><TableHead>Nama SKPD</TableHead><TableHead>Nomor SPM</TableHead><TableHead>Jumlah Kotor</TableHead><TableHead>Status Akhir</TableHead><TableHead>Diperiksa oleh</TableHead><TableHead className="text-center">Aksi</TableHead>
           </TableRow></TableHeader><TableBody>
               {loadingData && !loadingPagination ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
+                  <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
                     Memuat data riwayat verifikasi...
                   </TableCell>
                 </TableRow>
               ) : tagihanList.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center text-muted-foreground">
+                  <TableCell colSpan={8} className="text-center text-muted-foreground">
                     Tidak ada data riwayat verifikasi.
                   </TableCell>
                 </TableRow>
@@ -504,7 +504,7 @@ const RiwayatVerifikasi = () => {
                   <TableRow key={tagihan.id_tagihan}>
                     <TableCell>{(currentPage - 1) * itemsPerPage + index + 1}</TableCell><TableCell>
                       {tagihan.waktu_verifikasi ? format(parseISO(tagihan.waktu_verifikasi), 'dd MMMM yyyy HH:mm', { locale: localeId }) : '-'}
-                    </TableCell><TableCell className="font-medium">{tagihan.nomor_verifikasi || '-'}</TableCell><TableCell>{tagihan.nama_skpd}</TableCell><TableCell>{tagihan.tanggal_spm ? format(parseISO(tagihan.tanggal_spm), 'dd MMM yyyy', { locale: localeId }) : '-'}</TableCell><TableCell className="font-medium">
+                    </TableCell><TableCell className="font-medium">{tagihan.nomor_verifikasi || '-'}</TableCell><TableCell>{tagihan.nama_skpd}</TableCell><TableCell className="font-medium">
                       <Tooltip>
                         <TooltipTrigger className="max-w-[250px] whitespace-nowrap overflow-hidden text-ellipsis block">
                           {tagihan.nomor_spm}
