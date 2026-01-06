@@ -65,6 +65,7 @@ interface Tagihan {
   waktu_koreksi?: string;
   catatan_koreksi?: string;
   sumber_dana?: string;
+  tanggal_spm?: string;
 }
 
 const VerifikasiDokumen = () => {
@@ -236,8 +237,8 @@ const VerifikasiDokumen = () => {
                 </Label>
                 <TooltipProvider>
                   <Tooltip>
-                    <TooltipTrigger className="w-full text-left">
-                      <p className="font-mono text-sm font-medium text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-900/50 px-3 py-2 rounded-lg truncate border border-slate-200 dark:border-slate-800">
+                    <TooltipTrigger asChild className="w-full text-left">
+                      <p className="font-mono text-sm font-medium text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-900/50 px-3 py-2 rounded-lg truncate border border-slate-200 dark:border-slate-800 cursor-help">
                         {tagihan.nomor_spm}
                       </p>
                     </TooltipTrigger>
@@ -246,6 +247,17 @@ const VerifikasiDokumen = () => {
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
+              </div>
+
+              {/* Tanggal SPM */}
+              <div className="space-y-2">
+                <Label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide flex items-center gap-1.5">
+                  <Calendar className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                  Tanggal SPM
+                </Label>
+                <p className="text-sm font-medium text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-900/50 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800">
+                  {tagihan.tanggal_spm ? format(new Date(tagihan.tanggal_spm), 'dd MMMM yyyy', { locale: localeId }) : '-'}
+                </p>
               </div>
 
               {/* Nama SKPD */}

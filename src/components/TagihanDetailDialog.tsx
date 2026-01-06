@@ -16,7 +16,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { id } from 'date-fns/locale';
 import {
   Tooltip,
@@ -66,6 +66,7 @@ interface Tagihan {
   waktu_koreksi?: string;
   catatan_koreksi?: string;
   sumber_dana?: string;
+  tanggal_spm?: string;
 }
 
 interface TagihanDetailDialogProps {
@@ -136,13 +137,16 @@ const TagihanDetailDialog: React.FC<TagihanDetailDialogProps> = ({ isOpen, onClo
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1">
-                <Label className="text-xs text-slate-500 dark:text-slate-400 font-medium">Nomor SPM</Label>
+                <Label className="text-xs text-slate-500 dark:text-slate-400 font-medium flex items-center gap-1.5 h-5">
+                  <FileText className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                  Nomor SPM
+                </Label>
                 <TooltipProvider>
                   <Tooltip>
-                    <TooltipTrigger className="w-full text-left">
-                      <p className="font-mono text-sm font-semibold text-emerald-700 dark:text-emerald-400 truncate bg-emerald-50 dark:bg-emerald-950/30 px-3 py-2 rounded-lg border border-emerald-200 dark:border-emerald-800/50">
+                    <TooltipTrigger asChild className="w-full text-left">
+                      <div className="font-mono text-sm font-semibold text-emerald-700 dark:text-emerald-400 truncate bg-emerald-50 dark:bg-emerald-950/30 px-3 py-2 rounded-lg border border-emerald-200 dark:border-emerald-800/50 cursor-help min-h-[40px] flex items-center">
                         {tagihan.nomor_spm}
-                      </p>
+                      </div>
                     </TooltipTrigger>
                     <TooltipContent>
                       <p className="font-mono">{tagihan.nomor_spm}</p>
@@ -152,46 +156,75 @@ const TagihanDetailDialog: React.FC<TagihanDetailDialogProps> = ({ isOpen, onClo
               </div>
 
               <div className="space-y-1">
-                <Label className="text-xs text-slate-500 dark:text-slate-400 font-medium">Nama SKPD</Label>
-                <p className="text-sm font-medium text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-900/50 px-3 py-2 rounded-lg">{tagihan.nama_skpd}</p>
+                <Label className="text-xs text-slate-500 dark:text-slate-400 font-medium flex items-center gap-1.5 h-5">
+                  <Calendar className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                  Tanggal SPM
+                </Label>
+                <div className="text-sm font-medium text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-900/50 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800/50 min-h-[40px] flex items-center">
+                  {tagihan.tanggal_spm ? format(parseISO(tagihan.tanggal_spm), 'dd MMMM yyyy', { locale: id }) : '-'}
+                </div>
               </div>
 
               <div className="space-y-1">
-                <Label className="text-xs text-slate-500 dark:text-slate-400 font-medium">Jenis SPM</Label>
-                <p className="text-sm font-medium text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-900/50 px-3 py-2 rounded-lg">{tagihan.jenis_spm}</p>
+                <Label className="text-xs text-slate-500 dark:text-slate-400 font-medium flex items-center gap-1.5 h-5">
+                  <Building2 className="h-3.5 w-3.5" />
+                  Nama SKPD
+                </Label>
+                <p className="text-sm font-medium text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-900/50 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800/50 min-h-[40px] flex items-center">{tagihan.nama_skpd}</p>
               </div>
 
               <div className="space-y-1">
-                <Label className="text-xs text-slate-500 dark:text-slate-400 font-medium">Jenis Tagihan</Label>
-                <p className="text-sm font-medium text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-900/50 px-3 py-2 rounded-lg">{tagihan.jenis_tagihan}</p>
+                <Label className="text-xs text-slate-500 dark:text-slate-400 font-medium flex items-center gap-1.5 h-5">
+                  <FileText className="h-3.5 w-3.5" />
+                  Jenis SPM
+                </Label>
+                <p className="text-sm font-medium text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-900/50 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800/50 min-h-[40px] flex items-center">{tagihan.jenis_spm}</p>
               </div>
 
               <div className="space-y-1">
-                <Label className="text-xs text-slate-500 dark:text-slate-400 font-medium">Sumber Dana</Label>
-                <p className="text-sm font-medium text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-900/50 px-3 py-2 rounded-lg">{tagihan.sumber_dana || '-'}</p>
+                <Label className="text-xs text-slate-500 dark:text-slate-400 font-medium flex items-center gap-1.5 h-5">
+                  <FileText className="h-3.5 w-3.5" />
+                  Jenis Tagihan
+                </Label>
+                <p className="text-sm font-medium text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-900/50 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800/50 min-h-[40px] flex items-center">{tagihan.jenis_tagihan}</p>
               </div>
 
               <div className="space-y-1">
-                <Label className="text-xs text-slate-500 dark:text-slate-400 font-medium flex items-center gap-1">
-                  <DollarSign className="h-3 w-3" />
+                <Label className="text-xs text-slate-500 dark:text-slate-400 font-medium flex items-center gap-1.5 h-5">
+                  <Building2 className="h-3.5 w-3.5" />
+                  Sumber Dana
+                </Label>
+                <p className="text-sm font-medium text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-900/50 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800/50 min-h-[40px] flex items-center">{tagihan.sumber_dana || '-'}</p>
+              </div>
+
+              <div className="space-y-1">
+                <Label className="text-xs text-slate-500 dark:text-slate-400 font-medium flex items-center gap-1.5 h-5">
+                  <DollarSign className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
                   Jumlah Kotor
                 </Label>
-                <p className="text-sm font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 px-3 py-2 rounded-lg border border-emerald-200 dark:border-emerald-800/50">
-                  Rp {tagihan.jumlah_kotor.toLocaleString('id-ID')}
-                </p>
+                <div className="text-sm font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 px-3 py-2 rounded-lg border border-emerald-200 dark:border-emerald-800/50 min-h-[40px] flex items-center">
+                  Rp{tagihan.jumlah_kotor.toLocaleString('id-ID')}
+                </div>
               </div>
 
               <div className="md:col-span-2 space-y-1">
-                <Label className="text-xs text-slate-500 dark:text-slate-400 font-medium">Uraian</Label>
-                <p className="text-sm text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-900/50 px-3 py-2 rounded-lg leading-relaxed">{tagihan.uraian}</p>
+                <Label className="text-xs text-slate-500 dark:text-slate-400 font-medium flex items-center gap-1.5 h-5">
+                  <FileText className="h-3.5 w-3.5" />
+                  Uraian
+                </Label>
+                <div className="text-sm font-medium text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-900/50 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800/50 min-h-[60px] flex items-start leading-relaxed">
+                  {tagihan.uraian}
+                </div>
               </div>
 
               <div className="space-y-1">
-                <Label className="text-xs text-slate-500 dark:text-slate-400 font-medium flex items-center gap-1">
-                  <Calendar className="h-3 w-3" />
+                <Label className="text-xs text-slate-500 dark:text-slate-400 font-medium flex items-center gap-1.5 h-5">
+                  <Calendar className="h-3.5 w-3.5" />
                   Waktu Input
                 </Label>
-                <p className="text-sm font-medium text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-900/50 px-3 py-2 rounded-lg">{formatDate(tagihan.waktu_input)}</p>
+                <div className="text-sm font-medium text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-900/50 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800/50 min-h-[40px] flex items-center">
+                  {formatDate(tagihan.waktu_input)}
+                </div>
               </div>
             </div>
           </div>
@@ -209,26 +242,29 @@ const TagihanDetailDialog: React.FC<TagihanDetailDialogProps> = ({ isOpen, onClo
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {tagihan.nomor_registrasi && (
                   <div className="space-y-1">
-                    <Label className="text-xs text-slate-500 dark:text-slate-400 font-medium">Nomor Registrasi</Label>
-                    <p className="text-sm font-medium text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-900/50 px-3 py-2 rounded-lg">{tagihan.nomor_registrasi}</p>
+                    <Label className="text-xs text-slate-500 dark:text-slate-400 font-medium flex items-center gap-1.5 h-5">
+                      <FileText className="h-3.5 w-3.5" />
+                      Nomor Registrasi
+                    </Label>
+                    <div className="text-sm font-medium text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-900/50 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800/50 min-h-[40px] flex items-center">{tagihan.nomor_registrasi}</div>
                   </div>
                 )}
                 {tagihan.nama_registrator && (
                   <div className="space-y-1">
-                    <Label className="text-xs text-slate-500 dark:text-slate-400 font-medium flex items-center gap-1">
-                      <User className="h-3 w-3" />
+                    <Label className="text-xs text-slate-500 dark:text-slate-400 font-medium flex items-center gap-1.5 h-5">
+                      <User className="h-3.5 w-3.5" />
                       Registrator
                     </Label>
-                    <p className="text-sm font-medium text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-900/50 px-3 py-2 rounded-lg">{tagihan.nama_registrator}</p>
+                    <div className="text-sm font-medium text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-900/50 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800/50 min-h-[40px] flex items-center">{tagihan.nama_registrator}</div>
                   </div>
                 )}
                 {tagihan.waktu_registrasi && (
                   <div className="space-y-1">
-                    <Label className="text-xs text-slate-500 dark:text-slate-400 font-medium flex items-center gap-1">
-                      <Calendar className="h-3 w-3" />
+                    <Label className="text-xs text-slate-500 dark:text-slate-400 font-medium flex items-center gap-1.5 h-5">
+                      <Calendar className="h-3.5 w-3.5" />
                       Waktu Registrasi
                     </Label>
-                    <p className="text-sm font-medium text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-900/50 px-3 py-2 rounded-lg">{formatDate(tagihan.waktu_registrasi)}</p>
+                    <div className="text-sm font-medium text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-900/50 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800/50 min-h-[40px] flex items-center">{formatDate(tagihan.waktu_registrasi)}</div>
                   </div>
                 )}
               </div>
@@ -247,26 +283,32 @@ const TagihanDetailDialog: React.FC<TagihanDetailDialogProps> = ({ isOpen, onClo
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
                 <div className="space-y-1">
-                  <Label className="text-xs text-slate-500 dark:text-slate-400 font-medium flex items-center gap-1">
-                    <User className="h-3 w-3" />
+                  <Label className="text-xs text-slate-500 dark:text-slate-400 font-medium flex items-center gap-1.5 h-5">
+                    <User className="h-3.5 w-3.5" />
                     Diperiksa oleh
                   </Label>
-                  <p className="text-sm font-medium text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-900/50 px-3 py-2 rounded-lg">{tagihan.nama_verifikator || '-'}</p>
+                  <div className="text-sm font-medium text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-900/50 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800/50 min-h-[40px] flex items-center">{tagihan.nama_verifikator || '-'}</div>
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-xs text-slate-500 dark:text-slate-400 font-medium flex items-center gap-1">
-                    <Calendar className="h-3 w-3" />
+                  <Label className="text-xs text-slate-500 dark:text-slate-400 font-medium flex items-center gap-1.5 h-5">
+                    <Calendar className="h-3.5 w-3.5" />
                     Waktu Pemeriksaan
                   </Label>
-                  <p className="text-sm font-medium text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-900/50 px-3 py-2 rounded-lg">{formatDate(tagihan.waktu_verifikasi)}</p>
+                  <div className="text-sm font-medium text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-900/50 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800/50 min-h-[40px] flex items-center">{formatDate(tagihan.waktu_verifikasi)}</div>
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-xs text-slate-500 dark:text-slate-400 font-medium">Nomor Verifikasi</Label>
-                  <p className="text-sm font-medium text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-900/50 px-3 py-2 rounded-lg">{tagihan.nomor_verifikasi || '-'}</p>
+                  <Label className="text-xs text-slate-500 dark:text-slate-400 font-medium flex items-center gap-1.5 h-5">
+                    <FileText className="h-3.5 w-3.5" />
+                    Nomor Verifikasi
+                  </Label>
+                  <div className="text-sm font-medium text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-900/50 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800/50 min-h-[40px] flex items-center">{tagihan.nomor_verifikasi || '-'}</div>
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-xs text-slate-500 dark:text-slate-400 font-medium">Status Akhir</Label>
-                  <div className="flex items-center h-full">
+                  <Label className="text-xs text-slate-500 dark:text-slate-400 font-medium flex items-center gap-1.5 h-5">
+                    <AlertCircle className="h-3.5 w-3.5" />
+                    Status Akhir
+                  </Label>
+                  <div className="flex items-center min-h-[40px]">
                     {getStatusBadge(tagihan.status_tagihan)}
                   </div>
                 </div>

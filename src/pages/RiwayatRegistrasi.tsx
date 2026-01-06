@@ -69,6 +69,7 @@ interface Tagihan {
   detail_verifikasi?: VerificationItem[];
   nomor_verifikasi?: string;
   nama_verifikator?: string;
+  tanggal_spm?: string;
 }
 
 interface SkpdOption {
@@ -399,7 +400,7 @@ const RiwayatRegistrasi = () => {
 
         <div className="overflow-x-auto">
           <Table><TableHeader><TableRow>
-            <TableHead className="w-[50px]">No.</TableHead><TableHead>Waktu Registrasi</TableHead><TableHead>Nomor Registrasi</TableHead><TableHead>Nomor SPM</TableHead><TableHead>Nama SKPD</TableHead><TableHead>Uraian</TableHead><TableHead>Jumlah Kotor</TableHead><TableHead>Status Tagihan</TableHead><TableHead className="text-center">Aksi</TableHead>
+            <TableHead className="w-[50px]">No.</TableHead><TableHead>Waktu Registrasi</TableHead><TableHead>Nomor Registrasi</TableHead><TableHead>Tanggal SPM</TableHead><TableHead>Nomor SPM</TableHead><TableHead>Nama SKPD</TableHead><TableHead>Uraian</TableHead><TableHead>Jumlah Kotor</TableHead><TableHead>Status Tagihan</TableHead><TableHead className="text-center">Aksi</TableHead>
           </TableRow></TableHeader><TableBody>
               {loadingData && !loadingPagination ? (
                 <TableRow>
@@ -418,7 +419,7 @@ const RiwayatRegistrasi = () => {
                   <TableRow key={tagihan.id_tagihan}>
                     <TableCell>{(currentPage - 1) * itemsPerPage + index + 1}</TableCell><TableCell>
                       {tagihan.waktu_registrasi ? format(parseISO(tagihan.waktu_registrasi), 'dd MMMM yyyy HH:mm', { locale: localeId }) : '-'}
-                    </TableCell><TableCell className="font-medium">{tagihan.nomor_registrasi || '-'}</TableCell><TableCell className="font-medium">
+                    </TableCell><TableCell className="font-medium">{tagihan.nomor_registrasi || '-'}</TableCell><TableCell>{tagihan.tanggal_spm ? format(parseISO(tagihan.tanggal_spm), 'dd MMM yyyy', { locale: localeId }) : '-'}</TableCell><TableCell className="font-medium">
                       <Tooltip>
                         <TooltipTrigger className="max-w-[250px] whitespace-nowrap overflow-hidden text-ellipsis block">
                           {tagihan.nomor_spm}

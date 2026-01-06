@@ -31,6 +31,7 @@ import AdminKodeWilayah from "./pages/AdminKodeWilayah";
 import VerifikasiDokumen from "./pages/VerifikasiDokumen"; // Import the new VerifikasiDokumen page
 import AdminLaporan from "./pages/AdminLaporan"; // Import the new AdminLaporan page
 import AdminActivityLog from "./pages/AdminActivityLog"; // Import the new AdminActivityLog page
+import RiwayatTagihan from "./pages/RiwayatTagihan"; // Import the new History page
 import { SessionContextProvider } from "./contexts/SessionContext";
 
 const queryClient = new QueryClient();
@@ -53,6 +54,7 @@ const App = () => (
                 <Route path="/" element={<Index />} />
                 <Route path="/dashboard-skpd" element={<DashboardSKPD />} />
                 <Route path="/portal-skpd" element={<PortalSKPD />} />
+                <Route path="/riwayat-tagihan" element={<RiwayatTagihan />} />
                 <Route path="/dashboard-registrasi" element={<DashboardRegistrasi />} />
                 <Route path="/portal-registrasi" element={<PortalRegistrasi />} />
                 <Route path="/riwayat-registrasi" element={<RiwayatRegistrasi />} />

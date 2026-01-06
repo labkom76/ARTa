@@ -64,6 +64,7 @@ interface Tagihan {
     waktu_koreksi?: string;
     catatan_koreksi?: string;
     sumber_dana?: string;
+    tanggal_spm?: string;
 }
 
 interface KoreksiTagihanDialogProps {
@@ -291,11 +292,20 @@ const KoreksiTagihanDialog: React.FC<KoreksiTagihanDialogProps> = ({ isOpen, onC
                                     <p className="text-sm font-medium text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-900/50 px-3 py-2 rounded-lg">{tagihan.nama_skpd}</p>
                                 </div>
                                 <div className="space-y-1">
+                                    <Label className="text-xs text-slate-500 dark:text-slate-400 font-medium flex items-center gap-1">
+                                        <Calendar className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
+                                        Tanggal SPM
+                                    </Label>
+                                    <p className="text-sm font-medium text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-900/50 px-3 py-2 rounded-lg">
+                                        {tagihan.tanggal_spm ? format(parseISO(tagihan.tanggal_spm), 'dd MMMM yyyy', { locale: localeId }) : '-'}
+                                    </p>
+                                </div>
+                                <div className="space-y-1">
                                     <Label className="text-xs text-slate-500 dark:text-slate-400 font-medium">Nomor SPM</Label>
                                     <TooltipProvider>
                                         <Tooltip>
-                                            <TooltipTrigger className="w-full text-left">
-                                                <p className="font-mono text-sm font-semibold text-slate-900 dark:text-white truncate bg-slate-50 dark:bg-slate-900/50 px-3 py-2 rounded-lg">
+                                            <TooltipTrigger asChild className="w-full text-left">
+                                                <p className="font-mono text-sm font-semibold text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-900/50 px-3 py-2 rounded-lg truncate cursor-help">
                                                     {tagihan.nomor_spm}
                                                 </p>
                                             </TooltipTrigger>
