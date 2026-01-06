@@ -264,12 +264,8 @@ const RiwayatTagihan = () => {
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="Semua Status">Semua Status</SelectItem>
-                                <SelectItem value="Selesai">Selesai</SelectItem>
                                 <SelectItem value="Diteruskan">Diteruskan</SelectItem>
-                                <SelectItem value="Menunggu Verifikasi">Menunggu Verifikasi</SelectItem>
-                                <SelectItem value="Menunggu Registrasi">Menunggu Registrasi</SelectItem>
                                 <SelectItem value="Dikembalikan">Dikembalikan</SelectItem>
-                                <SelectItem value="Tinjau Kembali">Tinjau Kembali</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
