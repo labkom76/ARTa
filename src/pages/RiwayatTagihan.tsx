@@ -22,7 +22,7 @@ import { toast } from 'sonner';
 import { format, parseISO, startOfYear, endOfYear, startOfMonth, endOfMonth, startOfDay, endOfDay } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
 import StatusBadge from '@/components/StatusBadge';
-import { HistoryIcon, SearchIcon, EyeIcon, Sparkles, FilterIcon, CalendarIcon, Undo2 } from 'lucide-react';
+import { HistoryIcon, SearchIcon, EyeIcon, Sparkles, FilterIcon, CalendarIcon, Undo2, FileDownIcon } from 'lucide-react';
 import TagihanDetailDialog from '@/components/TagihanDetailDialog';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
@@ -34,6 +34,7 @@ import {
     TooltipProvider,
     TooltipTrigger,
 } from "@/components/ui/tooltip";
+import * as XLSX from 'xlsx';
 
 interface Tagihan {
     id_tagihan: string;
@@ -123,6 +124,39 @@ const RiwayatTagihan = () => {
         }
     };
 
+    const handleExportToXLSX = () => {
+        if (tagihanList.length === 0) {
+            toast.info('Tidak ada data tagihan untuk diekspor.');
+            return;
+        }
+
+        // Create a copy of tagihanList and sort it by nomor_urut ascending
+        const sortedTagihanList = [...tagihanList].sort((a, b) => {
+            const nomorUrutA = a.nomor_urut ?? 0;
+            const nomorUrutB = b.nomor_urut ?? 0;
+            return nomorUrutA - nomorUrutB;
+        });
+
+        const dataToExport = sortedTagihanList.map(tagihan => ({
+            'Nomor SPM': tagihan.nomor_spm,
+            'Nama SKPD': tagihan.nama_skpd,
+            'Tanggal SPM': tagihan.tanggal_spm ? format(parseISO(tagihan.tanggal_spm), 'dd MMMM yyyy', { locale: localeId }) : '-',
+            'Jenis SPM': tagihan.jenis_spm,
+            'Jenis Tagihan': tagihan.jenis_tagihan,
+            'Uraian': tagihan.uraian,
+            'Jumlah Kotor': tagihan.jumlah_kotor,
+            'Status Tagihan': tagihan.status_tagihan,
+            'Waktu Input': format(new Date(tagihan.waktu_input), 'dd MMMM yyyy HH:mm', { locale: localeId }),
+        }));
+
+        const ws = XLSX.utils.json_to_sheet(dataToExport);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Riwayat Tagihan SKPD");
+        XLSX.writeFile(wb, `riwayat_tagihan_${selectedYear}.xlsx`);
+
+        toast.success('Data riwayat berhasil diekspor ke XLSX!');
+    };
+
     useEffect(() => {
         fetchHistory();
     }, [user, sessionLoading, selectedYear, selectedMonth, dateRange, selectedStatus, searchQuery]);
@@ -144,14 +178,38 @@ const RiwayatTagihan = () => {
                         <Sparkles className="h-4 w-4 text-emerald-500" />
                         Arsip tagihan tahun-tahun sebelumnya
                     </p>
-                    <Button
-                        variant="outline"
-                        onClick={() => navigate('/portal-skpd')}
-                        className="flex items-center gap-2 border-emerald-200 dark:border-emerald-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400"
-                    >
-                        <Undo2 className="h-4 w-4" />
-                        Kembali ke Portal Baru
-                    </Button>
+
+                    <div className="flex items-center gap-2 bg-white dark:bg-slate-900 p-1.5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                        <TooltipProvider>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button
+                                        variant="outline"
+                                        size="icon"
+                                        className="h-9 w-9 border-slate-200 dark:border-slate-800 hover:bg-emerald-50 hover:text-emerald-600 dark:hover:bg-emerald-950/30 dark:hover:text-emerald-400 transition-all rounded-lg"
+                                        onClick={handleExportToXLSX}
+                                        disabled={loading || tagihanList.length === 0}
+                                    >
+                                        <FileDownIcon className="h-4 w-4" />
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    <p>Export ke XLSX</p>
+                                </TooltipContent>
+                            </Tooltip>
+                        </TooltipProvider>
+
+                        <div className="w-px h-6 bg-slate-200 dark:bg-slate-800 mx-1" />
+
+                        <Button
+                            variant="outline"
+                            onClick={() => navigate('/portal-skpd')}
+                            className="h-9 flex items-center gap-2 border-emerald-200 dark:border-emerald-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 px-4 rounded-lg font-medium transition-all"
+                        >
+                            <Undo2 className="h-4 w-4" />
+                            Portal SKPD
+                        </Button>
+                    </div>
                 </div>
             </div>
 
