@@ -21,7 +21,7 @@ export const generateNomorSpm = (
   const jenisTagihanCode = getJenisTagihanCode(jenisTagihanFull);
 
   const now = new Date();
-  const currentMonth = format(now, 'MM');
+  const currentMonth = format(now, 'M');
   const currentYear = format(now, 'yyyy');
 
   const formattedSequence = String(nomorUrutTagihan).padStart(6, '0'); // Pad with 6 zeros

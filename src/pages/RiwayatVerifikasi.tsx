@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { EyeIcon, PrinterIcon, SearchIcon, ClockIcon, Sparkles, FilterIcon, FileDownIcon, PencilIcon } from 'lucide-react';
-import { format, parseISO, startOfDay, endOfDay } from 'date-fns';
+import { format, parseISO, startOfDay, endOfDay, startOfMonth, endOfMonth } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
 import { toast } from 'sonner';
 import useDebounce from '@/hooks/use-debounce';
@@ -37,6 +37,7 @@ import {
 import { Combobox } from '@/components/ui/combobox';
 import * as XLSX from 'xlsx';
 import EditTagihanVerifikatorDialog from '@/components/EditTagihanVerifikatorDialog';
+import { CalendarIcon } from 'lucide-react';
 
 interface VerificationItem {
   item: string;
@@ -85,6 +86,18 @@ const RiwayatVerifikasi = () => {
   const debouncedSearchQuery = useDebounce(searchQuery, 500);
   const [selectedStatus, setSelectedStatus] = useState<string>('Semua Status');
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+
+  // Year and Month Filter States
+  const currentYearInt = new Date().getFullYear();
+  const currentMonthInt = new Date().getMonth();
+  const [selectedYear, setSelectedYear] = useState<string>(currentYearInt.toString());
+  const [selectedMonth, setSelectedMonth] = useState<string>(currentMonthInt.toString());
+
+  const years = Array.from({ length: 5 }, (_, i) => (currentYearInt - i).toString());
+  const months = [
+    'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+    'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+  ];
 
   const [selectedVerifierId, setSelectedVerifierId] = useState<string>('Semua Verifikator');
   const [verifierOptions, setVerifierOptions] = useState<VerifierOption[]>([]);
@@ -196,11 +209,28 @@ const RiwayatVerifikasi = () => {
           query = query.eq('status_tagihan', selectedStatus);
         }
 
-        if (dateRange?.from) {
-          query = query.gte('waktu_verifikasi', startOfDay(dateRange.from).toISOString());
-        }
-        if (dateRange?.to) {
-          query = query.lte('waktu_verifikasi', endOfDay(dateRange.to).toISOString());
+        if (dateRange?.from || dateRange?.to) {
+          if (dateRange?.from) {
+            query = query.gte('waktu_verifikasi', startOfDay(dateRange.from).toISOString());
+          }
+          if (dateRange?.to) {
+            query = query.lte('waktu_verifikasi', endOfDay(dateRange.to).toISOString());
+          }
+        } else {
+          // Only apply Year/Month filters if no date range is selected
+          if (selectedYear !== 'Semua Tahun') {
+            if (selectedMonth !== 'Semua Bulan') {
+              const mIdx = parseInt(selectedMonth);
+              const yVal = parseInt(selectedYear);
+              const start = startOfMonth(new Date(yVal, mIdx));
+              const end = endOfMonth(new Date(yVal, mIdx));
+              query = query.gte('waktu_verifikasi', start.toISOString())
+                .lte('waktu_verifikasi', end.toISOString());
+            } else {
+              query = query.gte('waktu_verifikasi', `${selectedYear}-01-01T00:00:00Z`)
+                .lte('waktu_verifikasi', `${selectedYear}-12-31T23:59:59Z`);
+            }
+          }
         }
 
         if (selectedVerifierId !== 'Semua Verifikator') {
@@ -260,7 +290,7 @@ const RiwayatVerifikasi = () => {
     prevSelectedVerifierId.current = selectedVerifierId;
     prevSelectedSkpd.current = selectedSkpd;
 
-  }, [sessionLoading, profile, debouncedSearchQuery, selectedStatus, dateRange, currentPage, itemsPerPage, selectedVerifierId, selectedSkpd, verifierOptions, skpdOptions, refreshTrigger]);
+  }, [sessionLoading, profile, debouncedSearchQuery, selectedStatus, dateRange, currentPage, itemsPerPage, selectedVerifierId, selectedSkpd, verifierOptions, skpdOptions, refreshTrigger, selectedYear, selectedMonth]);
 
   useEffect(() => {
     if (!loadingData && !loadingPagination && debouncedSearchQuery && searchInputRef.current) {
@@ -408,54 +438,93 @@ const RiwayatVerifikasi = () => {
           </div>
           <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Filter Data</h2>
         </div>
-        <div className="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-2">
-          <div className="relative flex-1 w-full sm:w-auto">
-            <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400" />
-            <Input
-              ref={searchInputRef}
-              type="text"
-              placeholder="Cari berdasarkan Nomor SPM atau Nama SKPD..."
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-slate-500">Pilih Tahun</label>
+            <Select value={selectedYear} onValueChange={(value) => { setSelectedYear(value); setCurrentPage(1); if (value !== 'Semua Tahun') setDateRange(undefined); }}>
+              <SelectTrigger className="w-full focus:ring-emerald-500"><SelectValue placeholder="Pilih Tahun" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Semua Tahun">Semua Tahun</SelectItem>
+                {years.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-slate-500">Pilih Bulan</label>
+            <Select value={selectedMonth} onValueChange={(value) => { setSelectedMonth(value); setCurrentPage(1); if (value !== 'Semua Bulan') setDateRange(undefined); }}>
+              <SelectTrigger className="w-full focus:ring-emerald-500"><SelectValue placeholder="Pilih Bulan" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Semua Bulan">Semua Bulan</SelectItem>
+                {months.map((m, i) => <SelectItem key={i} value={i.toString()}>{m}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-slate-500">Rentang Tanggal</label>
+            <DateRangePickerWithPresets date={dateRange} onDateChange={(newDateRange) => { setDateRange(newDateRange); setCurrentPage(1); if (newDateRange?.from) { setSelectedYear('Semua Tahun'); setSelectedMonth('Semua Bulan'); } }} className="w-full" />
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-slate-500">Filter Status</label>
+            <Select onValueChange={(value) => { setSelectedStatus(value); setCurrentPage(1); }} value={selectedStatus}>
+              <SelectTrigger className="w-full focus:ring-emerald-500"><SelectValue placeholder="Filter Status" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Semua Status">Semua Status</SelectItem>
+                <SelectItem value="Diteruskan">Diteruskan</SelectItem>
+                <SelectItem value="Dikembalikan">Dikembalikan</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-slate-500">Filter Verifikator</label>
+            <Select onValueChange={(value) => { setSelectedVerifierId(value); setCurrentPage(1); }} value={selectedVerifierId}>
+              <SelectTrigger className="w-full focus:ring-emerald-500">
+                <SelectValue placeholder="Filter Verifikator" />
+              </SelectTrigger>
+              <SelectContent>
+                {verifierOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-slate-500">Filter SKPD</label>
+            <Combobox
+              options={skpdOptions}
+              value={selectedSkpd}
+              onValueChange={(value) => {
+                setSelectedSkpd(value);
                 setCurrentPage(1);
               }}
-              className="pl-9 w-full focus-visible:ring-emerald-500"
+              placeholder="Filter SKPD"
+              className="w-full"
             />
           </div>
-          <Select onValueChange={(value) => { setSelectedStatus(value); setCurrentPage(1); }} value={selectedStatus}>
-            <SelectTrigger className="w-full sm:w-[200px] focus:ring-emerald-500">
-              <SelectValue placeholder="Filter Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Semua Status">Semua Status</SelectItem>
-              <SelectItem value="Diteruskan">Diteruskan</SelectItem>
-              <SelectItem value="Dikembalikan">Dikembalikan</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select onValueChange={(value) => { setSelectedVerifierId(value); setCurrentPage(1); }} value={selectedVerifierId}>
-            <SelectTrigger className="w-full sm:w-[200px] focus:ring-emerald-500">
-              <SelectValue placeholder="Filter Verifikator" />
-            </SelectTrigger>
-            <SelectContent>
-              {verifierOptions.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Combobox
-            options={skpdOptions}
-            value={selectedSkpd}
-            onValueChange={(value) => {
-              setSelectedSkpd(value);
-              setCurrentPage(1);
-            }}
-            placeholder="Filter SKPD"
-            className="w-full sm:w-[200px]"
-          />
-          <DateRangePickerWithPresets date={dateRange} onDateChange={(newDateRange) => { setDateRange(newDateRange); setCurrentPage(1); }} className="w-full sm:w-auto" />
+
+          <div className="lg:col-span-3 space-y-1.5">
+            <label className="text-xs font-medium text-slate-500">Cari Data</label>
+            <div className="relative">
+              <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400" />
+              <Input
+                ref={searchInputRef}
+                type="text"
+                placeholder="Cari berdasarkan Nomor SPM atau Nama SKPD..."
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="pl-9 w-full focus-visible:ring-emerald-500"
+              />
+            </div>
+          </div>
         </div>
       </div>
 
@@ -485,17 +554,17 @@ const RiwayatVerifikasi = () => {
 
         <div className="overflow-x-auto">
           <Table><TableHeader><TableRow>
-            <TableHead className="w-[50px]">No.</TableHead><TableHead>Waktu Verifikasi</TableHead><TableHead>Nomor Verifikasi</TableHead><TableHead>Nama SKPD</TableHead><TableHead>Tanggal SPM</TableHead><TableHead>Nomor SPM</TableHead><TableHead>Jumlah Kotor</TableHead><TableHead>Status Akhir</TableHead><TableHead>Diperiksa oleh</TableHead><TableHead className="text-center">Aksi</TableHead>
+            <TableHead className="w-[50px]">No.</TableHead><TableHead>Waktu Verifikasi</TableHead><TableHead>Nomor Verifikasi</TableHead><TableHead>Nama SKPD</TableHead><TableHead>Nomor SPM</TableHead><TableHead>Jumlah Kotor</TableHead><TableHead>Status Akhir</TableHead><TableHead>Diperiksa oleh</TableHead><TableHead className="text-center">Aksi</TableHead>
           </TableRow></TableHeader><TableBody>
               {loadingData && !loadingPagination ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
+                  <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
                     Memuat data riwayat verifikasi...
                   </TableCell>
                 </TableRow>
               ) : tagihanList.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center text-muted-foreground">
+                  <TableCell colSpan={8} className="text-center text-muted-foreground">
                     Tidak ada data riwayat verifikasi.
                   </TableCell>
                 </TableRow>
@@ -504,7 +573,7 @@ const RiwayatVerifikasi = () => {
                   <TableRow key={tagihan.id_tagihan}>
                     <TableCell>{(currentPage - 1) * itemsPerPage + index + 1}</TableCell><TableCell>
                       {tagihan.waktu_verifikasi ? format(parseISO(tagihan.waktu_verifikasi), 'dd MMMM yyyy HH:mm', { locale: localeId }) : '-'}
-                    </TableCell><TableCell className="font-medium">{tagihan.nomor_verifikasi || '-'}</TableCell><TableCell>{tagihan.nama_skpd}</TableCell><TableCell>{tagihan.tanggal_spm ? format(parseISO(tagihan.tanggal_spm), 'dd MMM yyyy', { locale: localeId }) : '-'}</TableCell><TableCell className="font-medium">
+                    </TableCell><TableCell className="font-medium">{tagihan.nomor_verifikasi || '-'}</TableCell><TableCell>{tagihan.nama_skpd}</TableCell><TableCell className="font-medium">
                       <Tooltip>
                         <TooltipTrigger className="max-w-[250px] whitespace-nowrap overflow-hidden text-ellipsis block">
                           {tagihan.nomor_spm}

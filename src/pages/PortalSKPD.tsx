@@ -755,24 +755,55 @@ const PortalSKPD = () => {
             <Sparkles className="h-4 w-4 text-emerald-500" />
             Kelola pengajuan tagihan Anda tahun berjalan
           </p>
-          <Button
-            variant="outline"
-            onClick={() => navigate('/riwayat-tagihan')}
-            className="flex items-center gap-2 border-emerald-200 dark:border-emerald-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400"
-          >
-            <HistoryIcon className="h-4 w-4" />
-            Lihat Riwayat Tagihan
-          </Button>
         </div>
       </div>
 
       <div className="flex justify-end items-center mb-6">
-        <div className="flex space-x-2">
-          <Button variant="outline" className="flex items-center gap-2 hover:bg-emerald-50 hover:text-emerald-600 dark:hover:bg-slate-800 dark:hover:text-emerald-400 transition-colors" onClick={handleExportToXLSX} disabled={!isAccountVerified || tagihanList.length === 0}>
-            <FileDownIcon className="h-4 w-4" /> Export ke XLSX
-          </Button>
-          <Button onClick={() => { setEditingTagihan(null); setIsModalOpen(true); }} className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white dark:bg-emerald-600 dark:hover:bg-emerald-500 transition-all shadow-sm hover:shadow-md" disabled={!isAccountVerified || !profile?.is_active}>
-            <PlusCircleIcon className="h-4 w-4" /> Input Tagihan Baru
+        <div className="flex items-center gap-2 bg-white dark:bg-slate-900 p-1.5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => navigate('/riwayat-tagihan')}
+                  className="h-9 w-9 border-emerald-200 dark:border-emerald-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 transition-all rounded-lg"
+                >
+                  <HistoryIcon className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Lihat Riwayat Tagihan</p>
+              </TooltipContent>
+            </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-9 w-9 border-slate-200 dark:border-slate-800 hover:bg-emerald-50 hover:text-emerald-600 dark:hover:bg-emerald-950/30 dark:hover:text-emerald-400 transition-all rounded-lg"
+                  onClick={handleExportToXLSX}
+                  disabled={!isAccountVerified || tagihanList.length === 0}
+                >
+                  <FileDownIcon className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Export ke XLSX</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+
+          <div className="w-px h-6 bg-slate-200 dark:bg-slate-800 mx-1" />
+
+          <Button
+            onClick={() => { setEditingTagihan(null); setIsModalOpen(true); }}
+            className="h-9 flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white dark:bg-emerald-600 dark:hover:bg-emerald-500 transition-all shadow-sm hover:shadow-md px-4 rounded-lg font-medium"
+            disabled={!isAccountVerified || !profile?.is_active}
+          >
+            <PlusCircleIcon className="h-4 w-4" />
+            <span>Input Tagihan Baru</span>
           </Button>
         </div>
       </div>
