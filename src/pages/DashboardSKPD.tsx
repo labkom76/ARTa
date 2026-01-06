@@ -58,12 +58,14 @@ const DashboardSKPD = () => {
             setDataLoading(true);
             try {
                 const userId = user.id;
+                const currentYear = new Date().getFullYear().toString();
 
                 // Total Tagihan
                 const { count: totalCount, error: totalError } = await supabase
                     .from('database_tagihan')
                     .select('*', { count: 'exact', head: true })
-                    .eq('id_pengguna_input', userId);
+                    .eq('id_pengguna_input', userId)
+                    .ilike('nomor_spm', `%/${currentYear}`);
 
                 if (totalError) throw totalError;
 
@@ -72,7 +74,8 @@ const DashboardSKPD = () => {
                     .from('database_tagihan')
                     .select('*', { count: 'exact', head: true })
                     .eq('id_pengguna_input', userId)
-                    .eq('status_tagihan', 'Menunggu Registrasi');
+                    .eq('status_tagihan', 'Menunggu Registrasi')
+                    .ilike('nomor_spm', `%/${currentYear}`);
 
                 if (menungguRegistrasiError) throw menungguRegistrasiError;
 
@@ -81,7 +84,8 @@ const DashboardSKPD = () => {
                     .from('database_tagihan')
                     .select('*', { count: 'exact', head: true })
                     .eq('id_pengguna_input', userId)
-                    .eq('status_tagihan', 'Menunggu Verifikasi');
+                    .eq('status_tagihan', 'Menunggu Verifikasi')
+                    .ilike('nomor_spm', `%/${currentYear}`);
 
                 if (menungguVerifikasiError) throw menungguVerifikasiError;
 
@@ -90,7 +94,8 @@ const DashboardSKPD = () => {
                     .from('database_tagihan')
                     .select('*', { count: 'exact', head: true })
                     .eq('id_pengguna_input', userId)
-                    .eq('status_tagihan', 'Diteruskan');
+                    .eq('status_tagihan', 'Diteruskan')
+                    .ilike('nomor_spm', `%/${currentYear}`);
 
                 if (diteruskanError) throw diteruskanError;
 
@@ -99,7 +104,8 @@ const DashboardSKPD = () => {
                     .from('database_tagihan')
                     .select('*', { count: 'exact', head: true })
                     .eq('id_pengguna_input', userId)
-                    .eq('status_tagihan', 'Dikembalikan');
+                    .eq('status_tagihan', 'Dikembalikan')
+                    .ilike('nomor_spm', `%/${currentYear}`);
 
                 if (dikembalikanError) throw dikembalikanError;
 
@@ -122,10 +128,12 @@ const DashboardSKPD = () => {
             if (!user || sessionLoading) return;
 
             try {
+                const currentYear = new Date().getFullYear().toString();
                 const { data, error } = await supabase
                     .from('database_tagihan')
                     .select('id_tagihan, nomor_spm, status_tagihan, waktu_input, waktu_registrasi, waktu_verifikasi, waktu_koreksi')
                     .eq('id_pengguna_input', user.id)
+                    .ilike('nomor_spm', `%/${currentYear}`)
                     .order('waktu_input', { ascending: false })
                     .limit(5);
 

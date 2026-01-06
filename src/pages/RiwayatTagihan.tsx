@@ -304,8 +304,16 @@ const RiwayatTagihan = () => {
                             <TableBody>
                                 {loading ? (
                                     <TableRow>
-                                        <TableCell colSpan={8} className="h-32 text-center text-slate-500">
-                                            Memuat data riwayat...
+                                        <TableCell colSpan={8} className="py-12">
+                                            <div className="flex flex-col items-center justify-center space-y-4">
+                                                <div className="relative w-12 h-12">
+                                                    <div className="absolute inset-0 rounded-full border-4 border-emerald-200 dark:border-emerald-900"></div>
+                                                    <div className="absolute inset-0 rounded-full border-4 border-emerald-500 dark:border-emerald-400 border-t-transparent animate-spin"></div>
+                                                </div>
+                                                <p className="text-sm font-medium bg-gradient-to-r from-emerald-600 to-teal-600 dark:from-emerald-400 dark:to-teal-400 bg-clip-text text-transparent">
+                                                    Memuat data riwayat...
+                                                </p>
+                                            </div>
                                         </TableCell>
                                     </TableRow>
                                 ) : tagihanList.length === 0 ? (
