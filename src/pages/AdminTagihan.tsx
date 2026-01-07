@@ -3,7 +3,7 @@ import { useSession } from '@/contexts/SessionContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { EyeIcon, SearchIcon, EditIcon, Trash2Icon, FileTextIcon, FilterIcon, ChevronLeftIcon, ChevronRightIcon, CalendarIcon, Trash, UserPlus, ArrowRight, X, BarChart3, Banknote, Clock } from 'lucide-react';
+import { EyeIcon, SearchIcon, EditIcon, Trash2Icon, FileTextIcon, FilterIcon, ChevronLeftIcon, ChevronRightIcon, CalendarIcon, Trash, UserPlus, ArrowRight, X, BarChart3, Banknote, Clock, ChevronUp, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { format, parseISO, startOfDay, endOfDay, startOfMonth, endOfMonth } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
@@ -119,6 +119,7 @@ const AdminTagihan = () => {
   // Selection states
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isBulkActionLoading, setIsBulkActionLoading] = useState(false);
+  const [isFilterMinimized, setIsFilterMinimized] = useState(false);
 
   // Detail Dialog states
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
@@ -686,143 +687,153 @@ const AdminTagihan = () => {
       </div>
 
       {/* Filter Section */}
-      <Card className="border-slate-200 dark:border-slate-800 shadow-lg hover:shadow-xl transition-shadow duration-300">
-        <CardHeader className="border-b border-slate-200 dark:border-slate-800 bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
-          <div className="flex items-center gap-2">
-            <div className="p-1.5 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 shadow-sm">
-              <FilterIcon className="h-4 w-4 text-white" />
+      <Card className="border-slate-200 dark:border-slate-800 shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden">
+        <CardHeader
+          className="border-b border-slate-200 dark:border-slate-800 bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 cursor-pointer select-none"
+          onClick={() => setIsFilterMinimized(!isFilterMinimized)}
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 shadow-sm">
+                <FilterIcon className="h-4 w-4 text-white" />
+              </div>
+              <CardTitle className="text-lg font-bold text-slate-900 dark:text-white">
+                Filter & Pencarian Lanjutan
+              </CardTitle>
             </div>
-            <CardTitle className="text-lg font-bold text-slate-900 dark:text-white">
-              Filter & Pencarian Lanjutan
-            </CardTitle>
+            <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500 hover:text-emerald-600">
+              {isFilterMinimized ? <ChevronDown className="h-5 w-5" /> : <ChevronUp className="h-5 w-5" />}
+            </Button>
           </div>
         </CardHeader>
-        <CardContent className="pt-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {/* Row 1: Tahun, Bulan, Rentang Tanggal */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-slate-500">Pilih Tahun</label>
-              <Select value={selectedYear} onValueChange={(value) => { setSelectedYear(value); setCurrentPage(1); if (value !== 'Semua Tahun') setDateRange(undefined); }}>
-                <SelectTrigger className="w-full focus:ring-emerald-500"><SelectValue placeholder="Pilih Tahun" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Semua Tahun">Semua Tahun</SelectItem>
-                  {years.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
+        {!isFilterMinimized && (
+          <CardContent className="pt-6 animate-in fade-in slide-in-from-top-2 duration-300">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {/* Row 1: Tahun, Bulan, Rentang Tanggal */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-slate-500">Pilih Tahun</label>
+                <Select value={selectedYear} onValueChange={(value) => { setSelectedYear(value); setCurrentPage(1); if (value !== 'Semua Tahun') setDateRange(undefined); }}>
+                  <SelectTrigger className="w-full focus:ring-emerald-500"><SelectValue placeholder="Pilih Tahun" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Semua Tahun">Semua Tahun</SelectItem>
+                    {years.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-slate-500">Pilih Bulan</label>
-              <Select value={selectedMonth} onValueChange={(value) => { setSelectedMonth(value); setCurrentPage(1); if (value !== 'Semua Bulan') setDateRange(undefined); }}>
-                <SelectTrigger className="w-full focus:ring-emerald-500"><SelectValue placeholder="Pilih Bulan" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Semua Bulan">Semua Bulan</SelectItem>
-                  {months.map((m, i) => <SelectItem key={i} value={i.toString()}>{m}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-slate-500">Pilih Bulan</label>
+                <Select value={selectedMonth} onValueChange={(value) => { setSelectedMonth(value); setCurrentPage(1); if (value !== 'Semua Bulan') setDateRange(undefined); }}>
+                  <SelectTrigger className="w-full focus:ring-emerald-500"><SelectValue placeholder="Pilih Bulan" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Semua Bulan">Semua Bulan</SelectItem>
+                    {months.map((m, i) => <SelectItem key={i} value={i.toString()}>{m}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-slate-500">Rentang Tanggal</label>
-              <DateRangePickerWithPresets date={dateRange} onDateChange={(newDateRange) => { setDateRange(newDateRange); setCurrentPage(1); if (newDateRange?.from) { setSelectedYear('Semua Tahun'); setSelectedMonth('Semua Bulan'); } }} className="w-full" />
-            </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-slate-500">Rentang Tanggal</label>
+                <DateRangePickerWithPresets date={dateRange} onDateChange={(newDateRange) => { setDateRange(newDateRange); setCurrentPage(1); if (newDateRange?.from) { setSelectedYear('Semua Tahun'); setSelectedMonth('Semua Bulan'); } }} className="w-full" />
+              </div>
 
-            {/* Row 2: Status, SKPD, Verifikator */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-slate-500">Filter Status</label>
-              <Select onValueChange={(value) => { setSelectedStatus(value); setCurrentPage(1); }} value={selectedStatus}>
-                <SelectTrigger className="w-full focus:ring-emerald-500"><SelectValue placeholder="Filter Status" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Semua Status">Semua Status</SelectItem>
-                  <SelectItem value="Menunggu Registrasi">Menunggu Registrasi</SelectItem>
-                  <SelectItem value="Menunggu Verifikasi">Menunggu Verifikasi</SelectItem>
-                  <SelectItem value="Diteruskan">Diteruskan</SelectItem>
-                  <SelectItem value="Dikembalikan">Dikembalikan</SelectItem>
-                  <SelectItem value="Tinjau Kembali">Tinjau Kembali</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+              {/* Row 2: Status, SKPD, Verifikator */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-slate-500">Filter Status</label>
+                <Select onValueChange={(value) => { setSelectedStatus(value); setCurrentPage(1); }} value={selectedStatus}>
+                  <SelectTrigger className="w-full focus:ring-emerald-500"><SelectValue placeholder="Filter Status" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Semua Status">Semua Status</SelectItem>
+                    <SelectItem value="Menunggu Registrasi">Menunggu Registrasi</SelectItem>
+                    <SelectItem value="Menunggu Verifikasi">Menunggu Verifikasi</SelectItem>
+                    <SelectItem value="Diteruskan">Diteruskan</SelectItem>
+                    <SelectItem value="Dikembalikan">Dikembalikan</SelectItem>
+                    <SelectItem value="Tinjau Kembali">Tinjau Kembali</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-slate-500">Filter SKPD</label>
-              <Combobox
-                options={skpdOptions}
-                value={selectedSkpd}
-                onValueChange={(value) => {
-                  setSelectedSkpd(value);
-                  setCurrentPage(1);
-                }}
-                placeholder="Pilih SKPD"
-                className="w-full"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-slate-500">Filter Verifikator</label>
-              <Select onValueChange={(value) => { setSelectedVerifierId(value); setCurrentPage(1); }} value={selectedVerifierId}>
-                <SelectTrigger className="w-full focus:ring-emerald-500">
-                  <SelectValue placeholder="Filter Verifikator" />
-                </SelectTrigger>
-                <SelectContent>
-                  {verifierOptions.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Row 3: Jenis SPM, Jenis Tagihan, Pencarian */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-slate-500">Jenis SPM</label>
-              <Select onValueChange={(value) => { setSelectedJenisSpm(value); setCurrentPage(1); }} value={selectedJenisSpm}>
-                <SelectTrigger className="w-full focus:ring-emerald-500"><SelectValue placeholder="Pilih Jenis SPM" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Semua Jenis SPM">Semua Jenis SPM</SelectItem>
-                  <SelectItem value="Belanja Pegawai">Belanja Pegawai</SelectItem>
-                  <SelectItem value="Belanja Barang Jasa">Belanja Barang Jasa</SelectItem>
-                  <SelectItem value="Belanja Modal">Belanja Modal</SelectItem>
-                  <SelectItem value="Belanja Hibah">Belanja Hibah</SelectItem>
-                  <SelectItem value="Belanja Bantuan Sosial">Belanja Bantuan Sosial</SelectItem>
-                  <SelectItem value="Belanja Tidak Terduga">Belanja Tidak Terduga</SelectItem>
-                  <SelectItem value="Belanja Transfer">Belanja Transfer</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-slate-500">Jenis Tagihan</label>
-              <Select onValueChange={(value) => { setSelectedJenisTagihan(value); setCurrentPage(1); }} value={selectedJenisTagihan}>
-                <SelectTrigger className="w-full focus:ring-emerald-500"><SelectValue placeholder="Pilih Jenis Tagihan" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Semua Jenis Tagihan">Semua Jenis Tagihan</SelectItem>
-                  <SelectItem value="Langsung (LS)">Langsung (LS)</SelectItem>
-                  <SelectItem value="Uang Persediaan (UP)">Uang Persediaan (UP)</SelectItem>
-                  <SelectItem value="Ganti Uang (GU)">Ganti Uang (GU)</SelectItem>
-                  <SelectItem value="Tambah Uang (TU)">Tambah Uang (TU)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-slate-500">Cari Data</label>
-              <div className="relative">
-                <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500 dark:text-slate-400" />
-                <Input
-                  type="text"
-                  placeholder="Cari Nomor SPM atau Nama SKPD..."
-                  value={searchQuery}
-                  onChange={(e) => {
-                    setSearchQuery(e.target.value);
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-slate-500">Filter SKPD</label>
+                <Combobox
+                  options={skpdOptions}
+                  value={selectedSkpd}
+                  onValueChange={(value) => {
+                    setSelectedSkpd(value);
                     setCurrentPage(1);
                   }}
-                  className="pl-9 border-slate-300 dark:border-slate-700 focus:border-emerald-500 focus:ring-emerald-500 transition-colors"
+                  placeholder="Pilih SKPD"
+                  className="w-full"
                 />
               </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-slate-500">Filter Verifikator</label>
+                <Select onValueChange={(value) => { setSelectedVerifierId(value); setCurrentPage(1); }} value={selectedVerifierId}>
+                  <SelectTrigger className="w-full focus:ring-emerald-500">
+                    <SelectValue placeholder="Filter Verifikator" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {verifierOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Row 3: Jenis SPM, Jenis Tagihan, Pencarian */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-slate-500">Jenis SPM</label>
+                <Select onValueChange={(value) => { setSelectedJenisSpm(value); setCurrentPage(1); }} value={selectedJenisSpm}>
+                  <SelectTrigger className="w-full focus:ring-emerald-500"><SelectValue placeholder="Pilih Jenis SPM" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Semua Jenis SPM">Semua Jenis SPM</SelectItem>
+                    <SelectItem value="Belanja Pegawai">Belanja Pegawai</SelectItem>
+                    <SelectItem value="Belanja Barang Jasa">Belanja Barang Jasa</SelectItem>
+                    <SelectItem value="Belanja Modal">Belanja Modal</SelectItem>
+                    <SelectItem value="Belanja Hibah">Belanja Hibah</SelectItem>
+                    <SelectItem value="Belanja Bantuan Sosial">Belanja Bantuan Sosial</SelectItem>
+                    <SelectItem value="Belanja Tidak Terduga">Belanja Tidak Terduga</SelectItem>
+                    <SelectItem value="Belanja Transfer">Belanja Transfer</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-slate-500">Jenis Tagihan</label>
+                <Select onValueChange={(value) => { setSelectedJenisTagihan(value); setCurrentPage(1); }} value={selectedJenisTagihan}>
+                  <SelectTrigger className="w-full focus:ring-emerald-500"><SelectValue placeholder="Pilih Jenis Tagihan" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Semua Jenis Tagihan">Semua Jenis Tagihan</SelectItem>
+                    <SelectItem value="Langsung (LS)">Langsung (LS)</SelectItem>
+                    <SelectItem value="Uang Persediaan (UP)">Uang Persediaan (UP)</SelectItem>
+                    <SelectItem value="Ganti Uang (GU)">Ganti Uang (GU)</SelectItem>
+                    <SelectItem value="Tambah Uang (TU)">Tambah Uang (TU)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-slate-500">Cari Data</label>
+                <div className="relative">
+                  <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500 dark:text-slate-400" />
+                  <Input
+                    type="text"
+                    placeholder="Cari Nomor SPM atau Nama SKPD..."
+                    value={searchQuery}
+                    onChange={(e) => {
+                      setSearchQuery(e.target.value);
+                      setCurrentPage(1);
+                    }}
+                    className="pl-9 border-slate-300 dark:border-slate-700 focus:border-emerald-500 focus:ring-emerald-500 transition-colors"
+                  />
+                </div>
+              </div>
             </div>
-          </div>
-        </CardContent>
+          </CardContent>
+        )}
       </Card>
 
       {/* Table Section */}
@@ -1046,13 +1057,16 @@ const AdminTagihan = () => {
 
       {/* Floating Bulk Action Bar */}
       {selectedIds.length > 0 && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-bottom-4 duration-300">
-          <div className="bg-slate-900 dark:bg-slate-800 text-white px-6 py-4 rounded-2xl shadow-2xl border border-slate-700 flex items-center gap-6 min-w-[500px]">
-            <div className="flex items-center gap-3 pr-6 border-r border-slate-700">
-              <div className="bg-emerald-500 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm">
+        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-bottom-full duration-500 ease-out">
+          <div className="bg-slate-900/95 dark:bg-slate-800/95 backdrop-blur-md text-white px-6 py-4 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.3)] border border-white/10 flex items-center gap-8 min-w-[600px]">
+            <div className="flex items-center gap-4 pr-8 border-r border-white/10 text-nowrap">
+              <div className="bg-gradient-to-br from-emerald-400 to-teal-500 text-white w-10 h-10 rounded-2xl flex items-center justify-center font-bold text-lg shadow-lg shadow-emerald-500/20">
                 {selectedIds.length}
               </div>
-              <span className="font-medium text-slate-200">Item Terpilih</span>
+              <div className="flex flex-col">
+                <span className="font-bold text-white tracking-tight">Terpilih</span>
+                <span className="text-[10px] text-emerald-400/80 font-medium uppercase tracking-wider">Item Tagihan</span>
+              </div>
             </div>
 
             <div className="flex items-center gap-3">
@@ -1104,9 +1118,9 @@ const AdminTagihan = () => {
               variant="ghost"
               size="icon"
               onClick={() => setSelectedIds([])}
-              className="ml-4 h-8 w-8 hover:bg-slate-800 text-slate-400"
+              className="ml-4 h-10 w-10 hover:bg-white/10 text-slate-400 hover:text-white rounded-xl transition-all"
             >
-              <X className="h-4 w-4" />
+              <X className="h-5 w-5" />
             </Button>
           </div>
         </div>
