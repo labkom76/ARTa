@@ -907,11 +907,6 @@ const PortalRegistrasi = () => {
                 </div>
 
                 <div className="flex items-start gap-3">
-                  <Label className="text-sm text-slate-600 dark:text-slate-400 w-32 pt-1 shrink-0">Nomor Registrasi:</Label>
-                  <p className="flex-1 font-medium text-emerald-600 dark:text-emerald-400">{selectedTagihanForTinjau?.nomor_registrasi || '-'}</p>
-                </div>
-
-                <div className="flex items-start gap-3">
                   <Label className="text-sm text-slate-600 dark:text-slate-400 w-32 pt-1 shrink-0">Jenis SPM:</Label>
                   <p className="flex-1 text-slate-900 dark:text-white">{selectedTagihanForTinjau?.jenis_spm || '-'}</p>
                 </div>

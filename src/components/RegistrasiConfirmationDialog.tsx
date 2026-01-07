@@ -88,16 +88,7 @@ const RegistrasiConfirmationDialog: React.FC<RegistrasiConfirmationDialogProps> 
           <div className="space-y-3 pt-2">
             <div className="flex items-start gap-3">
               <Label className="text-sm text-slate-600 dark:text-slate-400 w-32 pt-1 shrink-0">Nomor SPM:</Label>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild className="flex-1 text-left font-medium text-slate-900 dark:text-white truncate cursor-help mb-0">
-                    <p>{tagihan.nomor_spm}</p>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p className="font-mono">{tagihan.nomor_spm}</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              <p className="flex-1 font-medium text-slate-900 dark:text-white break-all">{tagihan.nomor_spm}</p>
             </div>
 
             <div className="flex items-start gap-3">
