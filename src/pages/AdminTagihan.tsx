@@ -26,8 +26,13 @@ import {
   PaginationLink,
   PaginationNext,
   PaginationPrevious,
-
 } from '@/components/ui/pagination';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import TagihanDetailDialog from '@/components/TagihanDetailDialog';
@@ -147,6 +152,11 @@ const AdminTagihan = () => {
       menungguRegistrasi: 0,
       menungguVerifikasi: 0,
       tinjauKembali: 0
+    },
+    nominalBreakdown: {
+      belumDiproses: 0,
+      diteruskan: 0,
+      dikembalikan: 0
     }
   });
 
@@ -352,6 +362,16 @@ const AdminTagihan = () => {
         const menungguVerifikasi = statsData.filter(item => item.status_tagihan === 'Menunggu Verifikasi').length;
         const tinjauKembali = statsData.filter(item => item.status_tagihan === 'Tinjau Kembali').length;
 
+        const nominalBelumDiproses = statsData
+          .filter(item => ['Menunggu Registrasi', 'Menunggu Verifikasi', 'Tinjau Kembali'].includes(item.status_tagihan))
+          .reduce((sum, item) => sum + (item.jumlah_kotor || 0), 0);
+        const nominalDiteruskan = statsData
+          .filter(item => item.status_tagihan === 'Diteruskan')
+          .reduce((sum, item) => sum + (item.jumlah_kotor || 0), 0);
+        const nominalDikembalikan = statsData
+          .filter(item => item.status_tagihan === 'Dikembalikan')
+          .reduce((sum, item) => sum + (item.jumlah_kotor || 0), 0);
+
         const pendingAction = menungguRegistrasi + menungguVerifikasi + tinjauKembali;
 
         setKpiStats({
@@ -362,6 +382,11 @@ const AdminTagihan = () => {
             menungguRegistrasi,
             menungguVerifikasi,
             tinjauKembali
+          },
+          nominalBreakdown: {
+            belumDiproses: nominalBelumDiproses,
+            diteruskan: nominalDiteruskan,
+            dikembalikan: nominalDikembalikan
           }
         });
       }
@@ -400,6 +425,17 @@ const AdminTagihan = () => {
     prevCurrentPage.current = currentPage;
 
   }, [sessionLoading, profile, debouncedSearchQuery, selectedStatus, selectedSkpd, dateRange, currentPage, itemsPerPage, selectedYear, selectedMonth, selectedJenisSpm, selectedJenisTagihan, selectedVerifierId]);
+
+  const formatCompactRp = (val: number) => {
+    if (!val || val === 0) return '0';
+    if (val >= 1e9) {
+      return `Rp${(val / 1e9).toLocaleString('id-ID', { maximumFractionDigits: 1 })}M`;
+    }
+    if (val >= 1e6) {
+      return `Rp${(val / 1e6).toLocaleString('id-ID', { maximumFractionDigits: 1 })}jt`;
+    }
+    return `Rp${val.toLocaleString('id-ID')}`;
+  };
 
   const formatDate = (dateString: string | undefined) => {
     if (!dateString) return '-';
@@ -638,18 +674,75 @@ const AdminTagihan = () => {
 
         <Card className="border-none shadow-lg overflow-hidden bg-gradient-to-br from-blue-500 to-indigo-600">
           <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-blue-50/80 text-sm font-medium uppercase tracking-wider">Total Nominal</p>
-                <h3 className="text-2xl font-bold text-white mt-1 uppercase">
-                  {loadingData ? '...' : `Rp${kpiStats.totalNominal.toLocaleString('id-ID')}`}
-                </h3>
-                <p className="text-blue-50/60 text-xs mt-2 font-medium italic">Akumulasi nilai kotor</p>
+            <TooltipProvider>
+              <div className="flex items-center justify-between pb-2">
+                <div>
+                  <p className="text-blue-50/80 text-sm font-medium uppercase tracking-wider">Total Nominal</p>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <h3 className="text-2xl font-bold text-white mt-1 uppercase cursor-help">
+                        {loadingData ? '...' : `Rp${kpiStats.totalNominal.toLocaleString('id-ID')}`}
+                      </h3>
+                    </TooltipTrigger>
+                    <TooltipContent className="bg-white text-blue-900 font-bold border-blue-200">
+                      <p>Full: Rp{kpiStats.totalNominal.toLocaleString('id-ID')}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
+                <div className="p-3 bg-white/20 rounded-2xl backdrop-blur-sm">
+                  <Banknote className="h-8 w-8 text-white" />
+                </div>
               </div>
-              <div className="p-3 bg-white/20 rounded-2xl backdrop-blur-sm">
-                <Banknote className="h-8 w-8 text-white" />
+
+              {!loadingData && (
+                <div className="mt-4 pt-4 border-t border-white/10 grid grid-cols-3 gap-1">
+                  <div className="text-center">
+                    <p className="text-[9px] text-blue-50/70 uppercase font-bold leading-tight">Belum Proses</p>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <p className="text-[11px] font-bold text-white mt-1 cursor-help">
+                          {formatCompactRp(kpiStats.nominalBreakdown.belumDiproses)}
+                        </p>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="bg-white text-blue-900 border-blue-200">
+                        <p>Rp{kpiStats.nominalBreakdown.belumDiproses.toLocaleString('id-ID')}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
+                  <div className="text-center border-x border-white/10 px-0.5">
+                    <p className="text-[9px] text-blue-50/70 uppercase font-bold leading-tight">Diteruskan</p>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <p className="text-[11px] font-bold text-white mt-1 cursor-help">
+                          {formatCompactRp(kpiStats.nominalBreakdown.diteruskan)}
+                        </p>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="bg-white text-blue-900 border-blue-200">
+                        <p>Rp{kpiStats.nominalBreakdown.diteruskan.toLocaleString('id-ID')}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-[9px] text-blue-50/70 uppercase font-bold leading-tight">Dikembalikan</p>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <p className="text-[11px] font-bold text-white mt-1 cursor-help">
+                          {formatCompactRp(kpiStats.nominalBreakdown.dikembalikan)}
+                        </p>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="bg-white text-blue-900 border-blue-200">
+                        <p>Rp{kpiStats.nominalBreakdown.dikembalikan.toLocaleString('id-ID')}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
+                </div>
+              )}
+            </TooltipProvider>
+            {loadingData && (
+              <div className="mt-4 pt-4 border-t border-white/10 flex justify-center">
+                <div className="h-4 w-24 bg-white/10 rounded animate-pulse"></div>
               </div>
-            </div>
+            )}
           </CardContent>
         </Card>
 
