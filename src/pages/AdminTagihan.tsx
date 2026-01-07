@@ -135,6 +135,7 @@ const AdminTagihan = () => {
 
   // Delete Dialog states
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isBulkDeleteDialogOpen, setIsBulkDeleteDialogOpen] = useState(false);
   const [tagihanToDelete, setTagihanToDelete] = useState<{ id: string; nomorSpm: string } | null>(null);
 
   // KPI States
@@ -342,7 +343,7 @@ const AdminTagihan = () => {
         statsQuery = statsQuery.eq('id_pengguna_verifikasi', selectedVerifierId);
       }
 
-      const { data: statsData } = await statsQuery;
+      const { data: statsData } = await statsQuery.limit(10000); // Increase limit to avoid 1000 row cap for calculations
 
       if (statsData) {
         const totalNominal = statsData.reduce((sum, item) => sum + (item.jumlah_kotor || 0), 0);
@@ -424,10 +425,13 @@ const AdminTagihan = () => {
     );
   };
 
-  const handleBulkDelete = async () => {
+  const handleBulkDelete = () => {
     if (selectedIds.length === 0) return;
-    if (!confirm(`Apakah Anda yakin ingin menghapus ${selectedIds.length} tagihan yang dipilih secara permanen?`)) return;
+    setIsBulkDeleteDialogOpen(true);
+  };
 
+  const confirmBulkDelete = async () => {
+    setIsBulkDeleteDialogOpen(false);
     setIsBulkActionLoading(true);
     try {
       const { error } = await supabase
@@ -1053,6 +1057,14 @@ const AdminTagihan = () => {
         onConfirm={confirmDelete}
         title="Konfirmasi Penghapusan Tagihan"
         message={`Apakah Anda yakin ingin menghapus tagihan dengan Nomor SPM: ${tagihanToDelete?.nomorSpm || ''}? Tindakan ini tidak dapat diurungkan.`}
+      />
+
+      <DeleteConfirmationDialog
+        isOpen={isBulkDeleteDialogOpen}
+        onClose={() => setIsBulkDeleteDialogOpen(false)}
+        onConfirm={confirmBulkDelete}
+        title="Konfirmasi Hapus Massal"
+        message={`Apakah Anda yakin ingin menghapus ${selectedIds.length} tagihan yang dipilih secara permanen? Tindakan ini tidak dapat diurungkan.`}
       />
 
       {/* Floating Bulk Action Bar */}

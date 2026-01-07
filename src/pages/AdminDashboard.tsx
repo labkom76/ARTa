@@ -151,7 +151,7 @@ const AdminDashboard = () => {
         .is('asal_skpd', null); // Filter for users with SKPD role but no assigned SKPD
       if (newUsersError) throw newUsersError;
 
-      // 3. Nilai Total Tagihan - Filtered by totalAmountTimeFilter (status always 'Diteruskan')
+      // 3. Nilai Total Tagihan - Filtered by totalAmountTimeFilter (Sync logic with AdminTagihan.tsx)
       let timeFilterStart: string;
       let timeFilterEnd: string;
 
@@ -161,7 +161,7 @@ const AdminDashboard = () => {
           timeFilterEnd = endOfDay(now).toISOString();
           break;
         case 'Minggu Ini':
-          timeFilterStart = startOfWeek(now, { weekStartsOn: 1 }).toISOString(); // Monday as start of week
+          timeFilterStart = startOfWeek(now, { weekStartsOn: 1 }).toISOString();
           timeFilterEnd = endOfWeek(now, { weekStartsOn: 1 }).toISOString();
           break;
         case 'Bulan Ini':
@@ -178,26 +178,28 @@ const AdminDashboard = () => {
           break;
       }
 
+      // GLOBAL NOMINAL: Sync with AdminTagihan.tsx
+      // Use waktu_input and count all statuses to match the "Global Pool"
       const { data: totalAmountData, error: totalAmountError } = await supabase
         .from('database_tagihan')
         .select('jumlah_kotor')
-        .eq('status_tagihan', 'Diteruskan') // Always 'Diteruskan' for this card
-        .gte('waktu_verifikasi', timeFilterStart)
-        .lte('waktu_verifikasi', timeFilterEnd);
+        .gte('waktu_input', timeFilterStart)
+        .lte('waktu_input', timeFilterEnd)
+        .limit(10000); // Increase limit to avoid 1000 row cap on large datasets
       if (totalAmountError) throw totalAmountError;
 
-      const totalAmountProcessed = totalAmountData.reduce((sum, tagihan) => sum + (tagihan.jumlah_kotor || 0), 0);
+      const totalAmountProcessed = (totalAmountData || []).reduce((sum, item) => sum + (item.jumlah_kotor || 0), 0);
 
-      // 4. Tagihan Dalam Antrian
+      // 4. Tagihan Dalam Antrian - Sync with AdminTagihan "Pending Action" logic
       const { count: queuedTagihanCount, error: queuedError } = await supabase
         .from('database_tagihan')
         .select('*', { count: 'exact', head: true })
-        .in('status_tagihan', ['Menunggu Registrasi', 'Menunggu Verifikasi']);
+        .in('status_tagihan', ['Menunggu Registrasi', 'Menunggu Verifikasi', 'Tinjau Kembali']);
       if (queuedError) throw queuedError;
 
       setKpiData({
         totalSKPD: totalSKPDCount || 0,
-        newUsersPendingActivation: newUsersCount || 0, // Menggunakan data pengguna baru
+        newUsersPendingActivation: newUsersCount || 0,
         totalAmountProcessed: totalAmountProcessed,
         queuedTagihan: queuedTagihanCount || 0,
       });
@@ -276,8 +278,8 @@ const AdminDashboard = () => {
         .select('nama_verifikator')
         .eq('status_tagihan', 'Diteruskan')
         .not('nama_verifikator', 'is', null)
-        .gte('waktu_verifikasi', timeFilterStart)
-        .lte('waktu_verifikasi', timeFilterEnd);
+        .gte('waktu_input', timeFilterStart)
+        .lte('waktu_input', timeFilterEnd);
 
       if (error) throw error;
 
@@ -355,8 +357,8 @@ const AdminDashboard = () => {
         .select('nama_skpd, jumlah_kotor')
         .eq('status_tagihan', 'Diteruskan')
         .not('nama_skpd', 'is', null)
-        .gte('waktu_verifikasi', timeFilterStart)
-        .lte('waktu_verifikasi', timeFilterEnd);
+        .gte('waktu_input', timeFilterStart)
+        .lte('waktu_input', timeFilterEnd);
 
       if (error) throw error;
 
@@ -439,8 +441,8 @@ const AdminDashboard = () => {
         .select('nama_registrator, jumlah_kotor')
         .in('status_tagihan', ['Menunggu Verifikasi', 'Diteruskan', 'Dikembalikan'])
         .not('nama_registrator', 'is', null)
-        .gte('waktu_registrasi', timeFilterStart)
-        .lte('waktu_registrasi', timeFilterEnd);
+        .gte('waktu_input', timeFilterStart)
+        .lte('waktu_input', timeFilterEnd);
 
       if (error) throw error;
 
@@ -572,7 +574,7 @@ const AdminDashboard = () => {
       </div>
 
       {/* KPI Cards Grid */}
-      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4">
         {/* Total SKPD Card */}
         <Card className="group relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
           <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-cyan-600 opacity-100"></div>
@@ -625,12 +627,12 @@ const AdminDashboard = () => {
           <div className="absolute inset-0 bg-gradient-to-br from-emerald-600 to-teal-700 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
           <CardHeader className="relative flex flex-row items-center justify-between space-y-0 pb-3">
             <CardTitle className="text-sm font-semibold text-white/90">Nilai Total Tagihan</CardTitle>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
               <Select
                 onValueChange={(value: 'Hari Ini' | 'Minggu Ini' | 'Bulan Ini' | 'Tahun Ini') => setTotalAmountTimeFilter(value)}
                 value={totalAmountTimeFilter}
               >
-                <SelectTrigger className="h-7 w-auto px-2 border-white/30 bg-white/10 backdrop-blur-sm text-white text-xs font-medium hover:bg-white/20 transition-colors">
+                <SelectTrigger className="h-6 w-auto px-1.5 border-white/20 bg-white/10 backdrop-blur-sm text-white text-[10px] font-medium hover:bg-white/20 transition-all">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -640,20 +642,20 @@ const AdminDashboard = () => {
                   <SelectItem value="Tahun Ini">Tahun Ini</SelectItem>
                 </SelectContent>
               </Select>
-              <div className="p-2.5 rounded-lg bg-white/20 backdrop-blur-sm group-hover:scale-110 transition-transform duration-300">
-                <TrendingUpIcon className="h-5 w-5 text-white" />
+              <div className="p-2 rounded-lg bg-white/20 backdrop-blur-sm group-hover:scale-105 transition-transform duration-300">
+                <TrendingUpIcon className="h-4 w-4 text-white" />
               </div>
             </div>
           </CardHeader>
           <CardContent className="relative">
-            <div className="text-2xl sm:text-3xl font-bold text-white mb-1 break-words">
+            <div className="text-xl sm:text-2xl font-bold text-white mb-1 tracking-tight whitespace-nowrap overflow-hidden">
               Rp{(kpiData?.totalAmountProcessed || 0).toLocaleString('id-ID')}
             </div>
-            <p className="text-xs text-white/80 font-medium">
-              Tagihan Diteruskan
+            <p className="text-xs text-emerald-50/70 font-medium italic">
+              Akumulasi nilai kotor
             </p>
             <div className="absolute bottom-0 right-0 opacity-10 group-hover:opacity-20 transition-opacity duration-300">
-              <TrendingUpIcon className="h-24 w-24 text-white" />
+              <TrendingUpIcon className="h-20 w-20 text-white" />
             </div>
           </CardContent>
         </Card>
@@ -1110,10 +1112,16 @@ const AdminDashboard = () => {
                   />
                   <Bar
                     dataKey="value"
-                    fill={({ name }) => currentChartColors[statusColorMap[name as keyof typeof statusColorMap]]}
                     radius={[8, 8, 0, 0]}
                     maxBarSize={60}
-                  />
+                  >
+                    {barChartData.map((entry, index) => (
+                      <Cell
+                        key={`cell-${index}`}
+                        fill={currentChartColors[statusColorMap[entry.name as keyof typeof statusColorMap]] || '#cbd5e1'}
+                      />
+                    ))}
+                  </Bar>
                 </BarChart>
               ) : (
                 <PieChart>
