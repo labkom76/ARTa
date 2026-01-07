@@ -35,6 +35,8 @@ import EditTagihanDialog from '@/components/EditTagihanDialog';
 import DeleteConfirmationDialog from '@/components/DeleteConfirmationDialog';
 import StatusBadge from '@/components/StatusBadge';
 import { Combobox } from '@/components/ui/combobox';
+import QuickAuditDialog from '@/components/QuickAuditDialog';
+import { HistoryIcon } from 'lucide-react';
 
 interface VerificationItem {
   item: string;
@@ -125,6 +127,10 @@ const AdminTagihan = () => {
   // Edit Dialog states
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingTagihan, setEditingTagihan] = useState<Tagihan | null>(null);
+
+  // Audit Dialog states
+  const [isAuditModalOpen, setIsAuditModalOpen] = useState(false);
+  const [selectedTagihanIdForAudit, setSelectedTagihanIdForAudit] = useState<{ id: string, spm: string } | null>(null);
 
   // Delete Dialog states
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -486,6 +492,16 @@ const AdminTagihan = () => {
     } finally {
       setIsBulkActionLoading(false);
     }
+  };
+
+  const handleOpenAudit = (id: string, spm: string) => {
+    setSelectedTagihanIdForAudit({ id, spm });
+    setIsAuditModalOpen(true);
+  };
+
+  const handleCloseAudit = () => {
+    setIsAuditModalOpen(false);
+    setSelectedTagihanIdForAudit(null);
   };
 
   const handleDetailClick = (tagihan: Tagihan) => {
@@ -863,7 +879,6 @@ const AdminTagihan = () => {
                     />
                   </TableHead>
                   <TableHead className="font-bold text-emerald-900 dark:text-emerald-100">Waktu Input</TableHead>
-                  <TableHead className="font-bold text-emerald-900 dark:text-emerald-100">Tanggal SPM</TableHead>
                   <TableHead className="font-bold text-emerald-900 dark:text-emerald-100">Nomor SPM</TableHead>
                   <TableHead className="font-bold text-emerald-900 dark:text-emerald-100">Nama SKPD</TableHead>
                   <TableHead className="font-bold text-emerald-900 dark:text-emerald-100">Jumlah Kotor</TableHead>
@@ -875,7 +890,7 @@ const AdminTagihan = () => {
               <TableBody>
                 {loadingData && !loadingPagination ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center py-12">
+                    <TableCell colSpan={8} className="text-center py-12">
                       <div className="flex flex-col items-center gap-3">
                         <div className="relative w-12 h-12">
                           <div className="absolute inset-0 rounded-full border-4 border-emerald-200 dark:border-emerald-900"></div>
@@ -887,7 +902,7 @@ const AdminTagihan = () => {
                   </TableRow>
                 ) : tagihanList.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center py-12">
+                    <TableCell colSpan={8} className="text-center py-12">
                       <div className="flex flex-col items-center gap-3">
                         <div className="p-4 rounded-full bg-slate-100 dark:bg-slate-800">
                           <FileTextIcon className="h-8 w-8 text-slate-400 dark:text-slate-600" />
@@ -911,9 +926,6 @@ const AdminTagihan = () => {
                         />
                       </TableCell>
                       <TableCell className="text-slate-700 dark:text-slate-300">{formatDate(tagihan.waktu_input)}</TableCell>
-                      <TableCell className="text-slate-700 dark:text-slate-300">
-                        {tagihan.tanggal_spm ? format(parseISO(tagihan.tanggal_spm), 'dd MMM yyyy', { locale: localeId }) : '-'}
-                      </TableCell>
                       <TableCell className="font-semibold text-slate-900 dark:text-white">{tagihan.nomor_spm}</TableCell>
                       <TableCell className="text-slate-700 dark:text-slate-300">{tagihan.nama_skpd}</TableCell>
                       <TableCell className="font-medium text-slate-900 dark:text-white">Rp{tagihan.jumlah_kotor.toLocaleString('id-ID')}</TableCell>
@@ -921,6 +933,15 @@ const AdminTagihan = () => {
                       <TableCell className="text-slate-700 dark:text-slate-300">{tagihan.nama_verifikator || tagihan.nama_registrator || tagihan.id_korektor ? (tagihan.nama_verifikator || tagihan.nama_registrator || 'Staf Koreksi') : '-'}</TableCell>
                       <TableCell className="text-center">
                         <div className="flex justify-center gap-1.5">
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-8 w-8 hover:bg-emerald-50 hover:border-emerald-500 hover:text-emerald-600 dark:hover:bg-emerald-950 dark:hover:border-emerald-500 dark:hover:text-emerald-400 transition-colors"
+                            title="Jejak Audit"
+                            onClick={() => handleOpenAudit(tagihan.id_tagihan, tagihan.nomor_spm)}
+                          >
+                            <HistoryIcon className="h-4 w-4" />
+                          </Button>
                           <Button
                             variant="outline"
                             size="icon"
@@ -997,6 +1018,14 @@ const AdminTagihan = () => {
         isOpen={isDetailModalOpen}
         onClose={() => setIsDetailModalOpen(false)}
         tagihan={selectedTagihanForDetail}
+      />
+
+      <QuickAuditDialog
+        // HMR Force Update
+        isOpen={isAuditModalOpen}
+        onClose={handleCloseAudit}
+        tagihanId={selectedTagihanIdForAudit?.id || null}
+        nomorSpm={selectedTagihanIdForAudit?.spm || null}
       />
 
       <EditTagihanDialog
