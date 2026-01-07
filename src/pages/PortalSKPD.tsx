@@ -93,6 +93,11 @@ interface ScheduleOption {
   deskripsi_jadwal: string;
 }
 
+interface SumberDanaOption {
+  id: string;
+  nama_sumber_dana: string;
+}
+
 interface Tagihan {
   id_tagihan: string;
   nama_skpd: string;
@@ -180,6 +185,7 @@ const PortalSKPD = () => {
   const toastShownRef = useRef(false);
 
   const [scheduleOptions, setScheduleOptions] = useState<ScheduleOption[]>([]); // State for schedule options
+  const [sumberDanaOptions, setSumberDanaOptions] = useState<SumberDanaOption[]>([]); // State for sumber dana options
   const [kodeWilayah, setKodeWilayah] = useState<string | null>(null); // State for kode_wilayah
   const [kodeSkpd, setKodeSkpd] = useState<string | null>(null); // New state for kode_skpd
   const [generatedNomorSpm, setGeneratedNomorSpm] = useState<string | null>(null); // State for generated Nomor SPM
@@ -287,6 +293,25 @@ const PortalSKPD = () => {
       }
     };
     fetchScheduleOptions();
+  }, []);
+
+  // Fetch Sumber Dana Options
+  useEffect(() => {
+    const fetchSumberDanaOptions = async () => {
+      const { data, error } = await supabase
+        .from('master_sumber_dana')
+        .select('id, nama_sumber_dana')
+        .eq('is_active', true)
+        .order('nama_sumber_dana', { ascending: true });
+      if (error) {
+        console.error('Error fetching sumber dana options:', error.message);
+        toast.error('Gagal memuat daftar sumber dana.');
+        setSumberDanaOptions([]);
+      } else {
+        setSumberDanaOptions(data || []);
+      }
+    };
+    fetchSumberDanaOptions();
   }, []);
 
   // Function to generate Nomor SPM
@@ -1252,15 +1277,15 @@ const PortalSKPD = () => {
                   <SelectValue placeholder="Pilih Sumber Dana" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Pendapatan Asli Daerah">Pendapatan Asli Daerah</SelectItem>
-                  <SelectItem value="Dana Bagi Hasil">Dana Bagi Hasil</SelectItem>
-                  <SelectItem value="DAU - BG">DAU - BG</SelectItem>
-                  <SelectItem value="DAU - SG">DAU - SG</SelectItem>
-                  <SelectItem value="DAK - Fisik">DAK - Fisik</SelectItem>
-                  <SelectItem value="DAK - Non Fisik">DAK - Non Fisik</SelectItem>
-                  <SelectItem value="Dana Desa">Dana Desa</SelectItem>
-                  <SelectItem value="Insentif Fiskal">Insentif Fiskal</SelectItem>
-                  <SelectItem value="Pendapatan Transfer Antar Daerah">Pendapatan Transfer Antar Daerah</SelectItem>
+                  {sumberDanaOptions.length > 0 ? (
+                    sumberDanaOptions.map((option) => (
+                      <SelectItem key={option.id} value={option.nama_sumber_dana}>
+                        {option.nama_sumber_dana}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <SelectItem value="loading" disabled>Memuat sumber dana...</SelectItem>
+                  )}
                 </SelectContent>
               </Select>
               {form.formState.errors.sumber_dana && (

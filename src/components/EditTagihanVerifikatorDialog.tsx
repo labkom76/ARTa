@@ -55,6 +55,11 @@ interface Tagihan {
     tanggal_spm?: string;
 }
 
+interface SumberDanaOption {
+    id: string;
+    nama_sumber_dana: string;
+}
+
 interface EditTagihanVerifikatorDialogProps {
     isOpen: boolean;
     onClose: () => void;
@@ -87,6 +92,7 @@ const EditTagihanVerifikatorDialog: React.FC<EditTagihanVerifikatorDialogProps> 
 }) => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+    const [sumberDanaOptions, setSumberDanaOptions] = useState<SumberDanaOption[]>([]);
     const [nomorUrut, setNomorUrut] = useState<string>('');
     const [copiedSpm, setCopiedSpm] = useState(false);
 
@@ -136,6 +142,24 @@ const EditTagihanVerifikatorDialog: React.FC<EditTagihanVerifikatorDialogProps> 
             setNomorUrut('');
         }
     }, [isOpen, editingTagihan, form]);
+
+    useEffect(() => {
+        const fetchSumberDanaOptions = async () => {
+            const { data, error } = await supabase
+                .from('master_sumber_dana')
+                .select('id, nama_sumber_dana')
+                .eq('is_active', true)
+                .order('nama_sumber_dana', { ascending: true });
+            if (error) {
+                console.error('Error fetching sumber dana options:', error.message);
+                toast.error('Gagal memuat daftar sumber dana.');
+                setSumberDanaOptions([]);
+            } else {
+                setSumberDanaOptions(data || []);
+            }
+        };
+        fetchSumberDanaOptions();
+    }, []);
 
     // Watch jenis_tagihan for real-time SPM update
     const jenisTagihanWatch = form.watch('jenis_tagihan');
@@ -410,15 +434,15 @@ const EditTagihanVerifikatorDialog: React.FC<EditTagihanVerifikatorDialogProps> 
                                             <SelectValue placeholder="Pilih Sumber Dana" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="Pendapatan Asli Daerah">Pendapatan Asli Daerah</SelectItem>
-                                            <SelectItem value="Dana Bagi Hasil">Dana Bagi Hasil</SelectItem>
-                                            <SelectItem value="DAU - BG">DAU - BG</SelectItem>
-                                            <SelectItem value="DAU - SG">DAU - SG</SelectItem>
-                                            <SelectItem value="DAK - Fisik">DAK - Fisik</SelectItem>
-                                            <SelectItem value="DAK - Non Fisik">DAK - Non Fisik</SelectItem>
-                                            <SelectItem value="Dana Desa">Dana Desa</SelectItem>
-                                            <SelectItem value="Insentif Fiskal">Insentif Fiskal</SelectItem>
-                                            <SelectItem value="Pendapatan Transfer Antar Daerah">Pendapatan Transfer Antar Daerah</SelectItem>
+                                            {sumberDanaOptions.length > 0 ? (
+                                                sumberDanaOptions.map((option) => (
+                                                    <SelectItem key={option.id} value={option.nama_sumber_dana}>
+                                                        {option.nama_sumber_dana}
+                                                    </SelectItem>
+                                                ))
+                                            ) : (
+                                                <SelectItem value="loading" disabled>Memuat sumber dana...</SelectItem>
+                                            )}
                                         </SelectContent>
                                     </Select>
                                 )}

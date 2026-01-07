@@ -63,6 +63,11 @@ interface Tagihan {
     sumber_dana?: string;
 }
 
+interface SumberDanaOption {
+    id: string;
+    nama_sumber_dana: string;
+}
+
 interface ScheduleOption {
     id: string;
     kode_jadwal: string;
@@ -103,6 +108,7 @@ const EditTagihanDialog: React.FC<EditTagihanDialogProps> = ({ isOpen, onClose, 
     const { profile } = useSession();
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [scheduleOptions, setScheduleOptions] = useState<ScheduleOption[]>([]);
+    const [sumberDanaOptions, setSumberDanaOptions] = useState<SumberDanaOption[]>([]);
     const [kodeWilayah, setKodeWilayah] = useState<string | null>(null);
     const [kodeSkpd, setKodeSkpd] = useState<string | null>(null);
     const [generatedNomorSpmPreview, setGeneratedNomorSpmPreview] = useState<string | null>(null);
@@ -182,6 +188,24 @@ const EditTagihanDialog: React.FC<EditTagihanDialogProps> = ({ isOpen, onClose, 
             }
         };
         fetchScheduleOptions();
+    }, []);
+
+    useEffect(() => {
+        const fetchSumberDanaOptions = async () => {
+            const { data, error } = await supabase
+                .from('master_sumber_dana')
+                .select('id, nama_sumber_dana')
+                .eq('is_active', true)
+                .order('nama_sumber_dana', { ascending: true });
+            if (error) {
+                console.error('Error fetching sumber dana options:', error.message);
+                toast.error('Gagal memuat daftar sumber dana.');
+                setSumberDanaOptions([]);
+            } else {
+                setSumberDanaOptions(data || []);
+            }
+        };
+        fetchSumberDanaOptions();
     }, []);
 
     useEffect(() => {
@@ -540,15 +564,15 @@ const EditTagihanDialog: React.FC<EditTagihanDialogProps> = ({ isOpen, onClose, 
                                                 <SelectValue placeholder="Pilih Sumber Dana" />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                <SelectItem value="Pendapatan Asli Daerah">Pendapatan Asli Daerah</SelectItem>
-                                                <SelectItem value="Dana Bagi Hasil">Dana Bagi Hasil</SelectItem>
-                                                <SelectItem value="DAU - BG">DAU - BG</SelectItem>
-                                                <SelectItem value="DAU - SG">DAU - SG</SelectItem>
-                                                <SelectItem value="DAK - Fisik">DAK - Fisik</SelectItem>
-                                                <SelectItem value="DAK - Non Fisik">DAK - Non Fisik</SelectItem>
-                                                <SelectItem value="Dana Desa">Dana Desa</SelectItem>
-                                                <SelectItem value="Insentif Fiskal">Insentif Fiskal</SelectItem>
-                                                <SelectItem value="Pendapatan Transfer Antar Daerah">Pendapatan Transfer Antar Daerah</SelectItem>
+                                                {sumberDanaOptions.length > 0 ? (
+                                                    sumberDanaOptions.map((option) => (
+                                                        <SelectItem key={option.id} value={option.nama_sumber_dana}>
+                                                            {option.nama_sumber_dana}
+                                                        </SelectItem>
+                                                    ))
+                                                ) : (
+                                                    <SelectItem value="loading" disabled>Memuat sumber dana...</SelectItem>
+                                                )}
                                             </SelectContent>
                                         </Select>
                                     )}
