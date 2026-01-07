@@ -10,7 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { PlusCircleIcon, EditIcon, Trash2Icon, SearchIcon, BanIcon, CheckCircleIcon, ArrowRightLeftIcon, UsersIcon, ChevronLeftIcon, ChevronRightIcon, FilterIcon, Trash2, UserCheck, UserX } from 'lucide-react';
+import { PlusCircleIcon, EditIcon, Trash2Icon, SearchIcon, BanIcon, CheckCircleIcon, ArrowRightLeftIcon, UsersIcon, ChevronLeftIcon, ChevronRightIcon, FilterIcon, Trash2, UserCheck, UserX, X, ShieldCheck, ShieldOff, UserCog } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
 import AddUserDialog from '@/components/AddUserDialog';
@@ -82,12 +82,15 @@ const AdminUsers = () => {
 
   // Bulk selection states
   const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(new Set());
+  const [isBulkActionLoading, setIsBulkActionLoading] = useState(false);
   const [selectAll, setSelectAll] = useState(false);
 
   // Bulk action dialog states
   const [isBulkDeleteDialogOpen, setIsBulkDeleteDialogOpen] = useState(false);
   const [isBulkActivateDialogOpen, setIsBulkActivateDialogOpen] = useState(false);
   const [isBulkDeactivateDialogOpen, setIsBulkDeactivateDialogOpen] = useState(false);
+  const [isBulkRoleDialogOpen, setIsBulkRoleDialogOpen] = useState(false);
+  const [newBulkRole, setNewBulkRole] = useState<string>('');
 
   // Refs to track previous values for determining pagination-only changes
   const prevSearchQuery = useRef(searchQuery);
@@ -295,6 +298,7 @@ const AdminUsers = () => {
 
   const confirmBulkDelete = async () => {
     setIsBulkDeleteDialogOpen(false);
+    setIsBulkActionLoading(true);
 
     try {
       let successCount = 0;
@@ -329,6 +333,8 @@ const AdminUsers = () => {
     } catch (error: any) {
       console.error('Error bulk deleting users:', error.message);
       toast.error('Gagal menghapus pengguna: ' + error.message);
+    } finally {
+      setIsBulkActionLoading(false);
     }
   };
 
@@ -342,6 +348,7 @@ const AdminUsers = () => {
 
   const confirmBulkActivate = async () => {
     setIsBulkActivateDialogOpen(false);
+    setIsBulkActionLoading(true);
 
     try {
       const { error } = await supabase
@@ -358,6 +365,8 @@ const AdminUsers = () => {
     } catch (error: any) {
       console.error('Error bulk activating users:', error.message);
       toast.error('Gagal mengaktifkan pengguna: ' + error.message);
+    } finally {
+      setIsBulkActionLoading(false);
     }
   };
 
@@ -371,6 +380,7 @@ const AdminUsers = () => {
 
   const confirmBulkDeactivate = async () => {
     setIsBulkDeactivateDialogOpen(false);
+    setIsBulkActionLoading(true);
 
     try {
       const { error } = await supabase
@@ -387,6 +397,38 @@ const AdminUsers = () => {
     } catch (error: any) {
       console.error('Error bulk deactivating users:', error.message);
       toast.error('Gagal menonaktifkan pengguna: ' + error.message);
+    } finally {
+      setIsBulkActionLoading(false);
+    }
+  };
+
+  const handleBulkRoleUpdate = (role: string) => {
+    if (selectedUserIds.size === 0) return;
+    setNewBulkRole(role);
+    setIsBulkRoleDialogOpen(true);
+  };
+
+  const confirmBulkRoleUpdate = async () => {
+    setIsBulkRoleDialogOpen(false);
+    setIsBulkActionLoading(true);
+
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ peran: newBulkRole })
+        .in('id', Array.from(selectedUserIds));
+
+      if (error) throw error;
+
+      toast.success(`Berhasil memperbarui peran ${selectedUserIds.size} pengguna menjadi ${newBulkRole}`);
+      setSelectedUserIds(new Set());
+      setSelectAll(false);
+      fetchUsers();
+    } catch (error: any) {
+      console.error('Error bulk updating user roles:', error.message);
+      toast.error('Gagal memperbarui peran: ' + error.message);
+    } finally {
+      setIsBulkActionLoading(false);
     }
   };
 
@@ -556,40 +598,6 @@ const AdminUsers = () => {
                 Daftar Pengguna
               </CardTitle>
             </div>
-            {selectedUserIds.size > 0 && (
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-slate-600 dark:text-slate-400">
-                  {selectedUserIds.size} dipilih
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleBulkActivateClick}
-                  className="gap-1.5 hover:bg-green-50 hover:border-green-500 hover:text-green-600 dark:hover:bg-green-950 dark:hover:border-green-500 dark:hover:text-green-400"
-                >
-                  <UserCheck className="h-4 w-4" />
-                  Aktifkan
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleBulkDeactivateClick}
-                  className="gap-1.5 hover:bg-orange-50 hover:border-orange-500 hover:text-orange-600 dark:hover:bg-orange-950 dark:hover:border-orange-500 dark:hover:text-orange-400"
-                >
-                  <UserX className="h-4 w-4" />
-                  Nonaktifkan
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleBulkDeleteClick}
-                  className="gap-1.5 hover:bg-red-50 hover:border-red-500 hover:text-red-600 dark:hover:bg-red-950 dark:hover:border-red-500 dark:hover:text-red-400"
-                >
-                  <Trash2 className="h-4 w-4" />
-                  Hapus
-                </Button>
-              </div>
-            )}
           </div>
         </CardHeader>
         <CardContent className="p-0">
@@ -821,6 +829,95 @@ const AdminUsers = () => {
         confirmIcon={UserX}
         variant="warning"
       />
+
+      {/* Bulk Role Update Confirmation Dialog */}
+      <ConfirmationDialog
+        isOpen={isBulkRoleDialogOpen}
+        onClose={() => setIsBulkRoleDialogOpen(false)}
+        onConfirm={confirmBulkRoleUpdate}
+        title="Konfirmasi Pembaruan Peran Massal"
+        message={`Apakah Anda yakin ingin mengubah peran ${selectedUserIds.size} pengguna yang dipilih menjadi ${newBulkRole}?`}
+        confirmText="Perbarui Peran"
+        confirmIcon={UserCog}
+        variant="success"
+      />
+
+      {/* Floating Bulk Action Toolbar */}
+      {selectedUserIds.size > 0 && (
+        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-bottom-full duration-500 ease-out">
+          <div className="bg-slate-900/95 dark:bg-slate-800/95 backdrop-blur-md text-white px-6 py-4 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.3)] border border-white/10 flex items-center gap-8 min-w-[600px]">
+            <div className="flex items-center gap-4 pr-8 border-r border-white/10 text-nowrap">
+              <div className="bg-gradient-to-br from-emerald-400 to-teal-500 text-white w-10 h-10 rounded-2xl flex items-center justify-center font-bold text-lg shadow-lg shadow-emerald-500/20">
+                {selectedUserIds.size}
+              </div>
+              <div className="flex flex-col">
+                <span className="font-bold text-white tracking-tight">Terpilih</span>
+                <span className="text-[10px] text-emerald-400/80 font-medium uppercase tracking-wider">User Account</span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <Select onValueChange={handleBulkRoleUpdate} disabled={isBulkActionLoading}>
+                <SelectTrigger className="w-[180px] h-10 bg-white/5 border-white/10 text-white placeholder:text-slate-400 focus:ring-emerald-500 rounded-xl">
+                  <div className="flex items-center gap-2">
+                    <UserCog className="h-4 w-4 text-emerald-400" />
+                    <SelectValue placeholder="Ubah Peran" />
+                  </div>
+                </SelectTrigger>
+                <SelectContent side="top" className="bg-slate-900 border-slate-800 text-white">
+                  <SelectItem value="Administrator">Administrator</SelectItem>
+                  <SelectItem value="Staf Registrasi">Staf Registrasi</SelectItem>
+                  <SelectItem value="Staf Verifikator">Staf Verifikator</SelectItem>
+                  <SelectItem value="Staf Koreksi">Staf Koreksi</SelectItem>
+                  <SelectItem value="SKPD">SKPD</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleBulkActivateClick}
+                disabled={isBulkActionLoading}
+                className="h-10 px-4 hover:bg-emerald-500/10 hover:text-emerald-400 text-emerald-500 gap-2 rounded-xl transition-all font-semibold"
+              >
+                <ShieldCheck className="h-4 w-4" />
+                <span>Aktifkan</span>
+              </Button>
+
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleBulkDeactivateClick}
+                disabled={isBulkActionLoading}
+                className="h-10 px-4 hover:bg-orange-500/10 hover:text-orange-400 text-orange-500 gap-2 rounded-xl transition-all font-semibold"
+              >
+                <ShieldOff className="h-4 w-4" />
+                <span>Blokir</span>
+              </Button>
+
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleBulkDeleteClick}
+                disabled={isBulkActionLoading}
+                className="h-10 px-4 hover:bg-red-500/10 hover:text-red-400 text-red-500 gap-2 rounded-xl transition-all font-semibold"
+              >
+                <Trash2Icon className="h-4 w-4" />
+                <span>Hapus</span>
+              </Button>
+            </div>
+
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => { setSelectedUserIds(new Set()); setSelectAll(false); }}
+              className="ml-4 h-10 w-10 hover:bg-white/10 text-slate-400 hover:text-white rounded-xl transition-all"
+            >
+              <X className="h-5 w-5" />
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

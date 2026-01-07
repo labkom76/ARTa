@@ -13,7 +13,8 @@ import {
 import { DateRange } from 'react-day-picker';
 import { DateRangePickerWithPresets } from '@/components/DateRangePickerWithPresets';
 import { toast } from 'sonner';
-import { FileDownIcon, BarChartIcon, PieChartIcon, FilterIcon, ChevronLeftIcon, ChevronRightIcon } from 'lucide-react';
+import { FileDownIcon, BarChartIcon, PieChartIcon, FilterIcon, ChevronLeftIcon, ChevronRightIcon, CalendarIcon, PrinterIcon } from 'lucide-react';
+import { format, parseISO, startOfDay, endOfDay, startOfMonth, endOfMonth } from 'date-fns';
 import {
   BarChart,
   Bar,
@@ -75,9 +76,21 @@ const AdminLaporan = () => {
   const [skpdOptionsForAnalysis, setSkpdOptionsForAnalysis] = useState<string[]>([]);
   const [selectedStatusFilter, setSelectedStatusFilter] = useState<string>('Semua (Selesai)');
 
+  // Year and Month Filter States
+  const currentYearInt = new Date().getFullYear();
+  const currentMonthInt = new Date().getMonth();
+  const [selectedYear, setSelectedYear] = useState<string>(currentYearInt.toString());
+  const [selectedMonth, setSelectedMonth] = useState<string>(currentMonthInt.toString());
+
+  const years = Array.from({ length: 5 }, (_, i) => (currentYearInt - i).toString());
+  const months = [
+    'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+    'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+  ];
+
   const [generatedReportType, setGeneratedReportType] = useState<string | null>(null);
   const [chartData, setChartData] = useState<ChartDataItem[]>([]);
-  const [tableData, setTableData] = useState<TagihanDetail[]>([]);
+  const [tableData, setTableData] = useState<any[]>([]);
   const [loadingReport, setLoadingReport] = useState(false);
 
   // Pagination states
@@ -143,8 +156,24 @@ const AdminLaporan = () => {
     setCurrentPage(1);
 
     try {
-      const startDateISO = dateRange?.from ? dateRange.from.toISOString() : undefined;
-      const endDateISO = dateRange?.to ? dateRange.to.toISOString() : undefined;
+      let startDateISO = dateRange?.from ? dateRange.from.toISOString() : undefined;
+      let endDateISO = dateRange?.to ? dateRange.to.toISOString() : undefined;
+
+      // Use Year/Month if dateRange is empty
+      if (!startDateISO && !endDateISO) {
+        if (selectedYear !== 'Semua Tahun') {
+          const yearInt = parseInt(selectedYear);
+          if (selectedMonth !== 'Semua Bulan') {
+            const monthInt = parseInt(selectedMonth);
+            const monthDate = new Date(yearInt, monthInt);
+            startDateISO = startOfMonth(monthDate).toISOString();
+            endDateISO = endOfMonth(monthDate).toISOString();
+          } else {
+            startDateISO = `${yearInt}-01-01T00:00:00Z`;
+            endDateISO = `${yearInt}-12-31T23:59:59Z`;
+          }
+        }
+      }
 
       const payload: any = {
         reportType,
@@ -200,7 +229,7 @@ const AdminLaporan = () => {
 
     if (generatedReportType === 'sumber_dana' || generatedReportType === 'jenis_tagihan') {
       headers = [generatedReportType === 'sumber_dana' ? 'Sumber Dana' : 'Jenis Tagihan', 'Total Nilai'];
-      data = tableData.map((item: ChartDataItem) => [item.name, item.value]);
+      data = (tableData as ChartDataItem[]).map((item: ChartDataItem) => [item.name, item.value]);
       fileName = `laporan_per_${generatedReportType}.xlsx`;
     } else if (generatedReportType === 'analisis_skpd') {
       headers = [
@@ -239,6 +268,10 @@ const AdminLaporan = () => {
     XLSX.writeFile(wb, fileName);
 
     toast.success('Laporan berhasil diunduh!');
+  };
+
+  const handlePrint = () => {
+    window.print();
   };
 
   const formatCurrency = (amount: number) => {
@@ -298,6 +331,32 @@ const AdminLaporan = () => {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
+      <style dangerouslySetInnerHTML={{
+        __html: `
+        @media print {
+          @page { size: auto; margin: 10mm; }
+          body { background: white !important; color: black !important; }
+          .print\\:hidden, button, .flex-items-end, .mb-5 { display: none !important; }
+          .shadow-lg, .shadow-xl, .shadow-sm { box-shadow: none !important; border: 1px solid #e2e8f0 !important; }
+          .bg-gradient-to-r, .bg-gradient-to-br, .bg-emerald-500, .bg-teal-600 { 
+            background: none !important; 
+            background-color: transparent !important;
+            color: black !important; 
+          }
+          h1, h2, h3, .text-transparent { 
+            background-clip: initial !important; 
+            -webkit-background-clip: initial !important; 
+            color: black !important; 
+            background: none !important; 
+          }
+          .CardContent { padding: 0 !important; }
+          .CardHeader { border-bottom: 2px solid #000 !important; margin-bottom: 10px !important; }
+          table { width: 100% !important; border-collapse: collapse !important; border: 1px solid #000 !important; }
+          th, td { border: 1px solid #000 !important; color: black !important; padding: 4px 8px !important; font-size: 10pt !important; }
+          th { background-color: #f1f5f9 !important; -webkit-print-color-adjust: exact; }
+          .ResponsiveContainer { height: 250px !important; }
+        }
+      ` }} />
       {/* Header Section */}
       <div className="space-y-3">
         <div className="flex items-center gap-3">
@@ -323,24 +382,59 @@ const AdminLaporan = () => {
               <FilterIcon className="h-4 w-4 text-white" />
             </div>
             <CardTitle className="text-lg font-bold text-slate-900 dark:text-white">
-              Filter Laporan
+              Sistem Pelaporan & Filter Lanjutan
             </CardTitle>
           </div>
         </CardHeader>
         <CardContent className="pt-6">
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 items-end">
-            <div className="grid gap-2">
-              <Label htmlFor="date-range">Rentang Tanggal</Label>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {/* Row 1: Tahun, Bulan, Rentang Tanggal */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Pilih Tahun</label>
+              <Select value={selectedYear} onValueChange={(value) => { setSelectedYear(value); if (value !== 'Semua Tahun') setDateRange(undefined); }}>
+                <SelectTrigger className="w-full focus:ring-emerald-500 border-slate-200 dark:border-slate-800">
+                  <SelectValue placeholder="Pilih Tahun" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Semua Tahun">Semua Tahun</SelectItem>
+                  {years.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Pilih Bulan</label>
+              <Select value={selectedMonth} onValueChange={(value) => { setSelectedMonth(value); if (value !== 'Semua Bulan') setDateRange(undefined); }}>
+                <SelectTrigger className="w-full focus:ring-emerald-500 border-slate-200 dark:border-slate-800">
+                  <SelectValue placeholder="Pilih Bulan" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Semua Bulan">Semua Bulan</SelectItem>
+                  {months.map((m, i) => <SelectItem key={i} value={i.toString()}>{m}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Rentang Tanggal (Kustom)</label>
               <DateRangePickerWithPresets
                 date={dateRange}
-                onDateChange={setDateRange}
+                onDateChange={(newRange) => {
+                  setDateRange(newRange);
+                  if (newRange?.from) {
+                    setSelectedYear('Semua Tahun');
+                    setSelectedMonth('Semua Bulan');
+                  }
+                }}
                 className="w-full"
               />
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="report-type">Jenis Laporan</Label>
+
+            {/* Row 2: Jenis Laporan & Filter Spesifik */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Jenis Laporan</label>
               <Select onValueChange={setReportType} value={reportType}>
-                <SelectTrigger id="report-type" className="w-full border-slate-300 dark:border-slate-700 hover:border-emerald-500 dark:hover:border-emerald-500 transition-colors">
+                <SelectTrigger className="w-full focus:ring-emerald-500 border-slate-200 dark:border-slate-800">
                   <SelectValue placeholder="Pilih Jenis Laporan" />
                 </SelectTrigger>
                 <SelectContent>
@@ -350,11 +444,12 @@ const AdminLaporan = () => {
                 </SelectContent>
               </Select>
             </div>
+
             {(reportType === 'sumber_dana' || reportType === 'jenis_tagihan') && (
-              <div className="grid gap-2">
-                <Label htmlFor="status-filter">Status</Label>
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Status Tagihan</label>
                 <Select onValueChange={setSelectedStatus} value={selectedStatus}>
-                  <SelectTrigger id="status-filter" className="w-full border-slate-300 dark:border-slate-700 hover:border-emerald-500 dark:hover:border-emerald-500 transition-colors">
+                  <SelectTrigger className="w-full focus:ring-emerald-500 border-slate-200 dark:border-slate-800">
                     <SelectValue placeholder="Pilih Status" />
                   </SelectTrigger>
                   <SelectContent>
@@ -365,13 +460,14 @@ const AdminLaporan = () => {
                 </Select>
               </div>
             )}
+
             {reportType === 'analisis_skpd' && (
               <>
-                <div className="grid gap-2">
-                  <Label htmlFor="group-by-option">Kelompokkan Berdasarkan</Label>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Kelompokkan Berdasarkan</label>
                   <Select onValueChange={setGroupByOption} value={groupByOption}>
-                    <SelectTrigger id="group-by-option" className="w-full border-slate-300 dark:border-slate-700 hover:border-emerald-500 dark:hover:border-emerald-500 transition-colors">
-                      <SelectValue placeholder="Pilih Opsi Pengelompokan" />
+                    <SelectTrigger className="w-full focus:ring-emerald-500 border-slate-200 dark:border-slate-800">
+                      <SelectValue placeholder="Pilih Opsi" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="sumber_dana">Sumber Dana</SelectItem>
@@ -379,25 +475,23 @@ const AdminLaporan = () => {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="skpd-for-analysis">Pilih SKPD</Label>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Pilih SKPD</label>
                   <Select onValueChange={setSelectedSkpdForAnalysis} value={selectedSkpdForAnalysis}>
-                    <SelectTrigger id="skpd-for-analysis" className="w-full border-slate-300 dark:border-slate-700 hover:border-emerald-500 dark:hover:border-emerald-500 transition-colors">
+                    <SelectTrigger className="w-full focus:ring-emerald-500 border-slate-200 dark:border-slate-800">
                       <SelectValue placeholder="Pilih SKPD" />
                     </SelectTrigger>
                     <SelectContent>
                       {skpdOptionsForAnalysis.map((skpd) => (
-                        <SelectItem key={skpd} value={skpd}>
-                          {skpd}
-                        </SelectItem>
+                        <SelectItem key={skpd} value={skpd}>{skpd}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="status-tagihan-filter">Status Tagihan</Label>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Status Tagihan</label>
                   <Select onValueChange={setSelectedStatusFilter} value={selectedStatusFilter}>
-                    <SelectTrigger id="status-tagihan-filter" className="w-full border-slate-300 dark:border-slate-700 hover:border-emerald-500 dark:hover:border-emerald-500 transition-colors">
+                    <SelectTrigger className="w-full focus:ring-emerald-500 border-slate-200 dark:border-slate-800">
                       <SelectValue placeholder="Pilih Status" />
                     </SelectTrigger>
                     <SelectContent>
@@ -409,13 +503,16 @@ const AdminLaporan = () => {
                 </div>
               </>
             )}
-            <Button
-              onClick={handleGenerateReport}
-              className="w-full md:col-span-1 lg:col-span-1 flex items-center gap-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white shadow-lg shadow-emerald-500/20 transition-all"
-              disabled={loadingReport}
-            >
-              {loadingReport ? 'Membuat Laporan...' : <><BarChartIcon className="h-4 w-4" /> Tampilkan Laporan</>}
-            </Button>
+
+            <div className="flex items-end gap-3 mt-auto">
+              <Button
+                onClick={handleGenerateReport}
+                className="flex-1 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white shadow-lg shadow-emerald-500/20 transition-all h-10"
+                disabled={loadingReport}
+              >
+                {loadingReport ? 'Memproses...' : <><BarChartIcon className="h-4 w-4 mr-2" /> Generate</>}
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -566,7 +663,7 @@ const AdminLaporan = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {currentTableData.map((item: ChartDataItem, index) => (
+                  {(currentTableData as ChartDataItem[]).map((item: ChartDataItem, index) => (
                     <TableRow key={index} className="hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
                       <TableCell className="text-slate-700 dark:text-slate-300">{item.name}</TableCell>
                       <TableCell className="text-right font-medium text-slate-900 dark:text-white">{formatCurrency(item.value)}</TableCell>
@@ -654,11 +751,18 @@ const AdminLaporan = () => {
       </Card>
 
       {/* Download Button */}
-      <div className="flex justify-end">
+      <div className="flex justify-end gap-3 print:hidden">
+        <Button
+          onClick={handlePrint}
+          variant="outline"
+          className="flex items-center gap-2 hover:bg-slate-50 border-slate-200 dark:border-slate-800 transition-colors"
+          disabled={!generatedReportType || loadingReport || tableData.length === 0}
+        >
+          <PrinterIcon className="h-4 w-4" /> Cetak Rekap (PDF)
+        </Button>
         <Button
           onClick={handleDownloadCSV}
-          variant="outline"
-          className="flex items-center gap-2 hover:bg-emerald-50 hover:border-emerald-500 hover:text-emerald-600 dark:hover:bg-emerald-950 dark:hover:border-emerald-500 dark:hover:text-emerald-400 transition-colors"
+          className="flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white transition-colors"
           disabled={!generatedReportType || loadingReport || tableData.length === 0}
         >
           <FileDownIcon className="h-4 w-4" /> Download Laporan (XLSX)
