@@ -44,8 +44,15 @@ const SP2DDetailDialog: React.FC<SP2DDetailDialogProps> = ({
                             </DialogTitle>
                         </div>
                         <DialogDescription className="text-slate-600 dark:text-slate-400">
-                            Informasi lengkap penerbitan dokumen SP2D
+                            Rincian dokumen berdasarkan nomor SPM
                         </DialogDescription>
+                        <div className="mt-1 flex flex-wrap gap-2">
+                            <div className="px-2.5 py-1 bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-100 dark:border-emerald-800/50 rounded-lg shadow-sm">
+                                <span className="text-[11px] font-bold text-emerald-800 dark:text-emerald-300 font-mono">
+                                    {tagihan.nomor_spm}
+                                </span>
+                            </div>
+                        </div>
                     </div>
                 </DialogHeader>
 
