@@ -28,6 +28,8 @@ interface ComboboxProps {
   options: Option[];
   value: string;
   onValueChange: (value: string) => void;
+  onCreate?: (value: string) => void;
+  createLabel?: string;
   placeholder?: string;
   disabled?: boolean;
   className?: string; // Allow external classes
@@ -37,6 +39,8 @@ export function Combobox({
   options,
   value,
   onValueChange,
+  onCreate,
+  createLabel = "Tambah",
   placeholder = "Select option...",
   disabled = false,
   className, // Destructure className
@@ -51,6 +55,8 @@ export function Combobox({
       setPopoverWidth(triggerRef.current.offsetWidth)
     }
   }, [open])
+
+  const [search, setSearch] = React.useState("")
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -75,10 +81,33 @@ export function Combobox({
         className="p-0"
         style={{ width: popoverWidth > 0 ? `${popoverWidth}px` : 'auto' }}
         align="start"
+        onWheel={(e) => e.stopPropagation()}
+        onTouchMove={(e) => e.stopPropagation()}
       >
         <Command>
-          <CommandInput placeholder="Search option..." className="h-9" />
-          <CommandEmpty>No option found.</CommandEmpty>
+          <CommandInput
+            placeholder="Search option..."
+            className="h-9"
+            value={search}
+            onValueChange={setSearch}
+          />
+          <CommandEmpty className="py-2 px-2 flex flex-col gap-1">
+            <span className="text-xs text-muted-foreground">No option found.</span>
+            {onCreate && search && (
+              <Button
+                variant="ghost"
+                className="h-8 justify-start text-xs text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 w-full px-2"
+                onClick={() => {
+                  onCreate(search);
+                  setOpen(false);
+                  setSearch("");
+                }}
+              >
+                <Check className="mr-2 h-3 w-3 opacity-0" />
+                + {createLabel} "{search}"
+              </Button>
+            )}
+          </CommandEmpty>
           <CommandList style={{ maxHeight: '300px', overflowY: 'auto', overflowX: 'hidden' }}>
             <CommandGroup>
               {options.map((option) => (
@@ -89,6 +118,7 @@ export function Combobox({
                     const selectedOption = options.find(o => o.label.toLowerCase() === currentValue.toLowerCase());
                     onValueChange(selectedOption ? selectedOption.value : "");
                     setOpen(false);
+                    setSearch("");
                   }}
                 >
                   <Check

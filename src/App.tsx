@@ -33,6 +33,8 @@ import AdminLaporan from "./pages/AdminLaporan"; // Import the new AdminLaporan 
 import AdminActivityLog from "./pages/AdminActivityLog"; // Import the new AdminActivityLog page
 import AdminSumberDana from "./pages/AdminSumberDana"; // Import the new AdminSumberDana page
 import RiwayatTagihan from "./pages/RiwayatTagihan"; // Import the new History page
+import PortalSP2D from "./pages/PortalSP2D"; // Import the new PortalSP2D page
+import DashboardSP2D from "./pages/DashboardSP2D"; // Import the new DashboardSP2D page
 import { SessionContextProvider } from "./contexts/SessionContext";
 
 const queryClient = new QueryClient();
@@ -62,6 +64,9 @@ const App = () => (
                 <Route path="/dashboard-verifikasi" element={<DashboardVerifikasi />} />
                 <Route path="/portal-verifikasi" element={<PortalVerifikasi />} />
                 <Route path="/riwayat-verifikasi" element={<RiwayatVerifikasi />} />
+                <Route path="/dashboard-sp2d" element={<DashboardSP2D />} />
+                <Route path="/portal-sp2d" element={<PortalSP2D />} />
+
                 <Route path="/dashboard-koreksi" element={<DashboardKoreksi />} />
                 <Route path="/rekap-dikembalikan" element={<RekapDikembalikan />} />
                 <Route path="/admin/users" element={<AdminUsers />} />
