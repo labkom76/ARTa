@@ -34,6 +34,11 @@ const StatusBadge: React.FC<StatusBadgeProps> = ({ status }) => {
       IconComponent = FilePenLine;
       customClasses = 'bg-[#8338ec] text-white';
       break;
+    case 'Selesai':
+      variant = 'info';
+      IconComponent = CheckCircleIcon;
+      customClasses = 'bg-blue-600 text-white';
+      break;
     default:
       variant = 'default';
       IconComponent = null;

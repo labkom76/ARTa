@@ -33,41 +33,11 @@ import {
   DollarSign,
   Building2,
   ClipboardCheck,
-  AlertCircle
+  AlertCircle,
+  Landmark
 } from 'lucide-react';
 
-interface VerificationItem {
-  item: string;
-  memenuhi_syarat: boolean;
-  keterangan: string;
-}
-
-interface Tagihan {
-  id_tagihan: string;
-  nama_skpd: string;
-  nomor_spm: string;
-  jenis_spm: string;
-  jenis_tagihan: string;
-  uraian: string;
-  jumlah_kotor: number;
-  status_tagihan: string;
-  waktu_input: string;
-  id_pengguna_input: string;
-  catatan_verifikator?: string;
-  nomor_registrasi?: string;
-  waktu_registrasi?: string;
-  nama_registrator?: string;
-  waktu_verifikasi?: string;
-  detail_verifikasi?: VerificationItem[];
-  nomor_verifikasi?: string;
-  nama_verifikator?: string;
-  nomor_koreksi?: string;
-  id_korektor?: string;
-  waktu_koreksi?: string;
-  catatan_koreksi?: string;
-  sumber_dana?: string;
-  tanggal_spm?: string;
-}
+import { Tagihan, VerificationItem } from '@/types/tagihan';
 
 interface TagihanDetailDialogProps {
   isOpen: boolean;
@@ -99,6 +69,7 @@ const TagihanDetailDialog: React.FC<TagihanDetailDialogProps> = ({ isOpen, onClo
       'Menunggu Verifikasi': { variant: 'outline', className: 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950 dark:text-blue-400 dark:border-blue-800' },
       'Diteruskan': { variant: 'outline', className: 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950 dark:text-emerald-400 dark:border-emerald-800' },
       'Dikembalikan': { variant: 'destructive', className: 'bg-red-50 text-red-700 border-red-200 dark:bg-red-950 dark:text-red-400 dark:border-red-800' },
+      'Selesai': { variant: 'outline', className: 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950 dark:text-blue-400 dark:border-blue-800' },
     };
 
     const config = statusConfig[status] || { variant: 'outline' as const, className: '' };
@@ -384,6 +355,62 @@ const TagihanDetailDialog: React.FC<TagihanDetailDialogProps> = ({ isOpen, onClo
                         ))}
                       </TableBody>
                     </Table>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Bagian 3 - Informasi SP2D (Jika Selesai) */}
+          {(tagihan.tanggal_sp2d || tagihan.status_tagihan === 'Selesai') && (
+            <div className="bg-white dark:bg-slate-800/50 rounded-xl p-5 border border-indigo-100 dark:border-indigo-900/30 shadow-sm">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="h-8 w-8 rounded-lg bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center">
+                  <Landmark className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+                </div>
+                <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Informasi Registrasi SP2D</h3>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <Label className="text-xs text-slate-500 dark:text-slate-400 font-medium flex items-center gap-1.5 h-5">
+                    <Calendar className="h-3.5 w-3.5" />
+                    Tanggal SP2D
+                  </Label>
+                  <div className="text-sm font-medium text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-900/50 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800/50 min-h-[40px] flex items-center">
+                    {tagihan.tanggal_sp2d ? format(parseISO(tagihan.tanggal_sp2d), 'dd MMMM yyyy', { locale: id }) : '-'}
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <Label className="text-xs text-slate-500 dark:text-slate-400 font-medium flex items-center gap-1.5 h-5">
+                    <Building2 className="h-3.5 w-3.5" />
+                    Nama Bank
+                  </Label>
+                  <div className="text-sm font-medium text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-900/50 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800/50 min-h-[40px] flex items-center">
+                    {tagihan.nama_bank || '-'}
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <Label className="text-xs text-slate-500 dark:text-slate-400 font-medium flex items-center gap-1.5 h-5">
+                    <Calendar className="h-3.5 w-3.5" />
+                    Tanggal ke BSG
+                  </Label>
+                  <div className="text-sm font-medium text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-900/50 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800/50 min-h-[40px] flex items-center">
+                    {tagihan.tanggal_bsg ? format(parseISO(tagihan.tanggal_bsg), 'dd MMMM yyyy', { locale: id }) : '-'}
+                  </div>
+                </div>
+
+                {tagihan.catatan_sp2d && (
+                  <div className="md:col-span-2 space-y-1">
+                    <Label className="text-xs text-slate-500 dark:text-slate-400 font-medium flex items-center gap-1.5 h-5">
+                      <AlertCircle className="h-3.5 w-3.5" />
+                      Catatan Register SP2D
+                    </Label>
+                    <div className="text-sm text-slate-700 dark:text-slate-300 bg-indigo-50 dark:bg-indigo-950/20 px-3 py-2 rounded-lg border border-indigo-200 dark:border-indigo-800/50 leading-relaxed">
+                      {tagihan.catatan_sp2d}
+                    </div>
                   </div>
                 )}
               </div>

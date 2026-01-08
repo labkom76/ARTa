@@ -75,6 +75,8 @@ export function Combobox({
         className="p-0"
         style={{ width: popoverWidth > 0 ? `${popoverWidth}px` : 'auto' }}
         align="start"
+        onWheel={(e) => e.stopPropagation()}
+        onTouchMove={(e) => e.stopPropagation()}
       >
         <Command>
           <CommandInput placeholder="Search option..." className="h-9" />
