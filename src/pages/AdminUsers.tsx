@@ -131,7 +131,7 @@ const AdminUsers = () => {
       if (selectedRoleFilter === 'Administrator') {
         query = query.eq('peran', 'Administrator');
       } else if (selectedRoleFilter === 'Staf') {
-        query = query.in('peran', ['Staf Registrasi', 'Staf Verifikator', 'Staf Koreksi']);
+        query = query.in('peran', ['Staf Registrasi', 'Staf Verifikator', 'Staf Koreksi', 'Register SP2D']);
       } else if (selectedRoleFilter === 'SKPD (Semua)') {
         query = query.eq('peran', 'SKPD');
       } else if (selectedRoleFilter === 'SKPD (Menunggu Aktivasi)') {

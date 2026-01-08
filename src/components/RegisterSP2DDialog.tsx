@@ -298,7 +298,7 @@ const RegisterSP2DDialog: React.FC<RegisterSP2DDialogProps> = ({
                                         <Button
                                             variant="outline"
                                             className={cn(
-                                                "w-full h-12 rounded-xl justify-start text-left font-medium bg-slate-50/50 border-slate-200",
+                                                "w-full h-12 rounded-xl justify-start text-left font-medium bg-slate-50/50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700",
                                                 !tanggalSp2d && "text-muted-foreground"
                                             )}
                                         >
@@ -338,7 +338,7 @@ const RegisterSP2DDialog: React.FC<RegisterSP2DDialogProps> = ({
                                     createLabel="Tambah Bank"
                                     placeholder={isLoadingBanks ? "Memuat..." : "Cari atau Pilih Bank..."}
                                     disabled={isLoadingBanks}
-                                    className="h-12 rounded-xl border-slate-200 bg-slate-50/50"
+                                    className="h-12 rounded-xl border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50"
                                 />
                             </div>
 
@@ -353,7 +353,7 @@ const RegisterSP2DDialog: React.FC<RegisterSP2DDialogProps> = ({
                                         <Button
                                             variant="outline"
                                             className={cn(
-                                                "w-full h-12 rounded-xl justify-start text-left font-medium bg-slate-50/50 border-slate-200",
+                                                "w-full h-12 rounded-xl justify-start text-left font-medium bg-slate-50/50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700",
                                                 !tanggalBsg && "text-muted-foreground"
                                             )}
                                         >
@@ -390,7 +390,7 @@ const RegisterSP2DDialog: React.FC<RegisterSP2DDialogProps> = ({
                                     placeholder="Tambahkan catatan koreksi atau informasi tambahan..."
                                     value={catatanSp2d}
                                     onChange={(e) => setCatatanSp2d(e.target.value)}
-                                    className="min-h-[100px] rounded-xl border-slate-200 focus:ring-emerald-500 bg-slate-50/50 p-4"
+                                    className="min-h-[100px] rounded-xl border-slate-200 dark:border-slate-700 focus:ring-emerald-500 bg-slate-50/50 dark:bg-slate-800/50 p-4"
                                 />
                             </div>
                         </div>

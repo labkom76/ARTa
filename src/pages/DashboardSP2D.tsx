@@ -185,10 +185,10 @@ const DashboardSP2D = () => {
             </div>
 
             {/* Filter Section */}
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white/50 backdrop-blur-sm p-3 rounded-2xl border border-slate-200/50 shadow-sm">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm p-3 rounded-2xl border border-slate-200/50 dark:border-slate-700/50 shadow-sm">
                 <div className="flex items-center gap-2 px-2">
-                    <Clock className="h-4 w-4 text-slate-500" />
-                    <span className="text-xs font-bold text-slate-600 uppercase tracking-wider">Periode</span>
+                    <Clock className="h-4 w-4 text-slate-500 dark:text-slate-400" />
+                    <span className="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Periode</span>
                 </div>
                 <div className="flex items-center gap-2 w-full sm:w-auto">
                     <div className="w-full sm:w-40">
@@ -197,7 +197,7 @@ const DashboardSP2D = () => {
                             value={selectedMonth}
                             onValueChange={setSelectedMonth}
                             placeholder="Bulan"
-                            className="w-full h-9 rounded-lg border-slate-200 bg-white text-xs"
+                            className="w-full h-9 rounded-lg border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs"
                         />
                     </div>
                     <div className="w-full sm:w-28">
@@ -206,7 +206,7 @@ const DashboardSP2D = () => {
                             value={selectedYear}
                             onValueChange={setSelectedYear}
                             placeholder="Tahun"
-                            className="w-full h-9 rounded-lg border-slate-200 bg-white text-xs"
+                            className="w-full h-9 rounded-lg border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs"
                         />
                     </div>
                 </div>

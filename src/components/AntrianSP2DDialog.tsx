@@ -171,7 +171,7 @@ const AntrianSP2DDialog: React.FC<AntrianSP2DDialogProps> = ({
                                         setSearchQuery(e.target.value);
                                         setCurrentPage(1);
                                     }}
-                                    className="pl-11 h-12 border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-emerald-500/20 transition-all rounded-xl font-medium"
+                                    className="pl-11 h-12 border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-emerald-500/20 transition-all rounded-xl font-medium placeholder:text-slate-400 dark:placeholder:text-slate-500"
                                 />
                             </div>
                             <div className="w-full sm:w-64">
@@ -183,7 +183,7 @@ const AntrianSP2DDialog: React.FC<AntrianSP2DDialogProps> = ({
                                         setCurrentPage(1);
                                     }}
                                     placeholder="Filter SKPD"
-                                    className="w-full h-12 rounded-xl border-slate-200 bg-slate-50/50"
+                                    className="w-full h-12 rounded-xl border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50"
                                 />
                             </div>
                         </div>
@@ -197,7 +197,7 @@ const AntrianSP2DDialog: React.FC<AntrianSP2DDialogProps> = ({
                                         setCurrentPage(1);
                                     }}
                                     placeholder="Filter Bulan"
-                                    className="w-full h-12 rounded-xl border-slate-200 bg-slate-50/50"
+                                    className="w-full h-12 rounded-xl border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50"
                                 />
                             </div>
                             <div className="w-full sm:w-32">
@@ -209,7 +209,7 @@ const AntrianSP2DDialog: React.FC<AntrianSP2DDialogProps> = ({
                                         setCurrentPage(1);
                                     }}
                                     placeholder="Filter Tahun"
-                                    className="w-full h-12 rounded-xl border-slate-200 bg-slate-50/50"
+                                    className="w-full h-12 rounded-xl border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50"
                                 />
                             </div>
                         </div>

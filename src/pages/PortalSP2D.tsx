@@ -445,7 +445,7 @@ const PortalSP2D = () => {
             </div>
 
             {/* Filter Section */}
-            <Card className="border-none shadow-xl bg-white/80 backdrop-blur-md rounded-2xl overflow-hidden">
+            <Card className="border-none shadow-xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-md rounded-2xl overflow-hidden">
                 <CardContent className="p-6">
                     <div className="flex flex-col lg:flex-row items-center gap-4">
                         <div className="relative flex-1 w-full group">
@@ -454,7 +454,7 @@ const PortalSP2D = () => {
                                 placeholder="Cari berdasarkan Nomor SPM..."
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
-                                className="pl-11 h-12 border-slate-200 bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-emerald-500/20 transition-all rounded-xl font-medium"
+                                className="pl-11 h-12 border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-emerald-500/20 transition-all rounded-xl font-medium placeholder:text-slate-400 dark:placeholder:text-slate-500"
                             />
                         </div>
                         <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
@@ -464,7 +464,7 @@ const PortalSP2D = () => {
                                     value={mainSelectedMonth}
                                     onValueChange={setMainSelectedMonth}
                                     placeholder="Filter Bulan"
-                                    className="w-full h-12 rounded-xl border-slate-200 bg-slate-50/50"
+                                    className="w-full h-12 rounded-xl border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50"
                                 />
                             </div>
                             <div className="w-full sm:w-32">
@@ -473,7 +473,7 @@ const PortalSP2D = () => {
                                     value={mainSelectedYear}
                                     onValueChange={setMainSelectedYear}
                                     placeholder="Filter Tahun"
-                                    className="w-full h-12 rounded-xl border-slate-200 bg-slate-50/50"
+                                    className="w-full h-12 rounded-xl border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50"
                                 />
                             </div>
                             <div className="w-full sm:w-64">
@@ -482,7 +482,7 @@ const PortalSP2D = () => {
                                     value={selectedSkpd}
                                     onValueChange={setSelectedSkpd}
                                     placeholder="Filter Nama SKPD"
-                                    className="w-full h-12 rounded-xl border-slate-200 bg-slate-50/50"
+                                    className="w-full h-12 rounded-xl border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50"
                                 />
                             </div>
                         </div>
