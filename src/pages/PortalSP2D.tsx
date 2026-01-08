@@ -63,6 +63,7 @@ import StatusBadge from '@/components/StatusBadge';
 import RegisterSP2DDialog from '@/components/RegisterSP2DDialog';
 import SP2DDetailDialog from '@/components/SP2DDetailDialog';
 import AntrianSP2DDialog from '@/components/AntrianSP2DDialog';
+import { getJenisTagihanCode } from '@/utils/spmGenerator';
 import {
     Select,
     SelectContent,
@@ -72,6 +73,7 @@ import {
 } from '@/components/ui/select';
 import { Combobox } from '@/components/ui/combobox';
 import { Tagihan } from '@/types/tagihan';
+import * as XLSX from 'xlsx';
 
 interface SkpdOption {
     value: string;
@@ -255,6 +257,87 @@ const PortalSP2D = () => {
         setIsDeleteDialogOpen(true);
     };
 
+    const handleExportExcel = () => {
+        if (historyList.length === 0) {
+            toast.error('Tidak ada data untuk diekspor');
+            return;
+        }
+
+        try {
+            // Prepare data for export - Map to user-friendly format based on screenshot
+            const exportData = historyList.map((h, index) => {
+                const spmParts = h.nomor_spm.split('/');
+                const noSp2d = spmParts[2]?.padStart(6, '0') || '-';
+                // Reconstruct Kode SP2D: skip SKPD (index 4) and join Jadwal, Month, Year
+                // Also format month (index 6 in full SPM, index 1 in sliced) to remove leading zero
+                const kodeParts = spmParts.slice(5);
+                if (kodeParts.length >= 2) {
+                    kodeParts[1] = parseInt(kodeParts[1]).toString();
+                }
+                const kodeSp2d = kodeParts.length > 0 ? `/${kodeParts.join('/')}` : '-';
+
+                return {
+                    'No. Reg.': index + 1,
+                    'TGL. SP2D': h.tanggal_sp2d ? format(parseISO(h.tanggal_sp2d), 'dd/MM/yyyy') : '-',
+                    'NO. SP2D': noSp2d,
+                    'JENIS': getJenisTagihanCode(h.jenis_tagihan),
+                    'S K P D': h.nama_skpd,
+                    'URAIAN': h.uraian,
+                    'JUMLAH': h.jumlah_kotor, // Will be formatted below
+                    'NAMA BANK': h.nama_bank || '-',
+                    'TANGGAL DISERAHKAN KE BSG': h.tanggal_bsg ? format(parseISO(h.tanggal_bsg), 'dd/MM/yyyy') : '-',
+                    'KODE SP2D': kodeSp2d,
+                    'CATATAN KOREKSI': h.catatan_sp2d || '-'
+                };
+            });
+
+            // Create Worksheet
+            const ws = XLSX.utils.json_to_sheet(exportData);
+
+            // Format JUMLAH column to have dots as thousands separator (as string for consistency in basic XLSX)
+            // Note: XLSX.utils.json_to_sheet detects numbers. To match screenshot styling (e.g. 202.256.588),
+            // we can apply a number format to the cells.
+            const range = XLSX.utils.decode_range(ws['!ref'] || 'A1');
+            for (let R = range.s.r + 1; R <= range.e.r; ++R) {
+                const cellAddress = XLSX.utils.encode_cell({ r: R, c: 6 }); // Column G (JUMLAH)
+                if (ws[cellAddress]) {
+                    ws[cellAddress].z = '#,##0'; // Indonesian default separator in Excel usually follows system, but #,##0 is standard
+                }
+            }
+
+            // Set column widths
+            const wscols = [
+                { wch: 8 },  // No. Reg.
+                { wch: 15 }, // TGL. SP2D
+                { wch: 12 }, // NO. SP2D
+                { wch: 8 },  // JENIS
+                { wch: 40 }, // S K P D
+                { wch: 60 }, // URAIAN
+                { wch: 18 }, // JUMLAH
+                { wch: 15 }, // NAMA BANK
+                { wch: 25 }, // TANGGAL BSG
+                { wch: 15 }, // KODE SP2D
+                { wch: 30 }  // CATATAN KOREKSI
+            ];
+            ws['!cols'] = wscols;
+
+            // Create Workbook
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Register SP2D");
+
+            // Generate filename based on filters
+            const monthLabel = mainSelectedMonth === 'all' ? 'Semua_Bulan' : months.find(m => m.value === mainSelectedMonth)?.label;
+            const filename = `Register_SP2D_${monthLabel}_${mainSelectedYear}.xlsx`;
+
+            // Trigger Download
+            XLSX.writeFile(wb, filename);
+            toast.success('Data berhasil diekspor ke Excel!');
+        } catch (error: any) {
+            console.error('Export Error:', error);
+            toast.error('Gagal mengekspor data: ' + error.message);
+        }
+    };
+
     const confirmDelete = async () => {
         if (!tagihanToDelete) return;
 
@@ -312,22 +395,50 @@ const PortalSP2D = () => {
                         </p>
                     </div>
                 </div>
-                <div className="flex items-center gap-2 bg-white dark:bg-slate-900 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-x-auto whitespace-nowrap">
+                <div className="flex items-center gap-2 bg-white dark:bg-slate-900 p-1.5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-x-auto whitespace-nowrap">
+                    <TooltipProvider>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button
+                                    onClick={() => { fetchHistory(); }}
+                                    variant="outline"
+                                    size="icon"
+                                    className="h-9 w-9 border-slate-200 dark:border-slate-800 hover:bg-emerald-50 hover:text-emerald-600 dark:hover:bg-emerald-950/30 dark:hover:text-emerald-400 transition-all rounded-lg"
+                                >
+                                    <RefreshCw className={`h-4 w-4 ${loadingHistory ? 'animate-spin' : ''}`} />
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                <p>Refresh Data</p>
+                            </TooltipContent>
+                        </Tooltip>
+
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button
+                                    onClick={handleExportExcel}
+                                    variant="outline"
+                                    size="icon"
+                                    className="h-9 w-9 border-slate-200 dark:border-slate-800 hover:bg-emerald-50 hover:text-emerald-600 dark:hover:bg-emerald-950/30 dark:hover:text-emerald-400 transition-all rounded-lg"
+                                    disabled={loadingHistory || historyList.length === 0}
+                                >
+                                    <FileDownIcon className="h-4 w-4" />
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                <p>Ekspor ke Excel</p>
+                            </TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
+
+                    <div className="h-6 w-[1px] bg-slate-200 dark:bg-slate-800 mx-1 hidden sm:block" />
+
                     <Button
                         onClick={() => setIsAntrianDialogOpen(true)}
-                        className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold h-10 px-4 rounded-xl transition-all hover:scale-105 gap-2"
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold h-9 px-4 rounded-lg transition-all hover:scale-105 gap-2 text-sm"
                     >
                         <PlusCircle className="h-4 w-4" />
                         Regis SP2D
-                    </Button>
-                    <div className="h-6 w-[1px] bg-slate-200 mx-1 hidden sm:block" />
-                    <Button
-                        onClick={() => { fetchHistory(); }}
-                        variant="ghost"
-                        className="text-slate-600 hover:text-slate-800 hover:bg-slate-100 font-semibold gap-2 h-10 px-4 rounded-xl transition-all"
-                    >
-                        <RefreshCw className={`h-4 w-4 ${loadingHistory ? 'animate-spin' : ''}`} />
-                        <span className="hidden sm:inline">Refresh</span>
                     </Button>
                 </div>
             </div>

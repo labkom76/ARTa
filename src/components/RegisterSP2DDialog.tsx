@@ -7,6 +7,16 @@ import {
     DialogDescription,
     DialogFooter,
 } from '@/components/ui/dialog';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -29,6 +39,8 @@ import { Combobox } from '@/components/ui/combobox';
 import { FileCheck2, Calendar as CalendarIcon, Landmark, Info, CalendarDays } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { id } from 'date-fns/locale';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 import { Tagihan } from '@/types/tagihan';
 
@@ -45,55 +57,11 @@ interface RegisterSP2DDialogProps {
     isSubmitting: boolean;
 }
 
-const BANK_OPTIONS = [
-    { value: "SulutGo (BSG)", label: "SulutGo (BSG)" },
-    { value: "BRI", label: "BRI" },
-    { value: "BNI", label: "BNI" },
-    { value: "Mandiri", label: "Mandiri" },
-    { value: "Mandiri Taspen", label: "Mandiri Taspen" },
-    { value: "Maluku Malut", label: "Maluku Malut" },
-    { value: "Maspion Indonesia", label: "Maspion Indonesia" },
-    { value: "Mayapada Internasional", label: "Mayapada Internasional" },
-    { value: "Maybank Indonesia", label: "Maybank Indonesia" },
-    { value: "Mayora", label: "Mayora" },
-    { value: "Mega", label: "Mega" },
-    { value: "Mega Syariah", label: "Mega Syariah" },
-    { value: "Mestika Dharma", label: "Mestika Dharma" },
-    { value: "Mizuho Indonesia", label: "Mizuho Indonesia" },
-    { value: "MNC Internasional", label: "MNC Internasional" },
-    { value: "Muamalat Indonesia", label: "Muamalat Indonesia" },
-    { value: "Multiarta Sentosa", label: "Multiarta Sentosa" },
-    { value: "Nagari", label: "Nagari" },
-    { value: "Nano Syariah", label: "Nano Syariah" },
-    { value: "Nationalnobu", label: "Nationalnobu" },
-    { value: "NTB Syariah", label: "NTB Syariah" },
-    { value: "OCBC NISP", label: "OCBC NISP" },
-    { value: "Oke Indonesia", label: "Oke Indonesia" },
-    { value: "Panin", label: "Panin" },
-    { value: "Panin Dubai Syariah", label: "Panin Dubai Syariah" },
-    { value: "Papua", label: "Papua" },
-    { value: "Permata", label: "Permata" },
-    { value: "QNB Indonesia", label: "QNB Indonesia" },
-    { value: "Raya Indonesia", label: "Raya Indonesia" },
-    { value: "Resona Perdania", label: "Resona Perdania" },
-    { value: "Riau Kepri Syariah", label: "Riau Kepri Syariah" },
-    { value: "Sahabat Sampoerna", label: "Sahabat Sampoerna" },
-    { value: "SBI Indonesia", label: "SBI Indonesia" },
-    { value: "Shinhan Indonesia", label: "Shinhan Indonesia" },
-    { value: "Sinarmas", label: "Sinarmas" },
-    { value: "Sulselbar", label: "Sulselbar" },
-    { value: "Sulteng", label: "Sulteng" },
-    { value: "Sultra", label: "Sultra" },
-    { value: "Sumitomo Mitsui Indonesia", label: "Sumitomo Mitsui Indonesia" },
-    { value: "Sumsel Babel", label: "Sumsel Babel" },
-    { value: "Sumut", label: "Sumut" },
-    { value: "Syariah Indonesia (BSI)", label: "Syariah Indonesia (BSI)" },
-    { value: "Tabungan Negara (BTN)", label: "Tabungan Negara (BTN)" },
-    { value: "UOB Indonesia", label: "UOB Indonesia" },
-    { value: "Victoria International", label: "Victoria International" },
-    { value: "Victoria Syariah", label: "Victoria Syariah" },
-    { value: "Woori Saudara Indonesia 1906", label: "Woori Saudara Indonesia 1906" },
-];
+// Keep the interface
+interface BankOption {
+    value: string;
+    label: string;
+}
 
 const RegisterSP2DDialog: React.FC<RegisterSP2DDialogProps> = ({
     isOpen,
@@ -115,22 +83,108 @@ const RegisterSP2DDialog: React.FC<RegisterSP2DDialogProps> = ({
     const [extractedNomorSp2d, setExtractedNomorSp2d] = useState('');
     const [extractedKodeSp2d, setExtractedKodeSp2d] = useState('');
 
+    const [bankOptions, setBankOptions] = useState<BankOption[]>([]);
+    const [isLoadingBanks, setIsLoadingBanks] = useState(false);
+    const [isConfirmAddBankOpen, setIsConfirmAddBankOpen] = useState(false);
+    const [tempBankName, setTempBankName] = useState('');
+
+    const fetchBanks = async () => {
+        setIsLoadingBanks(true);
+        try {
+            const { data, error } = await supabase
+                .from('master_bank')
+                .select('nama_bank')
+                .eq('is_active', true)
+                .order('nama_bank', { ascending: true });
+
+            if (error) throw error;
+            if (data) {
+                const options = data.map(b => ({ value: b.nama_bank, label: b.nama_bank }));
+                // Prioritize SulutGo (BSG) at the top
+                const sortedOptions = options.sort((a, b) => {
+                    if (a.value === 'SulutGo (BSG)') return -1;
+                    if (b.value === 'SulutGo (BSG)') return 1;
+                    return a.label.localeCompare(b.label);
+                });
+                setBankOptions(sortedOptions);
+            }
+        } catch (error: any) {
+            console.error('Error fetching banks:', error.message);
+            toast.error('Gagal memuat daftar bank');
+        } finally {
+            setIsLoadingBanks(false);
+        }
+    };
+
     useEffect(() => {
-        if (tagihan?.nomor_spm) {
-            const parts = tagihan.nomor_spm.split('/');
+        if (isOpen) {
+            fetchBanks();
+        }
+    }, [isOpen]);
 
-            // Extract Nomor SP2D (Nomor Urut is the third part: index 2)
-            if (parts.length > 2) {
-                setExtractedNomorSp2d(parts[2].padStart(6, '0'));
+    const handleCreateBank = (newBankName: string) => {
+        setTempBankName(newBankName);
+        setIsConfirmAddBankOpen(true);
+    };
+
+    const confirmCreateBank = async () => {
+        try {
+            const { data, error } = await supabase
+                .from('master_bank')
+                .insert([{ nama_bank: tempBankName }])
+                .select()
+                .single();
+
+            if (error) {
+                if (error.code === '23505') {
+                    toast.error('Bank sudah ada dalam daftar');
+                } else {
+                    throw error;
+                }
+                return;
             }
 
-            // Extract Kode SP2D (from /M to the end)
-            const mIndex = tagihan.nomor_spm.indexOf('/M/');
-            if (mIndex !== -1) {
-                setExtractedKodeSp2d(tagihan.nomor_spm.substring(mIndex));
-            } else {
-                setExtractedKodeSp2d('');
+            if (data) {
+                const newOption = { value: data.nama_bank, label: data.nama_bank };
+                setBankOptions(prev => [...prev, newOption].sort((a, b) => {
+                    if (a.value === 'SulutGo (BSG)') return -1;
+                    if (b.value === 'SulutGo (BSG)') return 1;
+                    return a.label.localeCompare(b.label);
+                }));
+                setNamaBank(data.nama_bank);
+                toast.success(`Bank "${data.nama_bank}" berhasil ditambahkan!`);
             }
+        } catch (error: any) {
+            console.error('Error creating bank:', error.message);
+            toast.error('Gagal menambah bank baru');
+        } finally {
+            setIsConfirmAddBankOpen(false);
+            setTempBankName('');
+        }
+    };
+
+    useEffect(() => {
+        if (tagihan) {
+            // Data Otomatis part
+            if (tagihan.nomor_spm) {
+                const parts = tagihan.nomor_spm.split('/');
+                if (parts.length > 2) {
+                    setExtractedNomorSp2d(parts[2].padStart(6, '0'));
+                }
+                const mIndex = tagihan.nomor_spm.indexOf('/M/');
+                if (mIndex !== -1) {
+                    setExtractedKodeSp2d(tagihan.nomor_spm.substring(mIndex));
+                } else {
+                    setExtractedKodeSp2d('');
+                }
+            }
+
+            // Sync Manual Fields
+            // Use existing data if available (Mode Edit), otherwise use defaults (Mode New)
+            setTanggalSp2d(tagihan.tanggal_sp2d ? parseISO(tagihan.tanggal_sp2d) : new Date());
+            setNamaBank(tagihan.nama_bank || 'SulutGo (BSG)');
+            setTanggalBsg(tagihan.tanggal_bsg ? parseISO(tagihan.tanggal_bsg) : new Date());
+            setCatatanSp2d(tagihan.catatan_sp2d || '');
         }
     }, [tagihan]);
 
@@ -277,10 +331,13 @@ const RegisterSP2DDialog: React.FC<RegisterSP2DDialogProps> = ({
                                     Nama Bank
                                 </Label>
                                 <Combobox
-                                    options={BANK_OPTIONS}
+                                    options={bankOptions}
                                     value={namaBank}
                                     onValueChange={setNamaBank}
-                                    placeholder="Cari atau Pilih Bank..."
+                                    onCreate={handleCreateBank}
+                                    createLabel="Tambah Bank"
+                                    placeholder={isLoadingBanks ? "Memuat..." : "Cari atau Pilih Bank..."}
+                                    disabled={isLoadingBanks}
                                     className="h-12 rounded-xl border-slate-200 bg-slate-50/50"
                                 />
                             </div>
@@ -359,6 +416,29 @@ const RegisterSP2DDialog: React.FC<RegisterSP2DDialogProps> = ({
                     </DialogFooter>
                 </form>
             </DialogContent>
+
+            <AlertDialog open={isConfirmAddBankOpen} onOpenChange={setIsConfirmAddBankOpen}>
+                <AlertDialogContent className="rounded-xl border-emerald-100">
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className="flex items-center gap-2 text-emerald-700">
+                            <Landmark className="h-5 w-5" />
+                            Tambah Bank Baru?
+                        </AlertDialogTitle>
+                        <AlertDialogDescription className="text-slate-600">
+                            Anda akan menambahkan <span className="font-bold text-slate-900">"{tempBankName}"</span> ke dalam daftar bank permanen. Pastikan penulisan nama bank sudah benar.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter className="gap-2">
+                        <AlertDialogCancel className="h-10 rounded-lg border-slate-200">Batal</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={confirmCreateBank}
+                            className="h-10 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white"
+                        >
+                            Ya, Tambahkan
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </Dialog>
     );
 };
