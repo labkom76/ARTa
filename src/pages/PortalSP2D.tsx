@@ -62,6 +62,7 @@ import useDebounce from '@/hooks/use-debounce';
 import StatusBadge from '@/components/StatusBadge';
 import RegisterSP2DDialog from '@/components/RegisterSP2DDialog';
 import SP2DDetailDialog from '@/components/SP2DDetailDialog';
+import { BankBadge } from '@/components/BankBadge';
 import AntrianSP2DDialog from '@/components/AntrianSP2DDialog';
 import { getJenisTagihanCode } from '@/utils/spmGenerator';
 import {
@@ -619,8 +620,8 @@ const PortalSP2D = () => {
                                                     <div className="text-sm font-semibold text-emerald-700 dark:text-emerald-400">
                                                         {h.tanggal_bsg ? format(parseISO(h.tanggal_bsg), 'dd/MM/yyyy') : '-'}
                                                     </div>
-                                                    <div className="text-[10px] text-slate-500 mt-1 uppercase">
-                                                        {h.nama_bank}
+                                                    <div className="mt-1.5">
+                                                        <BankBadge bankName={h.nama_bank} />
                                                     </div>
                                                 </TableCell>
                                                 <TableCell className="text-center">
