@@ -54,6 +54,9 @@ import {
     ChevronRight,
     Pencil,
     Trash2,
+    ArrowUpDown,
+    ArrowUp,
+    ArrowDown,
 } from 'lucide-react';
 import { format, parseISO, startOfDay, getMonth, getYear } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
@@ -139,6 +142,48 @@ const PortalSP2D = () => {
     // Antrian Dialog State (only visibility control)
     const [isAntrianDialogOpen, setIsAntrianDialogOpen] = useState(false);
 
+    // Sorting State
+    const [sortConfig, setSortConfig] = useState<{
+        column: keyof Tagihan | 'nomor_urut_sp2d';
+        direction: 'asc' | 'desc';
+    }>({ column: 'nomor_urut_sp2d', direction: 'asc' });
+
+    const handleSort = (column: keyof Tagihan | 'nomor_urut_sp2d') => {
+        let direction: 'asc' | 'desc' = 'asc';
+        if (sortConfig.column === column && sortConfig.direction === 'asc') {
+            direction = 'desc';
+        }
+        setSortConfig({ column, direction });
+    };
+
+    const sortedHistoryList = [...historyList].sort((a, b) => {
+        const { column, direction } = sortConfig;
+
+        let valA = a[column as keyof Tagihan];
+        let valB = b[column as keyof Tagihan];
+
+        // Khusus untuk No. Reg (nomor_urut_sp2d)
+        if (column === 'nomor_urut_sp2d') {
+            valA = a.nomor_urut_sp2d || 0;
+            valB = b.nomor_urut_sp2d || 0;
+        }
+
+        if (valA === undefined || valA === null) return 1;
+        if (valB === undefined || valB === null) return -1;
+
+        if (typeof valA === 'string' && typeof valB === 'string') {
+            return direction === 'asc'
+                ? valA.localeCompare(valB)
+                : valB.localeCompare(valA);
+        }
+
+        if (typeof valA === 'number' && typeof valB === 'number') {
+            return direction === 'asc' ? valA - valB : valB - valA;
+        }
+
+        return 0;
+    });
+
     useEffect(() => {
         fetchSkpdOptions();
     }, []);
@@ -196,7 +241,7 @@ const PortalSP2D = () => {
                 query = query.eq('nama_skpd', selectedSkpd);
             }
 
-            const { data, error } = await query.order('tanggal_sp2d', { ascending: false });
+            const { data, error } = await query.order('nomor_urut_sp2d', { ascending: true });
 
             if (error) throw error;
             setHistoryList(data as Tagihan[]);
@@ -223,11 +268,28 @@ const PortalSP2D = () => {
         if (!selectedTagihanForRegister) return;
         setIsSubmitting(true);
         try {
+            // 1. Ambil nomor urut terakhir
+            const { data: lastData, error: lastError } = await supabase
+                .from('database_tagihan')
+                .select('nomor_urut_sp2d')
+                .not('nomor_urut_sp2d', 'is', null)
+                .order('nomor_urut_sp2d', { ascending: false })
+                .limit(1);
+
+            if (lastError) throw lastError;
+
+            const nextNomorUrut = (lastData && lastData.length > 0)
+                ? (lastData[0].nomor_urut_sp2d + 1)
+                : 1;
+
+            // 2. Simpan registrasi dengan nomor urut permanen
             const { error } = await supabase
                 .from('database_tagihan')
                 .update({
                     ...data,
                     status_tagihan: 'Selesai',
+                    nomor_urut_sp2d: nextNomorUrut,
+                    waktu_registrasi_sp2d: new Date().toISOString()
                 })
                 .eq('id_tagihan', selectedTagihanForRegister.id_tagihan);
 
@@ -278,7 +340,7 @@ const PortalSP2D = () => {
                 const kodeSp2d = kodeParts.length > 0 ? `/${kodeParts.join('/')}` : '-';
 
                 return {
-                    'No. Reg.': index + 1,
+                    'No. Reg.': h.nomor_urut_sp2d || '-',
                     'TGL. SP2D': h.tanggal_sp2d ? format(parseISO(h.tanggal_sp2d), 'dd/MM/yyyy') : '-',
                     'NO. SP2D': noSp2d,
                     'JENIS': getJenisTagihanCode(h.jenis_tagihan),
@@ -539,12 +601,62 @@ const PortalSP2D = () => {
                             <Table>
                                 <TableHeader>
                                     <TableRow className="bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950 dark:to-teal-950 hover:from-emerald-50 hover:to-teal-50 dark:hover:from-emerald-950 dark:hover:to-teal-950 border-b border-emerald-100 dark:border-emerald-900">
-                                        <TableHead className="font-bold text-emerald-900 dark:text-emerald-100">No. Reg</TableHead>
-                                        <TableHead className="font-bold text-emerald-900 dark:text-emerald-100">Tgl. SP2D</TableHead>
-                                        <TableHead className="font-bold text-emerald-900 dark:text-emerald-100">No. SP2D</TableHead>
-                                        <TableHead className="font-bold text-emerald-900 dark:text-emerald-100">SKPD</TableHead>
+                                        <TableHead
+                                            className="font-bold text-emerald-900 dark:text-emerald-100 cursor-pointer hover:bg-emerald-100/50 dark:hover:bg-emerald-900/50 transition-colors"
+                                            onClick={() => handleSort('nomor_urut_sp2d')}
+                                        >
+                                            <div className="flex items-center gap-1">
+                                                No. Reg
+                                                {sortConfig.column === 'nomor_urut_sp2d' ? (
+                                                    sortConfig.direction === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                                                ) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
+                                            </div>
+                                        </TableHead>
+                                        <TableHead
+                                            className="font-bold text-emerald-900 dark:text-emerald-100 cursor-pointer hover:bg-emerald-100/50 dark:hover:bg-emerald-900/50 transition-colors"
+                                            onClick={() => handleSort('tanggal_sp2d')}
+                                        >
+                                            <div className="flex items-center gap-1">
+                                                Tgl. SP2D
+                                                {sortConfig.column === 'tanggal_sp2d' ? (
+                                                    sortConfig.direction === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                                                ) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
+                                            </div>
+                                        </TableHead>
+                                        <TableHead
+                                            className="font-bold text-emerald-900 dark:text-emerald-100 cursor-pointer hover:bg-emerald-100/50 dark:hover:bg-emerald-900/50 transition-colors"
+                                            onClick={() => handleSort('nomor_spm')}
+                                        >
+                                            <div className="flex items-center gap-1">
+                                                No. SP2D
+                                                {sortConfig.column === 'nomor_spm' ? (
+                                                    sortConfig.direction === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                                                ) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
+                                            </div>
+                                        </TableHead>
+                                        <TableHead
+                                            className="font-bold text-emerald-900 dark:text-emerald-100 cursor-pointer hover:bg-emerald-100/50 dark:hover:bg-emerald-900/50 transition-colors"
+                                            onClick={() => handleSort('nama_skpd')}
+                                        >
+                                            <div className="flex items-center gap-1">
+                                                SKPD
+                                                {sortConfig.column === 'nama_skpd' ? (
+                                                    sortConfig.direction === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                                                ) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
+                                            </div>
+                                        </TableHead>
                                         <TableHead className="font-bold text-emerald-900 dark:text-emerald-100">Uraian</TableHead>
-                                        <TableHead className="font-bold text-emerald-900 dark:text-emerald-100 text-right">Jumlah</TableHead>
+                                        <TableHead
+                                            className="font-bold text-emerald-900 dark:text-emerald-100 text-right cursor-pointer hover:bg-emerald-100/50 dark:hover:bg-emerald-900/50 transition-colors"
+                                            onClick={() => handleSort('jumlah_kotor')}
+                                        >
+                                            <div className="flex items-center justify-end gap-1">
+                                                Jumlah
+                                                {sortConfig.column === 'jumlah_kotor' ? (
+                                                    sortConfig.direction === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                                                ) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
+                                            </div>
+                                        </TableHead>
                                         <TableHead className="font-bold text-emerald-900 dark:text-emerald-100">Bank & Tgl. Serah BSG</TableHead>
                                         <TableHead className="font-bold text-emerald-900 dark:text-emerald-100 text-center">Aksi</TableHead>
                                     </TableRow>
@@ -577,11 +689,11 @@ const PortalSP2D = () => {
                                             </TableCell>
                                         </TableRow>
                                     ) : (
-                                        historyList.slice((historyCurrentPage - 1) * historyPageSize, historyCurrentPage * historyPageSize).map((h, index) => (
+                                        sortedHistoryList.slice((historyCurrentPage - 1) * historyPageSize, historyCurrentPage * historyPageSize).map((h, index) => (
                                             <TableRow key={h.id_tagihan} className="hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
                                                 <TableCell className="text-slate-700 dark:text-slate-300">
                                                     <div className="text-sm font-bold text-slate-700 dark:text-slate-300">
-                                                        {(historyCurrentPage - 1) * historyPageSize + index + 1}
+                                                        {h.nomor_urut_sp2d || '-'}
                                                     </div>
                                                 </TableCell>
                                                 <TableCell className="text-slate-700 dark:text-slate-300">

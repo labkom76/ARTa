@@ -34,4 +34,6 @@ export interface Tagihan {
     nama_bank?: string;
     tanggal_bsg?: string;
     catatan_sp2d?: string;
+    nomor_urut_sp2d?: number;
+    waktu_registrasi_sp2d?: string;
 }
