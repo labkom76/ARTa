@@ -144,11 +144,11 @@ const PortalSP2D = () => {
 
     // Sorting State
     const [sortConfig, setSortConfig] = useState<{
-        column: keyof Tagihan | 'nomor_urut_sp2d';
+        column: keyof Tagihan | 'nomor_urut_sp2d' | 'tanggal_bsg' | 'nama_bank';
         direction: 'asc' | 'desc';
     }>({ column: 'nomor_urut_sp2d', direction: 'asc' });
 
-    const handleSort = (column: keyof Tagihan | 'nomor_urut_sp2d') => {
+    const handleSort = (column: keyof Tagihan | 'nomor_urut_sp2d' | 'tanggal_bsg' | 'nama_bank') => {
         let direction: 'asc' | 'desc' = 'asc';
         if (sortConfig.column === column && sortConfig.direction === 'asc') {
             direction = 'desc';
@@ -458,52 +458,7 @@ const PortalSP2D = () => {
                         </p>
                     </div>
                 </div>
-                <div className="flex items-center gap-2 bg-white dark:bg-slate-900 p-1.5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-x-auto whitespace-nowrap">
-                    <TooltipProvider>
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <Button
-                                    onClick={() => { fetchHistory(); }}
-                                    variant="outline"
-                                    size="icon"
-                                    className="h-9 w-9 border-slate-200 dark:border-slate-800 hover:bg-emerald-50 hover:text-emerald-600 dark:hover:bg-emerald-950/30 dark:hover:text-emerald-400 transition-all rounded-lg"
-                                >
-                                    <RefreshCw className={`h-4 w-4 ${loadingHistory ? 'animate-spin' : ''}`} />
-                                </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                                <p>Refresh Data</p>
-                            </TooltipContent>
-                        </Tooltip>
-
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <Button
-                                    onClick={handleExportExcel}
-                                    variant="outline"
-                                    size="icon"
-                                    className="h-9 w-9 border-slate-200 dark:border-slate-800 hover:bg-emerald-50 hover:text-emerald-600 dark:hover:bg-emerald-950/30 dark:hover:text-emerald-400 transition-all rounded-lg"
-                                    disabled={loadingHistory || historyList.length === 0}
-                                >
-                                    <FileDownIcon className="h-4 w-4" />
-                                </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                                <p>Ekspor ke Excel</p>
-                            </TooltipContent>
-                        </Tooltip>
-                    </TooltipProvider>
-
-                    <div className="h-6 w-[1px] bg-slate-200 dark:bg-slate-800 mx-1 hidden sm:block" />
-
-                    <Button
-                        onClick={() => setIsAntrianDialogOpen(true)}
-                        className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold h-9 px-4 rounded-lg transition-all hover:scale-105 gap-2 text-sm"
-                    >
-                        <PlusCircle className="h-4 w-4" />
-                        Regis SP2D
-                    </Button>
-                </div>
+                <div className="h-10" /> {/* Placeholder spacing */}
             </div>
 
             {/* Filter Section */}
@@ -571,235 +526,288 @@ const PortalSP2D = () => {
                             </div>
                         </div>
 
-                        <div className="flex items-center gap-3 bg-white dark:bg-slate-900 px-3 py-1.5 rounded-xl border border-emerald-100 dark:border-emerald-800/50 shadow-sm">
-                            <label className="text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-bold">Baris :</label>
-                            <Select
-                                value={historyPageSize.toString()}
-                                onValueChange={(value) => {
-                                    const newSize = value === 'all' ? historyList.length : parseInt(value);
-                                    setHistoryPageSize(newSize);
-                                    setHistoryCurrentPage(1);
-                                }}
+                        <div className="flex items-center gap-2 bg-white dark:bg-slate-900 p-1.5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-x-auto whitespace-nowrap">
+                            <TooltipProvider>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button
+                                            onClick={() => { fetchHistory(); }}
+                                            variant="outline"
+                                            size="icon"
+                                            className="h-9 w-9 border-slate-200 dark:border-slate-800 hover:bg-emerald-50 hover:text-emerald-600 dark:hover:bg-emerald-950/30 dark:hover:text-emerald-400 transition-all rounded-lg"
+                                        >
+                                            <RefreshCw className={`h-4 w-4 ${loadingHistory ? 'animate-spin' : ''}`} />
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                        <p>Refresh Data</p>
+                                    </TooltipContent>
+                                </Tooltip>
+
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button
+                                            onClick={handleExportExcel}
+                                            variant="outline"
+                                            size="icon"
+                                            className="h-9 w-9 border-slate-200 dark:border-slate-800 hover:bg-emerald-50 hover:text-emerald-600 dark:hover:bg-emerald-950/30 dark:hover:text-emerald-400 transition-all rounded-lg"
+                                            disabled={loadingHistory || historyList.length === 0}
+                                        >
+                                            <FileDownIcon className="h-4 w-4" />
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                        <p>Ekspor ke Excel</p>
+                                    </TooltipContent>
+                                </Tooltip>
+                            </TooltipProvider>
+
+                            <div className="h-6 w-[1px] bg-slate-200 dark:bg-slate-800 mx-1 hidden sm:block" />
+
+                            <Button
+                                onClick={() => setIsAntrianDialogOpen(true)}
+                                className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold h-9 px-4 rounded-lg transition-all hover:scale-105 gap-2 text-sm"
                             >
-                                <SelectTrigger className="w-[85px] h-8 text-xs bg-transparent border-none focus:ring-0 font-bold text-emerald-700 dark:text-emerald-400">
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="10">10</SelectItem>
-                                    <SelectItem value="25">25</SelectItem>
-                                    <SelectItem value="50">50</SelectItem>
-                                    <SelectItem value="100">100</SelectItem>
-                                    <SelectItem value="500">500</SelectItem>
-                                    <SelectItem value="all">Semua</SelectItem>
-                                </SelectContent>
-                            </Select>
+                                <PlusCircle className="h-4 w-4" />
+                                Regis SP2D
+                            </Button>
                         </div>
                     </div>
 
                     <CardContent className="pt-6">
-                        <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-800">
-                            <Table>
-                                <TableHeader>
-                                    <TableRow className="bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950 dark:to-teal-950 hover:from-emerald-50 hover:to-teal-50 dark:hover:from-emerald-950 dark:hover:to-teal-950 border-b border-emerald-100 dark:border-emerald-900">
-                                        <TableHead
-                                            className="font-bold text-emerald-900 dark:text-emerald-100 cursor-pointer hover:bg-emerald-100/50 dark:hover:bg-emerald-900/50 transition-colors"
-                                            onClick={() => handleSort('nomor_urut_sp2d')}
-                                        >
-                                            <div className="flex items-center gap-1">
-                                                No. Reg
-                                                {sortConfig.column === 'nomor_urut_sp2d' ? (
-                                                    sortConfig.direction === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
-                                                ) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
+                        <Table containerClassName="max-h-[650px] overflow-auto rounded-lg border border-slate-200 dark:border-slate-800 relative scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-800">
+                            <TableHeader className="bg-emerald-50 dark:bg-slate-900 shadow-sm transition-colors">
+                                <TableRow className="bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950 dark:to-teal-950 hover:from-emerald-50 hover:to-teal-50 dark:hover:from-emerald-950 dark:hover:to-teal-950 border-b border-emerald-100 dark:border-emerald-900">
+                                    <TableHead
+                                        className="sticky top-0 z-30 bg-emerald-50 dark:bg-slate-900 border-b border-emerald-100 dark:border-emerald-800 font-bold text-emerald-900 dark:text-emerald-100 cursor-pointer hover:bg-emerald-100/50 dark:hover:bg-emerald-900/50 transition-colors"
+                                        onClick={() => handleSort('nomor_urut_sp2d')}
+                                    >
+                                        <div className="flex items-center gap-1">
+                                            No. Reg
+                                            {sortConfig.column === 'nomor_urut_sp2d' ? (
+                                                sortConfig.direction === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                                            ) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
+                                        </div>
+                                    </TableHead>
+                                    <TableHead
+                                        className="sticky top-0 z-30 bg-emerald-50 dark:bg-slate-900 border-b border-emerald-100 dark:border-emerald-800 font-bold text-emerald-900 dark:text-emerald-100 cursor-pointer hover:bg-emerald-100/50 dark:hover:bg-emerald-900/50 transition-colors"
+                                        onClick={() => handleSort('tanggal_sp2d')}
+                                    >
+                                        <div className="flex items-center gap-1">
+                                            Tgl. SP2D
+                                            {sortConfig.column === 'tanggal_sp2d' ? (
+                                                sortConfig.direction === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                                            ) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
+                                        </div>
+                                    </TableHead>
+                                    <TableHead
+                                        className="sticky top-0 z-30 bg-emerald-50 dark:bg-slate-900 border-b border-emerald-100 dark:border-emerald-800 font-bold text-emerald-900 dark:text-emerald-100 cursor-pointer hover:bg-emerald-100/50 dark:hover:bg-emerald-900/50 transition-colors"
+                                        onClick={() => handleSort('nomor_spm')}
+                                    >
+                                        <div className="flex items-center gap-1">
+                                            No. SP2D
+                                            {sortConfig.column === 'nomor_spm' ? (
+                                                sortConfig.direction === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                                            ) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
+                                        </div>
+                                    </TableHead>
+                                    <TableHead
+                                        className="sticky top-0 z-30 bg-emerald-50 dark:bg-slate-900 border-b border-emerald-100 dark:border-emerald-800 font-bold text-emerald-900 dark:text-emerald-100 cursor-pointer hover:bg-emerald-100/50 dark:hover:bg-emerald-900/50 transition-colors"
+                                        onClick={() => handleSort('nama_skpd')}
+                                    >
+                                        <div className="flex items-center gap-1">
+                                            SKPD
+                                            {sortConfig.column === 'nama_skpd' ? (
+                                                sortConfig.direction === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                                            ) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
+                                        </div>
+                                    </TableHead>
+                                    {/* Kolom Uraian dihapus untuk melegakan ruang */}
+                                    <TableHead
+                                        className="sticky top-0 z-30 bg-emerald-50 dark:bg-slate-900 border-b border-emerald-100 dark:border-emerald-800 font-bold text-emerald-900 dark:text-emerald-100 text-right cursor-pointer hover:bg-emerald-100/50 dark:hover:bg-emerald-900/50 transition-colors"
+                                        onClick={() => handleSort('jumlah_kotor')}
+                                    >
+                                        <div className="flex items-center justify-end gap-1">
+                                            Jumlah
+                                            {sortConfig.column === 'jumlah_kotor' ? (
+                                                sortConfig.direction === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                                            ) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
+                                        </div>
+                                    </TableHead>
+                                    <TableHead
+                                        className="sticky top-0 z-30 bg-emerald-50 dark:bg-slate-900 border-b border-emerald-100 dark:border-emerald-800 font-bold text-emerald-900 dark:text-emerald-100 cursor-pointer hover:bg-emerald-100/50 dark:hover:bg-emerald-900/50 transition-colors"
+                                        onClick={() => handleSort('tanggal_bsg')}
+                                    >
+                                        <div className="flex items-center gap-1">
+                                            Tgl. Serah
+                                            {sortConfig.column === 'tanggal_bsg' ? (
+                                                sortConfig.direction === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                                            ) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
+                                        </div>
+                                    </TableHead>
+                                    <TableHead
+                                        className="sticky top-0 z-30 bg-emerald-50 dark:bg-slate-900 border-b border-emerald-100 dark:border-emerald-800 font-bold text-emerald-900 dark:text-emerald-100 cursor-pointer hover:bg-emerald-100/50 dark:hover:bg-emerald-900/50 transition-colors"
+                                        onClick={() => handleSort('nama_bank')}
+                                    >
+                                        <div className="flex items-center gap-1">
+                                            Bank
+                                            {sortConfig.column === 'nama_bank' ? (
+                                                sortConfig.direction === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                                            ) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
+                                        </div>
+                                    </TableHead>
+                                    <TableHead className="sticky top-0 z-30 bg-emerald-50 dark:bg-slate-900 border-b border-emerald-100 dark:border-emerald-800 font-bold text-emerald-900 dark:text-emerald-100 text-center">Aksi</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {loadingHistory ? (
+                                    <TableRow>
+                                        <TableCell colSpan={8} className="text-center py-12">
+                                            <div className="flex flex-col items-center gap-3">
+                                                <div className="relative w-12 h-12">
+                                                    <div className="absolute inset-0 rounded-full border-4 border-emerald-200 dark:border-emerald-900"></div>
+                                                    <div className="absolute inset-0 rounded-full border-4 border-emerald-500 dark:border-emerald-400 border-t-transparent animate-spin"></div>
+                                                </div>
+                                                <p className="text-sm text-slate-600 dark:text-slate-400 font-medium">Memuat data registrasi...</p>
                                             </div>
-                                        </TableHead>
-                                        <TableHead
-                                            className="font-bold text-emerald-900 dark:text-emerald-100 cursor-pointer hover:bg-emerald-100/50 dark:hover:bg-emerald-900/50 transition-colors"
-                                            onClick={() => handleSort('tanggal_sp2d')}
-                                        >
-                                            <div className="flex items-center gap-1">
-                                                Tgl. SP2D
-                                                {sortConfig.column === 'tanggal_sp2d' ? (
-                                                    sortConfig.direction === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
-                                                ) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
-                                            </div>
-                                        </TableHead>
-                                        <TableHead
-                                            className="font-bold text-emerald-900 dark:text-emerald-100 cursor-pointer hover:bg-emerald-100/50 dark:hover:bg-emerald-900/50 transition-colors"
-                                            onClick={() => handleSort('nomor_spm')}
-                                        >
-                                            <div className="flex items-center gap-1">
-                                                No. SP2D
-                                                {sortConfig.column === 'nomor_spm' ? (
-                                                    sortConfig.direction === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
-                                                ) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
-                                            </div>
-                                        </TableHead>
-                                        <TableHead
-                                            className="font-bold text-emerald-900 dark:text-emerald-100 cursor-pointer hover:bg-emerald-100/50 dark:hover:bg-emerald-900/50 transition-colors"
-                                            onClick={() => handleSort('nama_skpd')}
-                                        >
-                                            <div className="flex items-center gap-1">
-                                                SKPD
-                                                {sortConfig.column === 'nama_skpd' ? (
-                                                    sortConfig.direction === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
-                                                ) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
-                                            </div>
-                                        </TableHead>
-                                        <TableHead className="font-bold text-emerald-900 dark:text-emerald-100">Uraian</TableHead>
-                                        <TableHead
-                                            className="font-bold text-emerald-900 dark:text-emerald-100 text-right cursor-pointer hover:bg-emerald-100/50 dark:hover:bg-emerald-900/50 transition-colors"
-                                            onClick={() => handleSort('jumlah_kotor')}
-                                        >
-                                            <div className="flex items-center justify-end gap-1">
-                                                Jumlah
-                                                {sortConfig.column === 'jumlah_kotor' ? (
-                                                    sortConfig.direction === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
-                                                ) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
-                                            </div>
-                                        </TableHead>
-                                        <TableHead className="font-bold text-emerald-900 dark:text-emerald-100">Bank & Tgl. Serah BSG</TableHead>
-                                        <TableHead className="font-bold text-emerald-900 dark:text-emerald-100 text-center">Aksi</TableHead>
+                                        </TableCell>
                                     </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {loadingHistory ? (
-                                        <TableRow>
-                                            <TableCell colSpan={8} className="text-center py-12">
-                                                <div className="flex flex-col items-center gap-3">
-                                                    <div className="relative w-12 h-12">
-                                                        <div className="absolute inset-0 rounded-full border-4 border-emerald-200 dark:border-emerald-900"></div>
-                                                        <div className="absolute inset-0 rounded-full border-4 border-emerald-500 dark:border-emerald-400 border-t-transparent animate-spin"></div>
-                                                    </div>
-                                                    <p className="text-sm text-slate-600 dark:text-slate-400 font-medium">Memuat data registrasi...</p>
+                                ) : historyList.length === 0 ? (
+                                    <TableRow>
+                                        <TableCell colSpan={8} className="text-center py-12">
+                                            <div className="flex flex-col items-center gap-3">
+                                                <div className="p-4 rounded-full bg-slate-100 dark:bg-slate-800">
+                                                    <CreditCard className="h-8 w-8 text-slate-400 dark:text-slate-600" />
+                                                </div>
+                                                <div>
+                                                    <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Belum ada registrasi SP2D pada periode ini.</p>
+                                                    <p className="text-xs text-slate-500 dark:text-slate-500 mt-1">Coba ubah filter pencarian</p>
+                                                </div>
+                                            </div>
+                                        </TableCell>
+                                    </TableRow>
+                                ) : (
+                                    sortedHistoryList.slice((historyCurrentPage - 1) * historyPageSize, historyCurrentPage * historyPageSize).map((h, index) => (
+                                        <TableRow key={h.id_tagihan} className="hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
+                                            <TableCell className="text-slate-700 dark:text-slate-300">
+                                                <div className="text-sm font-bold text-slate-700 dark:text-slate-300">
+                                                    {h.nomor_urut_sp2d || '-'}
                                                 </div>
                                             </TableCell>
-                                        </TableRow>
-                                    ) : historyList.length === 0 ? (
-                                        <TableRow>
-                                            <TableCell colSpan={8} className="text-center py-12">
-                                                <div className="flex flex-col items-center gap-3">
-                                                    <div className="p-4 rounded-full bg-slate-100 dark:bg-slate-800">
-                                                        <CreditCard className="h-8 w-8 text-slate-400 dark:text-slate-600" />
-                                                    </div>
-                                                    <div>
-                                                        <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Belum ada registrasi SP2D pada periode ini.</p>
-                                                        <p className="text-xs text-slate-500 dark:text-slate-500 mt-1">Coba ubah filter pencarian</p>
-                                                    </div>
+                                            <TableCell className="text-slate-700 dark:text-slate-300">
+                                                <div className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                                                    {h.tanggal_sp2d ? format(parseISO(h.tanggal_sp2d), 'dd/MM/yyyy') : '-'}
                                                 </div>
                                             </TableCell>
-                                        </TableRow>
-                                    ) : (
-                                        sortedHistoryList.slice((historyCurrentPage - 1) * historyPageSize, historyCurrentPage * historyPageSize).map((h, index) => (
-                                            <TableRow key={h.id_tagihan} className="hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
-                                                <TableCell className="text-slate-700 dark:text-slate-300">
-                                                    <div className="text-sm font-bold text-slate-700 dark:text-slate-300">
-                                                        {h.nomor_urut_sp2d || '-'}
-                                                    </div>
-                                                </TableCell>
-                                                <TableCell className="text-slate-700 dark:text-slate-300">
-                                                    <div className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-                                                        {h.tanggal_sp2d ? format(parseISO(h.tanggal_sp2d), 'dd/MM/yyyy') : '-'}
-                                                    </div>
-                                                </TableCell>
-                                                <TableCell className="font-mono text-sm font-medium text-emerald-700 dark:text-emerald-400">
-                                                    {h.nomor_spm.split('/')[2]?.padStart(6, '0') || '-'}
-                                                </TableCell>
-                                                <TableCell className="max-w-[200px]">
-                                                    <div className="font-bold text-slate-900 dark:text-white truncate" title={h.nama_skpd}>
-                                                        {h.nama_skpd}
-                                                    </div>
-                                                </TableCell>
-                                                <TableCell className="max-w-[250px]">
+                                            <TableCell className="font-mono text-sm font-medium text-emerald-700 dark:text-emerald-400">
+                                                {h.nomor_spm.split('/')[2]?.padStart(6, '0') || '-'}
+                                            </TableCell>
+                                            <TableCell className="min-w-[200px]">
+                                                <div className="font-bold text-slate-900 dark:text-white leading-snug" title={h.nama_skpd}>
+                                                    {h.nama_skpd}
+                                                </div>
+                                            </TableCell>
+                                            <TableCell className="text-right">
+                                                <div className="font-bold text-emerald-600 dark:text-emerald-400">
+                                                    Rp{h.jumlah_kotor.toLocaleString('id-ID')}
+                                                </div>
+                                            </TableCell>
+                                            <TableCell>
+                                                <div className="text-sm font-semibold text-emerald-700 dark:text-emerald-400">
+                                                    {h.tanggal_bsg ? format(parseISO(h.tanggal_bsg), 'dd/MM/yyyy') : '-'}
+                                                </div>
+                                            </TableCell>
+                                            <TableCell>
+                                                <BankBadge bankName={h.nama_bank} />
+                                            </TableCell>
+                                            <TableCell className="text-center">
+                                                <div className="flex items-center justify-center gap-1.5">
                                                     <TooltipProvider>
                                                         <Tooltip>
                                                             <TooltipTrigger asChild>
-                                                                <div className="text-sm text-slate-600 dark:text-slate-400 truncate cursor-help">
-                                                                    {h.uraian}
-                                                                </div>
+                                                                <Button
+                                                                    variant="outline"
+                                                                    size="icon"
+                                                                    className="h-8 w-8 hover:bg-emerald-50 hover:border-emerald-500 hover:text-emerald-600 dark:hover:bg-emerald-950 dark:hover:border-emerald-500 dark:hover:text-emerald-400 transition-colors"
+                                                                    onClick={() => { setSelectedHistoryForDetail(h); setIsDetailDialogOpen(true); }}
+                                                                >
+                                                                    <EyeIcon className="h-4 w-4" />
+                                                                </Button>
                                                             </TooltipTrigger>
-                                                            <TooltipContent className="max-w-md p-4 bg-white dark:bg-slate-900 shadow-xl border-slate-200 dark:border-slate-700">
-                                                                <p className="text-sm leading-relaxed">{h.uraian}</p>
-                                                            </TooltipContent>
+                                                            <TooltipContent>Lihat Detail</TooltipContent>
                                                         </Tooltip>
                                                     </TooltipProvider>
-                                                </TableCell>
-                                                <TableCell className="text-right">
-                                                    <div className="font-bold text-emerald-600 dark:text-emerald-400">
-                                                        Rp{h.jumlah_kotor.toLocaleString('id-ID')}
-                                                    </div>
-                                                </TableCell>
-                                                <TableCell>
-                                                    <div className="text-sm font-semibold text-emerald-700 dark:text-emerald-400">
-                                                        {h.tanggal_bsg ? format(parseISO(h.tanggal_bsg), 'dd/MM/yyyy') : '-'}
-                                                    </div>
-                                                    <div className="mt-1.5">
-                                                        <BankBadge bankName={h.nama_bank} />
-                                                    </div>
-                                                </TableCell>
-                                                <TableCell className="text-center">
-                                                    <div className="flex items-center justify-center gap-1.5">
-                                                        <TooltipProvider>
-                                                            <Tooltip>
-                                                                <TooltipTrigger asChild>
-                                                                    <Button
-                                                                        variant="outline"
-                                                                        size="icon"
-                                                                        className="h-8 w-8 hover:bg-emerald-50 hover:border-emerald-500 hover:text-emerald-600 dark:hover:bg-emerald-950 dark:hover:border-emerald-500 dark:hover:text-emerald-400 transition-colors"
-                                                                        onClick={() => { setSelectedHistoryForDetail(h); setIsDetailDialogOpen(true); }}
-                                                                    >
-                                                                        <EyeIcon className="h-4 w-4" />
-                                                                    </Button>
-                                                                </TooltipTrigger>
-                                                                <TooltipContent>Lihat Detail</TooltipContent>
-                                                            </Tooltip>
-                                                        </TooltipProvider>
 
-                                                        <TooltipProvider>
-                                                            <Tooltip>
-                                                                <TooltipTrigger asChild>
-                                                                    <Button
-                                                                        variant="outline"
-                                                                        size="icon"
-                                                                        className="h-8 w-8 hover:bg-blue-50 hover:border-blue-500 hover:text-blue-600 dark:hover:bg-blue-950 dark:hover:border-blue-500 dark:hover:text-blue-400 transition-colors"
-                                                                        onClick={() => handleEditClick(h)}
-                                                                    >
-                                                                        <Pencil className="h-4 w-4" />
-                                                                    </Button>
-                                                                </TooltipTrigger>
-                                                                <TooltipContent>Edit Registrasi</TooltipContent>
-                                                            </Tooltip>
-                                                        </TooltipProvider>
+                                                    <TooltipProvider>
+                                                        <Tooltip>
+                                                            <TooltipTrigger asChild>
+                                                                <Button
+                                                                    variant="outline"
+                                                                    size="icon"
+                                                                    className="h-8 w-8 hover:bg-blue-50 hover:border-blue-500 hover:text-blue-600 dark:hover:bg-blue-950 dark:hover:border-blue-500 dark:hover:text-blue-400 transition-colors"
+                                                                    onClick={() => handleEditClick(h)}
+                                                                >
+                                                                    <Pencil className="h-4 w-4" />
+                                                                </Button>
+                                                            </TooltipTrigger>
+                                                            <TooltipContent>Edit Registrasi</TooltipContent>
+                                                        </Tooltip>
+                                                    </TooltipProvider>
 
-                                                        <TooltipProvider>
-                                                            <Tooltip>
-                                                                <TooltipTrigger asChild>
-                                                                    <Button
-                                                                        variant="outline"
-                                                                        size="icon"
-                                                                        className="h-8 w-8 hover:bg-red-50 hover:border-red-500 hover:text-red-600 dark:hover:bg-red-950 dark:hover:border-red-500 dark:hover:text-red-400 transition-colors"
-                                                                        onClick={() => handleDeleteClick(h)}
-                                                                    >
-                                                                        <Trash2 className="h-4 w-4" />
-                                                                    </Button>
-                                                                </TooltipTrigger>
-                                                                <TooltipContent>Hapus & Kembalikan ke Antrian</TooltipContent>
-                                                            </Tooltip>
-                                                        </TooltipProvider>
-                                                    </div>
-                                                </TableCell>
-                                            </TableRow>
-                                        ))
-                                    )}
-                                </TableBody>
-                            </Table>
-                        </div>
+                                                    <TooltipProvider>
+                                                        <Tooltip>
+                                                            <TooltipTrigger asChild>
+                                                                <Button
+                                                                    variant="outline"
+                                                                    size="icon"
+                                                                    className="h-8 w-8 hover:bg-red-50 hover:border-red-500 hover:text-red-600 dark:hover:bg-red-950 dark:hover:border-red-500 dark:hover:text-red-400 transition-colors"
+                                                                    onClick={() => handleDeleteClick(h)}
+                                                                >
+                                                                    <Trash2 className="h-4 w-4" />
+                                                                </Button>
+                                                            </TooltipTrigger>
+                                                            <TooltipContent>Hapus & Kembalikan ke Antrian</TooltipContent>
+                                                        </Tooltip>
+                                                    </TooltipProvider>
+                                                </div>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))
+                                )}
+                            </TableBody>
+                        </Table>
 
                         {/* Pagination */}
                         {historyList.length > 0 && (
                             <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-slate-50 dark:bg-slate-900/50 px-6 py-4 border-t border-slate-200 dark:border-slate-800">
-                                <p className="text-sm text-slate-600 dark:text-slate-400 font-medium">
-                                    Menampilkan {Math.min((historyCurrentPage - 1) * historyPageSize + 1, historyList.length)} - {Math.min(historyCurrentPage * historyPageSize, historyList.length)} dari {historyList.length} data
-                                </p>
+                                <div className="flex items-center gap-4">
+                                    <div className="flex items-center gap-2 bg-white dark:bg-slate-900 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                                        <label className="text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-bold whitespace-nowrap">Baris :</label>
+                                        <Select
+                                            value={historyPageSize.toString()}
+                                            onValueChange={(value) => {
+                                                const newSize = value === 'all' ? historyList.length : parseInt(value);
+                                                setHistoryPageSize(newSize);
+                                                setHistoryCurrentPage(1);
+                                            }}
+                                        >
+                                            <SelectTrigger className="w-[70px] h-8 text-xs bg-transparent border-none focus:ring-0 font-bold text-emerald-700 dark:text-emerald-400 p-0">
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="10">10</SelectItem>
+                                                <SelectItem value="25">25</SelectItem>
+                                                <SelectItem value="50">50</SelectItem>
+                                                <SelectItem value="100">100</SelectItem>
+                                                <SelectItem value="500">500</SelectItem>
+                                                <SelectItem value="all">Semua</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                    <p className="text-sm text-slate-600 dark:text-slate-400 font-medium whitespace-nowrap text-center sm:text-left">
+                                        Menampilkan {Math.min((historyCurrentPage - 1) * historyPageSize + 1, historyList.length)} - {Math.min(historyCurrentPage * historyPageSize, historyList.length)} dari {historyList.length} data
+                                    </p>
+                                </div>
                                 <div className="flex items-center gap-2">
                                     <Button
                                         variant="outline"
@@ -830,7 +838,6 @@ const PortalSP2D = () => {
                     </CardContent>
                 </Card>
             </div>
-
 
             {/* Antrian Dialog Component */}
             <AntrianSP2DDialog
