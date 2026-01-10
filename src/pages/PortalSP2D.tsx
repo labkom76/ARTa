@@ -443,7 +443,7 @@ const PortalSP2D = () => {
     }
 
     return (
-        <div className="max-w-[1600px] mx-auto px-4 md:px-8 py-8 space-y-8 animate-in fade-in duration-500">
+        <div className="max-w-[1600px] mx-auto px-4 md:px-8 py-4 space-y-4 animate-in fade-in duration-500">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-2">
                 <div className="flex items-center gap-4">
                     <div className="p-3 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 shadow-lg shadow-emerald-500/20">
@@ -458,12 +458,11 @@ const PortalSP2D = () => {
                         </p>
                     </div>
                 </div>
-                <div className="h-10" /> {/* Placeholder spacing */}
             </div>
 
             {/* Filter Section */}
             <Card className="border-none shadow-xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-md rounded-2xl overflow-hidden">
-                <CardContent className="p-6">
+                <CardContent className="p-4">
                     <div className="flex flex-col lg:flex-row items-center gap-4">
                         <div className="relative flex-1 w-full group">
                             <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-emerald-500 transition-colors" />
@@ -471,7 +470,7 @@ const PortalSP2D = () => {
                                 placeholder="Cari berdasarkan Nomor SPM..."
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
-                                className="pl-11 h-12 border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-emerald-500/20 transition-all rounded-xl font-medium placeholder:text-slate-400 dark:placeholder:text-slate-500"
+                                className="pl-11 h-10 border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-emerald-500/20 transition-all rounded-xl font-medium placeholder:text-slate-400 dark:placeholder:text-slate-500"
                             />
                         </div>
                         <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
@@ -481,7 +480,7 @@ const PortalSP2D = () => {
                                     value={mainSelectedMonth}
                                     onValueChange={setMainSelectedMonth}
                                     placeholder="Filter Bulan"
-                                    className="w-full h-12 rounded-xl border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50"
+                                    className="w-full h-10 rounded-xl border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50"
                                 />
                             </div>
                             <div className="w-full sm:w-32">
@@ -490,7 +489,7 @@ const PortalSP2D = () => {
                                     value={mainSelectedYear}
                                     onValueChange={setMainSelectedYear}
                                     placeholder="Filter Tahun"
-                                    className="w-full h-12 rounded-xl border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50"
+                                    className="w-full h-10 rounded-xl border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50"
                                 />
                             </div>
                             <div className="w-full sm:w-64">
@@ -499,7 +498,7 @@ const PortalSP2D = () => {
                                     value={selectedSkpd}
                                     onValueChange={setSelectedSkpd}
                                     placeholder="Filter Nama SKPD"
-                                    className="w-full h-12 rounded-xl border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50"
+                                    className="w-full h-10 rounded-xl border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50"
                                 />
                             </div>
                         </div>
@@ -575,7 +574,7 @@ const PortalSP2D = () => {
                     </div>
 
                     <CardContent className="pt-6">
-                        <Table containerClassName="max-h-[650px] overflow-auto rounded-lg border border-slate-200 dark:border-slate-800 relative scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-800">
+                        <Table containerClassName="max-h-[850px] overflow-auto rounded-lg border border-slate-200 dark:border-slate-800 relative scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-800">
                             <TableHeader className="bg-emerald-50 dark:bg-slate-900 shadow-sm transition-colors">
                                 <TableRow className="bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950 dark:to-teal-950 hover:from-emerald-50 hover:to-teal-50 dark:hover:from-emerald-950 dark:hover:to-teal-950 border-b border-emerald-100 dark:border-emerald-900">
                                     <TableHead
