@@ -410,6 +410,7 @@ const PortalSP2D = () => {
                 .from('database_tagihan')
                 .update({
                     status_tagihan: 'Diteruskan',
+                    nomor_urut_sp2d: null,
                     tanggal_sp2d: null,
                     nama_bank: null,
                     tanggal_bsg: null,
@@ -519,9 +520,6 @@ const PortalSP2D = () => {
                                 <h2 className="text-xl font-bold text-slate-900 dark:text-white">
                                     Daftar Register SP2D
                                 </h2>
-                                <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-                                    Riwayat penerbitan dan registrasi SP2D
-                                </p>
                             </div>
                         </div>
 

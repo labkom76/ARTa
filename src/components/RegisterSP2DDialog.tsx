@@ -86,6 +86,7 @@ const RegisterSP2DDialog: React.FC<RegisterSP2DDialogProps> = ({
     const [bankOptions, setBankOptions] = useState<BankOption[]>([]);
     const [isLoadingBanks, setIsLoadingBanks] = useState(false);
     const [isConfirmAddBankOpen, setIsConfirmAddBankOpen] = useState(false);
+    const [isConfirmSubmitOpen, setIsConfirmSubmitOpen] = useState(false);
     const [tempBankName, setTempBankName] = useState('');
 
     const fetchBanks = async () => {
@@ -192,12 +193,17 @@ const RegisterSP2DDialog: React.FC<RegisterSP2DDialogProps> = ({
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        setIsConfirmSubmitOpen(true);
+    };
+
+    const handleFinalSubmit = () => {
         onConfirm({
             tanggal_sp2d: tanggalSp2d ? format(tanggalSp2d, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'),
             nama_bank: namaBank,
             tanggal_bsg: tanggalBsg ? format(tanggalBsg, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'),
             catatan_sp2d: catatanSp2d,
         });
+        setIsConfirmSubmitOpen(false);
     };
 
     return (
@@ -435,6 +441,31 @@ const RegisterSP2DDialog: React.FC<RegisterSP2DDialogProps> = ({
                             className="h-10 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white"
                         >
                             Ya, Tambahkan
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            <AlertDialog open={isConfirmSubmitOpen} onOpenChange={setIsConfirmSubmitOpen}>
+                <AlertDialogContent className="rounded-xl border-emerald-100 dark:border-emerald-900 shadow-2xl">
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400">
+                            <Info className="h-5 w-5" />
+                            Konfirmasi Registrasi
+                        </AlertDialogTitle>
+                        <AlertDialogDescription className="text-slate-600 dark:text-slate-400 font-medium leading-relaxed">
+                            Mohon periksa kembali seluruh data Anda! Pastikan <span className="text-slate-900 dark:text-slate-200 font-bold">Nomor SPM</span>, <span className="text-slate-900 dark:text-slate-200 font-bold">Tanggal SP2D</span>, dan <span className="text-slate-900 dark:text-slate-200 font-bold">Nama Bank</span> sudah sesuai dengan dokumen fisik.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter className="gap-2 pt-2">
+                        <AlertDialogCancel className="h-11 rounded-xl border-slate-200 dark:border-slate-800 font-semibold px-6">
+                            Cek Kembali
+                        </AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={handleFinalSubmit}
+                            className="h-11 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-8 shadow-lg shadow-emerald-600/20"
+                        >
+                            Ya, Simpan Registrasi
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
