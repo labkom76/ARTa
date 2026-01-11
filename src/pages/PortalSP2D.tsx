@@ -45,7 +45,6 @@ import {
     RefreshCw,
     HistoryIcon,
     CalendarIcon,
-    FileDownIcon,
     CheckCircle2,
     CreditCard,
     PlusCircle,
@@ -77,7 +76,6 @@ import {
 } from '@/components/ui/select';
 import { Combobox } from '@/components/ui/combobox';
 import { Tagihan } from '@/types/tagihan';
-import * as XLSX from 'xlsx';
 
 interface SkpdOption {
     value: string;
@@ -282,13 +280,33 @@ const PortalSP2D = () => {
                 ? (lastData[0].nomor_urut_sp2d + 1)
                 : 1;
 
-            // 2. Simpan registrasi dengan nomor urut permanen
+            // 1.5 Ambil setting nomor_sp2d dari admin (app_settings)
+            const { data: settingData } = await supabase
+                .from('app_settings')
+                .select('value')
+                .eq('key', 'nomor_sp2d')
+                .single();
+
+            const nomorSp2dSetting = settingData?.value || '04.0';
+
+            // Generate Nomor SP2D Lengkap (Snapshot)
+            let finalNomorSp2d = selectedTagihanForRegister.nomor_spm;
+            if (finalNomorSp2d && finalNomorSp2d.includes('/')) {
+                const parts = finalNomorSp2d.split('/');
+                if (parts.length >= 2) {
+                    parts[1] = nomorSp2dSetting;
+                    finalNomorSp2d = parts.join('/');
+                }
+            }
+
+            // 2. Simpan registrasi dengan nomor urut permanen & nomor sp2d snapshot
             const { error } = await supabase
                 .from('database_tagihan')
                 .update({
                     ...data,
                     status_tagihan: 'Selesai',
                     nomor_urut_sp2d: nextNomorUrut,
+                    nomor_sp2d: finalNomorSp2d,
                     waktu_registrasi_sp2d: new Date().toISOString()
                 })
                 .eq('id_tagihan', selectedTagihanForRegister.id_tagihan);
@@ -320,86 +338,6 @@ const PortalSP2D = () => {
         setIsDeleteDialogOpen(true);
     };
 
-    const handleExportExcel = () => {
-        if (historyList.length === 0) {
-            toast.error('Tidak ada data untuk diekspor');
-            return;
-        }
-
-        try {
-            // Prepare data for export - Map to user-friendly format based on screenshot
-            const exportData = historyList.map((h, index) => {
-                const spmParts = h.nomor_spm.split('/');
-                const noSp2d = spmParts[2]?.padStart(6, '0') || '-';
-                // Reconstruct Kode SP2D: skip SKPD (index 4) and join Jadwal, Month, Year
-                // Also format month (index 6 in full SPM, index 1 in sliced) to remove leading zero
-                const kodeParts = spmParts.slice(5);
-                if (kodeParts.length >= 2) {
-                    kodeParts[1] = parseInt(kodeParts[1]).toString();
-                }
-                const kodeSp2d = kodeParts.length > 0 ? `/${kodeParts.join('/')}` : '-';
-
-                return {
-                    'No. Reg.': h.nomor_urut_sp2d || '-',
-                    'TGL. SP2D': h.tanggal_sp2d ? format(parseISO(h.tanggal_sp2d), 'dd/MM/yyyy') : '-',
-                    'NO. SP2D': noSp2d,
-                    'JENIS': getJenisTagihanCode(h.jenis_tagihan),
-                    'S K P D': h.nama_skpd,
-                    'URAIAN': h.uraian,
-                    'JUMLAH': h.jumlah_kotor, // Will be formatted below
-                    'NAMA BANK': h.nama_bank || '-',
-                    'TANGGAL DISERAHKAN KE BSG': h.tanggal_bsg ? format(parseISO(h.tanggal_bsg), 'dd/MM/yyyy') : '-',
-                    'KODE SP2D': kodeSp2d,
-                    'CATATAN KOREKSI': h.catatan_sp2d || '-'
-                };
-            });
-
-            // Create Worksheet
-            const ws = XLSX.utils.json_to_sheet(exportData);
-
-            // Format JUMLAH column to have dots as thousands separator (as string for consistency in basic XLSX)
-            // Note: XLSX.utils.json_to_sheet detects numbers. To match screenshot styling (e.g. 202.256.588),
-            // we can apply a number format to the cells.
-            const range = XLSX.utils.decode_range(ws['!ref'] || 'A1');
-            for (let R = range.s.r + 1; R <= range.e.r; ++R) {
-                const cellAddress = XLSX.utils.encode_cell({ r: R, c: 6 }); // Column G (JUMLAH)
-                if (ws[cellAddress]) {
-                    ws[cellAddress].z = '#,##0'; // Indonesian default separator in Excel usually follows system, but #,##0 is standard
-                }
-            }
-
-            // Set column widths
-            const wscols = [
-                { wch: 8 },  // No. Reg.
-                { wch: 15 }, // TGL. SP2D
-                { wch: 12 }, // NO. SP2D
-                { wch: 8 },  // JENIS
-                { wch: 40 }, // S K P D
-                { wch: 60 }, // URAIAN
-                { wch: 18 }, // JUMLAH
-                { wch: 15 }, // NAMA BANK
-                { wch: 25 }, // TANGGAL BSG
-                { wch: 15 }, // KODE SP2D
-                { wch: 30 }  // CATATAN KOREKSI
-            ];
-            ws['!cols'] = wscols;
-
-            // Create Workbook
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, "Register SP2D");
-
-            // Generate filename based on filters
-            const monthLabel = mainSelectedMonth === 'all' ? 'Semua_Bulan' : months.find(m => m.value === mainSelectedMonth)?.label;
-            const filename = `Register_SP2D_${monthLabel}_${mainSelectedYear}.xlsx`;
-
-            // Trigger Download
-            XLSX.writeFile(wb, filename);
-            toast.success('Data berhasil diekspor ke Excel!');
-        } catch (error: any) {
-            console.error('Export Error:', error);
-            toast.error('Gagal mengekspor data: ' + error.message);
-        }
-    };
 
     const confirmDelete = async () => {
         if (!tagihanToDelete) return;
@@ -411,6 +349,7 @@ const PortalSP2D = () => {
                 .update({
                     status_tagihan: 'Diteruskan',
                     nomor_urut_sp2d: null,
+                    nomor_sp2d: null,
                     tanggal_sp2d: null,
                     nama_bank: null,
                     tanggal_bsg: null,
@@ -538,23 +477,6 @@ const PortalSP2D = () => {
                                     </TooltipTrigger>
                                     <TooltipContent>
                                         <p>Refresh Data</p>
-                                    </TooltipContent>
-                                </Tooltip>
-
-                                <Tooltip>
-                                    <TooltipTrigger asChild>
-                                        <Button
-                                            onClick={handleExportExcel}
-                                            variant="outline"
-                                            size="icon"
-                                            className="h-9 w-9 border-slate-200 dark:border-slate-800 hover:bg-emerald-50 hover:text-emerald-600 dark:hover:bg-emerald-950/30 dark:hover:text-emerald-400 transition-all rounded-lg"
-                                            disabled={loadingHistory || historyList.length === 0}
-                                        >
-                                            <FileDownIcon className="h-4 w-4" />
-                                        </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                        <p>Ekspor ke Excel</p>
                                     </TooltipContent>
                                 </Tooltip>
                             </TooltipProvider>

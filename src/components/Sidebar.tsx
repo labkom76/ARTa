@@ -128,7 +128,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onLinkClick }) => {
         label: 'Data Master',
         icon: ListFilterIcon, // You can choose a more appropriate icon
         children: [
-          { to: '/admin/kode-wilayah', icon: MapPinIcon, label: 'Kode Wilayah' }, // New item
+          { to: '/admin/nomor-perben', icon: MapPinIcon, label: 'Nomor Perben' }, // New item
           { to: '/admin/kode-skpd', icon: ListChecksIcon, label: 'Kode SKPD' },
           { to: '/admin/jadwal-penganggaran', icon: CalendarCheckIcon, label: 'Jadwal Penganggaran' },
           { to: '/admin/sumber-dana', icon: CoinsIcon, label: 'Sumber Dana' },
@@ -141,6 +141,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onLinkClick }) => {
     navItems.push(
       { to: '/dashboard-sp2d', icon: LayoutDashboardIcon, label: 'Dashboard' },
       { to: '/portal-sp2d', icon: Landmark, label: 'Registrasi SP2D' },
+      { to: '/daftar-registrasi-sp2d', icon: FileTextIcon, label: 'Daftar Registrasi SP2D' },
     );
   } else {
     navItems.push(
