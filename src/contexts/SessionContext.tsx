@@ -318,6 +318,9 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
         case 'Administrator':
           targetPath = '/admin/dashboard';
           break;
+        case 'Register SP2D':
+          targetPath = '/dashboard-sp2d';
+          break;
         default:
           toast.warning('Profil tidak ditemukan. Silakan hubungi administrator.');
           return;
