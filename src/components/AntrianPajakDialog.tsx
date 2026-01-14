@@ -24,7 +24,7 @@ import {
     TooltipProvider,
     TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { SearchIcon, ReceiptIcon, ChevronLeft, ChevronRight, CalculatorIcon } from 'lucide-react';
+import { SearchIcon, PlusCircle, ChevronLeft, ChevronRight, CalculatorIcon } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -41,6 +41,7 @@ interface AntrianPajakDialogProps {
     onClose: () => void;
     onInputClick: (tagihan: Tagihan) => void;
     skpdOptions: SkpdOption[];
+    refreshKey?: number;
 }
 
 const months = [
@@ -70,6 +71,7 @@ const AntrianPajakDialog: React.FC<AntrianPajakDialogProps> = ({
     onClose,
     onInputClick,
     skpdOptions,
+    refreshKey,
 }) => {
     const [searchQuery, setSearchQuery] = useState('');
     const debouncedSearch = useDebounce(searchQuery, 500);
@@ -87,7 +89,7 @@ const AntrianPajakDialog: React.FC<AntrianPajakDialogProps> = ({
         if (isOpen) {
             fetchAntrian();
         }
-    }, [isOpen, selectedSkpd, selectedMonth, selectedYear, debouncedSearch, currentPage]);
+    }, [isOpen, selectedSkpd, selectedMonth, selectedYear, debouncedSearch, currentPage, refreshKey]);
 
     const fetchAntrian = async () => {
         setLoading(true);
@@ -286,7 +288,7 @@ const AntrianPajakDialog: React.FC<AntrianPajakDialogProps> = ({
                                                                 size="icon"
                                                                 className="bg-blue-600 hover:bg-blue-700 text-white h-9 w-9 rounded-lg transition-all hover:scale-110 shadow-sm"
                                                             >
-                                                                <ReceiptIcon className="h-5 w-5" />
+                                                                <PlusCircle className="h-5 w-5" />
                                                             </Button>
                                                         </TooltipTrigger>
                                                         <TooltipContent>

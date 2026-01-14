@@ -505,15 +505,38 @@ const PortalRiwayatPajak = () => {
                                         <TableCell className="font-mono text-[11px] font-bold text-slate-700 dark:text-slate-300">{h.ntpn || '-'}</TableCell>
                                         <TableCell className="font-mono text-[11px] text-slate-500 dark:text-slate-500">{h.ntb || '-'}</TableCell>
                                         <TableCell className="font-mono text-[11px] text-slate-700 dark:text-slate-300">{h.kode_billing || '-'}</TableCell>
-                                    </TableRow>
+                                    </TableRow >
                                 ))
                             )}
-                        </TableBody>
-                    </Table>
-                </div>
+                        </TableBody >
+                    </Table >
+                </div >
 
-                <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-900/50">
-                    <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Total {taxHistory.length} Data</p>
+                <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4 bg-slate-50/50 dark:bg-slate-900/50">
+                    <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter whitespace-nowrap">Baris :</span>
+                            <Select
+                                value={pageSize.toString()}
+                                onValueChange={(v) => {
+                                    setPageSize(Number(v));
+                                    setCurrentPage(1);
+                                }}
+                            >
+                                <SelectTrigger className="h-8 w-20 text-xs font-bold bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-800 rounded-lg">
+                                    <SelectValue placeholder="10" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {[10, 25, 50, 100].map(size => (
+                                        <SelectItem key={size} value={size.toString()} className="text-xs font-medium">
+                                            {size}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <p className="text-xs font-bold text-slate-500 uppercase tracking-widest whitespace-nowrap">Total {taxHistory.length} Data</p>
+                    </div>
                     <div className="flex items-center gap-2">
                         <Button
                             variant="outline" size="sm"
@@ -538,7 +561,7 @@ const PortalRiwayatPajak = () => {
                         </Button>
                     </div>
                 </div>
-            </Card>
+            </Card >
 
             <PrintRekapPajakDialog
                 isOpen={isPrintDialogOpen}
@@ -550,7 +573,7 @@ const PortalRiwayatPajak = () => {
                     skpd: selectedSkpd
                 }}
             />
-        </div>
+        </div >
     );
 };
 

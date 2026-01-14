@@ -104,6 +104,8 @@ const PortalPajak = () => {
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [tagihanToDelete, setTagihanToDelete] = useState<Tagihan | null>(null);
     const [isAntrianDialogOpen, setIsAntrianDialogOpen] = useState(false);
+    const [isFromAntrian, setIsFromAntrian] = useState(false);
+    const [antrianRefreshKey, setAntrianRefreshKey] = useState(0);
     const [antrianCount, setAntrianCount] = useState(0);
     const [skpdOptions, setSkpdOptions] = useState<{ value: string; label: string }[]>([]);
     const [selectedSkpd, setSelectedSkpd] = useState<string>('Semua SKPD');
@@ -219,10 +221,13 @@ const PortalPajak = () => {
         }
     };
 
-    const handleInputPajak = (tagihan: Tagihan) => {
+    const handleInputPajak = (tagihan: Tagihan, fromAntrian: boolean = false) => {
         setSelectedTagihan(tagihan);
+        setIsFromAntrian(fromAntrian);
         setIsInputDialogOpen(true);
-        setIsAntrianDialogOpen(false); // Pastikan antrian tutup saat input buka
+        if (!fromAntrian) {
+            setIsAntrianDialogOpen(false);
+        }
     };
 
     const handleViewPajak = (tagihan: Tagihan) => {
@@ -578,7 +583,8 @@ const PortalPajak = () => {
             <AntrianPajakDialog
                 isOpen={isAntrianDialogOpen}
                 onClose={() => setIsAntrianDialogOpen(false)}
-                onInputClick={handleInputPajak}
+                onInputClick={(t) => handleInputPajak(t, true)}
+                refreshKey={antrianRefreshKey}
                 skpdOptions={skpdOptions}
             />
 
@@ -591,6 +597,10 @@ const PortalPajak = () => {
                     onSuccess={() => {
                         fetchData();
                         fetchAntrianCount();
+                        if (isFromAntrian) {
+                            setAntrianRefreshKey(prev => prev + 1);
+                            setIsAntrianDialogOpen(true);
+                        }
                     }}
                 />
             )}

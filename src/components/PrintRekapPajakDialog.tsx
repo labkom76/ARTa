@@ -175,7 +175,15 @@ const PrintRekapPajakDialog = ({ isOpen, onOpenChange, data, filters }: PrintRek
                 </tbody>
                 <tfoot>
                     <tr className="bg-slate-50 font-bold">
-                        <td colSpan={8} className="p-2 text-right uppercase">TOTAL KESELURUHAN PAJAK</td>
+                        <td colSpan={3} className="p-2 text-right uppercase">TOTAL</td>
+                        <td className="p-2 text-right">
+                            {new Intl.NumberFormat('id-ID').format(data.reduce((sum, item) => sum + (item.jumlah_kotor || 0), 0))}
+                        </td>
+                        <td></td>
+                        <td className="p-2 text-right">
+                            {new Intl.NumberFormat('id-ID').format(data.reduce((sum, item) => sum + (item.jumlah_kotor || 0), 0))}
+                        </td>
+                        <td colSpan={2}></td>
                         <td className="p-2 text-right">
                             {new Intl.NumberFormat('id-ID').format(data.reduce((sum, item) => sum + (item.jumlah_pajak || 0), 0))}
                         </td>
@@ -267,9 +275,17 @@ const PrintRekapPajakDialog = ({ isOpen, onOpenChange, data, filters }: PrintRek
                                 </tbody>
                                 {data.length > 0 && (
                                     <tfoot>
-                                        <tr className="bg-slate-50 font-bold border-t-2 border-black">
-                                            <td colSpan={8} className="border border-black p-2 text-right uppercase text-[10px]">TOTAL KESELURUHAN PAJAK</td>
-                                            <td className="border border-black p-2 text-right text-[10px] text-rose-700">
+                                        <tr className="bg-slate-50 font-bold border-t-2 border-black text-[10px]">
+                                            <td colSpan={3} className="border border-black p-2 text-right uppercase">TOTAL</td>
+                                            <td className="border border-black p-2 text-right text-emerald-700">
+                                                {new Intl.NumberFormat('id-ID').format(data.reduce((sum, item) => sum + (item.jumlah_kotor || 0), 0))}
+                                            </td>
+                                            <td className="border border-black"></td>
+                                            <td className="border border-black p-2 text-right text-emerald-700">
+                                                {new Intl.NumberFormat('id-ID').format(data.reduce((sum, item) => sum + (item.jumlah_kotor || 0), 0))}
+                                            </td>
+                                            <td colSpan={2} className="border border-black"></td>
+                                            <td className="border border-black p-2 text-right text-rose-700">
                                                 {new Intl.NumberFormat('id-ID').format(data.reduce((sum, item) => sum + (item.jumlah_pajak || 0), 0))}
                                             </td>
                                             <td colSpan={3} className="border border-black"></td>
