@@ -267,19 +267,27 @@ const PortalSP2D = () => {
         if (!selectedTagihanForRegister) return;
         setIsSubmitting(true);
         try {
-            // 1. Ambil nomor urut terakhir
-            const { data: lastData, error: lastError } = await supabase
-                .from('database_tagihan')
-                .select('nomor_urut_sp2d')
-                .not('nomor_urut_sp2d', 'is', null)
-                .order('nomor_urut_sp2d', { ascending: false })
-                .limit(1);
+            const isEdit = selectedTagihanForRegister.status_tagihan === 'Selesai';
+            let finalNomorUrut = selectedTagihanForRegister.nomor_urut_sp2d;
+            let finalWaktuReg = selectedTagihanForRegister.waktu_registrasi_sp2d;
 
-            if (lastError) throw lastError;
+            if (!isEdit) {
+                // 1. Ambil nomor urut terakhir HANYA jika registrasi baru
+                const { data: lastData, error: lastError } = await supabase
+                    .from('database_tagihan')
+                    .select('nomor_urut_sp2d')
+                    .not('nomor_urut_sp2d', 'is', null)
+                    .order('nomor_urut_sp2d', { ascending: false })
+                    .limit(1);
 
-            const nextNomorUrut = (lastData && lastData.length > 0)
-                ? (lastData[0].nomor_urut_sp2d + 1)
-                : 1;
+                if (lastError) throw lastError;
+
+                finalNomorUrut = (lastData && lastData.length > 0)
+                    ? (lastData[0].nomor_urut_sp2d + 1)
+                    : 1;
+
+                finalWaktuReg = new Date().toISOString();
+            }
 
             // 1.5 Ambil setting nomor_sp2d dari admin (app_settings)
             const { data: settingData } = await supabase
@@ -309,16 +317,16 @@ const PortalSP2D = () => {
                 ].join('/');
             }
 
-            // 2. Simpan registrasi dengan nomor urut permanen & nomor sp2d snapshot
+            // 2. Simpan registrasi
             const { manual_sequence, ...submitData } = data;
             const { error } = await supabase
                 .from('database_tagihan')
                 .update({
                     ...submitData,
                     status_tagihan: 'Selesai',
-                    nomor_urut_sp2d: nextNomorUrut,
+                    nomor_urut_sp2d: finalNomorUrut,
                     nomor_sp2d: finalNomorSp2d,
-                    waktu_registrasi_sp2d: new Date().toISOString()
+                    waktu_registrasi_sp2d: finalWaktuReg
                 })
                 .eq('id_tagihan', selectedTagihanForRegister.id_tagihan);
 
