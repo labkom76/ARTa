@@ -233,7 +233,7 @@ const PortalSP2D = () => {
                 .lte('tanggal_sp2d', endDateStr);
 
             if (debouncedSearchQuery) {
-                query = query.ilike('nomor_spm', `%${debouncedSearchQuery}%`);
+                query = query.ilike('nomor_sp2d', `%${debouncedSearchQuery}%`);
             }
             if (selectedSkpd !== 'Semua SKPD') {
                 query = query.eq('nama_skpd', selectedSkpd);
@@ -262,6 +262,7 @@ const PortalSP2D = () => {
         nama_bank: string;
         tanggal_bsg: string;
         catatan_sp2d: string;
+        manual_sequence: string;
     }) => {
         if (!selectedTagihanForRegister) return;
         setIsSubmitting(true);
@@ -289,21 +290,31 @@ const PortalSP2D = () => {
 
             const nomorSp2dSetting = settingData?.value || '04.0';
 
-            // Generate Nomor SP2D Lengkap (Snapshot)
+            // Generate Nomor SP2D Lengkap (Safe Reconstruction)
             let finalNomorSp2d = selectedTagihanForRegister.nomor_spm;
             if (finalNomorSp2d && finalNomorSp2d.includes('/')) {
                 const parts = finalNomorSp2d.split('/');
-                if (parts.length >= 2) {
-                    parts[1] = nomorSp2dSetting;
-                    finalNomorSp2d = parts.join('/');
-                }
+                const wilayah = parts[0];
+
+                // Cari index bagian yang mengandung huruf (seperti LS, GU, dsb)
+                // Ini adalah anchor untuk memisahkan prefix wilayah/sequence dari isi SPM
+                const jenisIndex = parts.findIndex((p, i) => i > 0 && /[a-zA-Z]/.test(p));
+                const restParts = jenisIndex !== -1 ? parts.slice(jenisIndex) : parts.slice(2);
+
+                finalNomorSp2d = [
+                    wilayah,
+                    nomorSp2dSetting,
+                    data.manual_sequence,
+                    ...restParts
+                ].join('/');
             }
 
             // 2. Simpan registrasi dengan nomor urut permanen & nomor sp2d snapshot
+            const { manual_sequence, ...submitData } = data;
             const { error } = await supabase
                 .from('database_tagihan')
                 .update({
-                    ...data,
+                    ...submitData,
                     status_tagihan: 'Selesai',
                     nomor_urut_sp2d: nextNomorUrut,
                     nomor_sp2d: finalNomorSp2d,
@@ -407,7 +418,7 @@ const PortalSP2D = () => {
                         <div className="relative flex-1 w-full group">
                             <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-emerald-500 transition-colors" />
                             <Input
-                                placeholder="Cari berdasarkan Nomor SPM..."
+                                placeholder="Cari berdasarkan Nomor SP2D..."
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                                 className="pl-11 h-10 border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-emerald-500/20 transition-all rounded-xl font-medium placeholder:text-slate-400 dark:placeholder:text-slate-500"
@@ -521,11 +532,11 @@ const PortalSP2D = () => {
                                     </TableHead>
                                     <TableHead
                                         className="sticky top-0 z-30 bg-emerald-50 dark:bg-slate-900 border-b border-emerald-100 dark:border-emerald-800 font-bold text-emerald-900 dark:text-emerald-100 cursor-pointer hover:bg-emerald-100/50 dark:hover:bg-emerald-900/50 transition-colors"
-                                        onClick={() => handleSort('nomor_spm')}
+                                        onClick={() => handleSort('nomor_sp2d')}
                                     >
                                         <div className="flex items-center gap-1">
                                             No. SP2D
-                                            {sortConfig.column === 'nomor_spm' ? (
+                                            {sortConfig.column === 'nomor_sp2d' ? (
                                                 sortConfig.direction === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
                                             ) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
                                         </div>
@@ -619,7 +630,21 @@ const PortalSP2D = () => {
                                                 </div>
                                             </TableCell>
                                             <TableCell className="font-mono text-sm font-medium text-emerald-700 dark:text-emerald-400">
-                                                {h.nomor_spm.split('/')[2]?.padStart(6, '0') || '-'}
+                                                <TooltipProvider>
+                                                    <Tooltip>
+                                                        <TooltipTrigger asChild>
+                                                            <div className="max-w-[180px] truncate cursor-help hover:text-emerald-600 dark:hover:text-emerald-300 transition-colors">
+                                                                {h.nomor_sp2d || '-'}
+                                                            </div>
+                                                        </TooltipTrigger>
+                                                        <TooltipContent side="top" className="max-w-md break-all font-mono text-xs p-3">
+                                                            <div className="space-y-1">
+                                                                <p className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">Nomor SP2D Lengkap</p>
+                                                                <p>{h.nomor_sp2d}</p>
+                                                            </div>
+                                                        </TooltipContent>
+                                                    </Tooltip>
+                                                </TooltipProvider>
                                             </TableCell>
                                             <TableCell className="min-w-[200px]">
                                                 <div className="font-bold text-slate-900 dark:text-white leading-snug" title={h.nama_skpd}>

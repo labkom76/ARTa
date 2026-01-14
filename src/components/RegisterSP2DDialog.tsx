@@ -52,6 +52,7 @@ interface RegisterSP2DDialogProps {
         nama_bank: string;
         tanggal_bsg: string;
         catatan_sp2d: string;
+        manual_sequence: string;
     }) => void;
     tagihan: Tagihan | null;
     isSubmitting: boolean;
@@ -74,13 +75,12 @@ const RegisterSP2DDialog: React.FC<RegisterSP2DDialogProps> = ({
     const [namaBank, setNamaBank] = useState('SulutGo (BSG)');
     const [tanggalBsg, setTanggalBsg] = useState<Date | undefined>(new Date());
     const [catatanSp2d, setCatatanSp2d] = useState('');
+    const [manualSequence, setManualSequence] = useState('');
 
     // Calendar Popover states
     const [isCalendarSp2dOpen, setIsCalendarSp2dOpen] = useState(false);
     const [isCalendarBsgOpen, setIsCalendarBsgOpen] = useState(false);
 
-    // Auto-calculated fields
-    const [extractedNomorSp2d, setExtractedNomorSp2d] = useState('');
     const [extractedKodeSp2d, setExtractedKodeSp2d] = useState('');
 
     const [bankOptions, setBankOptions] = useState<BankOption[]>([]);
@@ -166,12 +166,31 @@ const RegisterSP2DDialog: React.FC<RegisterSP2DDialogProps> = ({
 
     useEffect(() => {
         if (tagihan) {
-            // Data Otomatis part
-            if (tagihan.nomor_spm) {
-                const parts = tagihan.nomor_spm.split('/');
-                if (parts.length > 2) {
-                    setExtractedNomorSp2d(parts[2].padStart(6, '0'));
+            // Data Otomatis & Sequence initialization (Robust Detection)
+            if (tagihan.nomor_sp2d) {
+                const sp2dParts = tagihan.nomor_sp2d.split('/');
+                // SP2D usually has sequence at index 2 (after Wilayah and Setting)
+                if (sp2dParts.length > 2) {
+                    setManualSequence(sp2dParts[2]);
                 }
+            } else if (tagihan.nomor_spm) {
+                const spmParts = tagihan.nomor_spm.split('/');
+                // Cari index Jenis (bagian yang ada hurufnya, misal 'LS')
+                const jenisIndex = spmParts.findIndex((p, i) => i > 0 && /[a-zA-Z]/.test(p));
+
+                // Urutan SP2D biasanya tepat sebelum Jenis
+                if (jenisIndex > 0) {
+                    setManualSequence(spmParts[jenisIndex - 1].padStart(6, '0'));
+                } else if (spmParts.length > 2) {
+                    setManualSequence(spmParts[2].padStart(6, '0')); // Fallback ke index 2
+                } else if (spmParts.length > 1) {
+                    setManualSequence(spmParts[1].padStart(6, '0')); // Fallback ke index 1
+                }
+            } else {
+                setManualSequence('');
+            }
+
+            if (tagihan.nomor_spm) {
                 const mIndex = tagihan.nomor_spm.indexOf('/M/');
                 if (mIndex !== -1) {
                     setExtractedKodeSp2d(tagihan.nomor_spm.substring(mIndex));
@@ -202,6 +221,7 @@ const RegisterSP2DDialog: React.FC<RegisterSP2DDialogProps> = ({
             nama_bank: namaBank,
             tanggal_bsg: tanggalBsg ? format(tanggalBsg, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'),
             catatan_sp2d: catatanSp2d,
+            manual_sequence: manualSequence,
         });
         setIsConfirmSubmitOpen(false);
     };
@@ -241,13 +261,7 @@ const RegisterSP2DDialog: React.FC<RegisterSP2DDialogProps> = ({
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div className="space-y-1">
-                                <Label className="text-xs text-slate-500 dark:text-slate-400 font-medium">No. SP2D</Label>
-                                <div className="text-sm font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 px-3 py-2 rounded-lg border border-emerald-200 dark:border-emerald-800/50 min-h-[40px] flex items-center font-mono">
-                                    {extractedNomorSp2d || '-'}
-                                </div>
-                            </div>
-                            <div className="space-y-1">
-                                <Label className="text-xs text-slate-500 dark:text-slate-400 font-medium">Kode SP2D</Label>
+                                <Label className="text-xs text-slate-500 dark:text-slate-400 font-medium h-5 flex items-center">Kode SP2D</Label>
                                 <div className="text-sm font-medium text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-900/50 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800/50 min-h-[40px] flex items-center font-mono">
                                     {extractedKodeSp2d || '-'}
                                 </div>
@@ -346,6 +360,22 @@ const RegisterSP2DDialog: React.FC<RegisterSP2DDialogProps> = ({
                                     disabled={isLoadingBanks}
                                     className="h-12 rounded-xl border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50"
                                 />
+                            </div>
+
+                            {/* Nomor Urut SP2D (Manual) */}
+                            <div className="space-y-1">
+                                <Label htmlFor="manual_sequence" className="text-xs text-slate-500 dark:text-slate-400 font-medium flex items-center gap-1.5 h-5">
+                                    <FileCheck2 className="h-3.5 w-3.5" />
+                                    Nomor Urut SP2D
+                                </Label>
+                                <Input
+                                    id="manual_sequence"
+                                    placeholder="Contoh: 000001"
+                                    value={manualSequence}
+                                    onChange={(e) => setManualSequence(e.target.value)}
+                                    className="h-12 rounded-xl border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 font-mono font-bold text-emerald-700 dark:text-emerald-400"
+                                />
+                                <p className="text-[10px] text-slate-400 px-1 italic">Dapat diedit jika berbeda dengan nomor urut SPM</p>
                             </div>
 
                             {/* Tanggal BSG */}

@@ -37,7 +37,7 @@ import {
     FileTextIcon,
     Printer,
 } from 'lucide-react';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, startOfDay, endOfDay } from 'date-fns';
 import { toast } from 'sonner';
 import useDebounce from '@/hooks/use-debounce';
 import { getJenisTagihanCode } from '@/utils/spmGenerator';
@@ -45,6 +45,8 @@ import { Combobox } from '@/components/ui/combobox';
 import { Tagihan } from '@/types/tagihan';
 import * as XLSX from 'xlsx';
 import PrintSP2DReportDialog from '@/components/PrintSP2DReportDialog';
+import { DateRange } from 'react-day-picker';
+import { DateRangePickerWithPresets } from '@/components/DateRangePickerWithPresets';
 
 interface SkpdOption {
     value: string;
@@ -83,6 +85,10 @@ const PortalRegistrasiSP2D = () => {
     // Period Filters
     const [selectedMonth, setSelectedMonth] = useState<string>('all');
     const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString());
+    const [filterDate, setFilterDate] = useState<string>('');
+    const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+    const [filterNoReg, setFilterNoReg] = useState<string>('');
+    const debouncedFilterNoReg = useDebounce(filterNoReg, 700);
 
     // Data State
     const [historyList, setHistoryList] = useState<Tagihan[]>([]);
@@ -153,7 +159,7 @@ const PortalRegistrasiSP2D = () => {
         if (user && (profile?.peran === 'Register SP2D' || profile?.peran === 'Administrator')) {
             fetchData();
         }
-    }, [user, profile, debouncedSearchQuery, selectedSkpd, selectedMonth, selectedYear]);
+    }, [user, profile, debouncedSearchQuery, selectedSkpd, selectedMonth, selectedYear, dateRange, debouncedFilterNoReg]);
 
     const fetchSetting = async () => {
         try {
@@ -191,26 +197,59 @@ const PortalRegistrasiSP2D = () => {
             let startDateStr: string;
             let endDateStr: string;
 
-            if (selectedMonth !== 'all') {
-                startDateStr = format(new Date(parseInt(selectedYear), parseInt(selectedMonth), 1), 'yyyy-MM-dd');
-                endDateStr = format(new Date(parseInt(selectedYear), parseInt(selectedMonth) + 1, 0), 'yyyy-MM-dd');
-            } else {
-                startDateStr = format(new Date(parseInt(selectedYear), 0, 1), 'yyyy-MM-dd');
-                endDateStr = format(new Date(parseInt(selectedYear), 11, 31), 'yyyy-MM-dd');
-            }
-
             let query = supabase
                 .from('database_tagihan')
                 .select('*')
-                .eq('status_tagihan', 'Selesai')
-                .gte('tanggal_sp2d', startDateStr)
-                .lte('tanggal_sp2d', endDateStr);
+                .eq('status_tagihan', 'Selesai');
+
+            if (dateRange?.from || dateRange?.to) {
+                if (dateRange?.from) {
+                    query = query.gte('tanggal_sp2d', startOfDay(dateRange.from).toISOString());
+                }
+                if (dateRange?.to) {
+                    query = query.lte('tanggal_sp2d', endOfDay(dateRange.to).toISOString());
+                }
+            } else if (selectedMonth !== 'all') {
+                startDateStr = format(new Date(parseInt(selectedYear), parseInt(selectedMonth), 1), 'yyyy-MM-dd');
+                endDateStr = format(new Date(parseInt(selectedYear), parseInt(selectedMonth) + 1, 0), 'yyyy-MM-dd');
+                query = query.gte('tanggal_sp2d', startDateStr).lte('tanggal_sp2d', endDateStr);
+            } else {
+                startDateStr = format(new Date(parseInt(selectedYear), 0, 1), 'yyyy-MM-dd');
+                endDateStr = format(new Date(parseInt(selectedYear), 11, 31), 'yyyy-MM-dd');
+                query = query.gte('tanggal_sp2d', startDateStr).lte('tanggal_sp2d', endDateStr);
+            }
 
             if (debouncedSearchQuery) {
-                query = query.ilike('nomor_spm', `%${debouncedSearchQuery}%`);
+                query = query.ilike('nomor_sp2d', `%${debouncedSearchQuery}%`);
             }
             if (selectedSkpd !== 'Semua SKPD') {
                 query = query.eq('nama_skpd', selectedSkpd);
+            }
+            // Removed filterDate in favor of dateRange as per AdminTagihan style
+            if (debouncedFilterNoReg) {
+                const queryStr = debouncedFilterNoReg.trim();
+
+                if (queryStr.includes('-')) {
+                    // Range: 1-10
+                    const parts = queryStr.split('-').map(p => parseInt(p.trim()));
+                    if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+                        query = query.gte('nomor_urut_sp2d', parts[0]).lte('nomor_urut_sp2d', parts[1]);
+                    }
+                } else if (queryStr.includes(',')) {
+                    // List: 1,2,5
+                    const numbers = queryStr.split(',')
+                        .map(p => parseInt(p.trim()))
+                        .filter(n => !isNaN(n));
+                    if (numbers.length > 0) {
+                        query = query.in('nomor_urut_sp2d', numbers);
+                    }
+                } else {
+                    // Single number
+                    const noRegInt = parseInt(queryStr);
+                    if (!isNaN(noRegInt)) {
+                        query = query.eq('nomor_urut_sp2d', noRegInt);
+                    }
+                }
             }
 
             const { data, error } = await query;
@@ -304,25 +343,66 @@ const PortalRegistrasiSP2D = () => {
             {/* Filter Section */}
             <Card className="border-none shadow-sm bg-white dark:bg-slate-900 ring-1 ring-slate-200 dark:ring-slate-800 overflow-hidden">
                 <CardContent className="p-4">
-                    <div className="flex flex-col lg:flex-row gap-4">
-                        <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-3">
-                            <div className="relative">
-                                <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                                <Input
-                                    placeholder="Cari No. SPM / SP2D..."
-                                    className="pl-9 h-10 bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 focus:ring-emerald-500 rounded-xl"
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
+                    <div className="flex flex-col gap-3">
+                        {/* Row 1: Primary Search & Date Filter (Optimized Spacing) */}
+                        <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                            <div className="md:col-span-3 space-y-1.5">
+                                <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest ml-1">Pencarian SP2D</label>
+                                <div className="relative">
+                                    <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                                    <Input
+                                        placeholder="Cari No. SP2D..."
+                                        className="pl-9 h-10 bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 focus:ring-emerald-500 rounded-xl"
+                                        value={searchQuery}
+                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                    />
+                                </div>
+                            </div>
+                            <div className="md:col-span-3 space-y-1.5">
+                                <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest ml-1">No. Registrasi</label>
+                                <div className="relative">
+                                    <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                                    <Input
+                                        placeholder="Cth: 1-10 atau 1,5,10"
+                                        className="pl-9 h-10 bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 focus:ring-emerald-500 rounded-xl"
+                                        value={filterNoReg}
+                                        onChange={(e) => setFilterNoReg(e.target.value)}
+                                    />
+                                </div>
+                            </div>
+                            <div className="md:col-span-4 space-y-1.5">
+                                <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest ml-1">Rentang Tanggal</label>
+                                <div className="w-fit min-w-[260px]">
+                                    <DateRangePickerWithPresets
+                                        date={dateRange}
+                                        onDateChange={(newRange) => {
+                                            setDateRange(newRange);
+                                            if (newRange?.from) {
+                                                setSelectedMonth('all');
+                                            }
+                                        }}
+                                        className="h-10"
+                                        numberOfMonths={1}
+                                        align="start"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Row 2: Secondary Select Filters */}
+                        <div className="flex flex-wrap items-end gap-3 pt-2 border-t border-slate-50 dark:border-slate-800/50 mt-1">
+                            <div className="flex-1 min-w-[300px] space-y-1.5">
+                                <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest ml-1">Filter SKPD</label>
+                                <Combobox
+                                    options={skpdOptions}
+                                    value={selectedSkpd}
+                                    onValueChange={setSelectedSkpd}
+                                    placeholder="Pilih SKPD..."
+                                    className="w-full h-10 rounded-xl"
                                 />
                             </div>
-                            <Combobox
-                                options={skpdOptions}
-                                value={selectedSkpd}
-                                onValueChange={setSelectedSkpd}
-                                placeholder="Pilih SKPD..."
-                                className="w-full h-10 rounded-xl"
-                            />
-                            <div className="grid grid-cols-2 gap-2">
+                            <div className="w-40 space-y-1.5">
+                                <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest ml-1">Bulan</label>
                                 <Select value={selectedMonth} onValueChange={setSelectedMonth}>
                                     <SelectTrigger className="h-10 px-3 bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 rounded-xl">
                                         <SelectValue placeholder="Bulan" />
@@ -333,6 +413,9 @@ const PortalRegistrasiSP2D = () => {
                                         ))}
                                     </SelectContent>
                                 </Select>
+                            </div>
+                            <div className="w-28 space-y-1.5">
+                                <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest ml-1">Tahun</label>
                                 <Select value={selectedYear} onValueChange={setSelectedYear}>
                                     <SelectTrigger className="h-10 px-3 bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 rounded-xl">
                                         <SelectValue placeholder="Tahun" />
@@ -344,6 +427,24 @@ const PortalRegistrasiSP2D = () => {
                                     </SelectContent>
                                 </Select>
                             </div>
+
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-10 px-4 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 transition-all rounded-lg ml-auto"
+                                onClick={() => {
+                                    setFilterDate('');
+                                    setDateRange(undefined);
+                                    setFilterNoReg('');
+                                    setSearchQuery('');
+                                    setSelectedMonth('all');
+                                    setSelectedYear(currentYear.toString());
+                                    setSelectedSkpd('Semua SKPD');
+                                }}
+                            >
+                                <RefreshCw className="h-4 w-4 mr-2" />
+                                Reset Filter
+                            </Button>
                         </div>
                     </div>
                 </CardContent>
@@ -469,8 +570,22 @@ const PortalRegistrasiSP2D = () => {
                                         <TableCell className="text-slate-600 dark:text-slate-400 whitespace-nowrap">
                                             {item.tanggal_sp2d ? format(parseISO(item.tanggal_sp2d), 'dd/MM/yyyy') : '-'}
                                         </TableCell>
-                                        <TableCell className="font-mono text-[13px] text-emerald-700 dark:text-emerald-400 font-bold leading-tight break-all">
-                                            {item.nomor_sp2d || formatNoSP2D(item.nomor_spm)}
+                                        <TableCell className="font-mono text-[13px] text-emerald-700 dark:text-emerald-400 font-bold leading-tight">
+                                            <TooltipProvider>
+                                                <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                        <div className="max-w-[240px] truncate cursor-help hover:text-emerald-600 dark:hover:text-emerald-300 transition-colors">
+                                                            {item.nomor_sp2d || (typeof formatNoSP2D === 'function' ? formatNoSP2D(item.nomor_spm) : item.nomor_spm)}
+                                                        </div>
+                                                    </TooltipTrigger>
+                                                    <TooltipContent side="top" className="max-w-md break-all font-mono text-xs p-3">
+                                                        <div className="space-y-1">
+                                                            <p className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">Nomor SP2D Lengkap</p>
+                                                            <p>{item.nomor_sp2d || (typeof formatNoSP2D === 'function' ? formatNoSP2D(item.nomor_spm) : item.nomor_spm)}</p>
+                                                        </div>
+                                                    </TooltipContent>
+                                                </Tooltip>
+                                            </TooltipProvider>
                                         </TableCell>
                                         <TableCell>
                                             <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 text-[10px] font-black uppercase">
@@ -549,7 +664,7 @@ const PortalRegistrasiSP2D = () => {
                         </Button>
                     </div>
                 </div>
-            </Card>
+            </Card >
 
             <PrintSP2DReportDialog
                 isOpen={isPrintDialogOpen}
@@ -562,7 +677,7 @@ const PortalRegistrasiSP2D = () => {
                     skpd: selectedSkpd
                 }}
             />
-        </div>
+        </div >
     );
 };
 
