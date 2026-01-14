@@ -135,6 +135,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onLinkClick }) => {
         ]
       },
       { to: '/admin/laporan', icon: HistoryIcon, label: 'Laporan' }, // New "Laporan" menu item
+      { to: '/portal-rekap-pajak', icon: ReceiptIcon, label: 'Rekap Pajak' }, // NEW: Rekap Pajak
       { to: '/admin/activity-log', icon: FileTextIcon, label: 'Activity Log' }, // NEW: Activity Log item, icon changed to FileTextIcon
     );
   } else if (role === 'Register SP2D') {
@@ -147,6 +148,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onLinkClick }) => {
     navItems.push(
       { to: '/dashboard-pajak', icon: LayoutDashboardIcon, label: 'Dashboard Pajak' },
       { to: '/portal-pajak', icon: WalletIcon, label: 'Portal Pajak' },
+      { to: '/portal-rekap-pajak', icon: ReceiptIcon, label: 'Rekap Pajak' },
     );
   } else {
     navItems.push(

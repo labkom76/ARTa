@@ -39,6 +39,7 @@ import PrintRegistrasiSP2D from "./pages/PrintRegistrasiSP2D"; // Import the new
 import DashboardSP2D from "./pages/DashboardSP2D"; // Import the new DashboardSP2D page
 import DashboardPajak from "./pages/DashboardPajak"; // [NEW]
 import PortalPajak from "./pages/PortalPajak"; // [NEW]
+import PortalRiwayatPajak from "./pages/PortalRiwayatPajak"; // [NEW]
 import { SessionContextProvider } from "./contexts/SessionContext";
 
 const queryClient = new QueryClient();
@@ -74,6 +75,7 @@ const App = () => (
                 <Route path="/daftar-registrasi-sp2d" element={<PortalRegistrasiSP2D />} />
                 <Route path="/dashboard-pajak" element={<DashboardPajak />} />
                 <Route path="/portal-pajak" element={<PortalPajak />} />
+                <Route path="/portal-rekap-pajak" element={<PortalRiwayatPajak />} />
 
                 <Route path="/dashboard-koreksi" element={<DashboardKoreksi />} />
                 <Route path="/rekap-dikembalikan" element={<RekapDikembalikan />} />
