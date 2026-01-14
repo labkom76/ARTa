@@ -27,13 +27,15 @@ import AdminCustomLogin from "./pages/AdminCustomLogin";
 import LengkapiProfil from "./pages/LengkapiProfil";
 import AdminKodeSKPD from "./pages/AdminKodeSKPD";
 import AdminJadwalPenganggaran from "./pages/AdminJadwalPenganggaran";
-import AdminKodeWilayah from "./pages/AdminKodeWilayah";
+import AdminNomorPerben from "./pages/AdminNomorPerben";
 import VerifikasiDokumen from "./pages/VerifikasiDokumen"; // Import the new VerifikasiDokumen page
 import AdminLaporan from "./pages/AdminLaporan"; // Import the new AdminLaporan page
 import AdminActivityLog from "./pages/AdminActivityLog"; // Import the new AdminActivityLog page
 import AdminSumberDana from "./pages/AdminSumberDana"; // Import the new AdminSumberDana page
 import RiwayatTagihan from "./pages/RiwayatTagihan"; // Import the new History page
 import PortalSP2D from "./pages/PortalSP2D"; // Import the new PortalSP2D page
+import PortalRegistrasiSP2D from "./pages/PortalRegistrasiSP2D"; // Import the new PortalRegistrasiSP2D page
+import PrintRegistrasiSP2D from "./pages/PrintRegistrasiSP2D"; // Import the new PrintRegistrasiSP2D page
 import DashboardSP2D from "./pages/DashboardSP2D"; // Import the new DashboardSP2D page
 import { SessionContextProvider } from "./contexts/SessionContext";
 
@@ -51,6 +53,7 @@ const App = () => (
               <Route path="/login" element={<Login />} />
               <Route path="/print-verifikasi" element={<PrintVerifikasi />} />
               <Route path="/print-koreksi" element={<PrintKoreksi />} />
+              <Route path="/print-registrasi-sp2d" element={<PrintRegistrasiSP2D />} />
               <Route path="/lengkapi-profil" element={<LengkapiProfil />} />
               <Route path="/verifikasi-dokumen/:tagihanId" element={<VerifikasiDokumen />} /> {/* New public route */}
               <Route element={<MainLayout />}>
@@ -66,6 +69,7 @@ const App = () => (
                 <Route path="/riwayat-verifikasi" element={<RiwayatVerifikasi />} />
                 <Route path="/dashboard-sp2d" element={<DashboardSP2D />} />
                 <Route path="/portal-sp2d" element={<PortalSP2D />} />
+                <Route path="/daftar-registrasi-sp2d" element={<PortalRegistrasiSP2D />} />
 
                 <Route path="/dashboard-koreksi" element={<DashboardKoreksi />} />
                 <Route path="/rekap-dikembalikan" element={<RekapDikembalikan />} />
@@ -75,7 +79,7 @@ const App = () => (
                 <Route path="/admin/custom-login" element={<AdminCustomLogin />} />
                 <Route path="/admin/kode-skpd" element={<AdminKodeSKPD />} />
                 <Route path="/admin/jadwal-penganggaran" element={<AdminJadwalPenganggaran />} />
-                <Route path="/admin/kode-wilayah" element={<AdminKodeWilayah />} />
+                <Route path="/admin/nomor-perben" element={<AdminNomorPerben />} />
                 <Route path="/admin/laporan" element={<AdminLaporan />} /> {/* New AdminLaporan route */}
                 <Route path="/admin/activity-log" element={<AdminActivityLog />} /> {/* New AdminActivityLog route */}
                 <Route path="/admin/sumber-dana" element={<AdminSumberDana />} /> {/* New AdminSumberDana route */}
