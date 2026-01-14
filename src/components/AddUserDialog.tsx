@@ -44,7 +44,7 @@ const formSchema = z.object({
   email: z.string().email({ message: 'Email tidak valid.' }).min(1, { message: 'Email wajib diisi.' }).optional(), // Optional for edit mode
   password: z.string().optional().refine(val => !val || val.length >= 6, { message: 'Password minimal 6 karakter.' }), // Corrected validation
   asal_skpd: z.string().optional(), // Make optional initially
-  peran: z.enum(['SKPD', 'Staf Registrasi', 'Staf Verifikator', 'Staf Koreksi', 'Register SP2D', 'Administrator'], {
+  peran: z.enum(['SKPD', 'Staf Registrasi', 'Staf Verifikator', 'Staf Koreksi', 'Register SP2D', 'Staf Pajak', 'Administrator'], {
     required_error: 'Peran wajib dipilih.',
   }),
 }).superRefine((data, ctx) => {
@@ -302,6 +302,7 @@ const AddUserDialog: React.FC<AddUserDialogProps> = ({ isOpen, onClose, onUserAd
                     <SelectItem value="Staf Verifikator">Staf Verifikator</SelectItem>
                     <SelectItem value="Staf Koreksi">Staf Koreksi</SelectItem>
                     <SelectItem value="Register SP2D">Register SP2D</SelectItem>
+                    <SelectItem value="Staf Pajak">Staf Pajak</SelectItem>
                     <SelectItem value="Administrator">Administrator</SelectItem>
                   </SelectContent>
                 </Select>

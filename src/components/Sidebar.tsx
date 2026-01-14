@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { HomeIcon, LayoutDashboardIcon, FileTextIcon, HistoryIcon, ListFilterIcon, UsersIcon, PaletteIcon, ClipboardListIcon, MapPinIcon, ListChecksIcon, CalendarCheckIcon, CoinsIcon, Landmark } from 'lucide-react';
+import { HomeIcon, LayoutDashboardIcon, FileTextIcon, HistoryIcon, ListFilterIcon, UsersIcon, PaletteIcon, ClipboardListIcon, MapPinIcon, ListChecksIcon, CalendarCheckIcon, CoinsIcon, Landmark, WalletIcon, ReceiptIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSession } from '@/contexts/SessionContext';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -142,6 +142,11 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onLinkClick }) => {
       { to: '/dashboard-sp2d', icon: LayoutDashboardIcon, label: 'Dashboard' },
       { to: '/portal-sp2d', icon: Landmark, label: 'Registrasi SP2D' },
       { to: '/daftar-registrasi-sp2d', icon: FileTextIcon, label: 'Daftar Registrasi SP2D' },
+    );
+  } else if (role === 'Staf Pajak') {
+    navItems.push(
+      { to: '/dashboard-pajak', icon: LayoutDashboardIcon, label: 'Dashboard Pajak' },
+      { to: '/portal-pajak', icon: WalletIcon, label: 'Portal Pajak' },
     );
   } else {
     navItems.push(
