@@ -140,6 +140,9 @@ const PortalSP2D = () => {
     // Antrian Dialog State (only visibility control)
     const [isAntrianDialogOpen, setIsAntrianDialogOpen] = useState(false);
 
+    // Sequence Handling
+    const [nextNomorUrut, setNextNomorUrut] = useState<number | null>(null);
+
     // Sorting State
     const [sortConfig, setSortConfig] = useState<{
         column: keyof Tagihan | 'nomor_urut_sp2d' | 'tanggal_bsg' | 'nama_bank';
@@ -209,6 +212,29 @@ const PortalSP2D = () => {
         }
     };
 
+    const fetchNextNomorUrut = async () => {
+        try {
+            const { data, error } = await supabase
+                .from('database_tagihan')
+                .select('nomor_urut_sp2d')
+                .not('nomor_urut_sp2d', 'is', null)
+                .order('nomor_urut_sp2d', { ascending: false })
+                .limit(1);
+
+            if (error) throw error;
+
+            const next = (data && data.length > 0)
+                ? (data[0].nomor_urut_sp2d + 1)
+                : 1;
+
+            setNextNomorUrut(next);
+            return next;
+        } catch (error: any) {
+            console.error('Error fetching next nomor urut:', error);
+            return null;
+        }
+    };
+
 
     const fetchHistory = async () => {
         setLoadingHistory(true);
@@ -250,11 +276,19 @@ const PortalSP2D = () => {
         }
     };
 
-    const handleRegisterClick = (tagihan: Tagihan) => {
+    const handleRegisterClick = async (tagihan: Tagihan) => {
+        setIsAntrianDialogOpen(false);
         setSelectedTagihanForRegister(tagihan);
-        setIsFromAntrian(true);
         setIsRegisterOpen(true);
-        setIsAntrianDialogOpen(false); // Close the list when registering
+        setIsFromAntrian(true);
+
+        // Fetch next nomor urut right away so it's ready for the dialog
+        if (tagihan.status_tagihan !== 'Selesai') {
+            await fetchNextNomorUrut();
+        } else {
+            // If editing, use its own number
+            setNextNomorUrut(tagihan.nomor_urut_sp2d || null);
+        }
     };
 
     const handleConfirmRegister = async (data: {
@@ -348,6 +382,7 @@ const PortalSP2D = () => {
 
     const handleEditClick = (tagihan: Tagihan) => {
         setSelectedTagihanForRegister(tagihan);
+        setNextNomorUrut(tagihan.nomor_urut_sp2d || null);
         setIsFromAntrian(false);
         setIsRegisterOpen(true);
     };
@@ -811,6 +846,7 @@ const PortalSP2D = () => {
                 onConfirm={handleConfirmRegister}
                 tagihan={selectedTagihanForRegister}
                 isSubmitting={isSubmitting}
+                nextNomorUrut={nextNomorUrut}
             />
 
             <SP2DDetailDialog

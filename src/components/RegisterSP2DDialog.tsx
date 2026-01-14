@@ -56,6 +56,7 @@ interface RegisterSP2DDialogProps {
     }) => void;
     tagihan: Tagihan | null;
     isSubmitting: boolean;
+    nextNomorUrut: number | null;
 }
 
 // Keep the interface
@@ -70,6 +71,7 @@ const RegisterSP2DDialog: React.FC<RegisterSP2DDialogProps> = ({
     onConfirm,
     tagihan,
     isSubmitting,
+    nextNomorUrut,
 }) => {
     const [tanggalSp2d, setTanggalSp2d] = useState<Date | undefined>(new Date());
     const [namaBank, setNamaBank] = useState('SulutGo (BSG)');
@@ -261,14 +263,20 @@ const RegisterSP2DDialog: React.FC<RegisterSP2DDialogProps> = ({
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div className="space-y-1">
+                                <Label className="text-xs text-slate-500 dark:text-slate-400 font-medium h-5 flex items-center">No. Registrasi (Auto)</Label>
+                                <div className="text-sm font-bold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-3 py-2 rounded-lg border border-amber-300 dark:border-amber-800/60 min-h-[42px] flex items-center font-mono">
+                                    {nextNomorUrut || '-'}
+                                </div>
+                            </div>
+                            <div className="space-y-1">
                                 <Label className="text-xs text-slate-500 dark:text-slate-400 font-medium h-5 flex items-center">Kode SP2D</Label>
-                                <div className="text-sm font-medium text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-900/50 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800/50 min-h-[40px] flex items-center font-mono">
+                                <div className="text-sm font-medium text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-900/50 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800/50 min-h-[42px] flex items-center font-mono">
                                     {extractedKodeSp2d || '-'}
                                 </div>
                             </div>
                             <div className="space-y-1">
-                                <Label className="text-xs text-slate-500 dark:text-slate-400 font-medium">Jenis Tagihan</Label>
-                                <div className="text-sm font-medium text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-900/50 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800/50 min-h-[40px] flex items-center">
+                                <Label className="text-xs text-slate-500 dark:text-slate-400 font-medium h-5 flex items-center">Jenis Tagihan</Label>
+                                <div className="text-sm font-medium text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-900/50 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800/50 min-h-[42px] flex items-center">
                                     {tagihan.jenis_tagihan}
                                 </div>
                             </div>
@@ -485,6 +493,13 @@ const RegisterSP2DDialog: React.FC<RegisterSP2DDialogProps> = ({
                         </AlertDialogTitle>
                         <AlertDialogDescription className="text-slate-600 dark:text-slate-400 font-medium leading-relaxed">
                             Mohon periksa kembali seluruh data Anda! Pastikan <span className="text-slate-900 dark:text-slate-200 font-bold">Nomor SPM</span>, <span className="text-slate-900 dark:text-slate-200 font-bold">Tanggal SP2D</span>, dan <span className="text-slate-900 dark:text-slate-200 font-bold">Nama Bank</span> sudah sesuai dengan dokumen fisik.
+                            <br /><br />
+                            <div className="p-4 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-xl">
+                                <p className="text-[10px] text-amber-800 dark:text-amber-400 font-bold uppercase tracking-wider mb-1">Penting - No. Registrasi SP2D:</p>
+                                <p className="text-xl font-black text-amber-700 dark:text-amber-300 font-mono">
+                                    No. Reg: {nextNomorUrut}
+                                </p>
+                            </div>
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter className="gap-2 pt-2">
