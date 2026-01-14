@@ -15,6 +15,7 @@ interface DateRangePickerWithPresetsProps extends React.HTMLAttributes<HTMLDivEl
   onDateChange: (date: DateRange | undefined) => void;
   align?: 'start' | 'center' | 'end';
   className?: string;
+  numberOfMonths?: number;
 }
 
 export function DateRangePickerWithPresets({
@@ -22,6 +23,7 @@ export function DateRangePickerWithPresets({
   onDateChange,
   className,
   align = 'end',
+  numberOfMonths = 2,
 }: DateRangePickerWithPresetsProps) {
   const handlePresetChange = (value: string) => {
     const today = new Date();
@@ -63,7 +65,7 @@ export function DateRangePickerWithPresets({
     if (isSameDay(date.from, subDays(today, 6)) && isSameDay(date.to, today)) return 'last7days';
     if (isSameDay(date.from, subDays(today, 29)) && isSameDay(date.to, today)) return 'last30days';
     if (isSameDay(date.from, startOfMonth(today)) && isSameDay(date.to, endOfMonth(today))) return 'thismonth';
-    
+
     const lastMonthStart = startOfMonth(subDays(today, 30));
     const lastMonthEnd = endOfMonth(subDays(today, 30));
     if (isSameDay(date.from, lastMonthStart) && isSameDay(date.to, lastMonthEnd)) return 'lastmonth';
@@ -119,7 +121,7 @@ export function DateRangePickerWithPresets({
               defaultMonth={date?.from}
               selected={date}
               onSelect={onDateChange}
-              numberOfMonths={2}
+              numberOfMonths={numberOfMonths}
               locale={localeId}
             />
             {date?.from && (

@@ -13,49 +13,48 @@ import {
     TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Label } from '@/components/ui/label';
-import { Landmark, Calendar, FileText, Building2, DollarSign, AlertCircle, Hash, Receipt } from 'lucide-react';
+import { Landmark, Calendar, FileText, Building2, DollarSign, AlertCircle, Hash, Receipt, Wallet } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { Tagihan } from '@/types/tagihan';
+import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 
-interface SP2DDetailDialogProps {
+interface PajakDetailDialogProps {
     isOpen: boolean;
     onClose: () => void;
     tagihan: Tagihan | null;
+    pajakList: any[];
 }
 
-const SP2DDetailDialog: React.FC<SP2DDetailDialogProps> = ({
+const PajakDetailDialog: React.FC<PajakDetailDialogProps> = ({
     isOpen,
     onClose,
     tagihan,
+    pajakList,
 }) => {
     if (!tagihan) return null;
 
-    // Extract logic consistent with Registry
-    const parts = tagihan.nomor_spm ? tagihan.nomor_spm.split('/') : [];
-    const extractedNoSp2d = parts.length > 2 ? parts[2].padStart(6, '0') : '-';
-
-    const mIndex = tagihan.nomor_spm ? tagihan.nomor_spm.indexOf('/M/') : -1;
-    const extractedKodeSp2d = mIndex !== -1 ? tagihan.nomor_spm.substring(mIndex) : '-';
+    // Total pajak calculation
+    const totalPajak = pajakList.reduce((sum, p) => sum + (parseFloat(p.jumlah_pajak) || 0), 0);
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto bg-gradient-to-br from-white to-emerald-50/30 dark:from-slate-900 dark:to-emerald-950/20">
+            <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto bg-gradient-to-br from-white to-emerald-50/30 dark:from-slate-900 dark:to-emerald-950/20">
                 <DialogHeader className="border-b border-emerald-100 dark:border-emerald-900/30 pb-4 pr-10">
                     <div className="space-y-3">
                         <div className="flex items-center gap-2">
-                            <Landmark className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+                            <Wallet className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
                             <DialogTitle className="text-2xl font-bold text-slate-900 dark:text-white">
-                                Detail Registrasi SP2D
+                                Detail Tagihan & Pajak
                             </DialogTitle>
                         </div>
                         <DialogDescription className="text-slate-600 dark:text-slate-400">
-                            Rincian dokumen berdasarkan nomor SPM
+                            Rincian tagihan yang sudah diproses datanya oleh Staf Pajak
                         </DialogDescription>
                         <div className="mt-1 flex flex-wrap gap-2">
                             <div className="px-2.5 py-1 bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-100 dark:border-emerald-800/50 rounded-lg shadow-sm">
                                 <span className="text-[11px] font-bold text-emerald-800 dark:text-emerald-300 font-mono">
-                                    {tagihan.nomor_spm}
+                                    SPM: {tagihan.nomor_spm}
                                 </span>
                             </div>
                         </div>
@@ -67,12 +66,12 @@ const SP2DDetailDialog: React.FC<SP2DDetailDialogProps> = ({
                     <div className="bg-white dark:bg-slate-800/50 rounded-xl p-5 border border-emerald-100 dark:border-emerald-900/30 shadow-sm">
                         <div className="flex items-center gap-2 mb-4">
                             <div className="h-8 w-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
-                                <Receipt className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                                <Landmark className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
                             </div>
                             <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Identitas SP2D</h3>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="space-y-1">
                                 <Label className="text-xs text-slate-500 dark:text-slate-400 font-medium flex items-center gap-1.5 h-5">
                                     <Calendar className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
@@ -91,30 +90,20 @@ const SP2DDetailDialog: React.FC<SP2DDetailDialogProps> = ({
                                 <TooltipProvider>
                                     <Tooltip>
                                         <TooltipTrigger asChild>
-                                            <div className="text-sm font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 px-3 py-2 rounded-lg border border-emerald-200 dark:border-emerald-800/50 min-h-[40px] flex items-center font-mono truncate cursor-help max-w-full overflow-hidden">
-                                                {extractedNoSp2d}
+                                            <div className="text-sm font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 px-3 py-2 rounded-lg border border-emerald-200 dark:border-emerald-800/50 min-h-[40px] flex items-center font-mono uppercase truncate cursor-help max-w-full overflow-hidden">
+                                                {tagihan.nomor_sp2d || '-'}
                                             </div>
                                         </TooltipTrigger>
                                         <TooltipContent className="max-w-[400px] break-all">
-                                            <p className="font-mono text-xs">{extractedNoSp2d}</p>
+                                            <p className="font-mono text-xs">{tagihan.nomor_sp2d}</p>
                                         </TooltipContent>
                                     </Tooltip>
                                 </TooltipProvider>
                             </div>
-
-                            <div className="space-y-1">
-                                <Label className="text-xs text-slate-500 dark:text-slate-400 font-medium flex items-center gap-1.5 h-5">
-                                    <Receipt className="h-3.5 w-3.5" />
-                                    Kode SP2D
-                                </Label>
-                                <div className="text-sm font-medium text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-900/50 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800/50 min-h-[40px] flex items-center font-mono">
-                                    {extractedKodeSp2d}
-                                </div>
-                            </div>
                         </div>
                     </div>
 
-                    {/* SECTION: DETAIL TAGIHAN */}
+                    {/* SECTION: DATA TAGIHAN */}
                     <div className="bg-white dark:bg-slate-800/50 rounded-xl p-5 border border-emerald-100 dark:border-emerald-900/30 shadow-sm">
                         <div className="flex items-center gap-2 mb-4">
                             <div className="h-8 w-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
@@ -157,59 +146,87 @@ const SP2DDetailDialog: React.FC<SP2DDetailDialogProps> = ({
                             <div className="space-y-1">
                                 <Label className="text-xs text-slate-500 dark:text-slate-400 font-medium flex items-center gap-1.5 h-5">
                                     <DollarSign className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
-                                    Jumlah
+                                    Nilai Belanja
                                 </Label>
-                                <div className="text-sm font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 px-3 py-2 rounded-lg border border-emerald-200 dark:border-emerald-800/50 min-h-[40px] flex items-center">
+                                <div className="text-sm font-bold text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-900/50 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800/50 min-h-[40px] flex items-center">
                                     Rp{tagihan.jumlah_kotor.toLocaleString('id-ID')}
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    {/* SECTION: PERBANKAN & BSG */}
-                    <div className="bg-white dark:bg-slate-800/50 rounded-xl p-5 border border-blue-100 dark:border-blue-900/30 shadow-sm">
-                        <div className="flex items-center gap-2 mb-4">
-                            <div className="h-8 w-8 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                                <Landmark className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                    {/* SECTION: RINCIAN PAJAK */}
+                    <div className="bg-white dark:bg-slate-800/50 rounded-xl p-5 border border-emerald-200 dark:border-emerald-800 shadow-sm relative overflow-hidden group">
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full -mr-16 -mt-16 blur-2xl group-hover:bg-emerald-500/10 transition-colors"></div>
+
+                        <div className="flex items-center justify-between mb-4">
+                            <div className="flex items-center gap-2">
+                                <div className="h-8 w-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
+                                    <Receipt className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                                </div>
+                                <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Rincian Pajak</h3>
                             </div>
-                            <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Perbankan & BSG</h3>
+                            <div className="text-xs font-bold px-3 py-1.5 bg-emerald-50 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 rounded-full border border-emerald-100 dark:border-emerald-800">
+                                {pajakList.length} Entri Pajak
+                            </div>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="space-y-1">
-                                <Label className="text-xs text-slate-500 dark:text-slate-400 font-medium flex items-center gap-1.5 h-5">
-                                    <Landmark className="h-3.5 w-3.5" />
-                                    Nama Bank
-                                </Label>
-                                <div className="text-sm font-medium text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-900/50 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800/50 min-h-[40px] flex items-center">
-                                    {tagihan.nama_bank || '-'}
-                                </div>
-                            </div>
-
-                            <div className="space-y-1">
-                                <Label className="text-xs text-slate-500 dark:text-slate-400 font-medium flex items-center gap-1.5 h-5">
-                                    <Calendar className="h-3.5 w-3.5" />
-                                    Tgl. Diserahkan ke BSG
-                                </Label>
-                                <div className="text-sm font-medium text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-900/50 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800/50 min-h-[40px] flex items-center">
-                                    {tagihan.tanggal_bsg ? format(parseISO(tagihan.tanggal_bsg), 'dd MMMM yyyy', { locale: id }) : '-'}
-                                </div>
-                            </div>
+                        <div className="rounded-lg border border-emerald-100 dark:border-emerald-900/50 overflow-hidden">
+                            <Table>
+                                <TableHeader className="bg-emerald-50/50 dark:bg-emerald-950/30">
+                                    <TableRow className="hover:bg-transparent border-emerald-100 dark:border-emerald-900/50">
+                                        <TableHead className="text-[11px] uppercase font-bold text-emerald-800 dark:text-emerald-400">Jenis Pajak</TableHead>
+                                        <TableHead className="text-[11px] uppercase font-bold text-emerald-800 dark:text-emerald-400">Kode Akun</TableHead>
+                                        <TableHead className="text-[11px] uppercase font-bold text-emerald-800 dark:text-emerald-400">Kode Billing</TableHead>
+                                        <TableHead className="text-[11px] uppercase font-bold text-emerald-800 dark:text-emerald-400">NTB</TableHead>
+                                        <TableHead className="text-[11px] uppercase font-bold text-emerald-800 dark:text-emerald-400 text-right">Jumlah</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {pajakList.length === 0 ? (
+                                        <TableRow>
+                                            <TableCell colSpan={5} className="text-center py-8 text-slate-500 dark:text-slate-400 italic">
+                                                Belum ada rincian pajak untuk tagihan ini.
+                                            </TableCell>
+                                        </TableRow>
+                                    ) : (
+                                        pajakList.map((p, idx) => (
+                                            <TableRow key={idx} className="hover:bg-emerald-50/20 dark:hover:bg-emerald-950/10 border-emerald-50 dark:border-emerald-900/30">
+                                                <TableCell className="font-medium text-slate-900 dark:text-slate-100">{p.jenis_pajak}</TableCell>
+                                                <TableCell className="font-mono text-xs">{p.kode_akun}</TableCell>
+                                                <TableCell className="font-mono text-xs text-slate-700 dark:text-slate-300 uppercase">{p.kode_billing || '-'}</TableCell>
+                                                <TableCell className="font-mono text-xs text-slate-700 dark:text-slate-300 uppercase">{p.ntb || '-'}</TableCell>
+                                                <TableCell className="text-right font-bold text-emerald-600 dark:text-emerald-400">
+                                                    Rp{(parseFloat(p.jumlah_pajak) || 0).toLocaleString('id-ID')}
+                                                </TableCell>
+                                            </TableRow>
+                                        ))
+                                    )}
+                                    {pajakList.length > 0 && (
+                                        <TableRow className="bg-emerald-50/30 dark:bg-emerald-950/20 hover:bg-emerald-50/30 font-bold border-t-2 border-emerald-100 dark:border-emerald-900">
+                                            <TableCell colSpan={4} className="text-right text-emerald-800 dark:text-emerald-300 uppercase text-[11px]">Total Pajak</TableCell>
+                                            <TableCell className="text-right text-emerald-700 dark:text-emerald-300 text-base">
+                                                Rp{totalPajak.toLocaleString('id-ID')}
+                                            </TableCell>
+                                        </TableRow>
+                                    )}
+                                </TableBody>
+                            </Table>
                         </div>
                     </div>
 
-                    {/* SECTION: CATATAN */}
-                    {tagihan.catatan_sp2d && (
+                    {/* SECTION: CATATAN (Optional) */}
+                    {tagihan.catatan_pajak && (
                         <div className="bg-white dark:bg-slate-800/50 rounded-xl p-5 border border-amber-100 dark:border-amber-900/30 shadow-sm">
                             <div className="flex items-center gap-2 mb-4">
                                 <div className="h-8 w-8 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
                                     <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
                                 </div>
-                                <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Catatan Koreksi</h3>
+                                <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Catatan Staf Pajak</h3>
                             </div>
 
-                            <div className="text-sm text-slate-700 dark:text-slate-300 bg-amber-50 dark:bg-amber-950/20 px-3 py-2 rounded-lg border border-amber-200 dark:border-amber-800/50 leading-relaxed">
-                                {tagihan.catatan_sp2d}
+                            <div className="text-sm text-slate-700 dark:text-slate-300 bg-amber-50 dark:bg-amber-950/20 px-4 py-3 rounded-lg border border-amber-200 dark:border-amber-800/50 leading-relaxed italic">
+                                {tagihan.catatan_pajak}
                             </div>
                         </div>
                     )}
@@ -219,4 +236,4 @@ const SP2DDetailDialog: React.FC<SP2DDetailDialogProps> = ({
     );
 };
 
-export default SP2DDetailDialog;
+export default PajakDetailDialog;
