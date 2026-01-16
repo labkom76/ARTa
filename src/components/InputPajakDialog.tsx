@@ -30,7 +30,11 @@ import {
     ShieldCheckIcon,
     AlertCircle,
     PlusCircle,
-    Trash2
+    Trash2,
+    Building2,
+    FileText,
+    DollarSign,
+    Calendar
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -226,34 +230,62 @@ const InputPajakDialog: React.FC<InputPajakDialogProps> = ({
                     </div>
                 </DialogHeader>
 
-                <div className="space-y-2 p-3 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800">
-                    <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
-                        <div className="col-span-2">
-                            <Label className="text-[9px] uppercase font-bold text-slate-500">SKPD</Label>
-                            <p className="text-xs font-bold truncate mt-0.5" title={tagihan.nama_skpd}>{tagihan.nama_skpd}</p>
+                <div className="bg-white dark:bg-slate-800/50 rounded-xl p-5 border border-emerald-100 dark:border-emerald-900/30 shadow-sm space-y-4">
+                    <div className="flex items-center gap-2 pb-2 border-b border-slate-100 dark:border-slate-800">
+                        <div className="h-8 w-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
+                            <Building2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
                         </div>
-                        <div>
-                            <Label className="text-[9px] uppercase font-bold text-slate-500">Nilai Belanja</Label>
-                            <p className="text-xs font-bold text-emerald-600 mt-0.5">Rp{tagihan.jumlah_kotor.toLocaleString('id-ID')}</p>
+                        <h3 className="text-lg font-bold text-slate-900 dark:text-white">Informasi Tagihan</h3>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        <div className="md:col-span-2 space-y-1.5">
+                            <Label className="text-xs text-slate-500 dark:text-slate-400 font-semibold flex items-center gap-1.5 h-5 ml-1">
+                                <Building2 className="h-3.5 w-3.5" />
+                                NAMA SKPD
+                            </Label>
+                            <div className="text-sm font-black text-slate-900 dark:text-white bg-slate-50/50 dark:bg-slate-900/50 px-3 py-2.5 rounded-xl border border-slate-200/60 dark:border-slate-800/50 min-h-[44px] flex items-center shadow-sm">
+                                {tagihan.nama_skpd}
+                            </div>
                         </div>
-                        <div>
-                            <Label className="text-[9px] uppercase font-bold text-slate-500">No. SPM</Label>
-                            <p className="text-[10px] font-mono truncate mt-0.5" title={tagihan.nomor_spm}>{tagihan.nomor_spm}</p>
+
+                        <div className="space-y-1.5">
+                            <Label className="text-xs text-slate-500 dark:text-slate-400 font-semibold flex items-center gap-1.5 h-5 ml-1">
+                                <DollarSign className="h-3.5 w-3.5 text-emerald-600" />
+                                NILAI BELANJA
+                            </Label>
+                            <div className="text-lg font-black text-emerald-600 dark:text-emerald-400 bg-emerald-50/30 dark:bg-emerald-950/20 px-4 py-2 rounded-xl border border-emerald-100 dark:border-emerald-800/30 min-h-[44px] flex items-center shadow-sm">
+                                Rp{tagihan.jumlah_kotor.toLocaleString('id-ID')}
+                            </div>
                         </div>
-                        <div className="col-span-2">
-                            <Label className="text-[9px] uppercase font-bold text-slate-500">No. SP2D</Label>
+
+                        <div className="space-y-1.5">
+                            <Label className="text-xs text-slate-500 dark:text-slate-400 font-semibold flex items-center gap-1.5 h-5 ml-1">
+                                <FileText className="h-3.5 w-3.5" />
+                                NOMOR SPM
+                            </Label>
                             <TooltipProvider>
                                 <Tooltip>
                                     <TooltipTrigger asChild>
-                                        <p className="text-[10px] font-mono font-bold text-emerald-600 truncate cursor-help mt-0.5 max-w-full overflow-hidden">
-                                            {tagihan.nomor_sp2d}
-                                        </p>
+                                        <div className="text-[13px] font-mono font-bold text-slate-600 dark:text-slate-300 bg-slate-50/50 dark:bg-slate-900/50 px-3 py-2 rounded-xl border border-slate-200/60 dark:border-slate-800/50 cursor-help min-h-[44px] flex items-center shadow-sm overflow-hidden">
+                                            <span className="truncate w-full">{tagihan.nomor_spm}</span>
+                                        </div>
                                     </TooltipTrigger>
-                                    <TooltipContent className="max-w-[400px] break-all">
-                                        <p className="font-mono text-xs">{tagihan.nomor_sp2d}</p>
+                                    <TooltipContent side="top" className="font-mono text-xs max-w-md break-all">
+                                        {tagihan.nomor_spm}
                                     </TooltipContent>
                                 </Tooltip>
                             </TooltipProvider>
+                        </div>
+
+                        <div className="md:col-span-2 space-y-1.5">
+                            <Label className="text-xs text-slate-500 dark:text-slate-400 font-semibold flex items-center gap-1.5 h-5 ml-1">
+                                <ShieldCheckIcon className="h-3.5 w-3.5 text-emerald-600" />
+                                NOMOR SP2D
+                            </Label>
+                            <div className="text-[13px] font-mono font-black text-emerald-700 dark:text-emerald-400 bg-emerald-50/50 dark:bg-emerald-950/30 px-4 py-3 rounded-xl border border-emerald-200/50 dark:border-emerald-800/50 min-h-[50px] flex items-center shadow-sm">
+                                {tagihan.nomor_sp2d}
+                            </div>
                         </div>
                     </div>
                 </div>
