@@ -533,24 +533,27 @@ const PortalRegistrasiSP2D = () => {
                                 <TableHead className="w-[250px] font-bold text-slate-700 dark:text-slate-300 uppercase text-[11px] tracking-wider">
                                     SKPD
                                 </TableHead>
-                                <TableHead className="w-[350px] font-bold text-slate-700 dark:text-slate-300 uppercase text-[11px] tracking-wider">
+                                <TableHead className="w-[300px] font-bold text-slate-700 dark:text-slate-300 uppercase text-[11px] tracking-wider">
                                     Uraian
                                 </TableHead>
                                 <TableHead className="w-[150px] font-bold text-slate-700 dark:text-slate-300 uppercase text-[11px] tracking-wider text-right">
                                     Jumlah
                                 </TableHead>
-                                <TableHead className="w-[150px] font-bold text-slate-700 dark:text-slate-300 uppercase text-[11px] tracking-wider">
+                                <TableHead className="w-[120px] font-bold text-slate-700 dark:text-slate-300 uppercase text-[11px] tracking-wider">
                                     Nama Bank
                                 </TableHead>
-                                <TableHead className="w-[150px] font-bold text-slate-700 dark:text-slate-300 uppercase text-[11px] tracking-wider">
+                                <TableHead className="w-[120px] font-bold text-slate-700 dark:text-slate-300 uppercase text-[11px] tracking-wider">
                                     Tgl. Serah BSG
+                                </TableHead>
+                                <TableHead className="w-[150px] font-bold text-slate-700 dark:text-slate-300 uppercase text-[11px] tracking-wider">
+                                    Catatan
                                 </TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {loading ? (
                                 <TableRow>
-                                    <TableCell colSpan={9} className="h-32 text-center">
+                                    <TableCell colSpan={10} className="h-32 text-center">
                                         <div className="flex flex-col items-center gap-2">
                                             <RefreshCw className="h-6 w-6 animate-spin text-emerald-500" />
                                             <p className="text-sm text-slate-500 font-medium">Memuat data...</p>
@@ -559,7 +562,7 @@ const PortalRegistrasiSP2D = () => {
                                 </TableRow>
                             ) : paginatedList.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={9} className="h-32 text-center text-slate-500 font-medium font-mono text-sm uppercase">
+                                    <TableCell colSpan={10} className="h-32 text-center text-slate-500 font-medium font-mono text-sm uppercase">
                                         Tidak ada data ditemukan
                                     </TableCell>
                                 </TableRow>
@@ -595,8 +598,19 @@ const PortalRegistrasiSP2D = () => {
                                         <TableCell className="text-slate-700 dark:text-slate-300 text-xs font-bold leading-snug">
                                             {item.nama_skpd}
                                         </TableCell>
-                                        <TableCell className="text-slate-600 dark:text-slate-400 text-[11px] leading-relaxed max-w-[350px]">
-                                            {item.uraian}
+                                        <TableCell className="text-slate-600 dark:text-slate-400 text-[11px] leading-relaxed max-w-[300px]">
+                                            <TooltipProvider>
+                                                <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                        <div className="truncate cursor-help">
+                                                            {item.uraian}
+                                                        </div>
+                                                    </TooltipTrigger>
+                                                    <TooltipContent side="top" className="max-w-md p-3">
+                                                        <p className="text-xs leading-relaxed">{item.uraian}</p>
+                                                    </TooltipContent>
+                                                </Tooltip>
+                                            </TooltipProvider>
                                         </TableCell>
                                         <TableCell className="text-right font-bold text-slate-900 dark:text-slate-200">
                                             {new Intl.NumberFormat('id-ID').format(item.jumlah_kotor)}
@@ -606,6 +620,18 @@ const PortalRegistrasiSP2D = () => {
                                         </TableCell>
                                         <TableCell className="text-slate-600 dark:text-slate-400 whitespace-nowrap text-xs">
                                             {item.tanggal_bsg ? format(parseISO(item.tanggal_bsg), 'dd/MM/yyyy') : '-'}
+                                        </TableCell>
+                                        <TableCell>
+                                            <TooltipProvider>
+                                                <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                        <div className="text-[11px] font-medium text-slate-500 dark:text-slate-500 max-w-[150px] truncate cursor-help">
+                                                            {item.catatan_sp2d || '-'}
+                                                        </div>
+                                                    </TooltipTrigger>
+                                                    {item.catatan_sp2d && <TooltipContent><p className="max-w-xs">{item.catatan_sp2d}</p></TooltipContent>}
+                                                </Tooltip>
+                                            </TooltipProvider>
                                         </TableCell>
                                     </TableRow>
                                 ))
