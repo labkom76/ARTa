@@ -372,9 +372,11 @@ const PortalPajak = () => {
                                     </h2>
                                 </div>
                             </div>
+                        </div>
 
-                            {/* Summary Badges - Refined & Compact */}
-                            <div className="hidden lg:flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-3 bg-white/50 dark:bg-slate-900/50 p-1.5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm backdrop-blur-sm">
+                            {/* Summary Badges - Moved to Right */}
+                            <div className="hidden xl:flex items-center gap-2">
                                 <div className="flex items-center gap-2 px-3 h-8 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-full">
                                     <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 whitespace-nowrap">Total Belanja</span>
                                     <div className="w-[1px] h-3 bg-slate-200 dark:bg-slate-800" />
@@ -391,37 +393,39 @@ const PortalPajak = () => {
                                     </span>
                                 </div>
                             </div>
-                        </div>
 
-                        <div className="flex flex-wrap items-center gap-2 bg-white dark:bg-slate-900 p-1.5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
-                            <TooltipProvider>
-                                <Tooltip>
-                                    <TooltipTrigger asChild>
-                                        <Button
-                                            onClick={() => { fetchData(); fetchAntrianCount(); }}
-                                            variant="outline"
-                                            size="icon"
-                                            className="h-9 w-9 border-slate-200 dark:border-slate-800 hover:bg-emerald-50 hover:text-emerald-600 dark:hover:bg-emerald-950/30 dark:hover:text-emerald-400 transition-all rounded-lg"
-                                        >
-                                            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-                                        </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                        <p>Refresh Data</p>
-                                    </TooltipContent>
-                                </Tooltip>
-                            </TooltipProvider>
+                            <div className="h-6 w-[1px] bg-slate-200 dark:bg-slate-800 mx-1 hidden xl:block" />
 
-                            <div className="h-6 w-[1px] bg-slate-200 dark:bg-slate-800 mx-1 hidden sm:block" />
+                            <div className="flex items-center gap-2">
+                                <TooltipProvider>
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <Button
+                                                onClick={() => { fetchData(); fetchAntrianCount(); }}
+                                                variant="outline"
+                                                size="icon"
+                                                className="h-9 w-9 border-slate-200 dark:border-slate-800 hover:bg-emerald-50 hover:text-emerald-600 dark:hover:bg-emerald-950/30 dark:hover:text-emerald-400 transition-all rounded-lg"
+                                            >
+                                                <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                                            </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                            <p>Refresh Data</p>
+                                        </TooltipContent>
+                                    </Tooltip>
+                                </TooltipProvider>
 
-                            <Button
-                                onClick={() => setIsAntrianDialogOpen(true)}
-                                className="bg-gradient-to-r from-orange-500 to-rose-500 hover:from-orange-600 hover:to-rose-600 text-white font-bold h-9 px-3 rounded-lg transition-all hover:scale-105 gap-2 text-sm"
-                            >
-                                <CalculatorIcon className="h-4 w-4" />
-                                <span className="hidden sm:inline">Input Pajak</span>
-                                <span className="sm:hidden">Input</span>
-                            </Button>
+                                <div className="h-6 w-[1px] bg-slate-200 dark:bg-slate-800 mx-1 hidden sm:block" />
+
+                                <Button
+                                    onClick={() => setIsAntrianDialogOpen(true)}
+                                    className="bg-gradient-to-r from-orange-500 to-rose-500 hover:from-orange-600 hover:to-rose-600 text-white font-bold h-9 px-3 rounded-lg transition-all hover:scale-105 gap-2 text-sm"
+                                >
+                                    <CalculatorIcon className="h-4 w-4" />
+                                    <span className="hidden sm:inline">Input Pajak</span>
+                                    <span className="sm:hidden">Input</span>
+                                </Button>
+                            </div>
                         </div>
                     </div>
 
