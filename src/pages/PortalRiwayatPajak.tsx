@@ -237,7 +237,7 @@ const PortalRiwayatPajak = () => {
         }
 
         try {
-            const exportData = taxHistory.map((h, idx) => ({
+            const exportData: any[] = taxHistory.map((h, idx) => ({
                 'No.': idx + 1,
                 'SKPD': h.nama_skpd,
                 'No. SPM': h.nomor_spm,
@@ -252,7 +252,41 @@ const PortalRiwayatPajak = () => {
                 'Kode Billing': h.kode_billing
             }));
 
+            // Calculate Totals
+            const totalNilaiBelanja = taxHistory.reduce((sum, h) => sum + (h.jumlah_kotor || 0), 0);
+            const totalJumlahPajak = taxHistory.reduce((sum, h) => sum + (h.jumlah_pajak || 0), 0);
+
+            // Append Grand Total Row
+            exportData.push({
+                'No.': '',
+                'SKPD': 'GRAND TOTAL',
+                'No. SPM': '',
+                'Nilai Belanja': totalNilaiBelanja,
+                'No SP2D': '',
+                'Nilai Belanja ': totalNilaiBelanja,
+                'Kode Akun': '',
+                'Jenis Pajak': '',
+                'Jumlah Pajak': totalJumlahPajak,
+                'NTPN': '',
+                'NTB': '',
+                'Kode Billing': ''
+            });
+
             const ws = XLSX.utils.json_to_sheet(exportData);
+
+            // Inject Excel Formulas for Grand Total
+            const lastDataRow = taxHistory.length + 1;
+            const totalRowIdx = taxHistory.length + 1; // Row index (0-based) for the grand total row
+
+            [3, 5, 8].forEach(colIdx => {
+                const addr = XLSX.utils.encode_cell({ r: totalRowIdx, c: colIdx });
+                const colLetter = XLSX.utils.encode_col(colIdx);
+                if (ws[addr]) {
+                    // Set the formula: e.g., SUM(D2:D11)
+                    ws[addr].f = `SUM(${colLetter}2:${colLetter}${lastDataRow})`;
+                }
+            });
+
             const wscols = [
                 { wch: 5 },   // No.
                 { wch: 35 },  // SKPD
@@ -269,7 +303,7 @@ const PortalRiwayatPajak = () => {
             ];
             ws['!cols'] = wscols;
 
-            // Number formats
+            // Number formats (Applied to data AND total row)
             const range = XLSX.utils.decode_range(ws['!ref'] || 'A1');
             for (let R = range.s.r + 1; R <= range.e.r; ++R) {
                 [3, 5, 8].forEach(colIdx => {
@@ -281,7 +315,7 @@ const PortalRiwayatPajak = () => {
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, "Rekap_Pajak");
             XLSX.writeFile(wb, `Rekap_Pajak_${format(new Date(), 'yyyyMMdd_HHmm')}.xlsx`);
-            toast.success('Rekap pajak berhasil diekspor!');
+            toast.success('Rekap pajak berhasil diekspor dengan formula!');
         } catch (error: any) {
             toast.error('Gagal mengekspor data: ' + error.message);
         }

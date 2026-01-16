@@ -282,6 +282,14 @@ const PortalPajak = () => {
     const totalPages = Math.ceil(historyList.length / pageSize);
     const paginatedData = historyList.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
+    // Calculate grand totals of all shown in historyList
+    const grandTotalPajak = historyList.reduce((acc, h) => {
+        const pajak = pajakData[h.id_tagihan] || [];
+        const totalForTagihan = pajak.reduce((sum, p) => sum + (parseFloat(p.jumlah_pajak) || 0), 0);
+        return acc + totalForTagihan;
+    }, 0);
+
+    const grandTotalBelanja = historyList.reduce((acc, h) => acc + (h.jumlah_kotor || 0), 0);
 
     return (
         <div className="max-w-[1600px] mx-auto px-4 md:px-8 py-4 space-y-4 animate-in fade-in duration-500">
@@ -353,14 +361,35 @@ const PortalPajak = () => {
                 <Card className="border-slate-200 dark:border-slate-800 shadow-lg hover:shadow-xl transition-shadow duration-300">
                     {/* Section Header */}
                     <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-6 py-4 bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 border-b border-slate-200 dark:border-slate-800">
-                        <div className="flex items-center gap-3">
-                            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-500/20">
-                                <ReceiptIcon className="h-5 w-5 text-white" />
+                        <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-3">
+                                <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-500/20">
+                                    <ReceiptIcon className="h-5 w-5 text-white" />
+                                </div>
+                                <div>
+                                    <h2 className="text-xl font-bold text-slate-900 dark:text-white">
+                                        Riwayat Input Pajak
+                                    </h2>
+                                </div>
                             </div>
-                            <div>
-                                <h2 className="text-xl font-bold text-slate-900 dark:text-white">
-                                    Riwayat Input Pajak
-                                </h2>
+
+                            {/* Summary Badges - Refined & Compact */}
+                            <div className="hidden lg:flex items-center gap-2">
+                                <div className="flex items-center gap-2 px-3 h-8 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-full">
+                                    <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 whitespace-nowrap">Total Belanja</span>
+                                    <div className="w-[1px] h-3 bg-slate-200 dark:bg-slate-800" />
+                                    <span className="text-[13px] font-black text-slate-700 dark:text-slate-300 whitespace-nowrap">
+                                        Rp{grandTotalBelanja.toLocaleString('id-ID')}
+                                    </span>
+                                </div>
+
+                                <div className="flex items-center gap-2 px-3 h-8 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-800/50 rounded-full">
+                                    <span className="text-[9px] font-bold uppercase tracking-wider text-emerald-500/60 dark:text-emerald-500/40 whitespace-nowrap">Total Pajak</span>
+                                    <div className="w-[1px] h-3 bg-emerald-200 dark:bg-emerald-800" />
+                                    <span className="text-[13px] font-black text-emerald-700 dark:text-emerald-400 whitespace-nowrap">
+                                        Rp{grandTotalPajak.toLocaleString('id-ID')}
+                                    </span>
+                                </div>
                             </div>
                         </div>
 
@@ -544,6 +573,29 @@ const PortalPajak = () => {
                                     ))
                                 )}
                             </TableBody>
+                            {historyList.length > 0 && (
+                                <tfoot className="sticky bottom-0 z-30 bg-slate-50 dark:bg-slate-900 border-t-2 border-slate-200 dark:border-slate-800">
+                                    <TableRow className="hover:bg-transparent">
+                                        <TableCell colSpan={3} className="py-4 text-right">
+                                            <span className="text-sm font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest px-2">
+                                                Grand Total
+                                            </span>
+                                        </TableCell>
+                                        <TableCell className="text-right">
+                                            <span className="text-[15px] font-black text-slate-900 dark:text-white">
+                                                Rp{grandTotalBelanja.toLocaleString('id-ID')}
+                                            </span>
+                                        </TableCell>
+                                        <TableCell colSpan={2}></TableCell>
+                                        <TableCell className="text-right">
+                                            <span className="text-[15px] font-black text-emerald-600 dark:text-emerald-400">
+                                                Rp{grandTotalPajak.toLocaleString('id-ID')}
+                                            </span>
+                                        </TableCell>
+                                        <TableCell></TableCell>
+                                    </TableRow>
+                                </tfoot>
+                            )}
                         </Table>
 
                         {/* Pagination */}
