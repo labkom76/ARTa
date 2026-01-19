@@ -360,11 +360,26 @@ const PortalSP2D = () => {
                     status_tagihan: 'Selesai',
                     nomor_urut_sp2d: finalNomorUrut,
                     nomor_sp2d: finalNomorSp2d,
-                    waktu_registrasi_sp2d: finalWaktuReg
+                    waktu_registrasi_sp2d: finalWaktuReg,
+                    nama_register_sp2d: profile?.nama_lengkap
                 })
                 .eq('id_tagihan', selectedTagihanForRegister.id_tagihan);
 
             if (error) throw error;
+
+            // 3. Catat ke Activity Log (Bonus: Audit Trail)
+            await supabase.from('activity_log').insert({
+                user_id: user?.id || '',
+                user_role: profile?.peran || '',
+                action: isEdit ? 'TAGIHAN_UPDATED' : 'STATUS_CHANGED',
+                tagihan_terkait: selectedTagihanForRegister.id_tagihan,
+                details: {
+                    old_status: selectedTagihanForRegister.status_tagihan,
+                    new_status: 'Selesai',
+                    nomor_sp2d: finalNomorSp2d,
+                    note: isEdit ? 'Update data Registrasi SP2D' : 'Registrasi SP2D berhasil'
+                }
+            });
 
             toast.success('Registrasi SP2D berhasil disimpan!');
             setIsRegisterOpen(false);
@@ -408,10 +423,26 @@ const PortalSP2D = () => {
                     nama_bank: null,
                     tanggal_bsg: null,
                     catatan_sp2d: null,
+                    waktu_registrasi_sp2d: null,
+                    nama_register_sp2d: null
                 })
                 .eq('id_tagihan', tagihanToDelete.id_tagihan);
 
             if (error) throw error;
+
+            // Catat ke Activity Log
+            await supabase.from('activity_log').insert({
+                user_id: user?.id || '',
+                user_role: profile?.peran || '',
+                action: 'STATUS_CHANGED',
+                tagihan_terkait: tagihanToDelete.id_tagihan,
+                details: {
+                    old_status: 'Selesai',
+                    new_status: 'Diteruskan',
+                    reason: 'Pembatalan/Penghapusan Registrasi SP2D',
+                    nomor_sp2d: tagihanToDelete.nomor_sp2d
+                }
+            });
 
             toast.success('Registrasi SP2D berhasil dihapus dan dikembalikan ke antrian!');
             setIsDeleteDialogOpen(false);
