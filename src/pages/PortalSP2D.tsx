@@ -57,7 +57,7 @@ import {
     ArrowUp,
     ArrowDown,
 } from 'lucide-react';
-import { format, parseISO, startOfDay, getMonth, getYear } from 'date-fns';
+import { format, parseISO, startOfDay, getMonth, getYear, startOfYear, endOfYear } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
 import { toast } from 'sonner';
 import useDebounce from '@/hooks/use-debounce';
@@ -136,6 +136,8 @@ const PortalSP2D = () => {
     // Main Table Pagination State
     const [historyCurrentPage, setHistoryCurrentPage] = useState(1);
     const [historyPageSize, setHistoryPageSize] = useState(10);
+    const [pendingCount, setPendingCount] = useState(0);
+    const [oldestPending, setOldestPending] = useState<string | null>(null);
 
     // Antrian Dialog State (only visibility control)
     const [isAntrianDialogOpen, setIsAntrianDialogOpen] = useState(false);
@@ -193,8 +195,35 @@ const PortalSP2D = () => {
         if (user && (profile?.peran === 'Register SP2D' || profile?.peran === 'Administrator')) {
             // Main table (History) uses main panel filters
             fetchHistory();
+            fetchQueueSummary();
         }
     }, [user, profile, debouncedSearchQuery, selectedSkpd, mainSelectedMonth, mainSelectedYear]);
+
+    const fetchQueueSummary = async () => {
+        try {
+            const now = new Date();
+            const startDate = startOfYear(now).toISOString();
+            const endDate = endOfYear(now).toISOString();
+
+            const { data, count, error } = await supabase
+                .from('database_tagihan')
+                .select('waktu_verifikasi', { count: 'exact' })
+                .eq('status_tagihan', 'Diteruskan')
+                .gte('waktu_verifikasi', startDate)
+                .lte('waktu_verifikasi', endDate)
+                .order('waktu_verifikasi', { ascending: true });
+
+            if (error) throw error;
+            setPendingCount(count || 0);
+            if (data && data.length > 0) {
+                setOldestPending(data[0].waktu_verifikasi);
+            } else {
+                setOldestPending(null);
+            }
+        } catch (error: any) {
+            console.error('Error fetching queue summary:', error);
+        }
+    };
 
     const fetchSkpdOptions = async () => {
         try {
@@ -302,23 +331,25 @@ const PortalSP2D = () => {
         setIsSubmitting(true);
         try {
             const isEdit = selectedTagihanForRegister.status_tagihan === 'Selesai';
-            let finalNomorUrut = selectedTagihanForRegister.nomor_urut_sp2d;
+            let finalNomorUrut = parseInt(data.manual_sequence) || 0;
             let finalWaktuReg = selectedTagihanForRegister.waktu_registrasi_sp2d;
 
             if (!isEdit) {
-                // 1. Ambil nomor urut terakhir HANYA jika registrasi baru
-                const { data: lastData, error: lastError } = await supabase
+                // 1. Validasi: Apakah ada tagihan lama yang terlewati?
+                const { data: olderBills } = await supabase
                     .from('database_tagihan')
-                    .select('nomor_urut_sp2d')
-                    .not('nomor_urut_sp2d', 'is', null)
-                    .order('nomor_urut_sp2d', { ascending: false })
+                    .select('id_tagihan')
+                    .eq('status_tagihan', 'Diteruskan')
+                    .lt('waktu_verifikasi', selectedTagihanForRegister.waktu_verifikasi || new Date().toISOString())
                     .limit(1);
 
-                if (lastError) throw lastError;
-
-                finalNomorUrut = (lastData && lastData.length > 0)
-                    ? (lastData[0].nomor_urut_sp2d + 1)
-                    : 1;
+                if (olderBills && olderBills.length > 0) {
+                    const confirmProceed = window.confirm("Peringatan: Masih ada tagihan yang masuk lebih awal di antrian. Apakah Anda yakin ingin memproses tagihan ini terlebih dahulu?");
+                    if (!confirmProceed) {
+                        setIsSubmitting(false);
+                        return;
+                    }
+                }
 
                 finalWaktuReg = new Date().toISOString();
             }
@@ -483,7 +514,37 @@ const PortalSP2D = () => {
                         </p>
                     </div>
                 </div>
+
             </div>
+
+            {/* Warning Banner for Pending Bills */}
+            {pendingCount > 0 && (
+                <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20 border border-amber-200 dark:border-amber-800/50 rounded-2xl p-4 shadow-sm animate-in slide-in-from-top duration-500">
+                    <div className="flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-4">
+                            <div className="h-10 w-10 rounded-xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center text-amber-600">
+                                <Clock className="h-6 w-6 animate-pulse" />
+                            </div>
+                            <div>
+                                <h4 className="text-[15px] font-bold text-amber-800 dark:text-amber-400">Peringatan: Antrian Menunggu!</h4>
+                                <p className="text-xs text-amber-700/80 dark:text-amber-500/70 font-medium">
+                                    Terdapat <span className="font-black text-amber-900 dark:text-amber-300">{pendingCount} tagihan</span> yang sedang menunggu di antrian.
+                                    {oldestPending && (
+                                        <> Tagihan tertua masuk sejak <span className="font-black text-amber-900 dark:text-amber-300">{format(parseISO(oldestPending), 'dd MMMM yyyy', { locale: localeId })}</span>.</>
+                                    )}
+                                </p>
+                            </div>
+                        </div>
+                        <Button
+                            variant="link"
+                            onClick={() => setIsAntrianDialogOpen(true)}
+                            className="text-amber-800 dark:text-amber-400 font-bold text-xs flex items-center gap-1.5 hover:no-underline hover:opacity-80 transition-opacity"
+                        >
+                            Proses Sekarang <ChevronRight className="h-4 w-4" />
+                        </Button>
+                    </div>
+                </div>
+            )}
 
             {/* Filter Section */}
             <Card className="border-none shadow-xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-md rounded-2xl overflow-hidden">
