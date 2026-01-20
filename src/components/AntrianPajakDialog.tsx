@@ -135,9 +135,9 @@ const AntrianPajakDialog: React.FC<AntrianPajakDialogProps> = ({
 
                 <div className="space-y-6 py-4">
                     {/* Filters */}
-                    <div className="flex flex-col gap-4">
-                        <div className="flex flex-col sm:flex-row gap-4">
-                            <div className="relative group flex-1">
+                    <div className="bg-slate-50/50 dark:bg-slate-800/20 p-4 rounded-2xl border border-slate-100 dark:border-slate-800/50">
+                        <div className="flex flex-col lg:flex-row items-center gap-3">
+                            <div className="relative group flex-1 w-full">
                                 <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
                                 <Input
                                     placeholder="Cari No. SP2D atau SKPD..."
@@ -146,33 +146,33 @@ const AntrianPajakDialog: React.FC<AntrianPajakDialogProps> = ({
                                         setSearchQuery(e.target.value);
                                         setCurrentPage(1);
                                     }}
-                                    className="pl-11 h-12 border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-blue-500/20 transition-all rounded-xl font-medium placeholder:text-slate-400 dark:placeholder:text-slate-500"
+                                    className="pl-11 h-11 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-blue-500/20 transition-all rounded-xl font-medium placeholder:text-slate-400 dark:placeholder:text-slate-500"
                                 />
                             </div>
-                            <div className="w-full sm:w-64">
-                                <Combobox
-                                    options={skpdOptions}
-                                    value={selectedSkpd}
-                                    onValueChange={(val) => {
-                                        setSelectedSkpd(val);
-                                        setCurrentPage(1);
-                                    }}
-                                    placeholder="Filter SKPD"
-                                    className="w-full h-12 rounded-xl border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50"
-                                />
-                            </div>
-                        </div>
-                        <div className="flex flex-wrap items-center gap-3">
-                            <div className="w-full sm:w-64">
-                                <DateRangePickerWithPresets
-                                    date={dateRange}
-                                    onDateChange={(val) => {
-                                        setDateRange(val);
-                                        setCurrentPage(1);
-                                    }}
-                                    className="w-full"
-                                    align="start"
-                                />
+                            <div className="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto">
+                                <div className="w-full sm:w-60">
+                                    <Combobox
+                                        options={skpdOptions}
+                                        value={selectedSkpd}
+                                        onValueChange={(val) => {
+                                            setSelectedSkpd(val);
+                                            setCurrentPage(1);
+                                        }}
+                                        placeholder="Filter SKPD"
+                                        className="w-full h-11 rounded-xl border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900"
+                                    />
+                                </div>
+                                <div className="w-full sm:w-64">
+                                    <DateRangePickerWithPresets
+                                        date={dateRange}
+                                        onDateChange={(val) => {
+                                            setDateRange(val);
+                                            setCurrentPage(1);
+                                        }}
+                                        className="w-full"
+                                        align="end"
+                                    />
+                                </div>
                             </div>
                         </div>
                     </div>
