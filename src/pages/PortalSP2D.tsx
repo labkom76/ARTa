@@ -331,26 +331,10 @@ const PortalSP2D = () => {
         setIsSubmitting(true);
         try {
             const isEdit = selectedTagihanForRegister.status_tagihan === 'Selesai';
-            let finalNomorUrut = parseInt(data.manual_sequence) || 0;
+            let finalNomorUrut = nextNomorUrut || 0;
             let finalWaktuReg = selectedTagihanForRegister.waktu_registrasi_sp2d;
 
             if (!isEdit) {
-                // 1. Validasi: Apakah ada tagihan lama yang terlewati?
-                const { data: olderBills } = await supabase
-                    .from('database_tagihan')
-                    .select('id_tagihan')
-                    .eq('status_tagihan', 'Diteruskan')
-                    .lt('waktu_verifikasi', selectedTagihanForRegister.waktu_verifikasi || new Date().toISOString())
-                    .limit(1);
-
-                if (olderBills && olderBills.length > 0) {
-                    const confirmProceed = window.confirm("Peringatan: Masih ada tagihan yang masuk lebih awal di antrian. Apakah Anda yakin ingin memproses tagihan ini terlebih dahulu?");
-                    if (!confirmProceed) {
-                        setIsSubmitting(false);
-                        return;
-                    }
-                }
-
                 finalWaktuReg = new Date().toISOString();
             }
 
