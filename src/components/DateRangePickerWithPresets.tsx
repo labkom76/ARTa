@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { format, addDays, subDays, startOfMonth, endOfMonth, startOfWeek, endOfWeek, isSameDay } from 'date-fns';
+import { format, addDays, subDays, startOfMonth, endOfMonth, startOfWeek, endOfWeek, isSameDay, startOfYear, endOfYear } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
 import { Calendar as CalendarIcon } from 'lucide-react';
 import { DateRange } from 'react-day-picker';
@@ -47,6 +47,9 @@ export function DateRangePickerWithPresets({
         const lastMonthEnd = endOfMonth(subDays(today, 30));
         newDateRange = { from: lastMonthStart, to: lastMonthEnd };
         break;
+      case 'thisyear':
+        newDateRange = { from: startOfYear(today), to: endOfYear(today) };
+        break;
       case 'clear':
         newDateRange = undefined;
         break;
@@ -69,6 +72,8 @@ export function DateRangePickerWithPresets({
     const lastMonthStart = startOfMonth(subDays(today, 30));
     const lastMonthEnd = endOfMonth(subDays(today, 30));
     if (isSameDay(date.from, lastMonthStart) && isSameDay(date.to, lastMonthEnd)) return 'lastmonth';
+
+    if (isSameDay(date.from, startOfYear(today)) && isSameDay(date.to, endOfYear(today))) return 'thisyear';
 
     return 'custom';
   };
@@ -112,6 +117,7 @@ export function DateRangePickerWithPresets({
                 <SelectItem value="last30days">30 Hari Terakhir</SelectItem>
                 <SelectItem value="thismonth">Bulan Ini</SelectItem>
                 <SelectItem value="lastmonth">Bulan Lalu</SelectItem>
+                <SelectItem value="thisyear">Tahun Ini</SelectItem>
                 <SelectItem value="custom">Rentang Kustom</SelectItem>
               </SelectContent>
             </Select>

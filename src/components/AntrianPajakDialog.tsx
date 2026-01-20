@@ -44,27 +44,9 @@ interface AntrianPajakDialogProps {
     refreshKey?: number;
 }
 
-const months = [
-    { value: 'all', label: 'Semua Bulan' },
-    { value: '0', label: 'Januari' },
-    { value: '1', label: 'Februari' },
-    { value: '2', label: 'Maret' },
-    { value: '3', label: 'April' },
-    { value: '4', label: 'Mei' },
-    { value: '5', label: 'Juni' },
-    { value: '6', label: 'Juli' },
-    { value: '7', label: 'Agustus' },
-    { value: '8', label: 'September' },
-    { value: '9', label: 'Oktober' },
-    { value: '10', label: 'November' },
-    { value: '11', label: 'Desember' },
-];
-
-const currentYear = new Date().getFullYear();
-const years = Array.from({ length: 5 }, (_, i) => ({
-    value: (currentYear - 2 + i).toString(),
-    label: (currentYear - 2 + i).toString(),
-}));
+import { DateRangePickerWithPresets } from './DateRangePickerWithPresets';
+import { DateRange } from 'react-day-picker';
+import { startOfMonth, endOfMonth, startOfDay, endOfDay, startOfYear, endOfYear } from 'date-fns';
 
 const AntrianPajakDialog: React.FC<AntrianPajakDialogProps> = ({
     isOpen,
@@ -76,8 +58,7 @@ const AntrianPajakDialog: React.FC<AntrianPajakDialogProps> = ({
     const [searchQuery, setSearchQuery] = useState('');
     const debouncedSearch = useDebounce(searchQuery, 500);
     const [selectedSkpd, setSelectedSkpd] = useState<string>('Semua SKPD');
-    const [selectedMonth, setSelectedMonth] = useState<string>('all');
-    const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString());
+    const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
 
     const [tagihanList, setTagihanList] = useState<Tagihan[]>([]);
     const [loading, setLoading] = useState(false);
@@ -89,7 +70,7 @@ const AntrianPajakDialog: React.FC<AntrianPajakDialogProps> = ({
         if (isOpen) {
             fetchAntrian();
         }
-    }, [isOpen, selectedSkpd, selectedMonth, selectedYear, debouncedSearch, currentPage, refreshKey]);
+    }, [isOpen, selectedSkpd, dateRange, debouncedSearch, currentPage, refreshKey]);
 
     const fetchAntrian = async () => {
         setLoading(true);
@@ -104,13 +85,15 @@ const AntrianPajakDialog: React.FC<AntrianPajakDialogProps> = ({
                 query = query.or(`nomor_spm.ilike.%${debouncedSearch}%,nama_skpd.ilike.%${debouncedSearch}%,nomor_sp2d.ilike.%${debouncedSearch}%`);
             }
 
-            if (selectedMonth !== 'all') {
-                const startDateStr = format(new Date(parseInt(selectedYear), parseInt(selectedMonth), 1), 'yyyy-MM-dd');
-                const endDateStr = format(new Date(parseInt(selectedYear), parseInt(selectedMonth) + 1, 0), 'yyyy-MM-dd');
+            if (dateRange?.from) {
+                const startDateStr = startOfDay(dateRange.from).toISOString();
+                const endDateStr = dateRange.to ? endOfDay(dateRange.to).toISOString() : endOfDay(dateRange.from).toISOString();
                 query = query.gte('tanggal_sp2d', startDateStr).lte('tanggal_sp2d', endDateStr);
             } else {
-                const startDateStr = format(new Date(parseInt(selectedYear), 0, 1), 'yyyy-MM-dd');
-                const endDateStr = format(new Date(parseInt(selectedYear), 11, 31), 'yyyy-MM-dd');
+                // Background fallback: Current Month if dateRange is cleared
+                const now = new Date();
+                const startDateStr = startOfMonth(now).toISOString();
+                const endDateStr = endOfMonth(now).toISOString();
                 query = query.gte('tanggal_sp2d', startDateStr).lte('tanggal_sp2d', endDateStr);
             }
 
@@ -180,28 +163,15 @@ const AntrianPajakDialog: React.FC<AntrianPajakDialogProps> = ({
                             </div>
                         </div>
                         <div className="flex flex-wrap items-center gap-3">
-                            <div className="w-full sm:w-48">
-                                <Combobox
-                                    options={months}
-                                    value={selectedMonth}
-                                    onValueChange={(val) => {
-                                        setSelectedMonth(val);
+                            <div className="w-full sm:w-64">
+                                <DateRangePickerWithPresets
+                                    date={dateRange}
+                                    onDateChange={(val) => {
+                                        setDateRange(val);
                                         setCurrentPage(1);
                                     }}
-                                    placeholder="Filter Bulan"
-                                    className="w-full h-12 rounded-xl border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50"
-                                />
-                            </div>
-                            <div className="w-full sm:w-32">
-                                <Combobox
-                                    options={years}
-                                    value={selectedYear}
-                                    onValueChange={(val) => {
-                                        setSelectedYear(val);
-                                        setCurrentPage(1);
-                                    }}
-                                    placeholder="Filter Tahun"
-                                    className="w-full h-12 rounded-xl border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50"
+                                    className="w-full"
+                                    align="start"
                                 />
                             </div>
                         </div>

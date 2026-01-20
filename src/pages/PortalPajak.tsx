@@ -49,10 +49,14 @@ import {
     CalculatorIcon,
     Eye,
     Edit,
-    Trash2
+    Trash2,
+    ArrowUpDown,
+    ArrowUp,
+    ArrowDown
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { format, parseISO } from 'date-fns';
+import { id as localeId } from 'date-fns/locale';
 import { toast } from 'sonner';
 import useDebounce from '@/hooks/use-debounce';
 import { Tagihan } from '@/types/tagihan';
@@ -61,27 +65,9 @@ import PajakDetailDialog from '@/components/PajakDetailDialog';
 import AntrianPajakDialog from '@/components/AntrianPajakDialog';
 import { Combobox } from '@/components/ui/combobox';
 
-const months = [
-    { value: 'all', label: 'Semua Bulan' },
-    { value: '0', label: 'Januari' },
-    { value: '1', label: 'Februari' },
-    { value: '2', label: 'Maret' },
-    { value: '3', label: 'April' },
-    { value: '4', label: 'Mei' },
-    { value: '5', label: 'Juni' },
-    { value: '6', label: 'Juli' },
-    { value: '7', label: 'Agustus' },
-    { value: '8', label: 'September' },
-    { value: '9', label: 'Oktober' },
-    { value: '10', label: 'November' },
-    { value: '11', label: 'Desember' },
-];
-
-const currentYear = new Date().getFullYear();
-const years = Array.from({ length: 5 }, (_, i) => ({
-    value: (currentYear - 2 + i).toString(),
-    label: (currentYear - 2 + i).toString(),
-}));
+import { DateRangePickerWithPresets } from '@/components/DateRangePickerWithPresets';
+import { DateRange } from 'react-day-picker';
+import { startOfMonth, endOfMonth, startOfDay, endOfDay, startOfYear, endOfYear } from 'date-fns';
 
 const PortalPajak = () => {
     const { user, profile, loading: sessionLoading } = useSession();
@@ -89,8 +75,7 @@ const PortalPajak = () => {
     const debouncedSearchQuery = useDebounce(searchQuery, 700);
 
     // Period Filters
-    const [selectedMonth, setSelectedMonth] = useState<string>('all');
-    const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString());
+    const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
     const [statusPajakFilter, setStatusPajakFilter] = useState<string>('Belum Input');
 
     // Data State
@@ -114,13 +99,19 @@ const PortalPajak = () => {
     const [currentPage, setCurrentPage] = useState(1);
     const [pageSize, setPageSize] = useState(10);
 
+    // Sorting State
+    const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' | null }>({
+        key: 'tanggal_sp2d',
+        direction: 'desc'
+    });
+
     useEffect(() => {
         if (user && (profile?.peran === 'Staf Pajak' || profile?.peran === 'Administrator')) {
             fetchData();
             fetchAntrianCount();
             fetchSkpdOptions();
         }
-    }, [user, profile, debouncedSearchQuery, selectedMonth, selectedYear, selectedSkpd]);
+    }, [user, profile, debouncedSearchQuery, dateRange, selectedSkpd]);
 
     const fetchSkpdOptions = async () => {
         try {
@@ -159,12 +150,14 @@ const PortalPajak = () => {
             let startDateStr: string;
             let endDateStr: string;
 
-            if (selectedMonth !== 'all') {
-                startDateStr = format(new Date(parseInt(selectedYear), parseInt(selectedMonth), 1), 'yyyy-MM-dd');
-                endDateStr = format(new Date(parseInt(selectedYear), parseInt(selectedMonth) + 1, 0), 'yyyy-MM-dd');
+            if (dateRange?.from) {
+                startDateStr = startOfDay(dateRange.from).toISOString();
+                endDateStr = dateRange.to ? endOfDay(dateRange.to).toISOString() : endOfDay(dateRange.from).toISOString();
             } else {
-                startDateStr = format(new Date(parseInt(selectedYear), 0, 1), 'yyyy-MM-dd');
-                endDateStr = format(new Date(parseInt(selectedYear), 11, 31), 'yyyy-MM-dd');
+                // Background fallback: Current Month if dateRange is cleared
+                const now = new Date();
+                startDateStr = startOfMonth(now).toISOString();
+                endDateStr = endOfMonth(now).toISOString();
             }
 
             let query = supabase
@@ -274,13 +267,61 @@ const PortalPajak = () => {
         }
     };
 
+    const sortedData = React.useMemo(() => {
+        let sortableItems = [...historyList];
+        if (sortConfig.key && sortConfig.direction) {
+            sortableItems.sort((a, b) => {
+                let aValue: any;
+                let bValue: any;
+
+                if (sortConfig.key === 'jumlah_pajak') {
+                    aValue = (pajakData[a.id_tagihan] || []).reduce((sum, p) => sum + (parseFloat(p.jumlah_pajak) || 0), 0);
+                    bValue = (pajakData[b.id_tagihan] || []).reduce((sum, p) => sum + (parseFloat(p.jumlah_pajak) || 0), 0);
+                } else if (sortConfig.key === 'jenis_pajak') {
+                    aValue = (pajakData[a.id_tagihan] || []).map(p => p.jenis_pajak).join(', ');
+                    bValue = (pajakData[b.id_tagihan] || []).map(p => p.jenis_pajak).join(', ');
+                } else if (sortConfig.key === 'kode_akun') {
+                    aValue = (pajakData[a.id_tagihan] || []).map(p => p.kode_akun).join(', ');
+                    bValue = (pajakData[b.id_tagihan] || []).map(p => p.kode_akun).join(', ');
+                } else {
+                    aValue = a[sortConfig.key as keyof Tagihan];
+                    bValue = b[sortConfig.key as keyof Tagihan];
+                }
+
+                if (aValue === null || aValue === undefined) return 1;
+                if (bValue === null || bValue === undefined) return -1;
+
+                if (typeof aValue === 'string') aValue = aValue.toLowerCase();
+                if (typeof bValue === 'string') bValue = bValue.toLowerCase();
+
+                if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+                if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
+                return 0;
+            });
+        }
+        return sortableItems;
+    }, [historyList, sortConfig, pajakData]);
+
     if (sessionLoading) return null;
     if (profile?.peran !== 'Staf Pajak' && profile?.peran !== 'Administrator') {
         return <div className="p-8 text-center text-slate-500">Akses ditolak.</div>;
     }
 
-    const totalPages = Math.ceil(historyList.length / pageSize);
-    const paginatedData = historyList.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+    const handleSort = (key: string) => {
+        let direction: 'asc' | 'desc' = 'asc';
+        if (sortConfig.key === key && sortConfig.direction === 'asc') {
+            direction = 'desc';
+        }
+        setSortConfig({ key, direction });
+    };
+
+    const SortIcon = ({ columnKey }: { columnKey: string }) => {
+        if (sortConfig.key !== columnKey) return <ArrowUpDown className="ml-2 h-3 w-3 opacity-30" />;
+        return sortConfig.direction === 'asc' ? <ArrowUp className="ml-2 h-3 w-3 text-emerald-600" /> : <ArrowDown className="ml-2 h-3 w-3 text-emerald-600" />;
+    };
+
+    const paginatedData = sortedData.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+    const totalPages = Math.ceil(sortedData.length / pageSize);
 
     // Calculate grand totals of all shown in historyList
     const grandTotalPajak = historyList.reduce((acc, h) => {
@@ -324,22 +365,11 @@ const PortalPajak = () => {
                             />
                         </div>
                         <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
-                            <div className="w-full sm:w-48">
-                                <Combobox
-                                    options={months}
-                                    value={selectedMonth}
-                                    onValueChange={setSelectedMonth}
-                                    placeholder="Filter Bulan"
-                                    className="w-full h-10 rounded-xl border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50"
-                                />
-                            </div>
-                            <div className="w-full sm:w-32">
-                                <Combobox
-                                    options={years}
-                                    value={selectedYear}
-                                    onValueChange={setSelectedYear}
-                                    placeholder="Filter Tahun"
-                                    className="w-full h-10 rounded-xl border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50"
+                            <div className="w-full sm:w-64">
+                                <DateRangePickerWithPresets
+                                    date={dateRange}
+                                    onDateChange={setDateRange}
+                                    className="w-full"
                                 />
                             </div>
                             <div className="w-full sm:w-64">
@@ -436,23 +466,59 @@ const PortalPajak = () => {
                                     <TableHead className="sticky top-0 z-30 bg-emerald-50 dark:bg-slate-900 border-b border-emerald-100 dark:border-emerald-800 font-bold text-emerald-900 dark:text-emerald-100">
                                         No
                                     </TableHead>
-                                    <TableHead className="sticky top-0 z-30 bg-emerald-50 dark:bg-slate-900 border-b border-emerald-100 dark:border-emerald-800 font-bold text-emerald-900 dark:text-emerald-100">
-                                        SKPD
+                                    <TableHead
+                                        className="sticky top-0 z-30 bg-emerald-50 dark:bg-slate-900 border-b border-emerald-100 dark:border-emerald-800 font-bold text-emerald-900 dark:text-emerald-100 cursor-pointer hover:bg-emerald-100/50 transition-colors"
+                                        onClick={() => handleSort('nama_skpd')}
+                                    >
+                                        <div className="flex items-center">
+                                            SKPD
+                                            <SortIcon columnKey="nama_skpd" />
+                                        </div>
                                     </TableHead>
-                                    <TableHead className="sticky top-0 z-30 bg-emerald-50 dark:bg-slate-900 border-b border-emerald-100 dark:border-emerald-800 font-bold text-emerald-900 dark:text-emerald-100">
-                                        No. SP2D
+                                    <TableHead
+                                        className="sticky top-0 z-30 bg-emerald-50 dark:bg-slate-900 border-b border-emerald-100 dark:border-emerald-800 font-bold text-emerald-900 dark:text-emerald-100 cursor-pointer hover:bg-emerald-100/50 transition-colors"
+                                        onClick={() => handleSort('nomor_sp2d')}
+                                    >
+                                        <div className="flex items-center">
+                                            No. SP2D
+                                            <SortIcon columnKey="nomor_sp2d" />
+                                        </div>
                                     </TableHead>
-                                    <TableHead className="sticky top-0 z-30 bg-emerald-50 dark:bg-slate-900 border-b border-emerald-100 dark:border-emerald-800 font-bold text-emerald-900 dark:text-emerald-100 text-right">
-                                        Nilai Belanja
+                                    <TableHead
+                                        className="sticky top-0 z-30 bg-emerald-50 dark:bg-slate-900 border-b border-emerald-100 dark:border-emerald-800 font-bold text-emerald-900 dark:text-emerald-100 text-right cursor-pointer hover:bg-emerald-100/50 transition-colors"
+                                        onClick={() => handleSort('jumlah_kotor')}
+                                    >
+                                        <div className="flex items-center justify-end">
+                                            Nilai Belanja
+                                            <SortIcon columnKey="jumlah_kotor" />
+                                        </div>
                                     </TableHead>
-                                    <TableHead className="sticky top-0 z-30 bg-emerald-50 dark:bg-slate-900 border-b border-emerald-100 dark:border-emerald-800 font-bold text-emerald-900 dark:text-emerald-100">
-                                        Jenis Pajak
+                                    <TableHead
+                                        className="sticky top-0 z-30 bg-emerald-50 dark:bg-slate-900 border-b border-emerald-100 dark:border-emerald-800 font-bold text-emerald-900 dark:text-emerald-100 cursor-pointer hover:bg-emerald-100/50 transition-colors"
+                                        onClick={() => handleSort('jenis_pajak')}
+                                    >
+                                        <div className="flex items-center">
+                                            Jenis Pajak
+                                            <SortIcon columnKey="jenis_pajak" />
+                                        </div>
                                     </TableHead>
-                                    <TableHead className="sticky top-0 z-30 bg-emerald-50 dark:bg-slate-900 border-b border-emerald-100 dark:border-emerald-800 font-bold text-emerald-900 dark:text-emerald-100">
-                                        Kode Akun
+                                    <TableHead
+                                        className="sticky top-0 z-30 bg-emerald-50 dark:bg-slate-900 border-b border-emerald-100 dark:border-emerald-800 font-bold text-emerald-900 dark:text-emerald-100 cursor-pointer hover:bg-emerald-100/50 transition-colors"
+                                        onClick={() => handleSort('kode_akun')}
+                                    >
+                                        <div className="flex items-center">
+                                            Kode Akun
+                                            <SortIcon columnKey="kode_akun" />
+                                        </div>
                                     </TableHead>
-                                    <TableHead className="sticky top-0 z-30 bg-emerald-50 dark:bg-slate-900 border-b border-emerald-100 dark:border-emerald-800 font-bold text-emerald-900 dark:text-emerald-100 text-right">
-                                        Jumlah Pajak
+                                    <TableHead
+                                        className="sticky top-0 z-30 bg-emerald-50 dark:bg-slate-900 border-b border-emerald-100 dark:border-emerald-800 font-bold text-emerald-900 dark:text-emerald-100 text-right cursor-pointer hover:bg-emerald-100/50 transition-colors"
+                                        onClick={() => handleSort('jumlah_pajak')}
+                                    >
+                                        <div className="flex items-center justify-end">
+                                            Jumlah Pajak
+                                            <SortIcon columnKey="jumlah_pajak" />
+                                        </div>
                                     </TableHead>
                                     <TableHead className="sticky top-0 z-30 bg-emerald-50 dark:bg-slate-900 border-b border-emerald-100 dark:border-emerald-800 font-bold text-emerald-900 dark:text-emerald-100 text-center">
                                         Aksi
@@ -484,7 +550,7 @@ const PortalPajak = () => {
                                         </TableCell>
                                     </TableRow>
                                 ) : (
-                                    historyList.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((h, idx) => (
+                                    paginatedData.map((h, idx) => (
                                         <TableRow key={h.id_tagihan} className="hover:bg-emerald-50/30 dark:hover:bg-emerald-950/20 transition-colors">
                                             <TableCell className="font-medium text-slate-600 dark:text-slate-400">
                                                 {(currentPage - 1) * pageSize + idx + 1}
