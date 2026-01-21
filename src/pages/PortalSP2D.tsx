@@ -57,7 +57,7 @@ import {
     ArrowUp,
     ArrowDown,
 } from 'lucide-react';
-import { format, parseISO, startOfDay, getMonth, getYear } from 'date-fns';
+import { format, parseISO, startOfDay, getMonth, getYear, startOfYear, endOfYear } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
 import { toast } from 'sonner';
 import useDebounce from '@/hooks/use-debounce';
@@ -136,9 +136,14 @@ const PortalSP2D = () => {
     // Main Table Pagination State
     const [historyCurrentPage, setHistoryCurrentPage] = useState(1);
     const [historyPageSize, setHistoryPageSize] = useState(10);
+    const [pendingCount, setPendingCount] = useState(0);
+    const [oldestPending, setOldestPending] = useState<string | null>(null);
 
     // Antrian Dialog State (only visibility control)
     const [isAntrianDialogOpen, setIsAntrianDialogOpen] = useState(false);
+
+    // Sequence Handling
+    const [nextNomorUrut, setNextNomorUrut] = useState<number | null>(null);
 
     // Sorting State
     const [sortConfig, setSortConfig] = useState<{
@@ -190,8 +195,35 @@ const PortalSP2D = () => {
         if (user && (profile?.peran === 'Register SP2D' || profile?.peran === 'Administrator')) {
             // Main table (History) uses main panel filters
             fetchHistory();
+            fetchQueueSummary();
         }
     }, [user, profile, debouncedSearchQuery, selectedSkpd, mainSelectedMonth, mainSelectedYear]);
+
+    const fetchQueueSummary = async () => {
+        try {
+            const now = new Date();
+            const startDate = startOfYear(now).toISOString();
+            const endDate = endOfYear(now).toISOString();
+
+            const { data, count, error } = await supabase
+                .from('database_tagihan')
+                .select('waktu_verifikasi', { count: 'exact' })
+                .eq('status_tagihan', 'Diteruskan')
+                .gte('waktu_verifikasi', startDate)
+                .lte('waktu_verifikasi', endDate)
+                .order('waktu_verifikasi', { ascending: true });
+
+            if (error) throw error;
+            setPendingCount(count || 0);
+            if (data && data.length > 0) {
+                setOldestPending(data[0].waktu_verifikasi);
+            } else {
+                setOldestPending(null);
+            }
+        } catch (error: any) {
+            console.error('Error fetching queue summary:', error);
+        }
+    };
 
     const fetchSkpdOptions = async () => {
         try {
@@ -206,6 +238,29 @@ const PortalSP2D = () => {
             setSkpdOptions([{ value: 'Semua SKPD', label: 'Semua SKPD' }, ...uniqueSkpd]);
         } catch (error: any) {
             console.error('Error fetching SKPD:', error.message);
+        }
+    };
+
+    const fetchNextNomorUrut = async () => {
+        try {
+            const { data, error } = await supabase
+                .from('database_tagihan')
+                .select('nomor_urut_sp2d')
+                .not('nomor_urut_sp2d', 'is', null)
+                .order('nomor_urut_sp2d', { ascending: false })
+                .limit(1);
+
+            if (error) throw error;
+
+            const next = (data && data.length > 0)
+                ? (data[0].nomor_urut_sp2d + 1)
+                : 1;
+
+            setNextNomorUrut(next);
+            return next;
+        } catch (error: any) {
+            console.error('Error fetching next nomor urut:', error);
+            return null;
         }
     };
 
@@ -233,7 +288,7 @@ const PortalSP2D = () => {
                 .lte('tanggal_sp2d', endDateStr);
 
             if (debouncedSearchQuery) {
-                query = query.ilike('nomor_spm', `%${debouncedSearchQuery}%`);
+                query = query.ilike('nomor_sp2d', `%${debouncedSearchQuery}%`);
             }
             if (selectedSkpd !== 'Semua SKPD') {
                 query = query.eq('nama_skpd', selectedSkpd);
@@ -250,11 +305,19 @@ const PortalSP2D = () => {
         }
     };
 
-    const handleRegisterClick = (tagihan: Tagihan) => {
+    const handleRegisterClick = async (tagihan: Tagihan) => {
+        setIsAntrianDialogOpen(false);
         setSelectedTagihanForRegister(tagihan);
-        setIsFromAntrian(true);
         setIsRegisterOpen(true);
-        setIsAntrianDialogOpen(false); // Close the list when registering
+        setIsFromAntrian(true);
+
+        // Fetch next nomor urut right away so it's ready for the dialog
+        if (tagihan.status_tagihan !== 'Selesai') {
+            await fetchNextNomorUrut();
+        } else {
+            // If editing, use its own number
+            setNextNomorUrut(tagihan.nomor_urut_sp2d || null);
+        }
     };
 
     const handleConfirmRegister = async (data: {
@@ -262,23 +325,18 @@ const PortalSP2D = () => {
         nama_bank: string;
         tanggal_bsg: string;
         catatan_sp2d: string;
+        manual_sequence: string;
     }) => {
         if (!selectedTagihanForRegister) return;
         setIsSubmitting(true);
         try {
-            // 1. Ambil nomor urut terakhir
-            const { data: lastData, error: lastError } = await supabase
-                .from('database_tagihan')
-                .select('nomor_urut_sp2d')
-                .not('nomor_urut_sp2d', 'is', null)
-                .order('nomor_urut_sp2d', { ascending: false })
-                .limit(1);
+            const isEdit = selectedTagihanForRegister.status_tagihan === 'Selesai';
+            let finalNomorUrut = nextNomorUrut || 0;
+            let finalWaktuReg = selectedTagihanForRegister.waktu_registrasi_sp2d;
 
-            if (lastError) throw lastError;
-
-            const nextNomorUrut = (lastData && lastData.length > 0)
-                ? (lastData[0].nomor_urut_sp2d + 1)
-                : 1;
+            if (!isEdit) {
+                finalWaktuReg = new Date().toISOString();
+            }
 
             // 1.5 Ambil setting nomor_sp2d dari admin (app_settings)
             const { data: settingData } = await supabase
@@ -289,29 +347,54 @@ const PortalSP2D = () => {
 
             const nomorSp2dSetting = settingData?.value || '04.0';
 
-            // Generate Nomor SP2D Lengkap (Snapshot)
+            // Generate Nomor SP2D Lengkap (Safe Reconstruction)
             let finalNomorSp2d = selectedTagihanForRegister.nomor_spm;
             if (finalNomorSp2d && finalNomorSp2d.includes('/')) {
                 const parts = finalNomorSp2d.split('/');
-                if (parts.length >= 2) {
-                    parts[1] = nomorSp2dSetting;
-                    finalNomorSp2d = parts.join('/');
-                }
+                const wilayah = parts[0];
+
+                // Cari index bagian yang mengandung huruf (seperti LS, GU, dsb)
+                // Ini adalah anchor untuk memisahkan prefix wilayah/sequence dari isi SPM
+                const jenisIndex = parts.findIndex((p, i) => i > 0 && /[a-zA-Z]/.test(p));
+                const restParts = jenisIndex !== -1 ? parts.slice(jenisIndex) : parts.slice(2);
+
+                finalNomorSp2d = [
+                    wilayah,
+                    nomorSp2dSetting,
+                    data.manual_sequence,
+                    ...restParts
+                ].join('/');
             }
 
-            // 2. Simpan registrasi dengan nomor urut permanen & nomor sp2d snapshot
+            // 2. Simpan registrasi
+            const { manual_sequence, ...submitData } = data;
             const { error } = await supabase
                 .from('database_tagihan')
                 .update({
-                    ...data,
+                    ...submitData,
                     status_tagihan: 'Selesai',
-                    nomor_urut_sp2d: nextNomorUrut,
+                    nomor_urut_sp2d: finalNomorUrut,
                     nomor_sp2d: finalNomorSp2d,
-                    waktu_registrasi_sp2d: new Date().toISOString()
+                    waktu_registrasi_sp2d: finalWaktuReg,
+                    nama_register_sp2d: profile?.nama_lengkap
                 })
                 .eq('id_tagihan', selectedTagihanForRegister.id_tagihan);
 
             if (error) throw error;
+
+            // 3. Catat ke Activity Log (Bonus: Audit Trail)
+            await supabase.from('activity_log').insert({
+                user_id: user?.id || '',
+                user_role: profile?.peran || '',
+                action: isEdit ? 'TAGIHAN_UPDATED' : 'STATUS_CHANGED',
+                tagihan_terkait: selectedTagihanForRegister.id_tagihan,
+                details: {
+                    old_status: selectedTagihanForRegister.status_tagihan,
+                    new_status: 'Selesai',
+                    nomor_sp2d: finalNomorSp2d,
+                    note: isEdit ? 'Update data Registrasi SP2D' : 'Registrasi SP2D berhasil'
+                }
+            });
 
             toast.success('Registrasi SP2D berhasil disimpan!');
             setIsRegisterOpen(false);
@@ -329,6 +412,7 @@ const PortalSP2D = () => {
 
     const handleEditClick = (tagihan: Tagihan) => {
         setSelectedTagihanForRegister(tagihan);
+        setNextNomorUrut(tagihan.nomor_urut_sp2d || null);
         setIsFromAntrian(false);
         setIsRegisterOpen(true);
     };
@@ -354,10 +438,26 @@ const PortalSP2D = () => {
                     nama_bank: null,
                     tanggal_bsg: null,
                     catatan_sp2d: null,
+                    waktu_registrasi_sp2d: null,
+                    nama_register_sp2d: null
                 })
                 .eq('id_tagihan', tagihanToDelete.id_tagihan);
 
             if (error) throw error;
+
+            // Catat ke Activity Log
+            await supabase.from('activity_log').insert({
+                user_id: user?.id || '',
+                user_role: profile?.peran || '',
+                action: 'STATUS_CHANGED',
+                tagihan_terkait: tagihanToDelete.id_tagihan,
+                details: {
+                    old_status: 'Selesai',
+                    new_status: 'Diteruskan',
+                    reason: 'Pembatalan/Penghapusan Registrasi SP2D',
+                    nomor_sp2d: tagihanToDelete.nomor_sp2d
+                }
+            });
 
             toast.success('Registrasi SP2D berhasil dihapus dan dikembalikan ke antrian!');
             setIsDeleteDialogOpen(false);
@@ -398,7 +498,37 @@ const PortalSP2D = () => {
                         </p>
                     </div>
                 </div>
+
             </div>
+
+            {/* Warning Banner for Pending Bills */}
+            {pendingCount > 0 && (
+                <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20 border border-amber-200 dark:border-amber-800/50 rounded-2xl p-4 shadow-sm animate-in slide-in-from-top duration-500">
+                    <div className="flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-4">
+                            <div className="h-10 w-10 rounded-xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center text-amber-600">
+                                <Clock className="h-6 w-6 animate-pulse" />
+                            </div>
+                            <div>
+                                <h4 className="text-[15px] font-bold text-amber-800 dark:text-amber-400">Peringatan: Antrian Menunggu!</h4>
+                                <p className="text-xs text-amber-700/80 dark:text-amber-500/70 font-medium">
+                                    Terdapat <span className="font-black text-amber-900 dark:text-amber-300">{pendingCount} tagihan</span> yang sedang menunggu di antrian.
+                                    {oldestPending && (
+                                        <> Tagihan tertua masuk sejak <span className="font-black text-amber-900 dark:text-amber-300">{format(parseISO(oldestPending), 'dd MMMM yyyy', { locale: localeId })}</span>.</>
+                                    )}
+                                </p>
+                            </div>
+                        </div>
+                        <Button
+                            variant="link"
+                            onClick={() => setIsAntrianDialogOpen(true)}
+                            className="text-amber-800 dark:text-amber-400 font-bold text-xs flex items-center gap-1.5 hover:no-underline hover:opacity-80 transition-opacity"
+                        >
+                            Proses Sekarang <ChevronRight className="h-4 w-4" />
+                        </Button>
+                    </div>
+                </div>
+            )}
 
             {/* Filter Section */}
             <Card className="border-none shadow-xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-md rounded-2xl overflow-hidden">
@@ -407,7 +537,7 @@ const PortalSP2D = () => {
                         <div className="relative flex-1 w-full group">
                             <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-emerald-500 transition-colors" />
                             <Input
-                                placeholder="Cari berdasarkan Nomor SPM..."
+                                placeholder="Cari berdasarkan Nomor SP2D..."
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                                 className="pl-11 h-10 border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-emerald-500/20 transition-all rounded-xl font-medium placeholder:text-slate-400 dark:placeholder:text-slate-500"
@@ -521,11 +651,11 @@ const PortalSP2D = () => {
                                     </TableHead>
                                     <TableHead
                                         className="sticky top-0 z-30 bg-emerald-50 dark:bg-slate-900 border-b border-emerald-100 dark:border-emerald-800 font-bold text-emerald-900 dark:text-emerald-100 cursor-pointer hover:bg-emerald-100/50 dark:hover:bg-emerald-900/50 transition-colors"
-                                        onClick={() => handleSort('nomor_spm')}
+                                        onClick={() => handleSort('nomor_sp2d')}
                                     >
                                         <div className="flex items-center gap-1">
                                             No. SP2D
-                                            {sortConfig.column === 'nomor_spm' ? (
+                                            {sortConfig.column === 'nomor_sp2d' ? (
                                                 sortConfig.direction === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
                                             ) : <ArrowUpDown className="h-3 w-3 opacity-30" />}
                                         </div>
@@ -619,7 +749,21 @@ const PortalSP2D = () => {
                                                 </div>
                                             </TableCell>
                                             <TableCell className="font-mono text-sm font-medium text-emerald-700 dark:text-emerald-400">
-                                                {h.nomor_spm.split('/')[2]?.padStart(6, '0') || '-'}
+                                                <TooltipProvider>
+                                                    <Tooltip>
+                                                        <TooltipTrigger asChild>
+                                                            <div className="max-w-[180px] truncate cursor-help hover:text-emerald-600 dark:hover:text-emerald-300 transition-colors">
+                                                                {h.nomor_sp2d || '-'}
+                                                            </div>
+                                                        </TooltipTrigger>
+                                                        <TooltipContent side="top" className="max-w-md break-all font-mono text-xs p-3">
+                                                            <div className="space-y-1">
+                                                                <p className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">Nomor SP2D Lengkap</p>
+                                                                <p>{h.nomor_sp2d}</p>
+                                                            </div>
+                                                        </TooltipContent>
+                                                    </Tooltip>
+                                                </TooltipProvider>
                                             </TableCell>
                                             <TableCell className="min-w-[200px]">
                                                 <div className="font-bold text-slate-900 dark:text-white leading-snug" title={h.nama_skpd}>
@@ -778,6 +922,7 @@ const PortalSP2D = () => {
                 onConfirm={handleConfirmRegister}
                 tagihan={selectedTagihanForRegister}
                 isSubmitting={isSubmitting}
+                nextNomorUrut={nextNomorUrut}
             />
 
             <SP2DDetailDialog

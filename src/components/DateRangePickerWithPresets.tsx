@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { format, addDays, subDays, startOfMonth, endOfMonth, startOfWeek, endOfWeek, isSameDay } from 'date-fns';
+import { format, addDays, subDays, startOfMonth, endOfMonth, startOfWeek, endOfWeek, isSameDay, startOfYear, endOfYear } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
 import { Calendar as CalendarIcon } from 'lucide-react';
 import { DateRange } from 'react-day-picker';
@@ -15,6 +15,7 @@ interface DateRangePickerWithPresetsProps extends React.HTMLAttributes<HTMLDivEl
   onDateChange: (date: DateRange | undefined) => void;
   align?: 'start' | 'center' | 'end';
   className?: string;
+  numberOfMonths?: number;
 }
 
 export function DateRangePickerWithPresets({
@@ -22,6 +23,7 @@ export function DateRangePickerWithPresets({
   onDateChange,
   className,
   align = 'end',
+  numberOfMonths = 2,
 }: DateRangePickerWithPresetsProps) {
   const handlePresetChange = (value: string) => {
     const today = new Date();
@@ -45,6 +47,9 @@ export function DateRangePickerWithPresets({
         const lastMonthEnd = endOfMonth(subDays(today, 30));
         newDateRange = { from: lastMonthStart, to: lastMonthEnd };
         break;
+      case 'thisyear':
+        newDateRange = { from: startOfYear(today), to: endOfYear(today) };
+        break;
       case 'clear':
         newDateRange = undefined;
         break;
@@ -63,10 +68,12 @@ export function DateRangePickerWithPresets({
     if (isSameDay(date.from, subDays(today, 6)) && isSameDay(date.to, today)) return 'last7days';
     if (isSameDay(date.from, subDays(today, 29)) && isSameDay(date.to, today)) return 'last30days';
     if (isSameDay(date.from, startOfMonth(today)) && isSameDay(date.to, endOfMonth(today))) return 'thismonth';
-    
+
     const lastMonthStart = startOfMonth(subDays(today, 30));
     const lastMonthEnd = endOfMonth(subDays(today, 30));
     if (isSameDay(date.from, lastMonthStart) && isSameDay(date.to, lastMonthEnd)) return 'lastmonth';
+
+    if (isSameDay(date.from, startOfYear(today)) && isSameDay(date.to, endOfYear(today))) return 'thisyear';
 
     return 'custom';
   };
@@ -110,6 +117,7 @@ export function DateRangePickerWithPresets({
                 <SelectItem value="last30days">30 Hari Terakhir</SelectItem>
                 <SelectItem value="thismonth">Bulan Ini</SelectItem>
                 <SelectItem value="lastmonth">Bulan Lalu</SelectItem>
+                <SelectItem value="thisyear">Tahun Ini</SelectItem>
                 <SelectItem value="custom">Rentang Kustom</SelectItem>
               </SelectContent>
             </Select>
@@ -119,7 +127,7 @@ export function DateRangePickerWithPresets({
               defaultMonth={date?.from}
               selected={date}
               onSelect={onDateChange}
-              numberOfMonths={2}
+              numberOfMonths={numberOfMonths}
               locale={localeId}
             />
             {date?.from && (

@@ -37,4 +37,5 @@ export interface Tagihan {
     nomor_urut_sp2d?: number;
     nomor_sp2d?: string;
     waktu_registrasi_sp2d?: string;
+    nama_register_sp2d?: string;
 }

@@ -25,9 +25,10 @@ interface PrintSP2DReportDialogProps {
         year: string;
         skpd: string;
     };
+    isAdmin?: boolean;
 }
 
-const PrintSP2DReportDialog = ({ isOpen, onOpenChange, data, nomorSp2dSetting, filters }: PrintSP2DReportDialogProps) => {
+const PrintSP2DReportDialog = ({ isOpen, onOpenChange, data, nomorSp2dSetting, filters, isAdmin }: PrintSP2DReportDialogProps) => {
     const handlePrint = () => {
         window.print();
     };
@@ -141,6 +142,7 @@ const PrintSP2DReportDialog = ({ isOpen, onOpenChange, data, nomorSp2dSetting, f
                         <th className="font-bold w-[100px]">JUMLAH (Rp)</th>
                         <th className="font-bold w-[80px]">NAMA BANK</th>
                         <th className="font-bold w-[60px]">TGL. SERAH BSG</th>
+                        <th className="font-bold w-[120px]">{isAdmin ? 'SUMBER DANA' : 'CATATAN'}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -170,6 +172,9 @@ const PrintSP2DReportDialog = ({ isOpen, onOpenChange, data, nomorSp2dSetting, f
                                 <td className="text-center">
                                     {item.tanggal_bsg ? format(parseISO(item.tanggal_bsg), 'dd/MM/yyyy') : '-'}
                                 </td>
+                                <td className={`text-[9px] leading-tight text-left ${isAdmin ? '' : 'italic'}`}>
+                                    {isAdmin ? (item.sumber_dana || '-') : (item.catatan_sp2d || '-')}
+                                </td>
                             </tr>
                         ))
                     )}
@@ -181,7 +186,7 @@ const PrintSP2DReportDialog = ({ isOpen, onOpenChange, data, nomorSp2dSetting, f
                             <td className="p-2 text-right">
                                 {new Intl.NumberFormat('id-ID').format(data.reduce((sum, item) => sum + (item.jumlah_kotor || 0), 0))}
                             </td>
-                            <td colSpan={2} className=""></td>
+                            <td colSpan={3} className=""></td>
                         </tr>
                     </tfoot>
                 )}
@@ -240,12 +245,13 @@ const PrintSP2DReportDialog = ({ isOpen, onOpenChange, data, nomorSp2dSetting, f
                                         <th className="border border-black p-1.5 align-middle text-right uppercase font-bold w-[110px]">JUMLAH (Rp)</th>
                                         <th className="border border-black p-1.5 align-middle text-center uppercase font-bold w-[100px]">NAMA BANK</th>
                                         <th className="border border-black p-1.5 align-middle text-center uppercase font-bold w-[85px]">TGL. SERAH BSG</th>
+                                        <th className="border border-black p-1.5 align-middle text-left uppercase font-bold w-[150px]">{isAdmin ? 'SUMBER DANA' : 'CATATAN'}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {data.length === 0 ? (
                                         <tr>
-                                            <td colSpan={9} className="border border-black p-4 text-center">Tidak ada data ditemukan untuk periode ini.</td>
+                                            <td colSpan={10} className="border border-black p-4 text-center">Tidak ada data ditemukan untuk periode ini.</td>
                                         </tr>
                                     ) : (
                                         data.map((item) => (
@@ -269,6 +275,9 @@ const PrintSP2DReportDialog = ({ isOpen, onOpenChange, data, nomorSp2dSetting, f
                                                 <td className="border border-black p-1.5 text-center">
                                                     {item.tanggal_bsg ? format(parseISO(item.tanggal_bsg), 'dd/MM/yyyy') : '-'}
                                                 </td>
+                                                <td className={`border border-black p-1.5 text-[9px] leading-tight ${isAdmin ? '' : 'italic'}`}>
+                                                    {isAdmin ? (item.sumber_dana || '-') : (item.catatan_sp2d || '-')}
+                                                </td>
                                             </tr>
                                         ))
                                     )}
@@ -280,7 +289,7 @@ const PrintSP2DReportDialog = ({ isOpen, onOpenChange, data, nomorSp2dSetting, f
                                             <td className="border border-black p-2 text-right">
                                                 {new Intl.NumberFormat('id-ID').format(data.reduce((sum, item) => sum + (item.jumlah_kotor || 0), 0))}
                                             </td>
-                                            <td colSpan={2} className="border border-black"></td>
+                                            <td colSpan={3} className="border border-black"></td>
                                         </tr>
                                     </tfoot>
                                 )}

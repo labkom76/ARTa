@@ -37,7 +37,7 @@ import {
     FileTextIcon,
     Printer,
 } from 'lucide-react';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, startOfDay, endOfDay } from 'date-fns';
 import { toast } from 'sonner';
 import useDebounce from '@/hooks/use-debounce';
 import { getJenisTagihanCode } from '@/utils/spmGenerator';
@@ -45,33 +45,14 @@ import { Combobox } from '@/components/ui/combobox';
 import { Tagihan } from '@/types/tagihan';
 import * as XLSX from 'xlsx';
 import PrintSP2DReportDialog from '@/components/PrintSP2DReportDialog';
+import { DateRange } from 'react-day-picker';
+import { DateRangePickerWithPresets } from '@/components/DateRangePickerWithPresets';
 
 interface SkpdOption {
     value: string;
     label: string;
 }
-
-const months = [
-    { value: 'all', label: 'Semua Bulan' },
-    { value: '0', label: 'Januari' },
-    { value: '1', label: 'Februari' },
-    { value: '2', label: 'Maret' },
-    { value: '3', label: 'April' },
-    { value: '4', label: 'Mei' },
-    { value: '5', label: 'Juni' },
-    { value: '6', label: 'Juli' },
-    { value: '7', label: 'Agustus' },
-    { value: '8', label: 'September' },
-    { value: '9', label: 'Oktober' },
-    { value: '10', label: 'November' },
-    { value: '11', label: 'Desember' },
-];
-
 const currentYear = new Date().getFullYear();
-const years = Array.from({ length: 5 }, (_, i) => ({
-    value: (currentYear - 2 + i).toString(),
-    label: (currentYear - 2 + i).toString(),
-}));
 
 const PortalRegistrasiSP2D = () => {
     const { user, profile, loading: sessionLoading } = useSession();
@@ -81,8 +62,10 @@ const PortalRegistrasiSP2D = () => {
     const [skpdOptions, setSkpdOptions] = useState<SkpdOption[]>([]);
 
     // Period Filters
-    const [selectedMonth, setSelectedMonth] = useState<string>('all');
-    const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString());
+    const [filterDate, setFilterDate] = useState('');
+    const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+    const [filterNoReg, setFilterNoReg] = useState<string>('');
+    const debouncedFilterNoReg = useDebounce(filterNoReg, 700);
 
     // Data State
     const [historyList, setHistoryList] = useState<Tagihan[]>([]);
@@ -153,7 +136,7 @@ const PortalRegistrasiSP2D = () => {
         if (user && (profile?.peran === 'Register SP2D' || profile?.peran === 'Administrator')) {
             fetchData();
         }
-    }, [user, profile, debouncedSearchQuery, selectedSkpd, selectedMonth, selectedYear]);
+    }, [user, profile, debouncedSearchQuery, selectedSkpd, dateRange, debouncedFilterNoReg]);
 
     const fetchSetting = async () => {
         try {
@@ -191,29 +174,58 @@ const PortalRegistrasiSP2D = () => {
             let startDateStr: string;
             let endDateStr: string;
 
-            if (selectedMonth !== 'all') {
-                startDateStr = format(new Date(parseInt(selectedYear), parseInt(selectedMonth), 1), 'yyyy-MM-dd');
-                endDateStr = format(new Date(parseInt(selectedYear), parseInt(selectedMonth) + 1, 0), 'yyyy-MM-dd');
-            } else {
-                startDateStr = format(new Date(parseInt(selectedYear), 0, 1), 'yyyy-MM-dd');
-                endDateStr = format(new Date(parseInt(selectedYear), 11, 31), 'yyyy-MM-dd');
-            }
-
             let query = supabase
                 .from('database_tagihan')
                 .select('*')
-                .eq('status_tagihan', 'Selesai')
-                .gte('tanggal_sp2d', startDateStr)
-                .lte('tanggal_sp2d', endDateStr);
+                .eq('status_tagihan', 'Selesai');
+
+            if (dateRange?.from || dateRange?.to) {
+                if (dateRange?.from) {
+                    query = query.gte('tanggal_sp2d', format(dateRange.from, 'yyyy-MM-dd'));
+                }
+                if (dateRange?.to) {
+                    query = query.lte('tanggal_sp2d', format(dateRange.to, 'yyyy-MM-dd'));
+                }
+            } else {
+                startDateStr = format(new Date(currentYear, 0, 1), 'yyyy-MM-dd');
+                endDateStr = format(new Date(currentYear, 11, 31), 'yyyy-MM-dd');
+                query = query.gte('tanggal_sp2d', startDateStr).lte('tanggal_sp2d', endDateStr);
+            }
 
             if (debouncedSearchQuery) {
-                query = query.ilike('nomor_spm', `%${debouncedSearchQuery}%`);
+                query = query.ilike('nomor_sp2d', `%${debouncedSearchQuery}%`);
             }
             if (selectedSkpd !== 'Semua SKPD') {
                 query = query.eq('nama_skpd', selectedSkpd);
             }
+            // Removed filterDate in favor of dateRange as per AdminTagihan style
+            if (debouncedFilterNoReg) {
+                const queryStr = debouncedFilterNoReg.trim();
 
-            const { data, error } = await query;
+                if (queryStr.includes('-')) {
+                    // Range: 1-10
+                    const parts = queryStr.split('-').map(p => parseInt(p.trim()));
+                    if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+                        query = query.gte('nomor_urut_sp2d', parts[0]).lte('nomor_urut_sp2d', parts[1]);
+                    }
+                } else if (queryStr.includes(',')) {
+                    // List: 1,2,5
+                    const numbers = queryStr.split(',')
+                        .map(p => parseInt(p.trim()))
+                        .filter(n => !isNaN(n));
+                    if (numbers.length > 0) {
+                        query = query.in('nomor_urut_sp2d', numbers);
+                    }
+                } else {
+                    // Single number
+                    const noRegInt = parseInt(queryStr);
+                    if (!isNaN(noRegInt)) {
+                        query = query.eq('nomor_urut_sp2d', noRegInt);
+                    }
+                }
+            }
+
+            const { data, error } = await query.order('nomor_urut_sp2d', { ascending: true });
             if (error) throw error;
             setHistoryList(data as Tagihan[]);
         } catch (error: any) {
@@ -231,19 +243,33 @@ const PortalRegistrasiSP2D = () => {
         }
 
         try {
-            // Map data including the new 'CATATAN' column
-            const exportData = historyList.map(h => ({
-                'No. Reg.': h.nomor_urut_sp2d || '-',
-                'TGL. SP2D': h.tanggal_sp2d ? format(parseISO(h.tanggal_sp2d), 'dd/MM/yyyy') : '-',
-                'NO. SP2D': h.nomor_sp2d || formatNoSP2D(h.nomor_spm),
-                'JENIS': getJenisTagihanCode(h.jenis_tagihan),
-                'S K P D': h.nama_skpd,
-                'URAIAN': h.uraian,
-                'JUMLAH': h.jumlah_kotor,
-                'NAMA BANK': h.nama_bank || '-',
-                'TANGGAL DISERAHKAN KE BSG': h.tanggal_bsg ? format(parseISO(h.tanggal_bsg), 'dd/MM/yyyy') : '-',
-                'CATATAN': h.catatan_sp2d || '-'
-            }));
+            // Map data from sortedList to respect current UI sorting (default is by No. Reg 1)
+            const isAdmin = profile?.peran === 'Administrator';
+            const exportData = sortedList.map(h => {
+                const baseData = {
+                    'No. Reg.': h.nomor_urut_sp2d || '-',
+                    'TGL. SP2D': h.tanggal_sp2d ? format(parseISO(h.tanggal_sp2d), 'dd/MM/yyyy') : '-',
+                    'NO. SP2D': h.nomor_sp2d || formatNoSP2D(h.nomor_spm),
+                    'JENIS': getJenisTagihanCode(h.jenis_tagihan),
+                    'S K P D': h.nama_skpd,
+                    'URAIAN': h.uraian,
+                    'JUMLAH': h.jumlah_kotor,
+                    'NAMA BANK': h.nama_bank || '-',
+                    'TANGGAL DISERAHKAN KE BSG': h.tanggal_bsg ? format(parseISO(h.tanggal_bsg), 'dd/MM/yyyy') : '-',
+                };
+
+                if (isAdmin) {
+                    return {
+                        ...baseData,
+                        'SUMBER DANA': h.sumber_dana || '-'
+                    };
+                }
+
+                return {
+                    ...baseData,
+                    'CATATAN': h.catatan_sp2d || '-'
+                };
+            });
 
             const ws = XLSX.utils.json_to_sheet(exportData);
 
@@ -258,7 +284,7 @@ const PortalRegistrasiSP2D = () => {
                 { wch: 20 },  // JUMLAH
                 { wch: 15 },  // NAMA BANK
                 { wch: 25 },  // TANGGAL DISERAHKAN KE BSG
-                { wch: 40 }   // CATATAN
+                isAdmin ? { wch: 25 } : { wch: 40 } // SUMBER DANA or CATATAN
             ];
             ws['!cols'] = wscols;
 
@@ -275,8 +301,7 @@ const PortalRegistrasiSP2D = () => {
             XLSX.utils.book_append_sheet(wb, ws, "Register_SP2D");
 
             // Generate a more descriptive dynamic filename
-            const monthLabel = selectedMonth === 'all' ? 'Semua_Bulan' : months.find(m => m.value === selectedMonth)?.label;
-            const filename = `Register_SP2D_${monthLabel}_${selectedYear}.xlsx`;
+            const filename = `Register_SP2D_Semua_Bulan_${currentYear}.xlsx`;
 
             XLSX.writeFile(wb, filename);
             toast.success('Laporan Excel berhasil diunduh!');
@@ -301,49 +326,85 @@ const PortalRegistrasiSP2D = () => {
 
     return (
         <div className="space-y-4 animate-in fade-in duration-500 pb-8">
-            {/* Filter Section */}
-            <Card className="border-none shadow-sm bg-white dark:bg-slate-900 ring-1 ring-slate-200 dark:ring-slate-800 overflow-hidden">
+            {/* Premium Single-Row Filter Toolbar */}
+            <Card className="border-none shadow-md bg-white dark:bg-slate-900 ring-1 ring-slate-200/60 dark:ring-slate-800/60 overflow-hidden transform transition-all">
                 <CardContent className="p-4">
-                    <div className="flex flex-col lg:flex-row gap-4">
-                        <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-3">
-                            <div className="relative">
-                                <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                    <div className="flex flex-col lg:flex-row items-end gap-3.5">
+                        {/* Search Focus */}
+                        <div className="flex-[1.5] min-w-[200px] space-y-2 w-full">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Pencarian SP2D</label>
+                            <div className="relative group">
+                                <SearchIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-emerald-500 transition-colors" />
                                 <Input
-                                    placeholder="Cari No. SPM / SP2D..."
-                                    className="pl-9 h-10 bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 focus:ring-emerald-500 rounded-xl"
+                                    placeholder="Cari No. SP2D..."
+                                    className="pl-10 h-11 bg-slate-50/50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 focus:ring-emerald-500/20 focus:border-emerald-500 rounded-xl shadow-sm transition-all text-sm font-medium"
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
                                 />
                             </div>
+                        </div>
+
+                        {/* Reg No */}
+                        <div className="flex-1 min-w-[150px] space-y-2 w-full">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">No. Registrasi</label>
+                            <div className="relative group">
+                                <FileTextIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-emerald-500 transition-colors" />
+                                <Input
+                                    placeholder="1-10, dst"
+                                    className="pl-10 h-11 bg-slate-50/50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 focus:ring-emerald-500/20 focus:border-emerald-500 rounded-xl shadow-sm transition-all text-sm font-medium"
+                                    value={filterNoReg}
+                                    onChange={(e) => setFilterNoReg(e.target.value)}
+                                />
+                            </div>
+                        </div>
+
+                        {/* SKPD Selector */}
+                        <div className="flex-[2] min-w-[250px] space-y-2 w-full">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Satuan Kerja (SKPD)</label>
                             <Combobox
                                 options={skpdOptions}
                                 value={selectedSkpd}
                                 onValueChange={setSelectedSkpd}
-                                placeholder="Pilih SKPD..."
-                                className="w-full h-10 rounded-xl"
+                                placeholder="Semua SKPD"
+                                className="w-full h-11 rounded-xl shadow-sm bg-slate-50/50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 transition-all text-sm font-semibold"
                             />
-                            <div className="grid grid-cols-2 gap-2">
-                                <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-                                    <SelectTrigger className="h-10 px-3 bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 rounded-xl">
-                                        <SelectValue placeholder="Bulan" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {months.map(m => (
-                                            <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                                <Select value={selectedYear} onValueChange={setSelectedYear}>
-                                    <SelectTrigger className="h-10 px-3 bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 rounded-xl">
-                                        <SelectValue placeholder="Tahun" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {years.map(y => (
-                                            <SelectItem key={y.value} value={y.value}>{y.label}</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
+                        </div>
+
+                        {/* Date Range & Reset */}
+                        <div className="flex-[1.5] min-w-[240px] flex items-end gap-2 w-full">
+                            <div className="flex-1 space-y-2">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Periode</label>
+                                <DateRangePickerWithPresets
+                                    date={dateRange}
+                                    onDateChange={setDateRange}
+                                    className="h-11 w-full shadow-sm"
+                                    numberOfMonths={1}
+                                    align="end"
+                                />
                             </div>
+                            <TooltipProvider>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button
+                                            variant="outline"
+                                            size="icon"
+                                            className="h-11 w-11 rounded-xl border-slate-200 dark:border-slate-800 hover:bg-red-50 hover:border-red-200 hover:text-red-500 dark:hover:bg-red-950/20 transition-all shadow-sm shrink-0"
+                                            onClick={() => {
+                                                setFilterDate('');
+                                                setDateRange(undefined);
+                                                setFilterNoReg('');
+                                                setSearchQuery('');
+                                                setSelectedSkpd('Semua SKPD');
+                                            }}
+                                        >
+                                            <RefreshCw className="h-4 w-4" />
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                        <p>Reset Filter</p>
+                                    </TooltipContent>
+                                </Tooltip>
+                            </TooltipProvider>
                         </div>
                     </div>
                 </CardContent>
@@ -432,24 +493,33 @@ const PortalRegistrasiSP2D = () => {
                                 <TableHead className="w-[250px] font-bold text-slate-700 dark:text-slate-300 uppercase text-[11px] tracking-wider">
                                     SKPD
                                 </TableHead>
-                                <TableHead className="w-[350px] font-bold text-slate-700 dark:text-slate-300 uppercase text-[11px] tracking-wider">
+                                <TableHead className="w-[300px] font-bold text-slate-700 dark:text-slate-300 uppercase text-[11px] tracking-wider">
                                     Uraian
                                 </TableHead>
                                 <TableHead className="w-[150px] font-bold text-slate-700 dark:text-slate-300 uppercase text-[11px] tracking-wider text-right">
                                     Jumlah
                                 </TableHead>
-                                <TableHead className="w-[150px] font-bold text-slate-700 dark:text-slate-300 uppercase text-[11px] tracking-wider">
+                                <TableHead className="w-[120px] font-bold text-slate-700 dark:text-slate-300 uppercase text-[11px] tracking-wider">
                                     Nama Bank
                                 </TableHead>
-                                <TableHead className="w-[150px] font-bold text-slate-700 dark:text-slate-300 uppercase text-[11px] tracking-wider">
+                                <TableHead className="w-[120px] font-bold text-slate-700 dark:text-slate-300 uppercase text-[11px] tracking-wider">
                                     Tgl. Serah BSG
                                 </TableHead>
+                                {profile?.peran === 'Administrator' ? (
+                                    <TableHead className="w-[150px] font-bold text-slate-700 dark:text-slate-300 uppercase text-[11px] tracking-wider">
+                                        Sumber Dana
+                                    </TableHead>
+                                ) : (
+                                    <TableHead className="w-[150px] font-bold text-slate-700 dark:text-slate-300 uppercase text-[11px] tracking-wider">
+                                        Catatan
+                                    </TableHead>
+                                )}
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {loading ? (
                                 <TableRow>
-                                    <TableCell colSpan={9} className="h-32 text-center">
+                                    <TableCell colSpan={10} className="h-32 text-center">
                                         <div className="flex flex-col items-center gap-2">
                                             <RefreshCw className="h-6 w-6 animate-spin text-emerald-500" />
                                             <p className="text-sm text-slate-500 font-medium">Memuat data...</p>
@@ -458,7 +528,7 @@ const PortalRegistrasiSP2D = () => {
                                 </TableRow>
                             ) : paginatedList.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={9} className="h-32 text-center text-slate-500 font-medium font-mono text-sm uppercase">
+                                    <TableCell colSpan={10} className="h-32 text-center text-slate-500 font-medium font-mono text-sm uppercase">
                                         Tidak ada data ditemukan
                                     </TableCell>
                                 </TableRow>
@@ -469,8 +539,22 @@ const PortalRegistrasiSP2D = () => {
                                         <TableCell className="text-slate-600 dark:text-slate-400 whitespace-nowrap">
                                             {item.tanggal_sp2d ? format(parseISO(item.tanggal_sp2d), 'dd/MM/yyyy') : '-'}
                                         </TableCell>
-                                        <TableCell className="font-mono text-[13px] text-emerald-700 dark:text-emerald-400 font-bold leading-tight break-all">
-                                            {item.nomor_sp2d || formatNoSP2D(item.nomor_spm)}
+                                        <TableCell className="font-mono text-[13px] text-emerald-700 dark:text-emerald-400 font-bold leading-tight">
+                                            <TooltipProvider>
+                                                <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                        <div className="max-w-[240px] truncate cursor-help hover:text-emerald-600 dark:hover:text-emerald-300 transition-colors">
+                                                            {item.nomor_sp2d || (typeof formatNoSP2D === 'function' ? formatNoSP2D(item.nomor_spm) : item.nomor_spm)}
+                                                        </div>
+                                                    </TooltipTrigger>
+                                                    <TooltipContent side="top" className="max-w-md break-all font-mono text-xs p-3">
+                                                        <div className="space-y-1">
+                                                            <p className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">Nomor SP2D Lengkap</p>
+                                                            <p>{item.nomor_sp2d || (typeof formatNoSP2D === 'function' ? formatNoSP2D(item.nomor_spm) : item.nomor_spm)}</p>
+                                                        </div>
+                                                    </TooltipContent>
+                                                </Tooltip>
+                                            </TooltipProvider>
                                         </TableCell>
                                         <TableCell>
                                             <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 text-[10px] font-black uppercase">
@@ -480,8 +564,19 @@ const PortalRegistrasiSP2D = () => {
                                         <TableCell className="text-slate-700 dark:text-slate-300 text-xs font-bold leading-snug">
                                             {item.nama_skpd}
                                         </TableCell>
-                                        <TableCell className="text-slate-600 dark:text-slate-400 text-[11px] leading-relaxed max-w-[350px]">
-                                            {item.uraian}
+                                        <TableCell className="text-slate-600 dark:text-slate-400 text-[11px] leading-relaxed max-w-[300px]">
+                                            <TooltipProvider>
+                                                <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                        <div className="truncate cursor-help">
+                                                            {item.uraian}
+                                                        </div>
+                                                    </TooltipTrigger>
+                                                    <TooltipContent side="top" className="max-w-md p-3">
+                                                        <p className="text-xs leading-relaxed">{item.uraian}</p>
+                                                    </TooltipContent>
+                                                </Tooltip>
+                                            </TooltipProvider>
                                         </TableCell>
                                         <TableCell className="text-right font-bold text-slate-900 dark:text-slate-200">
                                             {new Intl.NumberFormat('id-ID').format(item.jumlah_kotor)}
@@ -491,6 +586,24 @@ const PortalRegistrasiSP2D = () => {
                                         </TableCell>
                                         <TableCell className="text-slate-600 dark:text-slate-400 whitespace-nowrap text-xs">
                                             {item.tanggal_bsg ? format(parseISO(item.tanggal_bsg), 'dd/MM/yyyy') : '-'}
+                                        </TableCell>
+                                        <TableCell>
+                                            {profile?.peran === 'Administrator' ? (
+                                                <span className="text-slate-700 dark:text-slate-300 text-xs font-bold uppercase tracking-tight">
+                                                    {item.sumber_dana || '-'}
+                                                </span>
+                                            ) : (
+                                                <TooltipProvider>
+                                                    <Tooltip>
+                                                        <TooltipTrigger asChild>
+                                                            <div className="text-[11px] font-medium text-slate-500 dark:text-slate-500 max-w-[150px] truncate cursor-help">
+                                                                {item.catatan_sp2d || '-'}
+                                                            </div>
+                                                        </TooltipTrigger>
+                                                        {item.catatan_sp2d && <TooltipContent><p className="max-w-xs">{item.catatan_sp2d}</p></TooltipContent>}
+                                                    </Tooltip>
+                                                </TooltipProvider>
+                                            )}
                                         </TableCell>
                                     </TableRow>
                                 ))
@@ -549,7 +662,7 @@ const PortalRegistrasiSP2D = () => {
                         </Button>
                     </div>
                 </div>
-            </Card>
+            </Card >
 
             <PrintSP2DReportDialog
                 isOpen={isPrintDialogOpen}
@@ -557,12 +670,13 @@ const PortalRegistrasiSP2D = () => {
                 data={sortedList}
                 nomorSp2dSetting={nomorSp2dSetting}
                 filters={{
-                    month: selectedMonth,
-                    year: selectedYear,
+                    month: 'all',
+                    year: currentYear.toString(),
                     skpd: selectedSkpd
                 }}
+                isAdmin={profile?.peran === 'Administrator'}
             />
-        </div>
+        </div >
     );
 };
 
