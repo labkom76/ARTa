@@ -84,12 +84,30 @@ const RegisterSP2DDialog: React.FC<RegisterSP2DDialogProps> = ({
     const [isCalendarBsgOpen, setIsCalendarBsgOpen] = useState(false);
 
     const [extractedKodeSp2d, setExtractedKodeSp2d] = useState('');
+    const [activeScheduleCode, setActiveScheduleCode] = useState('');
 
     const [bankOptions, setBankOptions] = useState<BankOption[]>([]);
     const [isLoadingBanks, setIsLoadingBanks] = useState(false);
     const [isConfirmAddBankOpen, setIsConfirmAddBankOpen] = useState(false);
     const [isConfirmSubmitOpen, setIsConfirmSubmitOpen] = useState(false);
     const [tempBankName, setTempBankName] = useState('');
+
+    const fetchActiveSchedule = async () => {
+        try {
+            const { data, error } = await supabase
+                .from('master_jadwal')
+                .select('kode_jadwal')
+                .eq('is_active', true)
+                .maybeSingle();
+
+            if (error) throw error;
+            if (data) {
+                setActiveScheduleCode(data.kode_jadwal);
+            }
+        } catch (error: any) {
+            console.error('Error fetching active schedule:', error.message);
+        }
+    };
 
     const fetchBanks = async () => {
         setIsLoadingBanks(true);
@@ -122,6 +140,7 @@ const RegisterSP2DDialog: React.FC<RegisterSP2DDialogProps> = ({
     useEffect(() => {
         if (isOpen) {
             fetchBanks();
+            fetchActiveSchedule();
         }
     }, [isOpen]);
 
@@ -192,12 +211,20 @@ const RegisterSP2DDialog: React.FC<RegisterSP2DDialogProps> = ({
                 setManualSequence('');
             }
 
-            if (tagihan.nomor_spm) {
+            // Sync visual extractedKodeSp2d: [ACTIVE_JADWAL]/[BULAN]/[TAHUN]
+            if (activeScheduleCode) {
+                const dateToUse = tanggalSp2d || new Date();
+                const m = format(dateToUse, 'M');
+                const y = format(dateToUse, 'yyyy');
+                setExtractedKodeSp2d(`${activeScheduleCode}/${m}/${y}`);
+            } else if (tagihan.nomor_spm) {
+                // Fallback parsing manual if no active schedule yet
                 const mIndex = tagihan.nomor_spm.indexOf('/M/');
                 if (mIndex !== -1) {
-                    setExtractedKodeSp2d(tagihan.nomor_spm.substring(mIndex));
+                    setExtractedKodeSp2d(tagihan.nomor_spm.substring(mIndex + 1));
                 } else {
-                    setExtractedKodeSp2d('');
+                    const now = new Date();
+                    setExtractedKodeSp2d(`M/${format(now, 'M')}/${format(now, 'yyyy')}`);
                 }
             }
 
@@ -208,7 +235,7 @@ const RegisterSP2DDialog: React.FC<RegisterSP2DDialogProps> = ({
             setTanggalBsg(tagihan.tanggal_bsg ? parseISO(tagihan.tanggal_bsg) : new Date());
             setCatatanSp2d(tagihan.catatan_sp2d || '');
         }
-    }, [tagihan]);
+    }, [tagihan, activeScheduleCode, tanggalSp2d]);
 
     if (!tagihan) return null;
 

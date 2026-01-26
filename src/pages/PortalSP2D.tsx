@@ -347,6 +347,15 @@ const PortalSP2D = () => {
 
             const nomorSp2dSetting = settingData?.value || '04.0';
 
+            // 1.6 Ambil Jadwal Aktif
+            const { data: activeSchedule } = await supabase
+                .from('master_jadwal')
+                .select('kode_jadwal')
+                .eq('is_active', true)
+                .maybeSingle();
+
+            const activeScheduleCode = activeSchedule?.kode_jadwal;
+
             // Generate Nomor SP2D Lengkap (Safe Reconstruction)
             let finalNomorSp2d = selectedTagihanForRegister.nomor_spm;
             if (finalNomorSp2d && finalNomorSp2d.includes('/')) {
@@ -356,14 +365,52 @@ const PortalSP2D = () => {
                 // Cari index bagian yang mengandung huruf (seperti LS, GU, dsb)
                 // Ini adalah anchor untuk memisahkan prefix wilayah/sequence dari isi SPM
                 const jenisIndex = parts.findIndex((p, i) => i > 0 && /[a-zA-Z]/.test(p));
-                const restParts = jenisIndex !== -1 ? parts.slice(jenisIndex) : parts.slice(2);
 
-                finalNomorSp2d = [
-                    wilayah,
-                    nomorSp2dSetting,
-                    data.manual_sequence,
-                    ...restParts
-                ].join('/');
+                if (jenisIndex !== -1) {
+                    const restParts = [...parts.slice(jenisIndex)];
+
+                    // Replace kode_jadwal, bulan, dan tahun (disesuaikan dengan tanggal SP2D)
+                    // Format restParts: [JENIS, KODE_SKPD, KODE_JADWAL, BULAN, TAHUN]
+                    const sp2dDate = parseISO(data.tanggal_sp2d);
+                    const m = format(sp2dDate, 'M');
+                    const y = format(sp2dDate, 'yyyy');
+
+                    if (restParts.length >= 3 && activeScheduleCode) {
+                        restParts[2] = activeScheduleCode;
+                    }
+                    if (restParts.length >= 4) {
+                        restParts[3] = m;
+                    }
+                    if (restParts.length >= 5) {
+                        restParts[4] = y;
+                    }
+
+                    finalNomorSp2d = [
+                        wilayah,
+                        nomorSp2dSetting,
+                        data.manual_sequence,
+                        ...restParts
+                    ].join('/');
+                } else {
+                    // Fallback jika tidak menemukan anchor huruf
+                    const sp2dDate = parseISO(data.tanggal_sp2d);
+                    const m = format(sp2dDate, 'M');
+                    const y = format(sp2dDate, 'yyyy');
+
+                    finalNomorSp2d = [
+                        wilayah,
+                        nomorSp2dSetting,
+                        data.manual_sequence,
+                        ...parts.slice(2)
+                    ].join('/');
+
+                    // Jika ada active schedule/tanggal baru, coba replace part akhir secara manual
+                    if (activeScheduleCode) {
+                        // Regex untuk menargetkan /KODE/BULAN/TAHUN di akhir string
+                        // Contoh format: .../M/1/2026
+                        finalNomorSp2d = finalNomorSp2d.replace(/\/[^\/]+\/\d+\/\d{4}$/, `/${activeScheduleCode}/${m}/${y}`);
+                    }
+                }
             }
 
             // 2. Simpan registrasi
