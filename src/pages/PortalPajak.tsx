@@ -40,6 +40,13 @@ import {
     TooltipTrigger,
 } from '@/components/ui/tooltip';
 import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+    DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
+import {
     SearchIcon,
     RefreshCw,
     ChevronLeft,
@@ -52,7 +59,8 @@ import {
     Trash2,
     ArrowUpDown,
     ArrowUp,
-    ArrowDown
+    ArrowDown,
+    MoreVertical
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { format, parseISO } from 'date-fns';
@@ -369,6 +377,7 @@ const PortalPajak = () => {
                                 <DateRangePickerWithPresets
                                     date={dateRange}
                                     onDateChange={setDateRange}
+                                    placeholder="Filter Tgl SP2D"
                                     className="w-full"
                                 />
                             </div>
@@ -468,6 +477,15 @@ const PortalPajak = () => {
                                     </TableHead>
                                     <TableHead
                                         className="sticky top-0 z-30 bg-emerald-50 dark:bg-slate-900 border-b border-emerald-100 dark:border-emerald-800 font-bold text-emerald-900 dark:text-emerald-100 cursor-pointer hover:bg-emerald-100/50 transition-colors"
+                                        onClick={() => handleSort('tanggal_sp2d')}
+                                    >
+                                        <div className="flex items-center">
+                                            Tgl SP2D
+                                            <SortIcon columnKey="tanggal_sp2d" />
+                                        </div>
+                                    </TableHead>
+                                    <TableHead
+                                        className="sticky top-0 z-30 bg-emerald-50 dark:bg-slate-900 border-b border-emerald-100 dark:border-emerald-800 font-bold text-emerald-900 dark:text-emerald-100 cursor-pointer hover:bg-emerald-100/50 transition-colors"
                                         onClick={() => handleSort('nama_skpd')}
                                     >
                                         <div className="flex items-center">
@@ -528,7 +546,7 @@ const PortalPajak = () => {
                             <TableBody>
                                 {loading ? (
                                     <TableRow>
-                                        <TableCell colSpan={8} className="text-center py-20">
+                                        <TableCell colSpan={9} className="text-center py-20">
                                             <div className="flex flex-col items-center gap-3">
                                                 <div className="relative w-12 h-12">
                                                     <div className="absolute inset-0 rounded-full border-4 border-emerald-200 dark:border-emerald-900"></div>
@@ -540,7 +558,7 @@ const PortalPajak = () => {
                                     </TableRow>
                                 ) : historyList.length === 0 ? (
                                     <TableRow>
-                                        <TableCell colSpan={8} className="text-center py-20">
+                                        <TableCell colSpan={9} className="text-center py-20">
                                             <div className="flex flex-col items-center gap-3">
                                                 <div className="p-4 rounded-full bg-slate-100 dark:bg-slate-800">
                                                     <WalletIcon className="h-8 w-8 text-slate-400 dark:text-slate-600" />
@@ -555,10 +573,13 @@ const PortalPajak = () => {
                                             <TableCell className="font-medium text-slate-600 dark:text-slate-400">
                                                 {(currentPage - 1) * pageSize + idx + 1}
                                             </TableCell>
-                                            <TableCell className="max-w-[300px]">
+                                            <TableCell className="whitespace-nowrap font-medium text-slate-700 dark:text-slate-300">
+                                                {h.tanggal_sp2d ? format(parseISO(h.tanggal_sp2d), 'dd/MM/yyyy') : '-'}
+                                            </TableCell>
+                                            <TableCell className="max-w-[200px]">
                                                 <div className="font-bold text-slate-900 dark:text-slate-100 leading-tight">{h.nama_skpd}</div>
                                             </TableCell>
-                                            <TableCell className="max-w-[280px]">
+                                            <TableCell className="max-w-[240px]">
                                                 <TooltipProvider>
                                                     <Tooltip>
                                                         <TooltipTrigger asChild>
@@ -587,57 +608,43 @@ const PortalPajak = () => {
                                                     : '-'
                                                 }
                                             </TableCell>
-                                            <TableCell className="text-center">
-                                                <div className="flex justify-center gap-1.5">
-                                                    <TooltipProvider>
-                                                        <Tooltip>
-                                                            <TooltipTrigger asChild>
-                                                                <Button
-                                                                    variant="outline"
-                                                                    size="icon"
-                                                                    className="h-8 w-8 hover:bg-emerald-50 hover:border-emerald-500 hover:text-emerald-600 dark:hover:bg-emerald-950 dark:hover:border-emerald-500 dark:hover:text-emerald-400 transition-colors"
-                                                                    title="Lihat Detail"
-                                                                    onClick={() => handleViewPajak(h)}
-                                                                >
-                                                                    <Eye className="h-4 w-4" />
-                                                                </Button>
-                                                            </TooltipTrigger>
-                                                            <TooltipContent>Lihat Detail Pajak</TooltipContent>
-                                                        </Tooltip>
-                                                    </TooltipProvider>
-                                                    <TooltipProvider>
-                                                        <Tooltip>
-                                                            <TooltipTrigger asChild>
-                                                                <Button
-                                                                    variant="outline"
-                                                                    size="icon"
-                                                                    className="h-8 w-8 hover:bg-blue-50 hover:border-blue-500 hover:text-blue-600 dark:hover:bg-blue-950 dark:hover:border-blue-500 dark:hover:text-blue-400 transition-colors"
-                                                                    title="Edit Pajak"
-                                                                    onClick={() => handleInputPajak(h)}
-                                                                >
-                                                                    <Edit className="h-4 w-4" />
-                                                                </Button>
-                                                            </TooltipTrigger>
-                                                            <TooltipContent>Edit Data Pajak</TooltipContent>
-                                                        </Tooltip>
-                                                    </TooltipProvider>
-                                                    <TooltipProvider>
-                                                        <Tooltip>
-                                                            <TooltipTrigger asChild>
-                                                                <Button
-                                                                    variant="outline"
-                                                                    size="icon"
-                                                                    className="h-8 w-8 hover:bg-red-50 hover:border-red-500 hover:text-red-600 dark:hover:bg-red-950 dark:hover:border-red-500 dark:hover:text-red-400 transition-colors"
-                                                                    title="Hapus Data Pajak"
-                                                                    onClick={() => handleDeletePajak(h)}
-                                                                >
-                                                                    <Trash2 className="h-4 w-4" />
-                                                                </Button>
-                                                            </TooltipTrigger>
-                                                            <TooltipContent>Hapus Data Pajak</TooltipContent>
-                                                        </Tooltip>
-                                                    </TooltipProvider>
-                                                </div>
+                                            <TableCell className="text-center w-[60px]">
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-8 w-8 hover:bg-emerald-100/50 dark:hover:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400"
+                                                        >
+                                                            <MoreVertical className="h-4 w-4" />
+                                                            <span className="sr-only">Menu Aksi</span>
+                                                        </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end" className="w-[160px]">
+                                                        <DropdownMenuItem
+                                                            onClick={() => handleViewPajak(h)}
+                                                            className="cursor-pointer flex items-center gap-2 text-slate-700 dark:text-slate-300"
+                                                        >
+                                                            <Eye className="h-4 w-4 text-emerald-500" />
+                                                            <span>Lihat Detail</span>
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem
+                                                            onClick={() => handleInputPajak(h)}
+                                                            className="cursor-pointer flex items-center gap-2 text-slate-700 dark:text-slate-300"
+                                                        >
+                                                            <Edit className="h-4 w-4 text-blue-500" />
+                                                            <span>Edit Data</span>
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuSeparator />
+                                                        <DropdownMenuItem
+                                                            onClick={() => handleDeletePajak(h)}
+                                                            className="cursor-pointer flex items-center gap-2 text-red-600 dark:text-red-400 focus:text-red-700 focus:bg-red-50 dark:focus:bg-red-950/30"
+                                                        >
+                                                            <Trash2 className="h-4 w-4" />
+                                                            <span>Hapus Pajak</span>
+                                                        </DropdownMenuItem>
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
                                             </TableCell>
                                         </TableRow>
                                     ))
@@ -646,7 +653,7 @@ const PortalPajak = () => {
                             {historyList.length > 0 && (
                                 <tfoot className="sticky bottom-0 z-30 bg-slate-50 dark:bg-slate-900 border-t-2 border-slate-200 dark:border-slate-800">
                                     <TableRow className="hover:bg-transparent">
-                                        <TableCell colSpan={3} className="py-4 text-right">
+                                        <TableCell colSpan={4} className="py-4 text-right">
                                             <span className="text-sm font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest px-2">
                                                 Grand Total
                                             </span>

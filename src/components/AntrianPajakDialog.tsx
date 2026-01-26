@@ -169,6 +169,7 @@ const AntrianPajakDialog: React.FC<AntrianPajakDialogProps> = ({
                                             setDateRange(val);
                                             setCurrentPage(1);
                                         }}
+                                        placeholder="Filter Tgl SP2D"
                                         className="w-full"
                                         align="end"
                                     />

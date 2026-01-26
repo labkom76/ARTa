@@ -16,6 +16,7 @@ interface DateRangePickerWithPresetsProps extends React.HTMLAttributes<HTMLDivEl
   align?: 'start' | 'center' | 'end';
   className?: string;
   numberOfMonths?: number;
+  placeholder?: string;
 }
 
 export function DateRangePickerWithPresets({
@@ -24,6 +25,7 @@ export function DateRangePickerWithPresets({
   className,
   align = 'end',
   numberOfMonths = 2,
+  placeholder = "Pilih Tanggal",
 }: DateRangePickerWithPresetsProps) {
   const handlePresetChange = (value: string) => {
     const today = new Date();
@@ -101,7 +103,7 @@ export function DateRangePickerWithPresets({
                 format(date.from, 'dd MMM yyyy', { locale: localeId })
               )
             ) : (
-              <span>Pilih Tanggal</span>
+              <span>{placeholder}</span>
             )}
           </Button>
         </PopoverTrigger>
