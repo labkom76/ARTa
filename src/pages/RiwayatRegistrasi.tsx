@@ -162,7 +162,7 @@ const RiwayatRegistrasi = () => {
         let query = supabase
           .from('database_tagihan')
           .select('*', { count: 'exact' })
-          .in('status_tagihan', ['Menunggu Verifikasi', 'Diteruskan', 'Dikembalikan']) // MODIFIED: Hanya ambil status yang sudah diregistrasi
+          .in('status_tagihan', ['Menunggu Verifikasi', 'Diteruskan', 'Dikembalikan', 'Selesai']) // MODIFIED: Hanya ambil status yang sudah diregistrasi
           .order('waktu_registrasi', { ascending: false });
 
         if (debouncedSearchQuery) {
@@ -399,6 +399,7 @@ const RiwayatRegistrasi = () => {
                 <SelectItem value="Menunggu Verifikasi">Menunggu Verifikasi</SelectItem>
                 <SelectItem value="Diteruskan">Diteruskan</SelectItem>
                 <SelectItem value="Dikembalikan">Dikembalikan</SelectItem>
+                <SelectItem value="Selesai">Selesai (SP2D)</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -445,7 +446,7 @@ const RiwayatRegistrasi = () => {
 
         <div className="overflow-x-auto">
           <Table><TableHeader><TableRow>
-            <TableHead className="w-[50px]">No.</TableHead><TableHead>Waktu Registrasi</TableHead><TableHead>Nomor Registrasi</TableHead><TableHead>Tanggal SPM</TableHead><TableHead>Nomor SPM</TableHead><TableHead>Nama SKPD</TableHead><TableHead>Uraian</TableHead><TableHead>Jumlah Kotor</TableHead><TableHead>Status Tagihan</TableHead><TableHead className="text-center">Aksi</TableHead>
+            <TableHead className="w-[50px]">No.</TableHead><TableHead>Waktu Registrasi</TableHead><TableHead>Nomor Registrasi</TableHead><TableHead>Tanggal SPM</TableHead><TableHead>Nomor SPM</TableHead><TableHead>Nama SKPD</TableHead><TableHead>Jumlah Kotor</TableHead><TableHead>Status Tagihan</TableHead><TableHead className="text-center">Aksi</TableHead>
           </TableRow></TableHeader><TableBody>
               {loadingData && !loadingPagination ? (
                 <TableRow>
@@ -488,23 +489,6 @@ const RiwayatRegistrasi = () => {
                           <Copy className="h-3.5 w-3.5 text-slate-500 dark:text-slate-400" />
                         )}
                       </Button>
-                    </TableCell><TableCell className="min-w-[280px] relative group/uraian">
-                      <div className="pr-8">{tagihan.uraian || '-'}</div>
-                      {tagihan.uraian && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6 absolute top-1 right-1 opacity-0 group-hover/uraian:opacity-100 transition-opacity hover:bg-slate-100 dark:hover:bg-slate-800"
-                          onClick={() => handleCopyUraian(tagihan.uraian, tagihan.id_tagihan)}
-                          title="Salin uraian"
-                        >
-                          {copiedId === tagihan.id_tagihan ? (
-                            <Check className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
-                          ) : (
-                            <Copy className="h-3.5 w-3.5 text-slate-500 dark:text-slate-400" />
-                          )}
-                        </Button>
-                      )}
                     </TableCell><TableCell className="relative group/jumlah">
                       <div className="pr-8">Rp{tagihan.jumlah_kotor.toLocaleString('id-ID')}</div>
                       <Button

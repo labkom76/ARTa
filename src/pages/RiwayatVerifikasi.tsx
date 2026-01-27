@@ -193,7 +193,7 @@ const RiwayatVerifikasi = () => {
           .select('*', { count: 'exact' })
           .order('waktu_verifikasi', { ascending: false });
 
-        query = query.in('status_tagihan', ['Diteruskan', 'Dikembalikan']);
+        query = query.in('status_tagihan', ['Diteruskan', 'Dikembalikan', 'Selesai']);
 
         if (profile?.peran === 'Staf Verifikator') {
           query = query.is('id_korektor', null);
@@ -474,6 +474,7 @@ const RiwayatVerifikasi = () => {
                 <SelectItem value="Semua Status">Semua Status</SelectItem>
                 <SelectItem value="Diteruskan">Diteruskan</SelectItem>
                 <SelectItem value="Dikembalikan">Dikembalikan</SelectItem>
+                <SelectItem value="Selesai">Selesai (SP2D)</SelectItem>
               </SelectContent>
             </Select>
           </div>
