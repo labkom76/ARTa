@@ -31,12 +31,33 @@ const SP2DDetailDialog: React.FC<SP2DDetailDialogProps> = ({
 }) => {
     if (!tagihan) return null;
 
-    // Extract logic consistent with Registry
-    const parts = tagihan.nomor_spm ? tagihan.nomor_spm.split('/') : [];
-    const extractedNoSp2d = parts.length > 2 ? parts[2].padStart(6, '0') : '-';
+    // Logic parsing yang cerdas: Prioritaskan nomor_sp2d jika ada
+    let extractedNoSp2d = '-';
+    let extractedKodeSp2d = '-';
 
-    const mIndex = tagihan.nomor_spm ? tagihan.nomor_spm.indexOf('/M/') : -1;
-    const extractedKodeSp2d = mIndex !== -1 ? tagihan.nomor_spm.substring(mIndex) : '-';
+    if (tagihan.nomor_sp2d) {
+        const parts = tagihan.nomor_sp2d.split('/');
+        // Format Baru: WILAYAH/SETTING/SEQ/JENIS/SKPD/JADWAL/BULAN/TAHUN (8 bagian)
+        if (parts.length >= 8) {
+            extractedNoSp2d = parts[2];
+            extractedKodeSp2d = parts.slice(5).join('/');
+        } else if (parts.length > 2) {
+            // Fallback jika format kustom lain tapi punya minimal 3 bagian
+            extractedNoSp2d = parts[2];
+            const mIndex = tagihan.nomor_sp2d.indexOf('/M/');
+            if (mIndex !== -1) {
+                extractedKodeSp2d = tagihan.nomor_sp2d.substring(mIndex + 1);
+            }
+        } else {
+            extractedNoSp2d = tagihan.nomor_sp2d;
+        }
+    } else if (tagihan.nomor_spm) {
+        // Fallback ke SPM logic jika belum ada nomor_sp2d
+        const parts = tagihan.nomor_spm.split('/');
+        extractedNoSp2d = parts.length > 2 ? parts[2].padStart(6, '0') : '-';
+        const mIndex = tagihan.nomor_spm.indexOf('/M/');
+        extractedKodeSp2d = mIndex !== -1 ? tagihan.nomor_spm.substring(mIndex + 1) : '-';
+    }
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>

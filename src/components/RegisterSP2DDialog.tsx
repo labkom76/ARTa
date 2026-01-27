@@ -185,40 +185,46 @@ const RegisterSP2DDialog: React.FC<RegisterSP2DDialogProps> = ({
         }
     };
 
+    // Effect 1: Initialize form fields when tagihan changes (e.g. dialog opens or record changes)
     useEffect(() => {
         if (tagihan) {
             // Data Otomatis & Sequence initialization (Robust Detection)
             if (tagihan.nomor_sp2d) {
                 const sp2dParts = tagihan.nomor_sp2d.split('/');
-                // SP2D usually has sequence at index 2 (after Wilayah and Setting)
                 if (sp2dParts.length > 2) {
                     setManualSequence(sp2dParts[2]);
                 }
             } else if (tagihan.nomor_spm) {
                 const spmParts = tagihan.nomor_spm.split('/');
-                // Cari index Jenis (bagian yang ada hurufnya, misal 'LS')
                 const jenisIndex = spmParts.findIndex((p, i) => i > 0 && /[a-zA-Z]/.test(p));
-
-                // Urutan SP2D biasanya tepat sebelum Jenis
                 if (jenisIndex > 0) {
                     setManualSequence(spmParts[jenisIndex - 1].padStart(6, '0'));
                 } else if (spmParts.length > 2) {
-                    setManualSequence(spmParts[2].padStart(6, '0')); // Fallback ke index 2
+                    setManualSequence(spmParts[2].padStart(6, '0'));
                 } else if (spmParts.length > 1) {
-                    setManualSequence(spmParts[1].padStart(6, '0')); // Fallback ke index 1
+                    setManualSequence(spmParts[1].padStart(6, '0'));
                 }
             } else {
                 setManualSequence('');
             }
 
-            // Sync visual extractedKodeSp2d: [ACTIVE_JADWAL]/[BULAN]/[TAHUN]
+            // Sync Manual Fields (Mode Edit vs Mode New)
+            setTanggalSp2d(tagihan.tanggal_sp2d ? parseISO(tagihan.tanggal_sp2d) : new Date());
+            setNamaBank(tagihan.nama_bank || 'SulutGo (BSG)');
+            setTanggalBsg(tagihan.tanggal_bsg ? parseISO(tagihan.tanggal_bsg) : new Date());
+            setCatatanSp2d(tagihan.catatan_sp2d || '');
+        }
+    }, [tagihan?.id_tagihan]); // Only trigger when the actual record changes
+
+    // Effect 2: Update extractedKodeSp2d dynamically when activeScheduleCode or tanggalSp2d changes
+    useEffect(() => {
+        if (tagihan) {
             if (activeScheduleCode) {
                 const dateToUse = tanggalSp2d || new Date();
                 const m = format(dateToUse, 'M');
                 const y = format(dateToUse, 'yyyy');
                 setExtractedKodeSp2d(`${activeScheduleCode}/${m}/${y}`);
             } else if (tagihan.nomor_spm) {
-                // Fallback parsing manual if no active schedule yet
                 const mIndex = tagihan.nomor_spm.indexOf('/M/');
                 if (mIndex !== -1) {
                     setExtractedKodeSp2d(tagihan.nomor_spm.substring(mIndex + 1));
@@ -227,15 +233,8 @@ const RegisterSP2DDialog: React.FC<RegisterSP2DDialogProps> = ({
                     setExtractedKodeSp2d(`M/${format(now, 'M')}/${format(now, 'yyyy')}`);
                 }
             }
-
-            // Sync Manual Fields
-            // Use existing data if available (Mode Edit), otherwise use defaults (Mode New)
-            setTanggalSp2d(tagihan.tanggal_sp2d ? parseISO(tagihan.tanggal_sp2d) : new Date());
-            setNamaBank(tagihan.nama_bank || 'SulutGo (BSG)');
-            setTanggalBsg(tagihan.tanggal_bsg ? parseISO(tagihan.tanggal_bsg) : new Date());
-            setCatatanSp2d(tagihan.catatan_sp2d || '');
         }
-    }, [tagihan, activeScheduleCode, tanggalSp2d]);
+    }, [tagihan?.id_tagihan, activeScheduleCode, tanggalSp2d]);
 
     if (!tagihan) return null;
 
