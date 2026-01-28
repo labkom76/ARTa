@@ -107,7 +107,7 @@ const formSchema = z.object({
   ),
   jenis_spm: z.string().min(1, { message: 'Jenis SPM wajib dipilih.' }),
   jenis_tagihan: z.string().min(1, { message: 'Jenis Tagihan wajib dipilih.' }),
-  status_tagihan: z.enum(['Menunggu Registrasi', 'Menunggu Verifikasi', 'Diteruskan', 'Dikembalikan'], {
+  status_tagihan: z.enum(['Menunggu Registrasi', 'Menunggu Verifikasi', 'Diteruskan', 'Dikembalikan', 'Selesai'], {
     required_error: 'Status Tagihan wajib dipilih.',
   }),
   kode_jadwal: z.string().min(1, { message: 'Kode Jadwal Penganggaran wajib dipilih.' }),
@@ -719,7 +719,11 @@ const EditTagihanDialog: React.FC<EditTagihanDialogProps> = ({ isOpen, onClose, 
                     name="status_tagihan"
                     control={form.control}
                     render={({ field }) => (
-                      <Select onValueChange={field.onChange} value={field.value} disabled={isSubmitting}>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value}
+                        disabled={isSubmitting || editingTagihan?.status_tagihan === 'Selesai'}
+                      >
                         <SelectTrigger className="border-slate-300 dark:border-slate-700">
                           <SelectValue placeholder="Pilih Status" />
                         </SelectTrigger>
@@ -728,6 +732,7 @@ const EditTagihanDialog: React.FC<EditTagihanDialogProps> = ({ isOpen, onClose, 
                           <SelectItem value="Menunggu Verifikasi">Menunggu Verifikasi</SelectItem>
                           <SelectItem value="Diteruskan">Diteruskan</SelectItem>
                           <SelectItem value="Dikembalikan">Dikembalikan</SelectItem>
+                          <SelectItem value="Selesai">Selesai</SelectItem>
                         </SelectContent>
                       </Select>
                     )}
