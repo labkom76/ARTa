@@ -429,20 +429,6 @@ const PortalSP2D = () => {
 
             if (error) throw error;
 
-            // 3. Catat ke Activity Log (Bonus: Audit Trail)
-            await supabase.from('activity_log').insert({
-                user_id: user?.id || '',
-                user_role: profile?.peran || '',
-                action: isEdit ? 'TAGIHAN_UPDATED' : 'STATUS_CHANGED',
-                tagihan_terkait: selectedTagihanForRegister.id_tagihan,
-                details: {
-                    old_status: selectedTagihanForRegister.status_tagihan,
-                    new_status: 'Selesai',
-                    nomor_sp2d: finalNomorSp2d,
-                    note: isEdit ? 'Update data Registrasi SP2D' : 'Registrasi SP2D berhasil'
-                }
-            });
-
             toast.success('Registrasi SP2D berhasil disimpan!');
             setIsRegisterOpen(false);
             fetchHistory();
