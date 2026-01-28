@@ -821,6 +821,7 @@ const AdminTagihan = () => {
                     <SelectItem value="Diteruskan">Diteruskan</SelectItem>
                     <SelectItem value="Dikembalikan">Dikembalikan</SelectItem>
                     <SelectItem value="Tinjau Kembali">Tinjau Kembali</SelectItem>
+                    <SelectItem value="Selesai">Selesai</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -1179,6 +1180,7 @@ const AdminTagihan = () => {
                   <SelectItem value="Diteruskan">Diteruskan</SelectItem>
                   <SelectItem value="Dikembalikan">Dikembalikan</SelectItem>
                   <SelectItem value="Tinjau Kembali">Tinjau Kembali</SelectItem>
+                  <SelectItem value="Selesai">Selesai</SelectItem>
                 </SelectContent>
               </Select>
 
