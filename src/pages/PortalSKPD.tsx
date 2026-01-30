@@ -362,13 +362,16 @@ const PortalSKPD = () => {
     }
 
     try {
-      const currentYear = new Date().getFullYear();
+      const now = new Date();
+      const monthStart = startOfMonth(now);
+      const monthEnd = endOfMonth(now);
 
       let query = supabase
         .from('database_tagihan')
         .select('*, skpd_can_edit, tenggat_perbaikan, waktu_verifikasi', { count: 'exact' }) // Select all columns for detail view, including skpd_can_edit and tenggat_perbaikan
         .eq('id_pengguna_input', user.id)
-        .ilike('nomor_spm', `%/${currentYear}`);
+        .gte('tanggal_spm', format(monthStart, 'yyyy-MM-dd'))
+        .lte('tanggal_spm', format(monthEnd, 'yyyy-MM-dd'));
 
       if (searchQuery) {
         query = query.ilike('nomor_spm', `%${searchQuery}%`);

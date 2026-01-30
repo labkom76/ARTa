@@ -19,7 +19,7 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { toast } from 'sonner';
-import { format, parseISO, startOfYear, endOfYear, startOfMonth, endOfMonth, startOfDay, endOfDay } from 'date-fns';
+import { format, parseISO, startOfYear, endOfYear, startOfMonth, endOfMonth, startOfDay, endOfDay, subMonths } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
 import StatusBadge from '@/components/StatusBadge';
 import { HistoryIcon, SearchIcon, EyeIcon, Sparkles, FilterIcon, CalendarIcon, Undo2, FileDownIcon, ClipboardListIcon } from 'lucide-react';
@@ -59,9 +59,13 @@ const RiwayatTagihan = () => {
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedStatus, setSelectedStatus] = useState<string>('Semua Status');
-    const currentYearInt = new Date().getFullYear();
-    const [selectedYear, setSelectedYear] = useState<string>((currentYearInt - 1).toString()); // Default to last year
-    const [selectedMonth, setSelectedMonth] = useState<string>('Semua Bulan');
+    const now = new Date();
+    const prevMonthDate = subMonths(now, 1);
+    const defaultYear = prevMonthDate.getFullYear().toString();
+    const defaultMonth = prevMonthDate.getMonth().toString();
+
+    const [selectedYear, setSelectedYear] = useState<string>(defaultYear);
+    const [selectedMonth, setSelectedMonth] = useState<string>(defaultMonth);
     const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
 
     // Pagination states
@@ -73,7 +77,8 @@ const RiwayatTagihan = () => {
     const [isDetailModalOpen, setIsDetailModal] = useState(false);
     const [selectedTagihanForDetail, setSelectedTagihanForDetail] = useState<Tagihan | null>(null);
 
-    const years = Array.from({ length: 5 }, (_, i) => (currentYearInt - 1 - i).toString()); // Start from last year (2025 if 2026)
+    const currentYearInt = now.getFullYear();
+    const years = Array.from({ length: 5 }, (_, i) => (currentYearInt - i).toString()); // Include current year and last 4 years
 
     const fetchHistory = async (isPaginationOnlyChange = false) => {
         if (!user || sessionLoading) return;
@@ -95,17 +100,21 @@ const RiwayatTagihan = () => {
             // But user said "tahun 2025 pindah ke riwayat", assuming 2026 is current.
 
             if (selectedYear !== 'Semua Tahun') {
-                // Use ILIKE on nomor_spm as the most reliable year detector for archiving
-                query = query.ilike('nomor_spm', `%/${selectedYear}`);
-            }
-
-            if (selectedMonth !== 'Semua Bulan') {
-                const monthIdx = parseInt(selectedMonth);
-                const yearForMonth = selectedYear !== 'Semua Tahun' ? parseInt(selectedYear) : currentYearInt;
-                const monthStart = startOfMonth(new Date(yearForMonth, monthIdx));
-                const monthEnd = endOfMonth(new Date(yearForMonth, monthIdx));
-                query = query.gte('tanggal_spm', format(monthStart, 'yyyy-MM-dd'))
-                    .lte('tanggal_spm', format(monthEnd, 'yyyy-MM-dd'));
+                if (selectedMonth !== 'Semua Bulan') {
+                    // Logic: filter by Month AND Year using nomor_spm segment
+                    // Format in nomor_spm is .../Month/Year where Month is 1-12
+                    const monthNum = parseInt(selectedMonth) + 1;
+                    query = query.ilike('nomor_spm', `%/${monthNum}/${selectedYear}`);
+                } else {
+                    // Filter by Year only using nomor_spm
+                    query = query.ilike('nomor_spm', `%/${selectedYear}`);
+                }
+            } else {
+                // If Year is "Semua Tahun" but month is selected (rare but possible)
+                if (selectedMonth !== 'Semua Bulan') {
+                    const monthNum = parseInt(selectedMonth) + 1;
+                    query = query.ilike('nomor_spm', `%/${monthNum}/%`);
+                }
             }
 
             if (dateRange?.from) {
