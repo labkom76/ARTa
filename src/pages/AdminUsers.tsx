@@ -132,8 +132,6 @@ const AdminUsers = () => {
         query = query.eq('peran', 'Administrator');
       } else if (selectedRoleFilter === 'Staf') {
         query = query.in('peran', ['Staf Registrasi', 'Staf Verifikator', 'Staf Koreksi', 'Register SP2D', 'Staf Pajak']);
-      } else if (selectedRoleFilter === 'Staf Pajak') {
-        query = query.eq('peran', 'Staf Pajak');
       } else if (selectedRoleFilter === 'SKPD (Semua)') {
         query = query.eq('peran', 'SKPD');
       } else if (selectedRoleFilter === 'SKPD (Menunggu Aktivasi)') {
@@ -555,7 +553,6 @@ const AdminUsers = () => {
                 <SelectItem value="Semua Pengguna">Semua Pengguna</SelectItem>
                 <SelectItem value="Administrator">Administrator</SelectItem>
                 <SelectItem value="Staf">Staf (Semua)</SelectItem>
-                <SelectItem value="Staf Pajak">Staf Pajak</SelectItem>
                 <SelectItem value="SKPD (Semua)">SKPD (Semua)</SelectItem>
                 <SelectItem value="SKPD (Menunggu Aktivasi)">SKPD (Menunggu Aktivasi)</SelectItem>
               </SelectContent>
