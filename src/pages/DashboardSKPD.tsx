@@ -15,6 +15,7 @@ interface TagihanCounts {
     menungguVerifikasi: number;
     diteruskan: number;
     dikembalikan: number;
+    selesai: number;
 }
 
 interface TimelineActivity {
@@ -109,12 +110,23 @@ const DashboardSKPD = () => {
 
                 if (dikembalikanError) throw dikembalikanError;
 
+                // Selesai (Register SP2D)
+                const { count: selesaiCount, error: selesaiError } = await supabase
+                    .from('database_tagihan')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('id_pengguna_input', userId)
+                    .eq('status_tagihan', 'Selesai')
+                    .ilike('nomor_spm', `%/${currentYear}`);
+
+                if (selesaiError) throw selesaiError;
+
                 setCounts({
                     total: totalCount || 0,
                     menungguRegistrasi: menungguRegistrasiCount || 0,
                     menungguVerifikasi: menungguVerifikasiCount || 0,
                     diteruskan: diteruskanCount || 0,
                     dikembalikan: dikembalikanCount || 0,
+                    selesai: selesaiCount || 0,
                 });
             } catch (error: any) {
                 console.error('Error fetching tagihan counts:', error.message);
@@ -207,7 +219,7 @@ const DashboardSKPD = () => {
                 </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mb-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
                 {/* Total Tagihan Card */}
                 <Card
                     className="group relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 cursor-pointer"
@@ -337,6 +349,31 @@ const DashboardSKPD = () => {
                         </div>
                     </CardContent>
                 </Card>
+                {/* Selesai Card */}
+                <Card
+                    className="group relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 cursor-pointer"
+                    onClick={() => navigate('/portal-skpd?status=Selesai')}
+                >
+                    <div className="absolute inset-0 bg-gradient-to-br from-indigo-500 to-purple-600 opacity-100"></div>
+                    <div className="absolute inset-0 bg-gradient-to-br from-indigo-600 to-purple-700 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                    <CardHeader className="relative flex flex-row items-center justify-between space-y-0 pb-3">
+                        <CardTitle className="text-sm font-semibold text-white/90">Register SP2D</CardTitle>
+                        <div className="p-2.5 rounded-lg bg-white/20 backdrop-blur-sm group-hover:scale-110 transition-transform duration-300">
+                            <Sparkles className="h-5 w-5 text-white" />
+                        </div>
+                    </CardHeader>
+                    <CardContent className="relative">
+                        <div className="text-3xl font-bold text-white mb-1">
+                            {counts?.selesai}
+                        </div>
+                        <p className="text-xs text-white/80 font-medium">
+                            Selesai Proses
+                        </p>
+                        <div className="absolute bottom-0 right-0 opacity-10 group-hover:opacity-20 transition-opacity duration-300">
+                            <Sparkles className="h-24 w-24 text-white" />
+                        </div>
+                    </CardContent>
+                </Card>
             </div>
 
             {/* Timeline Activities */}
@@ -401,6 +438,13 @@ const DashboardSKPD = () => {
                                         StatusIcon = RotateCcwIcon;
                                         iconBgColor = 'bg-purple-100 dark:bg-purple-950/50';
                                         iconColor = 'text-purple-600 dark:text-purple-400';
+                                        break;
+                                    case 'Selesai':
+                                        message = `Tagihan ${activity.nomor_spm} Anda telah Selesai (SP2D).`;
+                                        statusColor = 'text-indigo-600 dark:text-indigo-400';
+                                        StatusIcon = Sparkles;
+                                        iconBgColor = 'bg-indigo-100 dark:bg-indigo-950/50';
+                                        iconColor = 'text-indigo-600 dark:text-indigo-400';
                                         break;
                                     default:
                                         message = `Aktivitas tidak diketahui untuk tagihan ${activity.nomor_spm}.`;

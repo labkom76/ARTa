@@ -22,10 +22,10 @@ import { toast } from 'sonner';
 import { format, parseISO, startOfYear, endOfYear, startOfMonth, endOfMonth, startOfDay, endOfDay } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
 import StatusBadge from '@/components/StatusBadge';
-import { HistoryIcon, SearchIcon, EyeIcon, Sparkles, FilterIcon, CalendarIcon, Undo2, FileDownIcon } from 'lucide-react';
+import { HistoryIcon, SearchIcon, EyeIcon, Sparkles, FilterIcon, CalendarIcon, Undo2, FileDownIcon, ClipboardListIcon } from 'lucide-react';
 import TagihanDetailDialog from '@/components/TagihanDetailDialog';
 import { useNavigate } from 'react-router-dom';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DateRangePickerWithPresets } from '@/components/DateRangePickerWithPresets';
 import { DateRange } from 'react-day-picker';
 import {
@@ -35,6 +35,7 @@ import {
     TooltipTrigger,
 } from "@/components/ui/tooltip";
 import * as XLSX from 'xlsx';
+import { Label } from '@/components/ui/label';
 
 interface Tagihan {
     id_tagihan: string;
@@ -63,14 +64,25 @@ const RiwayatTagihan = () => {
     const [selectedMonth, setSelectedMonth] = useState<string>('Semua Bulan');
     const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
 
+    // Pagination states
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage, setItemsPerPage] = useState(10);
+    const [totalItems, setTotalItems] = useState(0);
+    const [loadingPagination, setLoadingPagination] = useState(false);
+
     const [isDetailModalOpen, setIsDetailModal] = useState(false);
     const [selectedTagihanForDetail, setSelectedTagihanForDetail] = useState<Tagihan | null>(null);
 
     const years = Array.from({ length: 5 }, (_, i) => (currentYearInt - 1 - i).toString()); // Start from last year (2025 if 2026)
 
-    const fetchHistory = async () => {
+    const fetchHistory = async (isPaginationOnlyChange = false) => {
         if (!user || sessionLoading) return;
-        setLoading(true);
+
+        if (!isPaginationOnlyChange) {
+            setLoading(true);
+        } else {
+            setLoadingPagination(true);
+        }
 
         try {
             let query = supabase
@@ -113,14 +125,20 @@ const RiwayatTagihan = () => {
 
             query = query.order('tanggal_spm', { ascending: false });
 
-            const { data, error } = await query;
+            if (itemsPerPage !== -1) {
+                query = query.range((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage - 1);
+            }
+
+            const { data, error, count } = await query;
             if (error) throw error;
             setTagihanList(data as Tagihan[]);
+            setTotalItems(count || 0);
         } catch (error: any) {
             console.error('Error fetching history:', error.message);
             toast.error('Gagal memuat riwayat tagihan');
         } finally {
             setLoading(false);
+            setLoadingPagination(false);
         }
     };
 
@@ -157,9 +175,21 @@ const RiwayatTagihan = () => {
         toast.success('Data riwayat berhasil diekspor ke XLSX!');
     };
 
+    const totalPages = itemsPerPage === -1 ? 1 : Math.ceil(totalItems / itemsPerPage);
+
     useEffect(() => {
-        fetchHistory();
-    }, [user, sessionLoading, selectedYear, selectedMonth, dateRange, selectedStatus, searchQuery]);
+        // Reset to page 1 if search or other filters change
+        // However, we handle this in the onChange handlers already.
+        // If currentPage or itemsPerPage changed, it's a pagination-only change.
+        const isPaginationChange = prevCurrentPage.current !== currentPage || prevItemsPerPage.current !== itemsPerPage;
+        fetchHistory(isPaginationChange);
+
+        prevCurrentPage.current = currentPage;
+        prevItemsPerPage.current = itemsPerPage;
+    }, [user, sessionLoading, selectedYear, selectedMonth, dateRange, selectedStatus, searchQuery, currentPage, itemsPerPage]);
+
+    const prevCurrentPage = useRef(currentPage);
+    const prevItemsPerPage = useRef(itemsPerPage);
 
     // Handle year selection defaults
     useEffect(() => {
@@ -266,6 +296,7 @@ const RiwayatTagihan = () => {
                                 <SelectItem value="Semua Status">Semua Status</SelectItem>
                                 <SelectItem value="Diteruskan">Diteruskan</SelectItem>
                                 <SelectItem value="Dikembalikan">Dikembalikan</SelectItem>
+                                <SelectItem value="Selesai">Selesai</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
@@ -278,7 +309,10 @@ const RiwayatTagihan = () => {
                                 placeholder="Cari..."
                                 className="pl-9"
                                 value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
+                                onChange={(e) => {
+                                    setSearchQuery(e.target.value);
+                                    setCurrentPage(1);
+                                }}
                             />
                         </div>
                     </div>
@@ -286,6 +320,38 @@ const RiwayatTagihan = () => {
             </div>
 
             <Card className="border-emerald-100 dark:border-emerald-900/50 shadow-sm overflow-hidden">
+                <CardHeader className="border-b border-emerald-50 dark:border-emerald-900/50 bg-emerald-50/10 dark:bg-emerald-950/5 py-4">
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                        <div className="flex items-center gap-2">
+                            <div className="p-1.5 rounded-lg bg-emerald-100 dark:bg-emerald-950/50">
+                                <ClipboardListIcon className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                            </div>
+                            <CardTitle className="text-lg font-bold text-slate-900 dark:text-white">Daftar Arsip Tagihan</CardTitle>
+                        </div>
+
+                        <div className="flex items-center space-x-2 bg-white dark:bg-slate-900 p-1 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm px-3 h-9">
+                            <Label htmlFor="items-per-page" className="whitespace-nowrap text-xs text-slate-500 dark:text-slate-400 ml-1">Tampilkan:</Label>
+                            <Select
+                                value={itemsPerPage.toString()}
+                                onValueChange={(value) => {
+                                    setItemsPerPage(Number(value));
+                                    setCurrentPage(1);
+                                }}
+                            >
+                                <SelectTrigger className="w-[100px] h-7 focus:ring-emerald-500 border-none bg-transparent font-medium text-xs">
+                                    <SelectValue placeholder="10" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="10">10 Baris</SelectItem>
+                                    <SelectItem value="25">25 Baris</SelectItem>
+                                    <SelectItem value="50">50 Baris</SelectItem>
+                                    <SelectItem value="100">100 Baris</SelectItem>
+                                    <SelectItem value="-1">Semua</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
+                </CardHeader>
                 <CardContent className="p-0">
                     <div className="overflow-x-auto">
                         <Table>
@@ -334,11 +400,11 @@ const RiwayatTagihan = () => {
                                                     </span>
                                                 </div>
                                             </TableCell>
-                                            <TableCell className="font-mono text-xs font-semibold text-slate-900 dark:text-emerald-400">
+                                            <TableCell className="font-mono text-xs font-semibold text-slate-900 dark:text-emerald-400 max-w-[150px]">
                                                 <TooltipProvider>
                                                     <Tooltip>
                                                         <TooltipTrigger asChild>
-                                                            <span className="cursor-help">{tagihan.nomor_spm}</span>
+                                                            <span className="cursor-help truncate block">{tagihan.nomor_spm}</span>
                                                         </TooltipTrigger>
                                                         <TooltipContent>
                                                             <p>{tagihan.nomor_spm}</p>
@@ -375,6 +441,36 @@ const RiwayatTagihan = () => {
                             </TableBody>
                         </Table>
                     </div>
+
+                    {tagihanList.length > 0 && (
+                        <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 dark:bg-slate-900/50 dark:border-slate-800">
+                            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                                <div className="text-sm text-slate-600 dark:text-slate-400 font-medium">
+                                    Halaman <span className="text-slate-900 dark:text-white font-semibold">{totalItems === 0 ? 0 : currentPage}</span> dari <span className="text-slate-900 dark:text-white font-semibold">{totalPages}</span> (<span className="text-slate-900 dark:text-white font-semibold">{totalItems}</span> total item)
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                                        disabled={currentPage === 1 || itemsPerPage === -1 || loadingPagination}
+                                        className="hover:bg-emerald-50 hover:text-emerald-600 dark:hover:bg-slate-800 dark:hover:text-emerald-400 transition-colors"
+                                    >
+                                        Sebelumnya
+                                    </Button>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                                        disabled={currentPage >= totalPages || itemsPerPage === -1 || loadingPagination}
+                                        className="hover:bg-emerald-50 hover:text-emerald-600 dark:hover:bg-slate-800 dark:hover:text-emerald-400 transition-colors"
+                                    >
+                                        Berikutnya
+                                    </Button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </CardContent>
             </Card>
 

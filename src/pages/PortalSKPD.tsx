@@ -783,64 +783,64 @@ const PortalSKPD = () => {
         </div>
       </div>
 
-      <div className="flex justify-end items-center mb-6">
-        <div className="flex items-center gap-2 bg-white dark:bg-slate-900 p-1.5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => navigate('/riwayat-tagihan')}
-                  className="h-9 w-9 border-emerald-200 dark:border-emerald-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 transition-all rounded-lg"
-                >
-                  <HistoryIcon className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Lihat Riwayat Tagihan</p>
-              </TooltipContent>
-            </Tooltip>
-
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-9 w-9 border-slate-200 dark:border-slate-800 hover:bg-emerald-50 hover:text-emerald-600 dark:hover:bg-emerald-950/30 dark:hover:text-emerald-400 transition-all rounded-lg"
-                  onClick={handleExportToXLSX}
-                  disabled={!isAccountVerified || tagihanList.length === 0}
-                >
-                  <FileDownIcon className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Export ke XLSX</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-
-          <div className="w-px h-6 bg-slate-200 dark:bg-slate-800 mx-1" />
-
-          <Button
-            onClick={() => { setEditingTagihan(null); setIsModalOpen(true); }}
-            className="h-9 flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white dark:bg-emerald-600 dark:hover:bg-emerald-500 transition-all shadow-sm hover:shadow-md px-4 rounded-lg font-medium"
-            disabled={!isAccountVerified || !profile?.is_active}
-          >
-            <PlusCircleIcon className="h-4 w-4" />
-            <span>Input Tagihan Baru</span>
-          </Button>
-        </div>
-      </div>
-
       {/* Card for Table (now includes filters) */}
       <Card className="shadow-md hover:shadow-lg transition-all duration-300 rounded-lg border-emerald-200 dark:border-emerald-900/30 bg-gradient-to-br from-white to-emerald-50/20 dark:from-slate-900 dark:to-emerald-950/10">
         <CardHeader className="pb-4">
-          <div className="flex items-center gap-3 mb-6 pb-4 border-b border-emerald-200 dark:border-emerald-900/30">
-            <div className="p-2 bg-emerald-100 dark:bg-emerald-950/50 rounded-lg">
-              <ClipboardListIcon className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 pb-4 border-b border-emerald-200 dark:border-emerald-900/30">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-emerald-100 dark:bg-emerald-950/50 rounded-lg">
+                <ClipboardListIcon className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+              </div>
+              <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Daftar Tagihan</h2>
             </div>
-            <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Daftar Tagihan</h2>
+
+            <div className="flex items-center gap-2 bg-white/50 dark:bg-slate-900/50 p-1.5 rounded-xl border border-emerald-100 dark:border-emerald-800 shadow-sm">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => navigate('/riwayat-tagihan')}
+                      className="h-9 w-9 border-emerald-200 dark:border-emerald-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 transition-all rounded-lg"
+                    >
+                      <HistoryIcon className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Lihat Riwayat Tagihan</p>
+                  </TooltipContent>
+                </Tooltip>
+
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-9 w-9 border-slate-200 dark:border-slate-800 hover:bg-emerald-50 hover:text-emerald-600 dark:hover:bg-emerald-950/30 dark:hover:text-emerald-400 transition-all rounded-lg"
+                      onClick={handleExportToXLSX}
+                      disabled={!isAccountVerified || tagihanList.length === 0}
+                    >
+                      <FileDownIcon className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Export ke XLSX</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+
+              <div className="w-px h-6 bg-slate-200 dark:bg-slate-800 mx-1" />
+
+              <Button
+                onClick={() => { setEditingTagihan(null); setIsModalOpen(true); }}
+                className="h-9 flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white dark:bg-emerald-600 dark:hover:bg-emerald-500 transition-all shadow-sm hover:shadow-md px-4 rounded-lg font-medium"
+                disabled={!isAccountVerified || !profile?.is_active}
+              >
+                <PlusCircleIcon className="h-4 w-4" />
+                <span>Input Tagihan Baru</span>
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -870,6 +870,7 @@ const PortalSKPD = () => {
                 <SelectItem value="Menunggu Verifikasi">Menunggu Verifikasi</SelectItem>
                 <SelectItem value="Diteruskan">Diteruskan</SelectItem>
                 <SelectItem value="Dikembalikan">Dikembalikan</SelectItem>
+                <SelectItem value="Selesai">Selesai</SelectItem>
               </SelectContent>
             </Select>
             <div className="flex items-center space-x-2 w-full sm:w-auto justify-end">
